@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { generateSampleData } from '@/app/shared/mocks';
+import { generateSampleData } from '@/app-layer/shared/mocks';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import Header from '@/ui/components/header/main';
 import NavTabs from '@/ui/components/tabs';
@@ -9,13 +9,14 @@ import Filters from '@/ui/components/filter';
 import StatisticsPanel from '@/ui/components/statistics/panel';
 import VisualizationPanel from '@/ui/components/visualization';
 import AnalysisPanel from '@/ui/components/analysis';
-import { parseCSVFromFile } from '@/app/shared/csv_tsc_parser';
+import { parseCSVFromFile } from '@/app-layer/shared/csv_tsc_parser';
 
 
-import { useIntensityDist } from './hooks/useIntensityDist';
+import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
 import { useFilteredData } from './hooks/useProteomicsFilter';
-import { useProteomicsStats } from './hooks/useProteinStats';
-import { useVolcanoData } from './hooks/useVolcanoStats';
+import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
+import { useVolcanoData } from '@/app-layer/proteins/useVolcanoStats';
+
 
 export default function ProteomicsAnalysisHomeView(): JSX.Element {
   const [data, setData] = useState<ProteinRow[]>([]);

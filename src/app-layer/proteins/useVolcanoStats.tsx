@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ProteinRow } from '@/domain/proteins/index.types';
-import { safeLog2Ratio } from '@/app/shared/utils';
+import { safeLog2Ratio } from '@/app-layer/shared/utils';
 
 export function useVolcanoData(filteredData: ProteinRow[]) {
   return useMemo(() => {
