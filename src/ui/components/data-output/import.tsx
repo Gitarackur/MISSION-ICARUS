@@ -2,18 +2,21 @@ import React from 'react';
 import {Upload,} from 'lucide-react';
 
 
-const DataImport: React.FC<{
+type DataImportProps = {
   fileInputRef: React.RefObject<HTMLInputElement>;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isProcessing: boolean;
   totalProteins: number;
   columnsCount: number;
   selectedColumnsCount: number;
-}> = ({ fileInputRef, onFileChange, isProcessing, totalProteins, columnsCount, selectedColumnsCount }) => (
+}
+
+const DataImport: React.FC<DataImportProps> = ({ fileInputRef, onFileChange, isProcessing, totalProteins, columnsCount, selectedColumnsCount }) => (
   <div className="space-y-6">
     <div className="bg-white rounded-lg shadow p-6">
       <h2 className="text-lg font-semibold mb-4">Data Import</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Upload MaxQuant Output</label>
           <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
@@ -30,6 +33,8 @@ const DataImport: React.FC<{
             </button>
           </div>
         </div>
+
+
         <div>
           <h3 className="text-md font-medium mb-3">Data Summary</h3>
           <div className="space-y-2 text-sm">

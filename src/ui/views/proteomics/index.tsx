@@ -93,6 +93,16 @@ export default function ProteomicsAnalysisHomeView(): JSX.Element {
                             filteredData={filteredData}
                             selectedColumns={selectedColumns}
                             setSelectedColumns={setSelectedColumns}
+                            onSelectButtonForUpload={async () => {
+                                const file = fileInputRef.current?.files?.[0]
+                                if (!file) return;
+
+                                await handleCSVFileUpload(file, {
+                                    onData: setData,
+                                    onHeaders: setSelectedColumns,
+                                    onProcessingChange: setIsProcessing,
+                                });  
+                            }}
                         />
                     </div>
                 )}
