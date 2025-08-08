@@ -11,8 +11,10 @@ const Header: React.FC<{ onExport?: () => void }> = ({ onExport }) => (
             <Database className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-900">Mission Icarus</h1>
-            <p className="text-sm text-gray-600">Mass spectrometry data analysis and visualization</p>
+            <h1 className="text-xl font-bold text-gray-900">Icarus</h1>
+            <p className="text-sm text-gray-600">
+              Bioinformatics software (Mass spectrometry, data analysis and visualization)
+            </p>
           </div>
         </div>
         <div className="flex space-x-2">
