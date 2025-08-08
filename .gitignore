@@ -1,0 +1,110 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite build outputs
+dist/
+dist-electron/
+build/
+out/
+release/
+
+# Vite cache
+.vite/
+vite.config.js.timestamp-*
+vite.config.ts.timestamp-*
+
+# Electron build artifacts
+app/
+*.dmg
+*.exe
+*.deb
+*.rpm
+*.AppImage
+*.snap
+*.tar.gz
+*.zip
+
+# Platform-specific folders
+darwin/
+win32/
+linux/
+
+# Logs
+logs/
+*.log
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary folders
+tmp/
+temp/
+
+# Auto-generated files
+*.tgz
+*.tar.gz
+
+# Electron specific
+# If using electron-builder
+electron-builder.env
+
+# If using electron-forge
+.webpack/
+
+# If using auto-updater
+*.blockmap
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# TypeScript
+*.tsbuildinfo
