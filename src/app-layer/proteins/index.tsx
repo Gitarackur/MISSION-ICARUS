@@ -1,13 +1,9 @@
-// src/utils/statistics.ts
 import * as d3 from 'd3';
 import _ from 'lodash';
-import { ProteinRow } from '../../domain/proteins/index.types';
+import { ProteinRow } from '@/domain/proteins/index.types';
 
 export function calculateStatistics(data: ProteinRow[], selectedColumns: string[]) {
-  if (!data.length) return null;
-
-  const intensityCols = selectedColumns.filter(col => col.includes('intensity'));
-  const stats = {
+   const stats = {
     totalProteins: data.length,
     averageIntensity: 0,
     medianIntensity: 0,
@@ -15,6 +11,10 @@ export function calculateStatistics(data: ProteinRow[], selectedColumns: string[
     missingValues: 0
   };
 
+  if (!data.length) return stats;
+
+  const intensityCols = selectedColumns.filter(col => col.includes('intensity'));
+  
   if (intensityCols.length) {
     const allValues = data.flatMap(row =>
       intensityCols.map(col => Number(row[col]) || 0)

@@ -17,7 +17,12 @@ import {
 import { Stats } from '@/domain/proteins/index.types';
 
 
-const StatisticsPanel: React.FC<{ stats: Stats; intensityDist: { sample: string; meanIntensity: number; count: number }[] }> = ({ stats, intensityDist }) => {
+type StatisticsPanelProps = { 
+  stats: Stats; 
+  intensityDist: { sample: string; meanIntensity: number; count: number }[] 
+}
+
+const StatisticsPanel: React.FC<StatisticsPanelProps> = ({ stats, intensityDist }) => {
   if (!stats) return null;
   return (
     <div className="space-y-6">
@@ -29,7 +34,7 @@ const StatisticsPanel: React.FC<{ stats: Stats; intensityDist: { sample: string;
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Total Proteins</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.totalProteins}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.totalProteins}</p>
             </div>
           </div>
         </div>
@@ -41,7 +46,7 @@ const StatisticsPanel: React.FC<{ stats: Stats; intensityDist: { sample: string;
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Avg Intensity</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.averageIntensity.toExponential(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.averageIntensity?.toExponential(2)}</p>
             </div>
           </div>
         </div>
@@ -53,7 +58,7 @@ const StatisticsPanel: React.FC<{ stats: Stats; intensityDist: { sample: string;
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">CV</p>
-              <p className="text-2xl font-bold text-gray-900">{(stats.coefficientOfVariation * 100).toFixed(1)}%</p>
+              <p className="text-2xl font-bold text-gray-900">{(stats?.coefficientOfVariation * 100)?.toFixed(1)}%</p>
             </div>
           </div>
         </div>
@@ -65,7 +70,7 @@ const StatisticsPanel: React.FC<{ stats: Stats; intensityDist: { sample: string;
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Missing Values</p>
-              <p className="text-2xl font-bold text-gray-900">{stats.missingValues}</p>
+              <p className="text-2xl font-bold text-gray-900">{stats?.missingValues}</p>
             </div>
           </div>
         </div>

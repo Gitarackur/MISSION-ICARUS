@@ -2,25 +2,36 @@ import React, { useEffect, useMemo } from 'react';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
+import { UploadCloud } from 'lucide-react';
 
 const ROWS_PER_PAGE = 10;
 
-const DataPreview: React.FC<{
+
+type DataPreviewProps = {
   data: ProteinRow[];
   filteredData: ProteinRow[];
   selectedColumns: string[];
   setSelectedColumns: (cols: string[]) => void;
-}> = ({ data, filteredData, selectedColumns, setSelectedColumns }) => {
-  const columns = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
+  onSelectButtonForUpload?: () => void;
+}
 
-  // Initialize selectedColumns with all columns if none selected yet
-  useEffect(() => {
-    if (selectedColumns.length === 0 && columns.length > 0) {
-      setSelectedColumns(columns);
-    }
-  }, [columns, selectedColumns, setSelectedColumns]);
 
-  // Pagination hook
+const DataPreview: React.FC<DataPreviewProps> = ({ 
+  data, 
+  filteredData, 
+  selectedColumns, 
+  setSelectedColumns, 
+  onSelectButtonForUpload 
+}) => {
+
+  const columns = useMemo(() => (data.length > 0 ? Object.keys(data?.[0]) : []), [data]);
+
+  const toggleColumn = (column: string, checked: boolean) => {
+    if (checked) setSelectedColumns([...selectedColumns, column]);
+    else setSelectedColumns(selectedColumns.filter((c) => c !== column));
+    reset();
+  };
+
   const {
     currentPage,
     totalPages,
@@ -30,13 +41,31 @@ const DataPreview: React.FC<{
     reset,
   } = usePagination(filteredData, ROWS_PER_PAGE);
 
-  const toggleColumn = (column: string, checked: boolean) => {
-    if (checked) setSelectedColumns([...selectedColumns, column]);
-    else setSelectedColumns(selectedColumns.filter((c) => c !== column));
-    reset();
-  };
+  // Initialize selectedColumns with all columns if none selected yet
+  useEffect(() => {
+    if (selectedColumns.length === 0 && columns.length > 0) {
+      setSelectedColumns(columns);
+    }
+  }, [columns, selectedColumns, setSelectedColumns]);
 
-  if (!data.length) return null;
+
+  if (!data.length) {
+    return (
+      <div className="bg-white rounded-lg shadow p-10 flex flex-col items-center justify-center text-center border border-gray-200">
+        <UploadCloud className="w-16 h-16 text-gray-300 mb-4" />
+        <h3 className="text-lg font-semibold text-gray-700">No data imported</h3>
+        <p className="text-gray-500 text-sm mt-1 max-w-sm">
+          Import your proteomics CSV file to preview data here.
+        </p>
+        <button
+          onClick={() => onSelectButtonForUpload?.()}
+          className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+        >
+          Import Data
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-lg shadow p-6">
@@ -47,13 +76,14 @@ const DataPreview: React.FC<{
         <label className="block text-sm font-medium text-gray-700 mb-2">
           Select Columns to Display:
         </label>
+
         <div className="flex flex-wrap gap-3 max-w-full max-h-40 overflow-y-auto border border-gray-50 rounded p-2 bg-gray-50">
           {columns?.map((column) => (
-            <div 
+            <div
               className="flex items-center space-x-2 cursor-pointer select-none"
               key={column}
             >
-              <Checkbox 
+              <Checkbox
                 className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 type="checkbox"
                 label={column}
@@ -64,6 +94,7 @@ const DataPreview: React.FC<{
           ))}
         </div>
       </div>
+
 
       {/* Table */}
       <div className="overflow-x-auto w-full rounded border border-gray-200">

@@ -10,7 +10,12 @@ import {
 } from 'recharts';
 import ScatterTooltip from '@/ui/components/scatter/tooltip';
 
-const VisualizationPanel: React.FC<{ volcanoData: { x: number; y: number; protein: string; significant: boolean }[]; intensityDist: { sample: string; meanIntensity: number; count: number }[] }> = ({ volcanoData }) => {
+type VisualizationPanelProps = { 
+  volcanoData: { x: number; y: number; protein: string; significant: boolean }[]; 
+  intensityDist: { sample: string; meanIntensity: number; count: number }[] 
+}
+
+const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) => {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
