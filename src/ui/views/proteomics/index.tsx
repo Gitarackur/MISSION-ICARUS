@@ -8,21 +8,30 @@ import StatisticsPanel from '@/ui/components/statistics/panel';
 import VisualizationPanel from '@/ui/components/visualization';
 import AnalysisPanel from '@/ui/components/analysis';
 
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { generateSampleData } from '@/app-layer/shared/mocks';
 import { handleCSVFileUpload, handleFileExport } from '@/app-layer/shared/utils';
 import { ProteinRow } from '@/domain/proteins/index.types';
-
 
 import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
 import { useFilteredData } from './hooks/useProteomicsFilter';
 import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
 import { useVolcanoData } from '@/app-layer/proteins/useVolcanoStats';
 
+type Session = {
+	id: string;
+	name: string;
+	date: string;
+	matrix: number[][];
+};
 
+type ProteomicsAnalysisHomeViewProps = {
+	handleSessionCreate: (matrix: number[][]) => void;
+	activeSession: Session | null;
+};
 
-export default function ProteomicsAnalysisHomeView(): JSX.Element {
+export default function ProteomicsAnalysisHomeView({
+	handleSessionCreate,
+	activeSession
+}: ProteomicsAnalysisHomeViewProps): JSX.Element {
 	const [data, setData] = useState<ProteinRow[]>([]);
 	const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
 	const [activeTab, setActiveTab] = useState<'import' | 'filter' | 'statistics' | 'visualization' | 'analysis'>('import');
@@ -37,37 +46,40 @@ export default function ProteomicsAnalysisHomeView(): JSX.Element {
 	const volcanoData = useVolcanoData(filteredData);
 	const intensityDist = useIntensityDist(filteredData, selectedColumns);
 
-	// File upload
+	// File upload → also create a new session
 	const handleFileUpload = useCallback(
 		async (e: React.ChangeEvent<HTMLInputElement>) => {
 			const file = e.target.files?.[0];
 			if (!file) return;
 
 			await handleCSVFileUpload(file, {
-				onData: setData,
+				onData: (rows) => {
+					setData(rows);
+					// Convert imported data into a numeric matrix for the session
+					const matrix = rows.map((row) =>
+						selectedColumns.map((col) => Number(row[col]) || 0)
+					);
+					handleSessionCreate(matrix);
+				},
 				onHeaders: setSelectedColumns,
 				onProcessingChange: setIsProcessing,
 			});
 
 			e.target.value = '';
 		},
-		[]
+		[selectedColumns, handleSessionCreate]
 	);
 
 	// Export
 	const handleExport = useCallback(() => {
-		return handleFileExport(filteredData, "proteomics-data")
+		return handleFileExport(filteredData, "proteomics-data");
 	}, [filteredData]);
 
-	// Load sample data on mount
+	// Load empty state on mount
 	useEffect(() => {
-		const sample: ProteinRow[] = [];
-		setData(sample);
-		if (sample.length > 0) {
-			setSelectedColumns(Object.keys(sample[0]).slice(0, 8));
-		} else {
-			setSelectedColumns([]);
-		}
+		setData([]);
+		setSelectedColumns([]);
+		console.log(activeSession);
 	}, []);
 
 	return (
@@ -94,7 +106,7 @@ export default function ProteomicsAnalysisHomeView(): JSX.Element {
 							selectedColumns={selectedColumns}
 							setSelectedColumns={setSelectedColumns}
 							onSelectButtonForUpload={async () => {
-								const file = fileInputRef.current?.files?.[0]
+								const file = fileInputRef.current?.files?.[0];
 								if (!file) return;
 
 								await handleCSVFileUpload(file, {
