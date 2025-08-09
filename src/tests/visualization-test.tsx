@@ -67,7 +67,11 @@ export default function VisualizationTest(): JSX.Element {
         scriptPath: 'scripts/r/plot_r.R',
         args: [JSON.stringify(sampleData)],
       })
-      setRImage(`data:image/png;base64,${base64.trim()}`)
+      // setRImage(`data:image/png;base64,${base64.trim()}`)
+      // setRImage(`data:image/png;base64,${base64.replace(/\s/g, '')}`)
+      console.log(base64);
+      
+      setRImage(`data:image/png;base64,${base64}`)
     } catch (e) {
       setError(`R error: ${(e as Error).message || e}`)
     }

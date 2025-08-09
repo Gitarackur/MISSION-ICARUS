@@ -71,7 +71,9 @@ export default function VisualizationExternal() {
         scriptPath: 'scripts/r/plot_r.R',
         args: [JSON.stringify(data)],
       })
-      setRImage(`data:image/png;base64,${response.trim()}`)
+      // setRImage(`data:image/png;base64,${response.trim()}`)
+      // setRImage(`data:image/png;base64,${response.replace(/\s/g, '')}`)
+      setRImage(`data:image/png;base64,${response}`)
       setError(null)
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'message' in err) {
