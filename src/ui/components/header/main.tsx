@@ -5,7 +5,7 @@ import {Download,Settings,Database} from 'lucide-react';
 const Header: React.FC<{ onExport?: () => void }> = ({ onExport }) => (
   <div className="bg-white shadow-sm">
     <div className="px-6 py-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-5 lg:gap-0 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex items-center space-x-3">
           <div className="p-2 bg-blue-600 rounded-lg">
             <Database className="w-6 h-6 text-white" />
@@ -17,6 +17,7 @@ const Header: React.FC<{ onExport?: () => void }> = ({ onExport }) => (
             </p>
           </div>
         </div>
+
         <div className="flex space-x-2">
           <button
             type="button"

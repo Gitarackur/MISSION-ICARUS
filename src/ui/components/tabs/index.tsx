@@ -8,22 +8,40 @@ import {
   LucideProps,
 } from 'lucide-react';
 
+import { tv } from 'tailwind-variants';
+
 type NavTabsProps = { 
-    active: "filter" | "import" | "statistics" | "visualization" | "analysis"; 
-    setActive: (t: "filter" | "import" | "statistics" | "visualization" | "analysis") => void 
-}
+  active: "filter" | "import" | "statistics" | "visualization" | "analysis"; 
+  setActive: (t: "filter" | "import" | "statistics" | "visualization" | "analysis") => void;
+};
 
 type LucideIconProps = React.ForwardRefExoticComponent<
   Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
->
-
+>;
 
 interface TabsTypes {
-    id: "filter" | "import" | "statistics" | "visualization" | "analysis";
-    label: string;
-    icon: LucideIconProps;
+  id: "filter" | "import" | "statistics" | "visualization" | "analysis";
+  label: string;
+  icon: LucideIconProps;
 }
 
+// Define button variants with tailwind-variants
+const tabButton = tv({
+  base: `
+    flex items-center space-x-2
+    px-4 py-2
+    border-b-4 font-semibold text-sm rounded-t-md
+    flex-grow sm:flex-grow-0 min-w-0
+    transition-colors duration-200 ease-in-out
+    focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2
+  `,
+  variants: {
+    active: {
+      true: 'border-blue-600 text-blue-600 bg-blue-50',
+      false: 'border-transparent text-gray-600 hover:text-blue-600 hover:border-blue-300',
+    },
+  },
+});
 
 const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {
   const tabs: TabsTypes[] = [
@@ -35,24 +53,31 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {
   ];
 
   return (
-    <div className="bg-white border-b">
-      <div className="px-6">
-        <nav className="flex space-x-8" aria-label="Main tabs">
+    <div className="bg-white border-b border-gray-100 overflow-x-hidden">
+      <div className="px-3 sm:px-6 pt-3 max-w-full">
+        <nav
+          className="
+            flex flex-wrap justify-center sm:justify-start
+            gap-x-4 gap-y-2
+            max-w-full
+          "
+          aria-label="Main tabs"
+        >
           {tabs.map((tab) => {
             const Icon = tab.icon;
+            const isActive = active === tab.id;
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActive(tab.id)}
-                className={`flex items-center space-x-2 py-4 border-b-2 font-medium text-sm ${
-                  active === tab.id
-                    ? 'border-blue-600 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={tabButton({ active: isActive })}
               >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                <Icon
+                  className={`flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}
+                  size={18}
+                />
+                <span className="hidden sm:inline truncate">{tab.label}</span>
               </button>
             );
           })}
@@ -61,7 +86,5 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {
     </div>
   );
 };
-
-
 
 export default NavTabs;

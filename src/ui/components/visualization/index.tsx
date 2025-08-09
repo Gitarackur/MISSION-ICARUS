@@ -1,4 +1,5 @@
 import React from 'react';
+import { tv } from 'tailwind-variants';
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -15,12 +16,36 @@ type VisualizationPanelProps = {
   intensityDist: { sample: string; meanIntensity: number; count: number }[] 
 }
 
+const container = tv({
+  base: 'space-y-6',
+});
+
+const card = tv({
+  base: 'bg-white rounded-lg shadow p-6',
+});
+
+const heading = tv({
+  base: 'text-lg font-semibold mb-4',
+});
+
+const plotContainer = tv({
+  base: 'h-80',
+});
+
+const placeholderBox = tv({
+  base: 'bg-gray-100 h-64 rounded-lg flex items-center justify-center',
+});
+
+const placeholderText = tv({
+  base: 'text-gray-500',
+});
+
 const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) => {
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Volcano Plot</h3>
-        <div className="h-80">
+    <div className={container()}>
+      <div className={card()}>
+        <h3 className={heading()}>Volcano Plot</h3>
+        <div className={plotContainer()}>
           <ResponsiveContainer width="100%" height={320}>
             <ScatterChart>
               <CartesianGrid strokeDasharray="3 3" />
@@ -33,15 +58,16 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) 
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Sample Correlation Heatmap</h3>
-        <div className="bg-gray-100 h-64 rounded-lg flex items-center justify-center">
-          <p className="text-gray-500">Correlation heatmap would be rendered here (placeholder)</p>
+      <div className={card()}>
+        <h3 className={heading()}>Sample Correlation Heatmap</h3>
+        <div className={placeholderBox()}>
+          <p className={placeholderText()}>
+            Correlation heatmap would be rendered here (placeholder)
+          </p>
         </div>
       </div>
     </div>
   );
 };
-
 
 export default VisualizationPanel;
