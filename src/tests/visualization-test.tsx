@@ -6,7 +6,7 @@ type SampleData = Record<string, number>
 // Tailwind Variants styles
 const styles = {
   container: tv({
-    base: 'max-w-4xl mx-auto p-6 space-y-6 bg-white rounded-lg shadow-md',
+    base: 'p-6 space-y-6 bg-white rounded-lg shadow-md',
   }),
   header: tv({
     base: 'text-3xl font-semibold text-gray-900',
@@ -95,7 +95,7 @@ export default function VisualizationTest(): JSX.Element {
       {error && <p className={styles.errorText()}>{error}</p>}
 
       {pythonImage && (
-        <div>
+        <div className=''>
           <h3 className="text-xl font-semibold mt-6 mb-2 text-gray-800">
             Python Plot
           </h3>
@@ -110,7 +110,7 @@ export default function VisualizationTest(): JSX.Element {
       )}
 
       {rImage && (
-        <div>
+        <div className=''>
           <h3 className="text-xl font-semibold mt-6 mb-2 text-gray-800">
             R Plot
           </h3>

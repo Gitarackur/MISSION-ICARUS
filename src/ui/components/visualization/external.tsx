@@ -3,7 +3,7 @@ import { tv } from 'tailwind-variants'
 
 const styles = {
   container: tv({
-    base: 'max-w-3xl mx-auto p-6 space-y-6 bg-white rounded-lg shadow-md',
+    base: 'p-6 space-y-6 bg-white rounded-lg shadow-md',
   }),
   header: tv({
     base: 'text-2xl font-semibold text-gray-900',
@@ -104,7 +104,7 @@ export default function VisualizationExternal() {
       {error && <p className={styles.errorText()}>{error}</p>}
 
       {pythonImage && (
-        <div>
+        <div className=''>
           <h3 className={styles.subheader()}>Python Plot</h3>
           <div className={styles.imageWrapper()}>
             <img
@@ -117,7 +117,7 @@ export default function VisualizationExternal() {
       )}
 
       {rImage && (
-        <div>
+        <div className=''>
           <h3 className={styles.subheader()}>R Plot</h3>
           <div className={styles.imageWrapper()}>
             <img src={rImage} alt="R visualization" className={styles.image()} />

@@ -64,7 +64,6 @@ ipcMain.handle('run-r', async (event, { scriptPath, args }: { scriptPath?: strin
 
   try {
     const output = await rManager.runRScript(scriptPath, args || []);
-    console.log('R output:', output);
     return output;
   } catch (err) {
     console.error('R error:', err);
