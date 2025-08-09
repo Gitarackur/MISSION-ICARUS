@@ -61,8 +61,12 @@ export default class EmbeddedRManager {
     });
   }
 
-  
-  public runRScript(scriptPath: string, args: string[] = [], requiredPackages: string[] = []): Promise<string> {
+
+  public runRScript(
+    scriptPath: string,
+    args: string[] = [],
+    requiredPackages: string[] = []
+  ): Promise<string> {
     if (!this.rScriptExe) {
       return Promise.reject(new Error('Rscript executable not found on this system.'));
     }
@@ -73,43 +77,71 @@ export default class EmbeddedRManager {
 
     console.log(`Running Rscript with: ${scriptPath} ${args.join(' ')}`);
 
-    return new Promise((resolve, reject) => {
-      // Optional: check/install packages
-      if (requiredPackages.length > 0) {
-        const pkgCheckCmd = `
-          pkgs <- c(${requiredPackages.map(p => `"${p}"`).join(",")});
-          not_installed <- pkgs[!(pkgs %in% installed.packages()[,"Package"])];
-          if (length(not_installed) > 0) {
-            install.packages(not_installed, repos="https://cloud.r-project.org");
-          }
-        `;
-        spawn(this.rScriptExe!, ["-e", pkgCheckCmd]);
-      }
+    // Helper to run R commands synchronously for package installation
+    const installPackages = (): Promise<void> => {
+      if (requiredPackages.length === 0) return Promise.resolve();
 
-      const proc = spawn(this.rScriptExe!, [scriptPath, ...args]);
-
-      let stdout = '';
-      let stderr = '';
-
-      proc.stdout.on('data', (chunk: Buffer) => {
-        stdout += chunk.toString();
-        // console.log(`[R STDOUT]: ${chunk.toString()}`);
-      });
-
-      proc.stderr.on('data', (chunk: Buffer) => {
-        stderr += chunk.toString();
-        // console.error(`[R STDERR]: ${chunk.toString()}`);
-      });
-
-      proc.on('close', (code: number) => {
-        if (code === 0) {
-          resolve(stdout.trim());
-        } else {
-          reject(new Error(`R script failed with exit code ${code}\nSTDERR:\n${stderr.trim()}\nSTDOUT:\n${stdout.trim()}`));
+      const pkgCheckCmd = `
+        pkgs <- c(${requiredPackages.map((p) => `"${p}"`).join(",")});
+        not_installed <- pkgs[!(pkgs %in% installed.packages()[,"Package"])];
+        if(length(not_installed) > 0) {
+          install.packages(not_installed, repos="https://cloud.r-project.org");
         }
+      `;
+
+      return new Promise((resolve, reject) => {
+        const installProc = spawn(this.rScriptExe!, ['-e', pkgCheckCmd]);
+
+        let installStderr = '';
+        installProc.stderr.on('data', (chunk) => {
+          installStderr += chunk.toString();
+        });
+
+        installProc.on('close', (code) => {
+          if (code === 0) {
+            resolve();
+          } else {
+            reject(new Error(`Package installation failed with exit code ${code}\n${installStderr}`));
+          }
+        });
+      });
+    };
+
+    return installPackages().then(() => {
+      return new Promise((resolve, reject) => {
+        const proc = spawn(this.rScriptExe!, [scriptPath, ...args]);
+
+        let stdout = '';
+        let stderr = '';
+
+        proc.stdout.on('data', (chunk: Buffer) => {
+          stdout += chunk.toString();
+          // console.log(`[R STDOUT]: ${chunk.toString()}`);
+        });
+
+        proc.stderr.on('data', (chunk: Buffer) => {
+          stderr += chunk.toString();
+          // console.error(`[R STDERR]: ${chunk.toString()}`);
+        });
+
+        proc.on('close', (code: number) => {
+          if (code === 0) {
+            // Extract valid base64 only to clean out junk like "null device 1"
+            const base64Matches = stdout.match(/[A-Za-z0-9+/=]+/g);
+            if (!base64Matches) {
+              reject(new Error('No valid base64 content found in R script output.'));
+              return;
+            }
+            const cleanBase64 = base64Matches.join('');
+            resolve(cleanBase64);
+          } else {
+            reject(new Error(`R script failed with exit code ${code}\nSTDERR:\n${stderr.trim()}\nSTDOUT:\n${stdout.trim()}`));
+          }
+        });
       });
     });
   }
+
 
 
 

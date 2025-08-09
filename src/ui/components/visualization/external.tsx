@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tv } from 'tailwind-variants'
 
 const styles = {
@@ -44,9 +44,9 @@ export default function VisualizationExternal() {
   const [rImage, setRImage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
-  const data = { A: 10, B: 25, C: 15, D: 30 }
+  const data = useMemo(() => ({ A: 10, B: 25, C: 15, D: 30 }), [])
 
-  async function runPython() {
+  const runPython = useCallback(async () => {
     try {
       const pyData = JSON.stringify(data)
       const response = await window.electron.ipcRenderer.invoke('run-python', {
@@ -63,16 +63,14 @@ export default function VisualizationExternal() {
         setError('Python error: Unknown error')
       }
     }
-  }
+  }, [data])
 
-  async function runR() {
+  const runR = useCallback(async () => {
     try {
       const response = await window.electron.ipcRenderer.invoke('run-r', {
         scriptPath: 'scripts/r/plot_r.R',
         args: [JSON.stringify(data)],
       })
-      // setRImage(`data:image/png;base64,${response.trim()}`)
-      // setRImage(`data:image/png;base64,${response.replace(/\s/g, '')}`)
       setRImage(`data:image/png;base64,${response}`)
       setError(null)
     } catch (err: unknown) {
@@ -82,11 +80,17 @@ export default function VisualizationExternal() {
         setError('R error: Unknown error')
       }
     }
-  }
+  }, [data])
+
+  useEffect(() => {
+    runR();
+    runPython();
+  }, [runPython, runR])
+  
 
   return (
     <div className={styles.container()}>
-      <h2 className={styles.header()}>Data Visualization</h2>
+      {/* <h2 className={styles.header()}>Data Visualization</h2>
 
       <div className={styles.btnGroup()}>
         <button
@@ -101,7 +105,7 @@ export default function VisualizationExternal() {
         >
           Visualize with R
         </button>
-      </div>
+      </div> */}
 
       {error && <p className={styles.errorText()}>{error}</p>}
 

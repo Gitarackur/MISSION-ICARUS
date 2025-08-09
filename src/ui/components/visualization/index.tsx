@@ -10,7 +10,6 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 import ScatterTooltip from '@/ui/components/scatter/tooltip';
-import VisualizationTest from '@/tests/visualization-test';
 import VisualizationExternal from './external';
 
 type VisualizationPanelProps = {
@@ -53,7 +52,6 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) 
         <h3 className={s.heading()}>Bar Plot</h3>
         <div className={s.plotContainer()}>
           <div>
-            <VisualizationTest />
             <VisualizationExternal />
           </div>
         </div>

@@ -86,7 +86,7 @@ export default class EmbeddedPythonManager {
           });
         });
       } else {
-        console.log(`Package already installed: ${pkg}`);
+        // console.log(`Package already installed: ${pkg}`);
       }
     }
   }
