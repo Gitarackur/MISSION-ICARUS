@@ -5,9 +5,15 @@ import base64
 from io import BytesIO
 
 def main():
-    data_file = sys.argv[1]
-    with open(data_file) as f:
-        data = json.load(f)
+    input_arg = sys.argv[1]
+
+    try:
+        # Try to load input_arg as a path to a file first
+        with open(input_arg) as f:
+            data = json.load(f)
+    except (FileNotFoundError, OSError):
+        # If not a file, assume it's a JSON string and parse directly
+        data = json.loads(input_arg)
 
     labels = list(data.keys())
     values = list(data.values())

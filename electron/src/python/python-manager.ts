@@ -55,6 +55,41 @@ export default class EmbeddedPythonManager {
     }
   }
 
+  // Check if a Python package is installed
+  isPackageInstalled(pkg: string): Promise<boolean> {
+    return new Promise((resolve) => {
+      const proc = spawn(this.pythonExe, ['-c', `import ${pkg}`]);
+
+      proc.on('close', (code) => {
+        resolve(code === 0);
+      });
+
+      proc.on('error', () => {
+        resolve(false);
+      });
+    });
+  }
+
+  // Install missing packages only
+  async installPackages(packages: string[]): Promise<void> {
+    for (const pkg of packages) {
+      const installed = await this.isPackageInstalled(pkg);
+      if (!installed) {
+        console.log(`Installing missing package: ${pkg}`);
+        await new Promise<void>((resolve, reject) => {
+          const proc = spawn(this.pythonExe, ['-m', 'pip', 'install', pkg]);
+          proc.stdout.on('data', (data) => console.log(data.toString()));
+          proc.stderr.on('data', (data) => console.error(data.toString()));
+          proc.on('close', (code) => {
+            if (code === 0) resolve();
+            else reject(new Error(`Failed to install package: ${pkg}`));
+          });
+        });
+      } else {
+        console.log(`Package already installed: ${pkg}`);
+      }
+    }
+  }
 
   async ensurePythonReady(): Promise<void> {
     if (os.platform() === 'darwin') {
@@ -63,6 +98,8 @@ export default class EmbeddedPythonManager {
       if (!fs.existsSync(this.pythonExe)) {
         throw new Error('Python3 not found on this macOS system.');
       }
+      console.log('Installing required Python packages...');
+      await this.installPackages(['matplotlib', 'numpy', 'pandas']); // add all needed libs here
       return;
     }
 
@@ -70,36 +107,54 @@ export default class EmbeddedPythonManager {
       console.log('Downloading embedded Python runtime...');
       await this.downloadAndExtract();
       console.log('Embedded Python ready.');
+
+      console.log('Installing required Python packages...');
+      await this.installPackages(['matplotlib', 'numpy', 'pandas']); // add all needed libs here
+      console.log('Python packages installed.');
     }
   }
 
 
-  public runPythonScript(scriptPath: string, args: string[] = []): Promise<string> {
+  public runPythonScript(scriptPath: string, args: string[] = [], data?: unknown): Promise<string> {
     return new Promise((resolve, reject) => {
-      this.ensurePythonReady()
-        .then(() => {
-          const proc = spawn(this.pythonExe, [scriptPath, ...args])
+      (async () => {
+        try {
+          await this.ensurePythonReady();
 
-          let stdout = ''
-          let stderr = ''
+          let finalArgs = args;
+
+          if (data !== undefined) {
+            const tmpFile = path.join(os.tmpdir(), `data_${Date.now()}.json`);
+            fs.writeFileSync(tmpFile, JSON.stringify(data));
+            finalArgs = [tmpFile, ...args];
+          }
+
+          const proc = spawn(this.pythonExe, [scriptPath, ...finalArgs]);
+
+          let stdout = '';
+          let stderr = '';
 
           proc.stdout.on('data', (chunk: Buffer) => {
-            stdout += chunk.toString()
-          })
+            stdout += chunk.toString();
+          });
 
           proc.stderr.on('data', (chunk: Buffer) => {
-            stderr += chunk.toString()
-          })
+            stderr += chunk.toString();
+          });
 
           proc.on('close', (code: number) => {
             if (code === 0) {
-              resolve(stdout)
+              resolve(stdout);
             } else {
-              reject(new Error(stderr))
+              reject(new Error(stderr));
             }
-          })
-        })
-        .catch((err) => reject(err))
-    })
+          });
+        } catch (err) {
+          reject(err);
+        }
+      })();
+    });
   }
+
+
 }

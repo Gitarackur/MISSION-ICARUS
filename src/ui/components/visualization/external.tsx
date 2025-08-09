@@ -10,9 +10,11 @@ export default function VisualizationExternal() {
   async function runPython() {
     try {
       // Provide the full absolute path to your Python script and any args here
+      const pyData = JSON.stringify(data);
       const response = await window.electron.ipcRenderer.invoke('run-python', {
         scriptPath: "scripts/python/plot_data.py",
         // args: ['arg1', 'arg2'],  // optional
+        args: [pyData]
       });
       setPythonImage(`data:image/png;base64,${response}`);
       setError(null);

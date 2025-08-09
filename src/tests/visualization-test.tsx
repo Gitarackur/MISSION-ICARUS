@@ -10,11 +10,13 @@ export default function VisualizationTest(): JSX.Element {
   const sampleData: SampleData = { A: 10, B: 20, C: 30, D: 40 }
 
   async function runPython(): Promise<void> {
+    const pyData = JSON.stringify(sampleData);
     try {
       setError(null)
       const base64 = await window.electron.ipcRenderer.invoke('run-python', {
         scriptPath: "scripts/python/plot_data.py",
         // args: [], // add args if needed
+        args: [pyData]
       })
       setPythonImage(`data:image/png;base64,${base64}`)
     } catch (e) {
