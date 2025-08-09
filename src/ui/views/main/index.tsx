@@ -33,6 +33,9 @@ const IcarusApp: React.FC = () => {
           const found = sessions.find((s) => s.name === sessionName) || null;
           setActiveSession(found);
         }}
+        onCreateSession={() => {
+          console.log('Create session clicked');
+        }}
       />
 
       {/* Main Content */}
