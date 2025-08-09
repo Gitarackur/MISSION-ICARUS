@@ -23,7 +23,8 @@
     /* add alias*/
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "main@/*": ["/*"]
     }
   },
   "include": ["src", "electron"],

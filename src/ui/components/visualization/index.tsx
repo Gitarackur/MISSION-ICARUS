@@ -10,6 +10,8 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 import ScatterTooltip from '@/ui/components/scatter/tooltip';
+import VisualizationTest from '@/tests/visualization-test';
+import VisualizationExternal from './external';
 
 type VisualizationPanelProps = {
   volcanoData: { x: number; y: number; protein: string; significant: boolean }[];
@@ -53,6 +55,11 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) 
           <p className={s.placeholderText()}>
             Correlation heatmap would be rendered here (placeholder)
           </p>
+        </div>
+
+        <div>
+          <VisualizationTest />
+          <VisualizationExternal />
         </div>
       </div>
     </div>
