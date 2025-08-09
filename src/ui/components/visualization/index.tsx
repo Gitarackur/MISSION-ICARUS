@@ -11,41 +11,30 @@ import {
 } from 'recharts';
 import ScatterTooltip from '@/ui/components/scatter/tooltip';
 
-type VisualizationPanelProps = { 
-  volcanoData: { x: number; y: number; protein: string; significant: boolean }[]; 
-  intensityDist: { sample: string; meanIntensity: number; count: number }[] 
-}
+type VisualizationPanelProps = {
+  volcanoData: { x: number; y: number; protein: string; significant: boolean }[];
+  intensityDist: { sample: string; meanIntensity: number; count: number }[];
+};
 
-const container = tv({
-  base: 'space-y-6',
-});
-
-const card = tv({
-  base: 'bg-white rounded-lg shadow p-6',
-});
-
-const heading = tv({
-  base: 'text-lg font-semibold mb-4',
-});
-
-const plotContainer = tv({
-  base: 'h-80',
-});
-
-const placeholderBox = tv({
-  base: 'bg-gray-100 h-64 rounded-lg flex items-center justify-center',
-});
-
-const placeholderText = tv({
-  base: 'text-gray-500',
+const styles = tv({
+  slots: {
+    container: 'space-y-6',
+    card: 'bg-white rounded-lg shadow p-6',
+    heading: 'text-lg font-semibold mb-4',
+    plotContainer: 'h-80',
+    placeholderBox: 'bg-gray-100 h-64 rounded-lg flex items-center justify-center',
+    placeholderText: 'text-gray-500',
+  },
 });
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) => {
+  const s = styles();
+
   return (
-    <div className={container()}>
-      <div className={card()}>
-        <h3 className={heading()}>Volcano Plot</h3>
-        <div className={plotContainer()}>
+    <div className={s.container()}>
+      <div className={s.card()}>
+        <h3 className={s.heading()}>Volcano Plot</h3>
+        <div className={s.plotContainer()}>
           <ResponsiveContainer width="100%" height={320}>
             <ScatterChart>
               <CartesianGrid strokeDasharray="3 3" />
@@ -58,10 +47,10 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) 
         </div>
       </div>
 
-      <div className={card()}>
-        <h3 className={heading()}>Sample Correlation Heatmap</h3>
-        <div className={placeholderBox()}>
-          <p className={placeholderText()}>
+      <div className={s.card()}>
+        <h3 className={s.heading()}>Sample Correlation Heatmap</h3>
+        <div className={s.placeholderBox()}>
+          <p className={s.placeholderText()}>
             Correlation heatmap would be rendered here (placeholder)
           </p>
         </div>

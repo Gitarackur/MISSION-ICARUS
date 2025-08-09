@@ -7,36 +7,44 @@ interface SidebarProps {
   onSessionClick: (session: string) => void;
 }
 
-// Define variant styles for session buttons
-const sessionButton = tv({
-  base: `
-    w-full text-left px-4 py-2 rounded-md transition-colors
-    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1
-  `,
-  variants: {
-    active: {
-      true: "bg-indigo-600 text-white shadow-md",
-      false: "hover:bg-gray-800 hover:text-indigo-300 text-gray-300",
-    },
+const styles = tv({
+  slots: {
+    aside: "w-64 bg-gray-900 text-white flex flex-col border-r border-gray-800",
+    header: "p-4 border-b border-gray-800",
+    headerTitle: "text-lg font-semibold tracking-wide",
+    list: "flex-1 overflow-y-auto",
+    ul: "space-y-1 p-2",
+    listItem: "",
+    sessionButton: `
+      w-full text-left px-4 py-2 rounded-md transition-colors
+      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1
+    `,
+    sessionButtonActive: "bg-indigo-600 text-white shadow-md",
+    sessionButtonInactive: "hover:bg-gray-800 hover:text-indigo-300 text-gray-300",
+    footer: "p-4 border-t border-gray-800 text-sm text-gray-400",
   },
 });
 
 const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSession, onSessionClick }) => {
+  const s = styles();
+
   return (
-    <aside className="w-64 bg-gray-900 text-white flex flex-col border-r border-gray-800">
-      <div className="p-4 border-b border-gray-800">
-        <h2 className="text-lg font-semibold tracking-wide">Sessions</h2>
+    <aside className={s.aside()}>
+      <div className={s.header()}>
+        <h2 className={s.headerTitle()}>Sessions</h2>
       </div>
 
-      <div className="flex-1 overflow-y-auto">
-        <ul className="space-y-1 p-2">
+      <div className={s.list()}>
+        <ul className={s.ul()}>
           {sessions.map((session) => {
             const isActive = activeSession === session;
             return (
-              <li key={session}>
+              <li key={session} className={s.listItem()}>
                 <button
                   onClick={() => onSessionClick(session)}
-                  className={sessionButton({ active: isActive })}
+                  className={`${s.sessionButton()} ${
+                    isActive ? s.sessionButtonActive() : s.sessionButtonInactive()
+                  }`}
                 >
                   {session}
                 </button>
@@ -46,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ sessions, activeSession, onSessionCli
         </ul>
       </div>
 
-      <div className="p-4 border-t border-gray-800 text-sm text-gray-400">
+      <div className={s.footer()}>
         Total Sessions: {sessions.length}
       </div>
     </aside>
