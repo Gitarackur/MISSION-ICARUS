@@ -51,12 +51,26 @@ ipcMain.handle('run-python', async (event, { scriptPath, args }: { scriptPath: s
   return pythonManager.runPythonScript(scriptPath, args || [])
 })
 
-ipcMain.handle('run-r', async (event, { scriptPath, args }: { scriptPath: string; args?: string[] }) => {
-  if (!rManager.isRAvailable()) {
-    throw new Error('Rscript executable not found on this system.')
+ipcMain.handle('run-r', async (event, { scriptPath, args }: { scriptPath?: string; args?: string[] }) => {
+  if (!scriptPath) {
+    throw new Error('No R script path provided.');
   }
-  return rManager.runRScript(scriptPath, args || [])
-})
+
+  if (!rManager.isRAvailable()) {
+    throw new Error('R is not available on this system.');
+  }
+
+  rManager.ensurePackagesInstalled(['ggplot2', 'dplyr', 'jsonlite']);
+
+  try {
+    const output = await rManager.runRScript(scriptPath, args || []);
+    console.log('R output:', output);
+    return output;
+  } catch (err) {
+    console.error('R error:', err);
+    throw err;
+  }
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

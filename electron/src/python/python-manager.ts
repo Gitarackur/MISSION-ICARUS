@@ -55,7 +55,7 @@ export default class EmbeddedPythonManager {
     }
   }
 
-  // Check if a Python package is installed
+
   isPackageInstalled(pkg: string): Promise<boolean> {
     return new Promise((resolve) => {
       const proc = spawn(this.pythonExe, ['-c', `import ${pkg}`]);
@@ -70,7 +70,7 @@ export default class EmbeddedPythonManager {
     });
   }
 
-  // Install missing packages only
+
   async installPackages(packages: string[]): Promise<void> {
     for (const pkg of packages) {
       const installed = await this.isPackageInstalled(pkg);
@@ -94,12 +94,12 @@ export default class EmbeddedPythonManager {
   async ensurePythonReady(): Promise<void> {
     if (os.platform() === 'darwin') {
       // Assume python3 is available on macOS system
-      this.pythonExe = '/usr/bin/python3'; // or use 'which python3' programmatically
+      this.pythonExe = '/usr/bin/python3';
       if (!fs.existsSync(this.pythonExe)) {
         throw new Error('Python3 not found on this macOS system.');
       }
       console.log('Installing required Python packages...');
-      await this.installPackages(['matplotlib', 'numpy', 'pandas']); // add all needed libs here
+      await this.installPackages(['matplotlib', 'numpy', 'pandas']);
       return;
     }
 
@@ -109,7 +109,7 @@ export default class EmbeddedPythonManager {
       console.log('Embedded Python ready.');
 
       console.log('Installing required Python packages...');
-      await this.installPackages(['matplotlib', 'numpy', 'pandas']); // add all needed libs here
+      await this.installPackages(['matplotlib', 'numpy', 'pandas']);
       console.log('Python packages installed.');
     }
   }
