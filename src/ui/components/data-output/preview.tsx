@@ -23,7 +23,7 @@ const styles = tv({
     emptyIcon: 'w-16 h-16 text-gray-300 mb-4',
     emptyTitle: 'text-lg font-semibold text-gray-700',
     emptyDescription: 'text-gray-500 text-sm mt-1 max-w-sm',
-    button: 'mt-4 px-4 py-2 text-sm font-medium rounded focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-150',
+    button: 'bg-blue-600 text-white mt-4 px-4 py-2 text-sm font-medium rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 transition-colors duration-150',
     buttonDisabled: 'bg-blue-400 cursor-not-allowed text-white',
     buttonEnabled: 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer',
     heading3: 'text-lg font-semibold mb-4',
