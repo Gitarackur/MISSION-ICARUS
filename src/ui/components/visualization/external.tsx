@@ -55,7 +55,6 @@ export default function VisualizationExternal() {
       })
       setPythonImage(`data:image/png;base64,${response.trim()}`)
       setError(null)
-      console.log('Python output:', response)
     } catch (err: unknown) {
       if (err && typeof err === 'object' && 'message' in err) {
         setError('Python error: ' + (err as { message: string }).message)

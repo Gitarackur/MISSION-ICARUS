@@ -14,48 +14,16 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { tv } from 'tailwind-variants';
 import { Stats } from '@/domain/proteins/index.types';
+import { statisticsStyles } from './style-variants';
+import StatisticsEmptyState from './empty-state';
+
+
 
 type StatisticsPanelProps = {
-  stats: Stats;
-  intensityDist: { sample: string; meanIntensity: number; count: number }[];
+  stats?: Stats;
+  intensityDist?: { sample: string; meanIntensity: number; count: number }[];
 };
-
-const styles = tv({
-  slots: {
-    container: 'space-y-6',
-    grid: 'grid grid-cols-1 md:grid-cols-4 gap-6',
-    card: 'bg-white rounded-lg shadow p-6',
-    iconWrapper: 'p-3 rounded-full flex items-center justify-center',
-    iconColor: 'w-6 h-6',
-    title: 'text-sm font-medium text-gray-600',
-    value: 'text-2xl font-bold text-gray-900',
-    intensityTitle: 'text-lg font-semibold mb-4',
-    intensityChartWrapper: 'h-64',
-  },
-  variants: {
-    color: {
-      blue: {
-        iconWrapper: 'bg-blue-100',
-        iconColor: 'text-blue-600',
-      },
-      green: {
-        iconWrapper: 'bg-green-100',
-        iconColor: 'text-green-600',
-      },
-      yellow: {
-        iconWrapper: 'bg-yellow-100',
-        iconColor: 'text-yellow-600',
-      },
-      red: {
-        iconWrapper: 'bg-red-100',
-        iconColor: 'text-red-600',
-      },
-    },
-  },
-});
-
 
 
 
@@ -63,13 +31,13 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
   stats,
   intensityDist,
 }) => {
-  const style = styles();
+  const style = statisticsStyles();
 
   const ColorIcon: React.FC<{
     color: 'blue' | 'green' | 'yellow' | 'red';
     Icon: React.ComponentType<{ className?: string }>;
   }> = ({ color, Icon }) => {
-    const style = styles({ color });
+    const style = statisticsStyles({ color });
     return (
       <div className={style.iconWrapper()}>
         <Icon className={style.iconColor()} />
@@ -77,7 +45,15 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
     );
   };
 
-  if (!stats) return null;
+  // Empty state
+  // !stats || !intensityDist || intensityDist.length === 0
+  if (!stats || stats === null || !intensityDist || intensityDist.length === 0) {
+    return (
+      <StatisticsEmptyState />
+    );
+  }
+
+  console.log(stats, intensityDist)
 
   return (
     <div className={style.container()}>
@@ -131,18 +107,26 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
         </div>
       </div>
 
+      {/* Chart */}
       <div className={style.card()}>
         <h3 className={style.intensityTitle()}>Intensity Distribution</h3>
         <div className={style.intensityChartWrapper()}>
           <ResponsiveContainer width="100%" height={256}>
             <BarChart data={intensityDist}>
               <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="sample" />
+              <XAxis dataKey="sample" tick={{ fontSize: 12 }} />
               <YAxis
-                label={{ value: 'Mean Log10 Intensity', angle: -90, position: 'insideLeft' }}
+                label={{
+                  value: 'Mean Log10 Intensity',
+                  angle: -90,
+                  position: 'insideLeft',
+                  fontSize: 12,
+                }}
               />
-              <RechartsTooltip />
-              <Bar dataKey="meanIntensity" />
+              <RechartsTooltip
+                contentStyle={{ backgroundColor: 'white', borderRadius: '0.5rem', border: '1px solid #e5e7eb' }}
+              />
+              <Bar dataKey="meanIntensity" fill="#3b82f6" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
