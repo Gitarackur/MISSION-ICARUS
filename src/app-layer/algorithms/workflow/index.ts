@@ -1,0 +1,79 @@
+import { v4 as uuidv4 } from 'uuid';
+import { IcarusActivity, IcarusMatrix, IcarusVisualization, IMapActivityData, IMapMatrixData, IMapVisualizationData } from "./main.types";
+
+
+
+
+
+
+class IcarusWorkflow {
+    matrices: IcarusMatrix[] = [];
+    activities: IcarusActivity[] = [];
+    visualizations: IcarusVisualization[] = [];
+
+    constructor() { }
+
+
+    addToMatricesList({ matrix }: { matrix: IcarusMatrix }) {
+        // check for duplicates and then push
+        this.matrices.push(matrix);
+    }
+
+    addToActivityList({ activity }: { activity: IcarusActivity }) {
+        // check for duplicates and then push
+        this.activities.push(activity);
+    }
+
+    addToVisualizations({ visualization }: { visualization: IcarusVisualization }) {
+        // check for duplicates and then push
+        this.visualizations.push(visualization);
+    }
+
+    mapMatrixData({ data, activityId = null }: IMapMatrixData) {
+        return {
+            id: `icarus-matrix-${uuidv4()}`,
+            createdByActivityId: activityId,
+            createdAt: Date.now(),
+            data
+        }
+    }
+
+    generateMatrix({ data, activityId = null }: IMapMatrixData) {
+        const matrixWorkflowMap = this.mapMatrixData({
+            activityId,
+            data
+        })
+
+        // add matrix to the workflow
+        this.addToMatricesList({
+            matrix: matrixWorkflowMap
+        })
+
+        return matrixWorkflowMap;
+    }
+
+    mapActivityData({ inputMatrixIds, outputMatrixId, pluginId }: IMapActivityData) {
+        return {
+            id: `icarus-matrix-${uuidv4()}`,
+            pluginId,
+            inputMatrixIds,
+            outputMatrixId: outputMatrixId,
+            timestamp: Date.now()
+        }
+    }
+
+    mapVisualizationData({ data, activityId }: IMapVisualizationData) {
+        return {
+            id: `icarus-matrix-${uuidv4()}`,
+            createdByActivityId: activityId,
+            createdAt: Date.now(),
+            data
+        }
+    }
+}
+
+
+
+
+
+export default IcarusWorkflow;

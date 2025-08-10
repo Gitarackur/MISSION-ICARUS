@@ -1,36 +1,35 @@
 import React, { useState } from 'react';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
-
-type Session = {
-  id: string;
-  name: string;
-  date: string;
-  matrix: number[][];
-};
+import IcarusWorkflow from '@/app-layer/algorithms/workflow';
+import IcarusSession from '@/app-layer/session';
 
 const IcarusApp: React.FC = () => {
-  const [sessions, setSessions] = useState<Session[]>([]);
-  const [activeSession, setActiveSession] = useState<Session | null>(null);
+  const [sessions, setSessions] = useState<IcarusSession[]>([]);
+  const [activeSession, setActiveSession] = useState<IcarusSession | null>(null);
 
   const handleSessionCreate = (matrix: number[][]) => {
-    const newSession: Session = {
-      id: crypto.randomUUID(),
-      name: `Session ${sessions.length + 1}`,
-      date: new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }),
-      matrix,
-    };
-    setSessions((prev) => [...prev, newSession]);
-    setActiveSession(newSession);
+    const workflow = new IcarusWorkflow();
+    const matrixWorkflowMap = workflow.generateMatrix({ data: matrix });
+
+    const session = new IcarusSession();
+    const sessionMap = session.generateSession({ workflow });
+
+    console.log(sessionMap);
+    console.log(matrixWorkflowMap);
+    console.log(workflow);
+
+    setSessions((prev) => [...prev, session]);
+    setActiveSession(session);
   };
 
   return (
     <div className="flex h-screen bg-white text-gray-800">
       <Sidebar
-        sessions={sessions.map((s) => s.name)}
-        activeSession={activeSession ? activeSession.name : ''}
-        onSessionClick={(sessionName) => {
-          const found = sessions.find((s) => s.name === sessionName) || null;
+        sessions={sessions}
+        activeSession={activeSession}
+        onSessionClick={(session) => {
+          const found = sessions.find((s) => s === session) || null;
           setActiveSession(found);
         }}
         onCreateSession={() => {
@@ -38,7 +37,6 @@ const IcarusApp: React.FC = () => {
         }}
       />
 
-      {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-white p-6">
         <ProteomicsAnalysisHomeView
           handleSessionCreate={handleSessionCreate}

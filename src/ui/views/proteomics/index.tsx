@@ -17,18 +17,9 @@ import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
 import { useFilteredData } from './hooks/useProteomicsFilter';
 import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
 import { useVolcanoData } from '@/app-layer/proteins/useVolcanoStats';
+import { ProteomicsAnalysisHomeViewProps } from './types/index.types';
 
-type Session = {
-  id: string;
-  name: string;
-  date: string;
-  matrix: number[][];
-};
 
-type ProteomicsAnalysisHomeViewProps = {
-  handleSessionCreate: (matrix: number[][]) => void;
-  activeSession: Session | null;
-};
 
 const container = tv({ base: 'min-h-screen bg-gray-50' });
 const stickyHeader = tv({ base: 'sticky top-0 z-30 bg-gray-50 shadow-sm' });
@@ -37,6 +28,11 @@ const sectionSpacing = tv({ base: 'space-y-6' });
 const filterBox = tv({ base: 'bg-white rounded-lg shadow p-6' });
 const filterHeader = tv({ base: 'font-medium mb-2' });
 const filterText = tv({ base: 'text-sm text-gray-600' });
+
+
+
+
+
 
 export default function ProteomicsAnalysisHomeView({
   handleSessionCreate,
