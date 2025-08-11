@@ -1,14 +1,8 @@
 import React from "react";
-import { Plus } from "lucide-react";
-import IcarusSession from "@/app-layer/session";
-import sidebarStyles from "./variants/sidebar.variant";
+import { Plus, Trash2 } from "lucide-react";
+import sidebarStyles from "@/ui/components/sidebar/variants/sidebar.variant";
+import { SidebarProps } from "@/ui/components/sidebar/types/sidebar.types";
 
-interface SidebarProps {
-  sessions: IcarusSession[] | null;
-  activeSession: IcarusSession | null;
-  onSessionClick: (session: IcarusSession) => void;
-  onCreateSession: () => void;
-}
 
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -16,6 +10,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   activeSession,
   onSessionClick,
   onCreateSession,
+  onDeleteSession,
 }) => {
   const s = sidebarStyles();
 
@@ -28,9 +23,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className={s.list()}>
         <ul className={s.ul()}>
           {sessions?.map((session) => {
-            const isActive = activeSession === session;
+            const isActive = activeSession?.id === session?.id;
             return (
-              <li key={session.id} className={s.listItem()}>
+              <li key={session.id} className={`${s.listItem()} flex items-center justify-between`}>
                 <button
                   onClick={() => onSessionClick(session)}
                   className={`${s.sessionButton()} ${
@@ -38,6 +33,17 @@ const Sidebar: React.FC<SidebarProps> = ({
                   }`}
                 >
                   {session.name}
+                </button>
+
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteSession(session.id);
+                  }}
+                  className={s.deleteButton()}
+                  title="Delete session"
+                >
+                  <Trash2 size={16} />
                 </button>
               </li>
             );

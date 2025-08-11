@@ -1,40 +1,75 @@
 import React, { useState } from 'react';
+import { useLiveQuery } from 'dexie-react-hooks';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
 import IcarusWorkflow from '@/app-layer/algorithms/workflow';
 import IcarusSession from '@/app-layer/session';
+import { db } from '@/app-layer/database';
+import { IcarusDBAdapter } from '@/app-layer/database/store';
+import { IcarusSessionRecord } from '@/app-layer/database/database.types';
+
 
 const IcarusApp: React.FC = () => {
-  const [sessions, setSessions] = useState<IcarusSession[]>([]);
-  const [activeSession, setActiveSession] = useState<IcarusSession | null>(null);
+  const [activeSession, setActiveSession] = useState<IcarusSessionRecord | null>(null);
+  const sessions = useLiveQuery(() => db.sessions.toArray(), []);
 
-  const handleSessionCreate = (matrix: number[][]) => {
-    const workflow = new IcarusWorkflow();
-    const matrixWorkflowMap = workflow.generateMatrix({ data: matrix });
-
+  const createBareSession = ({ matrix }: { matrix: number[][] | null }) => {
     const session = new IcarusSession();
-    const sessionMap = session.generateSession({ workflow });
+    const workflow = new IcarusWorkflow();
+    const matrixWorkflowMap = workflow.addMatrix({ data: matrix });
+    const sessionMap = session.addWorkflow(workflow);
+    session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`)
 
-    console.log(sessionMap);
-    console.log(matrixWorkflowMap);
-    console.log(workflow);
+    return { matrixWorkflowMap, sessionMap, session, workflow };
+  };
 
-    setSessions((prev) => [...prev, session]);
+  const handleSessionCreate = async (matrix: number[][]) => {
+    const { sessionMap, workflow } = createBareSession({ matrix });
+
+    await IcarusDBAdapter.saveWorkflow({
+      id: `workflow-${crypto.randomUUID()}`,
+      createdAt: Date.now(),
+      data: workflow,
+    });
+
+    await IcarusDBAdapter.saveSession({
+      id: sessionMap.id,
+      name: sessionMap.name,
+      date: sessionMap.date,
+      workflowIds: [workflow.id],
+    });
+
+    setActiveSession(sessionMap as unknown as IcarusSessionRecord);
+
+    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(sessionMap.id);
+    setActiveSession(sessionWithWorkflows);
+  };
+
+  const handleSessionClick = async (session: IcarusSessionRecord) => {
     setActiveSession(session);
+    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
+    setActiveSession(sessionWithWorkflows);
+  };
+
+  const handleDeleteSession = async (id: string) => {
+    await IcarusDBAdapter.deleteSessionWithWorkflows(id);
+    if (activeSession?.id === id) {
+      setActiveSession(null);
+    }
   };
 
   return (
     <div className="flex h-screen bg-white text-gray-800">
       <Sidebar
-        sessions={sessions}
+        sessions={sessions || []}
         activeSession={activeSession}
-        onSessionClick={(session) => {
-          const found = sessions.find((s) => s === session) || null;
-          setActiveSession(found);
-        }}
+        onSessionClick={handleSessionClick}
         onCreateSession={() => {
           console.log('Create session clicked');
+          // Example: create a session with empty matrix
+          // handleSessionCreate([]);
         }}
+        onDeleteSession={handleDeleteSession}
       />
 
       <main className="flex-1 overflow-y-auto bg-white p-6">

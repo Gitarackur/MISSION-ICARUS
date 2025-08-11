@@ -7,11 +7,14 @@ import { IcarusActivity, IcarusMatrix, IcarusVisualization, IMapActivityData, IM
 
 
 class IcarusWorkflow {
+    id: string;
     matrices: IcarusMatrix[] = [];
     activities: IcarusActivity[] = [];
     visualizations: IcarusVisualization[] = [];
 
-    constructor() { }
+    constructor() { 
+        this.id = uuidv4();
+    }
 
 
     addToMatricesList({ matrix }: { matrix: IcarusMatrix }) {
@@ -38,7 +41,7 @@ class IcarusWorkflow {
         }
     }
 
-    generateMatrix({ data, activityId = null }: IMapMatrixData) {
+    addMatrix({ data, activityId = null }: IMapMatrixData) {
         const matrixWorkflowMap = this.mapMatrixData({
             activityId,
             data

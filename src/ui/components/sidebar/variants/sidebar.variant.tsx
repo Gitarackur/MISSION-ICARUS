@@ -34,6 +34,8 @@ const sidebarStyles = tv({
     `,
     createSubtext: "mt-2 text-sm text-gray-400",
 
+    deleteButton: "p-1 text-red-500 hover:text-red-700",
+
     footer: "p-4 border-t border-gray-800 text-sm text-gray-400 text-center",
   },
 });
