@@ -78,18 +78,29 @@ class DBAdapter {
 
 
 
-
   // delete sessions with workflows
   async deleteSessionWithWorkflows(sessionId: string) {
-    const session = await this.db.sessions.get(sessionId);
-    if (!session) return;
+    return this.db.transaction('rw', this.db.sessions, this.db.workflows, async () => {
+      const session = await this.db.sessions.get(sessionId);
+      if (!session) return;
 
-    if (session.workflowIds && session.workflowIds.length > 0) {
-      await this.db.workflows.bulkDelete(session.workflowIds);
-    }
+      if (session.workflowIds?.length) {
+        // Force IDs to strings because Dexie table is typed for string PKs
+        const normalizedIds = session.workflowIds.map(id => String(id));
 
-    await this.db.sessions.delete(sessionId);
+        // Optionally verify they exist before deleting
+        const existing = await this.db.workflows.bulkGet(normalizedIds);
+        const validIds = normalizedIds.filter((_, i) => existing[i] != null);
+
+        if (validIds.length) {
+          await this.db.workflows.bulkDelete(validIds as string[]);
+        }
+      }
+
+      await this.db.sessions.delete(sessionId);
+    });
   }
+
 }
 
 export const IcarusDBAdapter = new DBAdapter();

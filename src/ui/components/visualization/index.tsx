@@ -10,7 +10,6 @@ import {
   Tooltip as RechartsTooltip,
 } from 'recharts';
 import ScatterTooltip from '@/ui/components/scatter/tooltip';
-import VisualizationExternal from './external';
 
 type VisualizationPanelProps = {
   volcanoData: { x: number; y: number; protein: string; significant: boolean }[];
@@ -51,8 +50,14 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) 
       <div className={s.card()}>
         <h3 className={s.heading()}>Bar Plot</h3>
         <div className={s.plotContainer()}>
-          <div>
-            <VisualizationExternal />
+          <div className={s.placeholderBox()}>
+            <p className={s.placeholderText()}>
+              Bar Plots would be rendered here (placeholder)
+            </p>
+
+            {/* <div>
+              <VisualizationExternal />
+            </div> */}
           </div>
         </div>
       </div>
