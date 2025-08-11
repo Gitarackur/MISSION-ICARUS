@@ -109,7 +109,10 @@ export default function ProteomicsAnalysisHomeView({
     const workflows = sessionWithWorkflows?.workflows;
     console.log("workflow for present session", workflows);
     if (Array.isArray(workflows) && workflows.length > 0) {
-      parse2DArray(workflows as string[][]);
+      const matrix = workflows[0]?.data?.matrices[0]?.data;
+      if(!matrix || matrix === null) return;
+      parse2DArray(matrix);
+      
     }
   }, [activeSession]);
 

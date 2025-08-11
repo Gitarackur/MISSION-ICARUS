@@ -40,12 +40,12 @@ class DBAdapter {
   }
 
   // Get workflow by ID
-  async getWorkflowById(id: string): Promise<unknown | undefined> {
+  async getWorkflowById(id: string): Promise<IcarusWorkflowRecord | undefined> {
     return await this.db.workflows.get(id);
   }
 
   // Get workflows by array of IDs
-  async getWorkflowsByIds(ids: string[]): Promise<unknown[]> {
+  async getWorkflowsByIds(ids: string[]): Promise<IcarusWorkflowRecord[]> {
     return await this.db.workflows.where('id').anyOf(ids).toArray();
   }
 
@@ -64,7 +64,7 @@ class DBAdapter {
     const session = await this.getSessionById(id);
     if (!session) return null;
 
-    const workflows = await this.getWorkflowsByIds(session.workflowIds || []);
+    const workflows: IcarusWorkflowRecord[] = await this.getWorkflowsByIds(session.workflowIds || []);
     return { ...session, workflows };
   }
 

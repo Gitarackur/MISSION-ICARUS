@@ -17,9 +17,10 @@ const IcarusApp: React.FC = () => {
   const createBareSession = ({ columns, matrix }: BareSession) => {
     const session = new IcarusSession();
     const workflow = new IcarusWorkflow();
+    session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`);
     const matrixWorkflowMap = workflow.addMatrix({ columns, data: matrix });
     const sessionMap = session.addWorkflow(workflow);
-    session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`)
+    
 
     return { matrixWorkflowMap, sessionMap, session, workflow };
   };

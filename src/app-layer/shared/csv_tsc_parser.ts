@@ -160,7 +160,7 @@ export const parseCSVFromFile = async <T>(file: File): Promise<ParsedCSVResult<T
 
 /* parse 2D array to data format  */
 export const parse2DArray = <T extends (string | number)[]>(
-  rows: string[][]
+  rows: number[][]
 ): ParsedCSVResult<T> => {
   const errors: string[] = [];
 
