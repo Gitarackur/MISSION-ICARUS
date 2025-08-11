@@ -32,18 +32,20 @@ class IcarusWorkflow {
         this.visualizations.push(visualization);
     }
 
-    mapMatrixData({ data, activityId = null }: IMapMatrixData) {
+    mapMatrixData({ columns, data, activityId = null }: IMapMatrixData) {
         return {
             id: `icarus-matrix-${uuidv4()}`,
             createdByActivityId: activityId,
             createdAt: Date.now(),
+            columns,
             data
         }
     }
 
-    addMatrix({ data, activityId = null }: IMapMatrixData) {
+    addMatrix({ columns, data, activityId = null }: IMapMatrixData) {
         const matrixWorkflowMap = this.mapMatrixData({
             activityId,
+            columns,
             data
         })
 

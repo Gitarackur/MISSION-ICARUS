@@ -1,8 +1,13 @@
+type tableCol = string[] | null;
+type tableMatrix =  number[][] | null;
+
+
 export interface IcarusMatrix {
   id: string;
   createdByActivityId: string | null;
   createdAt?: number;
-  data: number[][] | null;
+  columns: tableCol;
+  data: tableMatrix;
 }
 
 export interface IcarusActivity {
@@ -34,13 +39,14 @@ export interface IcarusPlugin {
 
 // map data to workflow types
 export interface IMapMatrixData { 
-    data: number[][] | null;
+    columns: tableCol;
+    data: tableMatrix;
     activityId?: string | null;
 }
 
 export interface IMapActivityData{ 
     inputMatrixIds: string[]; 
-    outputMatrixId: string;
+    outputMatrixId: string[];
     pluginId?: string; 
 }
 

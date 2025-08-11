@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
@@ -7,27 +7,28 @@ import IcarusSession from '@/app-layer/session';
 import { db } from '@/app-layer/database';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
 import { IcarusSessionRecord } from '@/app-layer/database/database.types';
+import { BareSession } from './types/index.types';
 
 
 const IcarusApp: React.FC = () => {
   const [activeSession, setActiveSession] = useState<IcarusSessionRecord | null>(null);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
 
-  const createBareSession = ({ matrix }: { matrix: number[][] | null }) => {
+  const createBareSession = ({ columns, matrix }: BareSession) => {
     const session = new IcarusSession();
     const workflow = new IcarusWorkflow();
-    const matrixWorkflowMap = workflow.addMatrix({ data: matrix });
+    const matrixWorkflowMap = workflow.addMatrix({ columns, data: matrix });
     const sessionMap = session.addWorkflow(workflow);
     session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`)
 
     return { matrixWorkflowMap, sessionMap, session, workflow };
   };
 
-  const handleSessionCreate = async (matrix: number[][]) => {
-    const { sessionMap, workflow } = createBareSession({ matrix });
+  const handleSessionCreate = async ({columns, matrix}: BareSession) => {
+    const { sessionMap, workflow } = createBareSession({ columns, matrix });
 
     await IcarusDBAdapter.saveWorkflow({
-      id: `workflow-${crypto.randomUUID()}`,
+      id: workflow.id,
       createdAt: Date.now(),
       data: workflow,
     });
@@ -48,6 +49,7 @@ const IcarusApp: React.FC = () => {
   const handleSessionClick = async (session: IcarusSessionRecord) => {
     setActiveSession(session);
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
+    console.log(sessionWithWorkflows);
     setActiveSession(sessionWithWorkflows);
   };
 
@@ -57,6 +59,12 @@ const IcarusApp: React.FC = () => {
       setActiveSession(null);
     }
   };
+
+
+  useEffect(() => {
+    console.log(activeSession)
+  }, [activeSession]);
+  
 
   return (
     <div className="flex h-screen bg-white text-gray-800">

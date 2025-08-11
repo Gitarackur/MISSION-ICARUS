@@ -139,3 +139,82 @@ export const parseCSVFromFile = async <T>(file: File): Promise<ParsedCSVResult<T
     const text = await file.text();
     return parseCSV<T>(text);
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+/* parse 2D array to data format  */
+export const parse2DArray = <T extends (string | number)[]>(
+  rows: string[][]
+): ParsedCSVResult<T> => {
+  const errors: string[] = [];
+
+  if (!rows || rows.length === 0) {
+    throw new Error('Array is empty');
+  }
+
+  if (rows.length < 2) {
+    throw new Error('Array must contain at least a header row and one data row');
+  }
+
+  // First row = headers
+  const headers = rows[0]
+    .map(h => String(h).replace(/^["']|["']$/g, '').trim())
+    .filter(h => h.length > 0);
+
+  if (headers.length === 0) {
+    throw new Error('No valid headers found');
+  }
+
+  const data: T[] = [];
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+
+    try {
+      const values = row.map(v =>
+        String(v).replace(/^["']|["']$/g, '').trim()
+      );
+
+      if (values.every(v => !v)) {
+        continue;
+      }
+
+      const processedRow = values.map(v => toNumberIfPossible(v)) as T;
+
+      data.push(processedRow);
+    } catch (rowError) {
+      const errorMsg = `Error parsing row ${i + 1}: ${
+        rowError instanceof Error ? rowError.message : 'Unknown error'
+      }`;
+      errors.push(errorMsg);
+      continue;
+    }
+  }
+
+  if (data.length === 0) {
+    throw new Error('No valid data rows found in array');
+  }
+
+  return {
+    data,
+    headers: headers.slice(0, 8),
+    errors
+  };
+};
+

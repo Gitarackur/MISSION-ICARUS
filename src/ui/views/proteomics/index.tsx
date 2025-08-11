@@ -17,7 +17,9 @@ import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
 import { useFilteredData } from './hooks/useProteomicsFilter';
 import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
 import { useVolcanoData } from '@/app-layer/proteins/useVolcanoStats';
-import { ProteomicsAnalysisHomeViewProps } from './types/index.types';
+import { ProteomicsAnalysisHomeViewProps, tabTypes } from './types/index.types';
+import { IcarusDBAdapter } from '@/app-layer/database/store';
+import { parse2DArray } from '@/app-layer/shared/csv_tsc_parser';
 
 
 
@@ -40,21 +42,35 @@ export default function ProteomicsAnalysisHomeView({
 }: ProteomicsAnalysisHomeViewProps): JSX.Element {
   const [data, setData] = useState<ProteinRow[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
-  const [activeTab, setActiveTab] = useState<
-    'import' | 'filter' | 'statistics' | 'visualization' | 'analysis'
-  >('import');
+
+  // Tabs
+  const [activeTab, setActiveTab] = useState<tabTypes>('import');
+
+
+  // Filter
   const [filterCriteria, setFilterCriteria] = useState<
     Record<string, { min?: number; max?: number }>
   >({});
+
+  // Loading state
   const [isProcessing, setIsProcessing] = useState(false);
+
+
+  // search term
   const [searchTerm, setSearchTerm] = useState('');
+
+
+  // file input reference
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
 
   // Hooks for data processing
   const filteredData = useFilteredData(data, filterCriteria, searchTerm);
   const stats = useProteomicsStats(filteredData, selectedColumns);
   const volcanoData = useVolcanoData(filteredData);
   const intensityDist = useIntensityDist(filteredData, selectedColumns);
+
+
 
   // File upload → also create a new session
   const handleFileUpload = useCallback(
@@ -69,7 +85,7 @@ export default function ProteomicsAnalysisHomeView({
           const matrix = rows.map((row) =>
             selectedColumns.map((col) => Number(row[col]) || 0)
           );
-          handleSessionCreate(matrix);
+          handleSessionCreate({ columns: selectedColumns, matrix });
         },
         onHeaders: setSelectedColumns,
         onProcessingChange: setIsProcessing,
@@ -85,12 +101,33 @@ export default function ProteomicsAnalysisHomeView({
     return handleFileExport(filteredData, 'proteomics-data');
   }, [filteredData]);
 
+
+
+  const handleLoadingSessionData = useCallback(async () => {
+    if (!activeSession?.id) return;
+    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(activeSession.id);
+    const workflows = sessionWithWorkflows?.workflows;
+    console.log("workflow for present session", workflows);
+    if (Array.isArray(workflows) && workflows.length > 0) {
+      parse2DArray(workflows as string[][]);
+    }
+  }, [activeSession]);
+
+
+
+
   // Load empty state on mount
   useEffect(() => {
-    setData([]);
-    setSelectedColumns([]);
-    console.log(activeSession);
+    // setData([]);
+    // setSelectedColumns([]);
+    // console.log(activeSession);
   }, []);
+
+
+  useEffect(() => {
+    handleLoadingSessionData();
+  }, [activeSession, handleLoadingSessionData])
+  
 
   return (
     <div className={container()}>
