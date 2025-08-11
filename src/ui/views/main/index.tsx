@@ -48,7 +48,6 @@ const IcarusApp: React.FC = () => {
   };
 
   const handleSessionClick = async (session: IcarusSessionRecord) => {
-    setActiveSession(session);
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
     console.log(sessionWithWorkflows);
     setActiveSession(sessionWithWorkflows);
