@@ -20,20 +20,17 @@ import { ProteomicsAnalysisHomeViewProps, tabTypes } from './types/index.types';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
 import { proteomicsPagestyles } from './variants/proteomics.variants';
 
-
-
-
 export default function ProteomicsAnalysisHomeView({
   handleSessionCreate,
   activeSession,
 }: ProteomicsAnalysisHomeViewProps): JSX.Element {
   const {
-    container, 
-    stickyHeader, 
-    contentPadding, 
-    sectionSpacing, 
-    filterBox, 
-    filterHeader, 
+    container,
+    stickyHeader,
+    contentPadding,
+    sectionSpacing,
+    filterBox,
+    filterHeader,
     filterText
   } = proteomicsPagestyles();
 
@@ -44,6 +41,22 @@ export default function ProteomicsAnalysisHomeView({
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Track the last loaded session ID to prevent duplicate loads
+  const lastLoadedSessionIdRef = useRef<string | undefined>();
+  // Track if we're currently loading session data to prevent concurrent loads
+  const isLoadingSessionRef = useRef(false);
+
+  // Hooks for data processing
+  const filteredData = useFilteredData(data, filterCriteria, searchTerm);
+  const stats = useProteomicsStats(filteredData, selectedColumns);
+  const volcanoData = useVolcanoData(filteredData);
+  const intensityDist = useIntensityDist(filteredData, selectedColumns);
+
+  // Export
+  const handleExport = useCallback(() => {
+    return handleFileExport(filteredData, 'proteomics-data');
+  }, [filteredData]);
 
   // File upload → also create a new session
   const handleFileUpload = useCallback(
@@ -68,58 +81,87 @@ export default function ProteomicsAnalysisHomeView({
     [selectedColumns, handleSessionCreate]
   );
 
-  // Hooks for data processing
-  const filteredData = useFilteredData(data, filterCriteria, searchTerm);
-  const stats = useProteomicsStats(filteredData, selectedColumns);
-  const volcanoData = useVolcanoData(filteredData);
-  const intensityDist = useIntensityDist(filteredData, selectedColumns);
-
-  // Export
-  const handleExport = useCallback(() => {
-    return handleFileExport(filteredData, 'proteomics-data');
-  }, [filteredData]);
-
   // Load session data from DB
   const handleLoadingSessionData = useCallback(
     async (sessionId: string) => {
-      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(sessionId);
-      const workflows = sessionWithWorkflows?.workflows;
+      // Prevent concurrent session loads
+      if (isLoadingSessionRef.current) {
+        console.log('Session loading already in progress, skipping');
+        return;
+      }
 
-      if (Array.isArray(workflows) && workflows.length > 0) {
-        const matrix = workflows[0]?.data?.matrices[0]?.data;
-        const columns = workflows[0]?.data?.matrices[0]?.columns;
+      try {
+        isLoadingSessionRef.current = true;
+        console.log('Loading session data for ID:', sessionId);
 
-        if (!matrix || !columns) return;
+        const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(sessionId);
+        const workflows = sessionWithWorkflows?.workflows;
+
+        if (!Array.isArray(workflows) || workflows.length === 0) {
+          console.warn('No workflows found for session:', sessionId);
+          return;
+        }
+
+        const workflow = workflows[0];
+        const matrix = workflow?.data?.matrices?.[0]?.data;
+        const columns = workflow?.data?.matrices?.[0]?.columns;
+
+        // Validate that both matrix and columns exist and are valid
+        if (!matrix) {
+          console.warn('No matrix data found in session:', sessionId);
+          return;
+        }
+
+        if (!columns || !Array.isArray(columns) || columns.length === 0) {
+          console.warn('No valid columns found in session:', sessionId, { columns });
+          return;
+        }
+
+        if (!Array.isArray(matrix) || matrix.length === 0) {
+          console.warn('Matrix data is empty or invalid:', sessionId);
+          return;
+        }
+
+        console.log('Processing session data with columns:', columns.length, 'rows:', matrix.length);
 
         handleMatrixRowData(columns, matrix, {
           onData: (rows) => {
             setData(rows);
-            const matrix = rows.map((row) =>
-              selectedColumns.map((col) => Number(row[col]) || 0)
-            );
-            handleSessionCreate({ columns, matrix });
           },
-          onHeaders: (headers) => {
-            setSelectedColumns(headers);
-          },
+          onHeaders: setSelectedColumns,
           onProcessingChange: setIsProcessing,
         });
+      } catch (error) {
+        console.error('Error loading session data:', error);
+        setIsProcessing(false); // Reset processing state on error
+      } finally {
+        isLoadingSessionRef.current = false;
       }
     },
-    [selectedColumns, handleSessionCreate]
+    []
   );
 
-
-
-
-  // Effect: runs only when activeSession changes
+  // Effect: Only run when activeSession.id actually changes (not on re-renders)
   useEffect(() => {
-    if (activeSession?.id) {
-      handleLoadingSessionData(activeSession.id);
+    const currentSessionId = activeSession?.id;
+
+    console.log('useEffect triggered:', {
+      currentSessionId,
+      lastLoaded: lastLoadedSessionIdRef.current,
+      isLoading: isLoadingSessionRef.current
+    });
+
+    // Only proceed if session ID exists, has actually changed, and we're not already loading
+    if (
+      currentSessionId &&
+      currentSessionId !== lastLoadedSessionIdRef.current &&
+      !isLoadingSessionRef.current
+    ) {
+      console.log('Loading new session:', currentSessionId);
+      lastLoadedSessionIdRef.current = currentSessionId;
+      handleLoadingSessionData(currentSessionId);
     }
-  }, []);
-
-
+  }, [activeSession?.id, handleLoadingSessionData]);
 
   return (
     <div className={container()}>
