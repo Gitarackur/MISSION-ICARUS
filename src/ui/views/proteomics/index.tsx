@@ -94,18 +94,19 @@ export default function ProteomicsAnalysisHomeView({
         handleMatrixRowData(columns, matrix, {
           onData: (rows) => {
             setData(rows);
-            setSelectedColumns(columns);
-            const numericMatrix = rows.map((row) =>
-              columns.map((col) => Number(row[col]) || 0)
+            const matrix = rows.map((row) =>
+              selectedColumns.map((col) => Number(row[col]) || 0)
             );
-            handleSessionCreate({ columns, matrix: numericMatrix });
+            handleSessionCreate({ columns, matrix });
           },
-          onHeaders: () => {}, // Already handled above
+          onHeaders: (headers) => {
+            setSelectedColumns(headers);
+          },
           onProcessingChange: setIsProcessing,
         });
       }
     },
-    [handleSessionCreate]
+    [selectedColumns, handleSessionCreate]
   );
 
 
@@ -119,7 +120,7 @@ export default function ProteomicsAnalysisHomeView({
   }, []);
 
 
-  
+
   return (
     <div className={container()}>
       <div className={stickyHeader()}>
