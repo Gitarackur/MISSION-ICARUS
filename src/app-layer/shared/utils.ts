@@ -1,4 +1,4 @@
-import { parseCSVFromFile } from '@/app-layer/shared/csv_tsc_parser';
+import { parse2DArray, parseCSVFromFile } from '@/app-layer/shared/csv_tsc_parser';
 import { ProteinRow } from '@/domain/proteins/index.types';
 
 
@@ -93,3 +93,40 @@ export async function handleCSVFileUpload(
     onProcessingChange(false);
   }
 }
+
+
+
+
+
+export async function handleMatrixRowData(
+  columns: (string | number)[],
+  rows: (string | number)[][],
+  {
+    onData,
+    onHeaders,
+    onProcessingChange,
+  }: {
+    onData: (data: ProteinRow[]) => void;
+    onHeaders: (headers: string[]) => void;
+    onProcessingChange: (processing: boolean) => void;
+  }
+) {
+  onProcessingChange(true);
+
+  try {
+    const result = parse2DArray(columns, rows);
+
+    if (result.errors.length > 0) {
+      console.warn('CSV parsing warnings:', result.errors);
+    }
+
+    onData(result.data as unknown as ProteinRow[]);
+    onHeaders(result.headers);
+  } catch (err) {
+    console.error('Error handling row and column matrices:', err);
+  } finally {
+    onProcessingChange(false);
+  }
+}
+
+
