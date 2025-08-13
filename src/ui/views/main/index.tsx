@@ -8,7 +8,7 @@ import { db } from '@/app-layer/database';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
 import { IcarusSessionRecord } from '@/app-layer/database/database.types';
 import { BareSession } from './types/index.types';
-import { handleMatrixRowData } from '@/app-layer/shared/utils';
+import { handleMatrixRowData} from '@/app-layer/shared/utils';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
 
@@ -17,7 +17,7 @@ const IcarusApp: React.FC = () => {
   const [data, setData] = useState<ProteinRow[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-
+  
   // Track if we're in the middle of uploading/creating a session
   const isUploadingRef = useRef(false);
 
@@ -25,7 +25,7 @@ const IcarusApp: React.FC = () => {
 
   // Memoize active session ID to prevent unnecessary re-renders
   const activeSessionId = useMemo(() => activeSession?.id, [activeSession?.id]);
-
+  
 
 
   const createBareSession = ({ columns, matrix }: BareSession) => {
@@ -41,7 +41,7 @@ const IcarusApp: React.FC = () => {
   const handleSessionCreate = async ({ columns, matrix }: BareSession) => {
     // Mark that we're uploading to prevent unnecessary re-renders
     isUploadingRef.current = true;
-
+    
     try {
       const { sessionMap, workflow } = createBareSession({ columns, matrix });
 
@@ -67,9 +67,24 @@ const IcarusApp: React.FC = () => {
   };
 
   const handleSessionClick = async (session: IcarusSessionRecord) => {
-    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
-    console.log(sessionWithWorkflows);
-    setActiveSession(sessionWithWorkflows);
+    try {
+      // Clear existing data first to show loading state
+      setData([]);
+      setSelectedColumns([]);
+      setIsProcessing(true);
+      
+      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
+      console.log('Session with workflows:', sessionWithWorkflows);
+      
+      // First load and parse the session data (this populates data, selectedColumns, etc.)
+      await handleLoadingSessionData(session.id);
+      
+      // Then set the active session after data is loaded and processed
+      setActiveSession(sessionWithWorkflows);
+    } catch (error) {
+      console.error('Error handling session click:', error);
+      setIsProcessing(false);
+    }
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -121,12 +136,17 @@ const IcarusApp: React.FC = () => {
   }, [activeSession]);
 
   // Use memoized activeSessionId and check upload status to prevent unnecessary triggers
+  // This effect now serves as a fallback for edge cases
   useEffect(() => {
     // Don't trigger if we're in the middle of uploading/creating a session
+    // or if we don't have an activeSessionId
     if (activeSessionId && !isUploadingRef.current) {
-      handleLoadingSessionData(activeSessionId);
+      // Only load if we don't already have data (prevents duplicate loads)
+      if (data.length === 0) {
+        handleLoadingSessionData(activeSessionId);
+      }
     }
-  }, [activeSessionId, handleLoadingSessionData]);
+  }, [activeSessionId, handleLoadingSessionData, data.length]);
 
   return (
     <div className="flex h-screen bg-white text-gray-800">
