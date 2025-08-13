@@ -1,5 +1,5 @@
-import { BareSession } from "../../main/types/index.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
+import { BareSession } from "@/domain/session";
 
 
 

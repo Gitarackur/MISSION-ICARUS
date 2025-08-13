@@ -2,15 +2,13 @@ import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react'
 import { useLiveQuery } from 'dexie-react-hooks';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
-import IcarusWorkflow from '@/app-layer/algorithms/workflow';
-import IcarusSession from '@/app-layer/session';
 import { db } from '@/app-layer/database';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
 import { IcarusSessionRecord } from '@/app-layer/database/database.types';
-import { BareSession } from './types/index.types';
 import { handleMatrixRowData} from '@/app-layer/shared/utils';
 import { ProteinRow } from '@/domain/proteins/index.types';
-import { validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
+import { createBareSession, validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
+import { BareSession } from '@/domain/session';
 
 const IcarusApp: React.FC = () => {
   const [activeSession, setActiveSession] = useState<IcarusSessionRecord | null>(null);
@@ -25,21 +23,8 @@ const IcarusApp: React.FC = () => {
 
   // Memoize active session ID to prevent unnecessary re-renders
   const activeSessionId = useMemo(() => activeSession?.id, [activeSession?.id]);
-  
-
-
-  const createBareSession = ({ columns, matrix }: BareSession) => {
-    const session = new IcarusSession();
-    const workflow = new IcarusWorkflow();
-    session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`);
-    const matrixWorkflowMap = workflow.addMatrix({ columns, data: matrix });
-    const sessionMap = session.addWorkflow(workflow);
-
-    return { matrixWorkflowMap, sessionMap, session, workflow };
-  };
 
   const handleSessionCreate = async ({ columns, matrix }: BareSession) => {
-    // Mark that we're uploading to prevent unnecessary re-renders
     isUploadingRef.current = true;
     
     try {
@@ -61,7 +46,6 @@ const IcarusApp: React.FC = () => {
       const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(sessionMap.id);
       setActiveSession(sessionWithWorkflows);
     } finally {
-      // Reset upload flag after session creation is complete
       isUploadingRef.current = false;
     }
   };
@@ -108,6 +92,7 @@ const IcarusApp: React.FC = () => {
 
         console.log('Loaded session data:', {
           sessionId,
+          sessionWithWorkflows,
           columns,
           matrix,
           columnsLength: columns?.length,
@@ -135,11 +120,8 @@ const IcarusApp: React.FC = () => {
     console.log(activeSession)
   }, [activeSession]);
 
-  // Use memoized activeSessionId and check upload status to prevent unnecessary triggers
-  // This effect now serves as a fallback for edge cases
+
   useEffect(() => {
-    // Don't trigger if we're in the middle of uploading/creating a session
-    // or if we don't have an activeSessionId
     if (activeSessionId && !isUploadingRef.current) {
       // Only load if we don't already have data (prevents duplicate loads)
       if (data.length === 0) {
