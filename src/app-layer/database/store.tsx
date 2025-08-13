@@ -1,5 +1,5 @@
 import { db, IcarusDB } from ".";
-import { IcarusSessionRecord, IcarusWorkflowRecord } from "./database.types";
+import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord, IcarusWorkflowRecord } from "./database.types";
 
 
 class DBAdapter {
@@ -60,7 +60,7 @@ class DBAdapter {
 
   
   // get session with workflows
-  async getSessionWithWorkflows(id: string) {
+  async getSessionWithWorkflows(id: string): Promise<IcarusSessionWithWorkflowRecord | null> {
     const session = await this.getSessionById(id);
     if (!session) return null;
 

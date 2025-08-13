@@ -12,3 +12,11 @@ export interface IcarusSessionRecord {
   date: Date | string;
   workflowIds: string[];
 }
+
+export interface IcarusSessionWithWorkflowRecord {
+  id: string;
+  name: string;
+  date: Date | string;
+  workflowIds: string[];
+  workflows: IcarusWorkflowRecord[];
+}
