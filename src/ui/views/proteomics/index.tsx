@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+// ProteomicsAnalysisHomeView
+import React, { useCallback, useRef, useState } from 'react';
 import Header from '@/ui/components/header/main';
 import NavTabs from '@/ui/components/tabs';
 import DataImport from '@/ui/components/data-output/import';
@@ -8,7 +9,7 @@ import StatisticsPanel from '@/ui/components/statistics/panel';
 import VisualizationPanel from '@/ui/components/visualization';
 import AnalysisPanel from '@/ui/components/analysis';
 
-import { handleCSVFileUpload, handleFileExport } from '@/app-layer/shared/utils';
+import { createMatrixDataSafe, handleCSVFileUpload, handleFileExport } from '@/app-layer/shared/utils';
 import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
 import { useFilteredData } from './hooks/useProteomicsFilter';
 import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
@@ -24,9 +25,8 @@ export default function ProteomicsAnalysisHomeView({
 }: ProteomicsAnalysisHomeViewProps) {
   const styles = proteomicsPagestyles();
   const [activeTab, setActiveTab] = useState<tabTypes>('import');
-  const [filterCriteria, setFilterCriteria] = useState({});
+  const [filterCriteria, setFilterCriteria] = useState<Record<string, { min?: number; max?: number }>>({});
   const [searchTerm, setSearchTerm] = useState('');
-  const [sessionId, setSessionId] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filteredData = useFilteredData(data, filterCriteria, searchTerm);
@@ -34,44 +34,34 @@ export default function ProteomicsAnalysisHomeView({
   const volcanoData = useVolcanoData(filteredData);
   const intensityDist = useIntensityDist(filteredData, selectedColumns);
 
-  const handleExport = useCallback(() => handleFileExport(filteredData, 'proteomics-data'), [filteredData]);
+  const handleExport = useCallback(
+    () => handleFileExport(filteredData, 'proteomics-data'),
+    [filteredData]
+  );
 
   const handleFileUpload = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
     await handleCSVFileUpload(file, {
       onData: (rows, headers) => {
+        // Update local UI state
         setData(rows);
         setSelectedColumns(headers);
-        setSessionId('');
+        // Create a session immediately for this imported dataset (single, explicit action)
+        const result = createMatrixDataSafe(rows, headers);
+        if (!result) {
+          console.error('Failed to create matrix data from imported file');
+          return;
+        }
+        const { matrix } = result;
+        handleSessionCreate({ columns: headers, matrix });
       },
       onProcessingChange: setIsProcessing,
     });
+
     e.target.value = '';
-  }, [setData, setSelectedColumns, setIsProcessing]);
-
-  const matrixData = useMemo(() => (
-  data.length && selectedColumns.length
-    ? {
-        columns: selectedColumns,
-        matrix: data.map(row =>
-          selectedColumns.map(col => Number(row?.[col] ?? 0))
-        )
-      }
-    : null
-), [data, selectedColumns]);
-
-  const newSessionId = useMemo(
-    () => `${data.length}-${selectedColumns.join(',')}-${JSON.stringify(data[0] || {})}`,
-    [data, selectedColumns]
-  );
-
-  useEffect(() => {
-    if (matrixData && newSessionId !== sessionId) {
-      handleSessionCreate(matrixData);
-      setSessionId(newSessionId);
-    }
-  }, [matrixData, newSessionId, sessionId, handleSessionCreate]);
+  }, [setData, setSelectedColumns, setIsProcessing, handleSessionCreate]);
 
   return (
     <div className={styles.container()}>
