@@ -1,32 +1,26 @@
-import React, { useCallback, useEffect, useState, useMemo, useRef } from 'react';
+/* eslint-disable @typescript-eslint/no-unused-vars */
+import React, { useEffect, useState, useRef } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
 import { db } from '@/app-layer/database';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
-import { IcarusSessionRecord } from '@/app-layer/database/database.types';
-import { handleMatrixRowData} from '@/app-layer/shared/utils';
+import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord } from '@/app-layer/database/database.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { createBareSession, validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
 import { BareSession } from '@/domain/session';
+import { reconstructFromMatrix } from '@/app-layer/shared/utils';
 
 const IcarusApp: React.FC = () => {
-  const [activeSession, setActiveSession] = useState<IcarusSessionRecord | null>(null);
+  const [activeSession, setActiveSession] = useState<IcarusSessionRecord | IcarusSessionWithWorkflowRecord | null>(null);
   const [data, setData] = useState<ProteinRow[]>([]);
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Track if we're in the middle of uploading/creating a session
   const isUploadingRef = useRef(false);
-
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
-
-  // Memoize active session ID to prevent unnecessary re-renders
-  const activeSessionId = useMemo(() => activeSession?.id, [activeSession?.id]);
 
   const handleSessionCreate = async ({ columns, matrix }: BareSession) => {
     isUploadingRef.current = true;
-    
     try {
       const { sessionMap, workflow } = createBareSession({ columns, matrix });
 
@@ -51,24 +45,25 @@ const IcarusApp: React.FC = () => {
   };
 
   const handleSessionClick = async (session: IcarusSessionRecord) => {
-    try {
-      // Clear existing data first to show loading state
-      setData([]);
-      setSelectedColumns([]);
-      setIsProcessing(true);
-      
-      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
-      console.log('Session with workflows:', sessionWithWorkflows);
-      
-      // First load and parse the session data (this populates data, selectedColumns, etc.)
-      await handleLoadingSessionData(session.id);
-      
-      // Then set the active session after data is loaded and processed
-      setActiveSession(sessionWithWorkflows);
-    } catch (error) {
-      console.error('Error handling session click:', error);
-      setIsProcessing(false);
+    setData([]);
+    setSelectedColumns([]);
+
+    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
+    if (!sessionWithWorkflows) {
+      console.error('Session with workflows not found:', session.id);
+      return;
     }
+
+    const { matrix, columns } = validateAndExtractWorkflowDataStrict(sessionWithWorkflows);
+    const result = reconstructFromMatrix({ matrix, columns });
+    if (!result) {
+      console.error('Failed to reconstruct data from matrix');
+      return;
+    }
+
+    setData(result.data as ProteinRow[]);
+    setSelectedColumns(columns);
+    setActiveSession(sessionWithWorkflows);
   };
 
   const handleDeleteSession = async (id: string) => {
@@ -78,57 +73,9 @@ const IcarusApp: React.FC = () => {
     }
   };
 
-  // Load session data from DB
-  const handleLoadingSessionData = useCallback(
-    async (sessionId: string) => {
-      try {
-        console.log('Loading session data for ID:', sessionId);
-
-        const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(sessionId);
-        const {
-          matrix,
-          columns,
-        } = validateAndExtractWorkflowDataStrict(sessionWithWorkflows);
-
-        console.log('Loaded session data:', {
-          sessionId,
-          sessionWithWorkflows,
-          columns,
-          matrix,
-          columnsLength: columns?.length,
-          matrixLength: matrix?.length,
-        });
-
-        console.log('Processing session data with columns:', columns?.length, 'rows:', matrix.length);
-
-        handleMatrixRowData(columns, matrix, {
-          onData: (rows) => {
-            setData(rows);
-          },
-          onHeaders: setSelectedColumns,
-          onProcessingChange: setIsProcessing,
-        });
-      } catch (error) {
-        console.error('Error loading session data:', error);
-        setIsProcessing(false); // Reset processing state on error
-      } finally { /* empty */ }
-    },
-    []
-  );
-
   useEffect(() => {
-    console.log(activeSession)
+    console.log(activeSession);
   }, [activeSession]);
-
-
-  useEffect(() => {
-    if (activeSessionId && !isUploadingRef.current) {
-      // Only load if we don't already have data (prevents duplicate loads)
-      if (data.length === 0) {
-        handleLoadingSessionData(activeSessionId);
-      }
-    }
-  }, [activeSessionId, handleLoadingSessionData, data.length]);
 
   return (
     <div className="flex h-screen bg-white text-gray-800">
@@ -138,8 +85,6 @@ const IcarusApp: React.FC = () => {
         onSessionClick={handleSessionClick}
         onCreateSession={() => {
           console.log('Create session clicked');
-          // Example: create a session with empty matrix
-          // handleSessionCreate([]);
         }}
         onDeleteSession={handleDeleteSession}
       />

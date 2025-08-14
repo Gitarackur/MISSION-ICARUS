@@ -1,4 +1,5 @@
 import { IcarusWorkflowRecord } from "@/app-layer/database/database.types";
+import { ProteinRow } from "../proteins/index.types";
 
 export interface ParsedCSVResult<T> {
   data: T[];
@@ -12,4 +13,17 @@ export interface StrictValidationResult {
   workflow: IcarusWorkflowRecord;
   matrix: number[][];
   columns: string[];
+}
+
+
+
+export interface MatrixData {
+  columns: string[];
+  matrix: number[][];
+}
+
+
+export interface DataRowsAndColumns { 
+  data: ProteinRow[]; 
+  selectedColumns: string[] 
 }
