@@ -45,9 +45,6 @@ const IcarusApp: React.FC = () => {
   };
 
   const handleSessionClick = async (session: IcarusSessionRecord) => {
-    // setData([]);
-    // setSelectedColumns([]);
-
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
     if (!sessionWithWorkflows) {
       console.error('Session with workflows not found:', session.id);

@@ -25,5 +25,5 @@ export interface MatrixData {
 
 export interface DataRowsAndColumns { 
   data: ProteinRow[]; 
-  selectedColumns: string[] 
+  columns: string[] 
 }

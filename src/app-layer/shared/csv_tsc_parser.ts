@@ -141,7 +141,7 @@ export const parseCSV = <T>(csvText: string): ParsedCSVResult<T> => {
 
   return {
     data,
-    headers: headers.slice(0, 8),
+    headers,
     errors
   };
 };
@@ -203,7 +203,7 @@ export const parse2DArray = <T extends (string | number)[]>(
 
   return {
     data,
-    headers: headers.slice(0, 8), // still limiting to first 8 headers
+    headers,
     errors
   };
 };

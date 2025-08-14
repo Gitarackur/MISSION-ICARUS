@@ -133,21 +133,21 @@ export async function handleMatrixRowData(
 // Creates a matrix data structure from the provided data and selected columns
 export const createMatrixData = (
   data: ProteinRow[],
-  selectedColumns: string[]
+  columns: string[]
 ): MatrixData | null => {
   if (
     !data ||
     data.length === 0 ||
-    !selectedColumns ||
-    selectedColumns.length === 0
+    !columns ||
+    columns.length === 0
   ) {
     return null;
   }
 
   return {
-    columns: selectedColumns,
+    columns: columns,
     matrix: data.map((row) =>
-      selectedColumns.map((col) => Number(row[col]) || 0)
+      columns.map((col) => Number(row[col]) || 0)
     ),
   };
 };
@@ -155,19 +155,19 @@ export const createMatrixData = (
 // Creates a matrix data structure safely, ensuring all columns exist in the data
 export const createMatrixDataSafe = (
   data: ProteinRow[],
-  selectedColumns: string[]
+  columns: string[]
 ): MatrixData | null => {
   // Input validation
   if (!Array.isArray(data) || data.length === 0) {
     return null;
   }
 
-  if (!Array.isArray(selectedColumns) || selectedColumns.length === 0) {
+  if (!Array.isArray(columns) || columns.length === 0) {
     return null;
   }
 
   // Check if columns exist in data
-  const validColumns = selectedColumns.filter((col) =>
+  const validColumns = columns.filter((col) =>
     data.some((row) => row && Object.prototype.hasOwnProperty.call(row, col))
   );
 
@@ -225,12 +225,12 @@ export const reconstructFromMatrix = (
 
   return {
     data: reconstructedData,
-    selectedColumns: columns,
+    columns: columns,
   };
 };
 
 // Extracts selected columns from a matrix data structure
-export const getSelectedColumnsFromMatrix = (
+export const getcolumnsFromMatrix = (
   matrixData: MatrixData | null
 ): string[] | null => {
   if (!matrixData || !matrixData.columns) {
