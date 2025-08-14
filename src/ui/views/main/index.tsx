@@ -45,8 +45,8 @@ const IcarusApp: React.FC = () => {
   };
 
   const handleSessionClick = async (session: IcarusSessionRecord) => {
-    setData([]);
-    setSelectedColumns([]);
+    // setData([]);
+    // setSelectedColumns([]);
 
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
     if (!sessionWithWorkflows) {
@@ -70,6 +70,8 @@ const IcarusApp: React.FC = () => {
     await IcarusDBAdapter.deleteSessionWithWorkflows(id);
     if (activeSession?.id === id) {
       setActiveSession(null);
+      setData([]);
+      setSelectedColumns([]);
     }
   };
 
