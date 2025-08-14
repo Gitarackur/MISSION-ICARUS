@@ -72,10 +72,6 @@ const IcarusApp: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    console.log(activeSession);
-  }, [activeSession]);
-
   return (
     <div className="flex h-screen bg-white text-gray-800">
       <Sidebar

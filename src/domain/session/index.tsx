@@ -1,4 +1,4 @@
 export type BareSession = { 
   columns: string[] | null, 
-  matrix: number[][] | null 
+  matrix: (string | number)[][] | null 
 }

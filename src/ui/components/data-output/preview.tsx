@@ -19,6 +19,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 }) => {
   const s = dataOutputStyles();
 
+  // The main column of the dataset which is directly obtained from the data
+  // const columns = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
   const columns = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
 
   const toggleColumn = (column: string, checked: boolean) => {

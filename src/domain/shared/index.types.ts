@@ -19,7 +19,7 @@ export interface StrictValidationResult {
 
 export interface MatrixData {
   columns: string[];
-  matrix: number[][];
+  matrix: (string | number)[][];
 }
 
 

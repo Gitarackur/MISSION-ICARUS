@@ -180,7 +180,7 @@ export const createMatrixDataSafe = (
     matrix: data.map((row) =>
       validColumns.map((col) => {
         const value = row && row[col];
-        return Number(value) || 0;
+        return value as unknown as (string | number)
       })
     ),
   };
