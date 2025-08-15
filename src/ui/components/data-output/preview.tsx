@@ -9,6 +9,7 @@ import StatisticalAnalysisInstructions from '../statistics/analysis-instructions
 import StatisticalAnalysisColumns from '../statistics/analysis-columns';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
 import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
+import StatisticsMenu from '../statistics/menu';
 
 const ROWS_PER_PAGE = 10;
 
@@ -110,6 +111,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
             </button>
           </div>
           <StatisticalAnalysisColumns stats={stats} />
+          <StatisticsMenu />
         </>
       )}
 
