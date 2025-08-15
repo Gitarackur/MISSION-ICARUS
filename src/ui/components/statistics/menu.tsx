@@ -1,5 +1,4 @@
-import { tv } from "tailwind-variants";
-import { 
+import {
   BarChart3, // For 'Basic'
   Filter,    // For 'Filter rows', 'Filter columns'
   SquarePlus, // For 'Annot. columns', 'Annot. rows'
@@ -26,26 +25,10 @@ import {
   SquareDashedKanban, // For STDDev
   Hash, // Specific for f(x) and Count
 } from 'lucide-react';
+import { statisticsMenuStyles } from "./style-variants";
 
 
-const menuStyles = tv({
-  slots: {
-    mainContainer: "w-full bg-white rounded-lg shadow-xl p-6 flex flex-col font-sans text-gray-800", 
-    mainContent: "flex flex-row", 
 
-    rightToolbarArea: "flex-1 flex flex-col gap-2", 
-    toolbarRow: "flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm", 
-  
-    toolbarButton: "flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm cursor-pointer hover:bg-gray-200 transition-colors space-x-1", 
-    toolbarButtonIcon: "text-lg", 
-    toolbarButtonText: "", 
-    dropdownArrow: "ml-auto text-xs", 
-
-    // Labels below the toolbars (Processing, Analysis).
-    sectionLabelContainer: "flex-1 flex items-center justify-center pt-2 text-xs text-gray-500",
-    sectionLabel: "border-b border-gray-300 pb-1 px-4",
-  },
-});
 
 const {
   mainContainer,
@@ -58,7 +41,7 @@ const {
   dropdownArrow,
   sectionLabelContainer,
   sectionLabel,
-} = menuStyles();
+} = statisticsMenuStyles();
 
 const menuData = {
   mainMenu: [],
@@ -78,7 +61,7 @@ const menuData = {
       { id: 'timeSeries', label: 'Time series', hasDropdown: true, icon: <LineChart className={toolbarButtonIcon()} /> },
       { id: 'deAnalysis', label: 'DE analysis', hasDropdown: true, icon: <FlaskConical className={toolbarButtonIcon()} /> },
       { id: 'isobaricLabeling', label: 'Isobaric Labeling', hasDropdown: true, icon: <Split className={toolbarButtonIcon()} /> },
-      { id: 'pj', label: 'P_j', icon: <Sigma className={toolbarButtonIcon()} /> }, 
+      { id: 'pj', label: 'P_j', icon: <Sigma className={toolbarButtonIcon()} /> },
       { id: 'visualization', label: 'Visualization', hasDropdown: true, icon: <PieChart className={toolbarButtonIcon()} /> },
     ],
     [
@@ -88,9 +71,9 @@ const menuData = {
       { id: 'learning', label: 'Learning', hasDropdown: true, icon: <GraduationCap className={toolbarButtonIcon()} /> },
       { id: 'modifications', label: 'Modifications', hasDropdown: true, icon: <Palette className={toolbarButtonIcon()} /> },
       { id: 'external', label: 'External', hasDropdown: true, icon: <ExternalLink className={toolbarButtonIcon()} /> },
-      { id: 'z', label: 'Z', icon: <Sigma className={toolbarButtonIcon()} /> }, 
-      { id: '2d', label: '2D', icon: <TableProperties className={toolbarButtonIcon()} /> }, 
-      { id: 'pm', label: 'pμ', icon: <Sigma className={toolbarButtonIcon()} /> }, 
+      { id: 'z', label: 'Z', icon: <Sigma className={toolbarButtonIcon()} /> },
+      { id: '2d', label: '2D', icon: <TableProperties className={toolbarButtonIcon()} /> },
+      { id: 'pm', label: 'pμ', icon: <Sigma className={toolbarButtonIcon()} /> },
       { id: 'clusteringPca', label: 'Clustering/PCA', hasDropdown: true, icon: <GitGraph className={toolbarButtonIcon()} /> },
     ],
     [
@@ -100,9 +83,9 @@ const menuData = {
       { id: 'outliers', label: 'Outliers', hasDropdown: true, icon: <AlertTriangle className={toolbarButtonIcon()} /> },
       { id: 'wgcna', label: 'WGCNA', hasDropdown: true, icon: <Network className={toolbarButtonIcon()} /> },
       { id: 'clustering', label: 'Clustering', hasDropdown: true, icon: <GitGraph className={toolbarButtonIcon()} /> },
-      { id: 'fx', label: 'f(x)', icon: <SquareFunction className={toolbarButtonIcon()} /> }, 
-      { id: '1d', label: '1D', icon: <ListCollapse className={toolbarButtonIcon()} /> }, 
-      { id: 'pi', label: 'P_i', icon: <Sigma className={toolbarButtonIcon()} /> }, 
+      { id: 'fx', label: 'f(x)', icon: <SquareFunction className={toolbarButtonIcon()} /> },
+      { id: '1d', label: '1D', icon: <ListCollapse className={toolbarButtonIcon()} /> },
+      { id: 'pi', label: 'P_i', icon: <Sigma className={toolbarButtonIcon()} /> },
       { id: 'misc', label: 'Misc.', hasDropdown: true, icon: <MoreHorizontal className={toolbarButtonIcon()} /> },
     ],
   ],
