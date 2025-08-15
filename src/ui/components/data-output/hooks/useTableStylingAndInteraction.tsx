@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+import { useState, useMemo, useEffect } from "react";
 import { calculateColumnStats } from "@/app-layer/shared/statistics";
 import { getNumericColumns } from "@/app-layer/shared/utils";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -66,6 +67,14 @@ export const useTableStylingAndInteraction = (
     if (!selectedAnalysisColumn) return null;
     return calculateColumnStats(numericColumns, filteredData, selectedAnalysisColumn);
   }, [selectedAnalysisColumn, numericColumns, filteredData]);
+
+  useEffect(() => {
+    // it should clear if there is new data
+    if(data){
+      clearAnalysisSelection();
+    }
+  }, [data])
+  
 
   return {
     selectedAnalysisColumn,
