@@ -28,6 +28,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     numericColumns,
     stats,
     handleColumnClick,
+    handleColumnDoubleClick,
     clearAnalysisSelection,
     getCellStyle,
   } = useTableStylingAndInteraction(data, filteredData, columns);
@@ -120,6 +121,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                 <th
                   key={column}
                   className={getCellStyle(0, column, true)}
+                  onDoubleClick={() => {
+                    handleColumnDoubleClick()
+                  }}
                   onClick={() => handleColumnClick(column)}
                 >
                   <div className="flex items-center">

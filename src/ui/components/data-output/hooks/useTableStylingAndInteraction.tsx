@@ -34,6 +34,10 @@ export const useTableStylingAndInteraction = (
     setHighlightedCells(new Set());
   };
 
+  const handleColumnDoubleClick = () => {
+    clearAnalysisSelection();
+  }
+
   const getCellStyle = (rowIndex: number, columnName: string, isHeader = false) => {
     const cellKey = isHeader ? `header-${columnName}` : `${rowIndex}-${columnName}`;
     const isHighlighted = highlightedCells.has(cellKey);
@@ -69,6 +73,7 @@ export const useTableStylingAndInteraction = (
     numericColumns,
     stats,
     handleColumnClick,
+    handleColumnDoubleClick,
     clearAnalysisSelection,
     getCellStyle,
   };
