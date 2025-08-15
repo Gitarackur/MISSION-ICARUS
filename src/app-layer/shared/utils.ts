@@ -263,11 +263,11 @@ export const getNumericColumns = (columns:string[], data: ProteinRow[]): Set<str
 // Formats a table cell value for display, handling numbers and strings
 export const formatTableCellValue = (value: unknown): string => {
   if (typeof value === 'number') {
-    if (value > 1e3) {
-      return value.toExponential(2);
-    } else {
-      return value.toFixed(2);
-    }
+    // if (value > 1e3) {
+    //   return value.toExponential(2);
+    // } else {
+    //   return value.toFixed(2);
+    // }
   }
 
   // Handle other types, including null/undefined
