@@ -3,6 +3,7 @@ import { IcarusSessionWithWorkflowRecord } from "@/app-layer/database/database.t
 import IcarusSession from "../session";
 import IcarusWorkflow from "../algorithms/workflow";
 import { BareSession } from "@/domain/session";
+import { tableMatrix } from "../algorithms/workflow/main.types";
 
 // Validates and extracts workflow data from a session with workflows
 export function validateAndExtractWorkflowDataStrict(
@@ -61,7 +62,7 @@ export const createBareSession = ({ columns, matrix }: BareSession) => {
   const session = new IcarusSession();
   const workflow = new IcarusWorkflow();
   session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`);
-  const matrixWorkflowMap = workflow.addMatrix({ columns, data: matrix });
+  const matrixWorkflowMap = workflow.addMatrix({ columns, data: matrix as tableMatrix });
   const sessionMap = session.addWorkflow(workflow);
 
   return { matrixWorkflowMap, sessionMap, session, workflow };
