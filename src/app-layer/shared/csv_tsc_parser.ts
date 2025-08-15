@@ -1,210 +1,336 @@
+import { ParsedCSVResult } from "@/domain/shared/index.types";
 import { toNumberIfPossible } from "./utils";
+import Papa, { ParseResult } from "papaparse";
 
-export interface ParsedCSVResult<T> {
-  data: T[];
-  headers: string[];
-  errors: string[];
-}
+// Parses a CSV, TSV, or other delimited string and returns structured data
+class IcarusParser {
+  constructor() {}
 
-
-
-
-// Parses a CSV file and returns structured data
-export const parseCSVFromFile = async <T>(file: File): Promise<ParsedCSVResult<T>> => {
-  const text = await file.text();
-  return parseCSV<T>(text);
-};
-
-
-
-// Parses a CSV string and returns structured data
-export const parseCSV = <T>(csvText: string): ParsedCSVResult<T> => {
-  const errors: string[] = [];
-
-  if (!csvText.trim()) {
-    throw new Error('File is empty');
-  }
-
-  const lines = csvText.split(/\r?\n/).filter(line => line.trim());
-
-  if (lines.length < 2) {
-    throw new Error('File must contain at least a header row and one data row');
-  }
-
-  // Detect delimiter more reliably
-  const firstLine = lines[0];
-  let delimiter = ',';
-  const delimiters = [',', '\t', ';', '|'];
-
-  // Count occurrences of each delimiter and pick the most common one
-  const delimiterCounts = delimiters.map(d => ({
-    delimiter: d,
-    count: firstLine.split(d).length - 1
-  }));
-
-  const bestDelimiter = delimiterCounts
-    .filter(d => d.count > 0)
-    .sort((a, b) => b.count - a.count)[0];
-
-  if (bestDelimiter) {
-    delimiter = bestDelimiter.delimiter;
-  }
-
-  // Parse CSV with basic quoted field support
-  const parseCSVLine = (line: string, delimiter: string): string[] => {
-    const result: string[] = [];
-    let current = '';
-    let inQuotes = false;
-    let i = 0;
-
-    while (i < line.length) {
-      const char = line[i];
-      const nextChar = line[i + 1];
-
-      if (char === '"') {
-        if (inQuotes && nextChar === '"') {
-          // Escaped quote
-          current += '"';
-          i += 2;
-          continue;
-        } else {
-          // Toggle quote state
-          inQuotes = !inQuotes;
-        }
-      } else if (char === delimiter && !inQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-      i++;
+  // Parses a CSV, TSV, or other delimited string and returns structured data
+  parseCSVPapaParse = <T>(csvText: string): ParsedCSVResult<T> => {
+    if (!csvText.trim()) {
+      throw new Error("File is empty");
     }
 
-    result.push(current.trim());
-    return result;
-  };
+    const result: ParseResult<Record<string, string>> = Papa.parse(csvText, {
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: false,
+      transform: (value) => value.trim(),
+    });
 
+    // Handle Papa Parse errors and convert them to your custom format
+    const errors: string[] = result.errors.map(
+      (e) => `Error on row ${e.row}: ${e.message}`
+    );
 
-  const headers = parseCSVLine(firstLine, delimiter)
-    .map(h => h.replace(/^["']|["']$/g, '').trim())
-    .filter(h => h.length > 0);
+    // Use a fallback for headers if they are not present
+    const headers = result.meta.fields || [];
 
-  if (headers.length === 0) {
-    throw new Error('No valid headers found');
-  }
+    if (headers.length === 0) {
+      throw new Error("No valid headers found");
+    }
 
+    if (!result.data || result.data.length === 0) {
+      throw new Error("No valid data rows found in file");
+    }
 
-  const data: T[] = [];
+    const data: T[] = [];
 
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-
-    try {
-      const values = parseCSVLine(line, delimiter)
-        .map(v => v.replace(/^["']|["']$/g, '').trim());
-
-
-      if (values.every(v => !v)) {
-        continue;
-      }
-
+    // Manually convert data types and add an 'id'
+    result.data.forEach((row, index) => {
       const obj: Record<string, string | number> = {};
       let hasValidData = false;
 
-      headers.forEach((header, index) => {
-        const value = values[index] || '';
+      for (const header of headers) {
+        const value = row[header] || "";
         const processedValue = toNumberIfPossible(value);
         obj[header] = processedValue;
 
-        if (processedValue !== '') {
+        if (processedValue !== "") {
           hasValidData = true;
         }
-      });
+      }
 
       if (hasValidData) {
         data.push({
           ...obj,
-          id: data.length + 1
+          id: index + 1,
         } as T);
       }
-    } catch (rowError) {
-      const errorMsg = `Error parsing row ${i + 1}: ${rowError instanceof Error ? rowError.message : 'Unknown error'}`;
-      errors.push(errorMsg);
-      continue;
+    });
+
+    if (data.length === 0) {
+      throw new Error("No valid data rows found in file");
     }
-  }
 
-  if (data.length === 0) {
-    throw new Error('No valid data rows found in file');
-  }
-
-  return {
-    data,
-    headers,
-    errors
+    return {
+      data,
+      headers,
+      errors,
+    };
   };
-};
 
+  // Parses a CSV file using PapaParse and returns structured data
+  parseCSVFromFilePapaParse = async <T>(
+    file: File
+  ): Promise<ParsedCSVResult<T>> => {
+    const text = await file.text();
+    return this.parseCSVPapaParse<T>(text);
+  };
 
+  // Parses a CSV file native and returns structured data
+  parseCSVNative = <T>(csvText: string): ParsedCSVResult<T> => {
+    const errors: string[] = [];
 
+    if (!csvText.trim()) {
+      throw new Error("File is empty");
+    }
 
-// Parses a 2D array into structured data
-export const parse2DArray = <T extends (string | number)[]>(
-  columns: (string | number)[],
-  rows: (string | number)[][]
-): ParsedCSVResult<T> => {
-  const errors: string[] = [];
+    const lines = csvText.split(/\r?\n/).filter((line) => line.trim());
 
-  if (!columns || columns.length === 0) {
-    throw new Error('No columns provided');
-  }
+    if (lines.length < 2) {
+      throw new Error("File must contain at least a header and one data row");
+    }
 
-  if (!rows || rows.length === 0) {
-    throw new Error('No rows provided');
-  }
+    const firstLine = lines[0];
+    const dataLines = lines.slice(1);
+    const possibleDelimiters = [",", "\t", ";", "|"]; // Removed space to avoid ambiguity
 
-  // Normalize and validate headers
-  const headers = columns
-    .map(h => String(h).replace(/^["']|["']$/g, '').trim())
-    .filter(h => h.length > 0);
+    let delimiter = ","; // Default to a comma
 
-  if (headers.length === 0) {
-    throw new Error('No valid headers found');
-  }
+    // The trim quotes regex needs to be defined here for use in the detection logic.
+    const trimQuotesRegex = /^["']|["']$/g;
 
-  const data: T[] = [];
+    // Function to split a line by a given delimiter, handling quotes
+    const parseLineWithDelimiter = (line: string, d: string): string[] => {
+      // This is a simplified version for detection purposes only
+      return line.split(d).map((v) => v.replace(trimQuotesRegex, "").trim());
+    };
 
-  rows.forEach((row, i) => {
-    try {
-      const values = row.map(v =>
-        String(v).replace(/^["']|["']$/g, '').trim()
-      );
+    // Find the most consistent delimiter by checking multiple rows
+    let bestDelimiter = "";
+    let maxConsistentRows = 0;
 
-      // Skip completely empty rows
-      if (values.every(v => !v)) {
-        return;
+    for (const d of possibleDelimiters) {
+      const headerColumnCount = parseLineWithDelimiter(firstLine, d).length;
+      if (headerColumnCount <= 1) continue; // Not a good delimiter if it doesn't split the line
+
+      let consistentRows = 0;
+      for (let i = 0; i < Math.min(dataLines.length, 5); i++) {
+        const rowColumnCount = parseLineWithDelimiter(dataLines[i], d).length;
+        if (rowColumnCount === headerColumnCount) {
+          consistentRows++;
+        }
       }
 
-      // Convert numeric-like values to numbers
-      const processedRow = values.map(v => toNumberIfPossible(v)) as T;
-      data.push(processedRow);
-    } catch (rowError) {
-      const errorMsg = `Error parsing row ${i + 1}: ${
-        rowError instanceof Error ? rowError.message : 'Unknown error'
-      }`;
-      errors.push(errorMsg);
+      if (consistentRows > maxConsistentRows) {
+        maxConsistentRows = consistentRows;
+        bestDelimiter = d;
+      }
     }
-  });
 
-  if (data.length === 0) {
-    throw new Error('No valid data rows found');
-  }
+    if (bestDelimiter) {
+      delimiter = bestDelimiter;
+    } else if (firstLine.split(/\s+/).length > 1) {
+      // Fallback: If no clear delimiter is found, try multiple spaces for plain text files.
+      delimiter = " ";
+    }
 
-  return {
-    data,
-    headers,
-    errors
+    // Private helper to parse a single line with full quote support
+    const parseFinalLine = (line: string): string[] => {
+      const result: string[] = [];
+      let current = "";
+      let inQuotes = false;
+      let i = 0;
+
+      while (i < line.length) {
+        const char = line[i];
+        const nextChar = line[i + 1];
+
+        if (char === '"') {
+          if (inQuotes && nextChar === '"') {
+            current += '"';
+            i += 2;
+            continue;
+          }
+          inQuotes = !inQuotes;
+        } else if (char === delimiter && !inQuotes) {
+          result.push(current.trim());
+          current = "";
+        } else {
+          current += char;
+        }
+        i++;
+      }
+
+      result.push(current.trim());
+      return result;
+    };
+
+    const headers = parseFinalLine(firstLine)
+      .map((h) => h.replace(trimQuotesRegex, "").trim())
+      .filter((h) => h.length > 0);
+
+    if (headers.length === 0) {
+      throw new Error("No valid headers found");
+    }
+
+    const data: T[] = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+
+      try {
+        const values = parseFinalLine(line).map((v) =>
+          v.replace(trimQuotesRegex, "").trim()
+        );
+
+        if (values.every((v) => !v)) continue;
+
+        const obj: Record<string, string | number> = {};
+        let hasValidData = false;
+
+        headers.forEach((header, index) => {
+          const value = values[index] || "";
+          obj[header] = toNumberIfPossible(value);
+          if (obj[header] !== "") hasValidData = true;
+        });
+
+        if (hasValidData) {
+          data.push({ ...obj, id: data.length + 1 } as T);
+        }
+      } catch (rowError) {
+        errors.push(
+          `Error parsing row ${i + 1}: ${
+            rowError instanceof Error ? rowError.message : "Unknown error"
+          }`
+        );
+      }
+    }
+
+    if (data.length === 0) {
+      throw new Error("No valid data rows found in file");
+    }
+
+    return { data, headers, errors };
   };
-};
+
+  // Parses a CSV file and returns structured data
+  parseCSVFromFileNative = async <T>(file: File): Promise<ParsedCSVResult<T>> => {
+    const text = await file.text();
+    return this.parseCSVNative<T>(text);
+  };
+
+  // Parses a 2D array into structured data - 1
+  parse2DArrayNative2 = <T extends (string | number)[]>(
+    columns: (string | number)[],
+    rows: (string | number)[][]
+  ): ParsedCSVResult<T> => {
+    const errors: string[] = [];
+
+    if (!columns || columns.length === 0) {
+      throw new Error("No columns provided");
+    }
+
+    if (!rows || rows.length === 0) {
+      throw new Error("No rows provided");
+    }
+
+    const trimQuotesRegex = /^["']|["']$/g;
+    const headers = columns
+      .map((h) => String(h).replace(trimQuotesRegex, "").trim())
+      .filter((h) => h.length > 0);
+
+    if (headers.length === 0) {
+      throw new Error("No valid headers found");
+    }
+
+    const data: T[] = [];
+    rows.forEach((row, i) => {
+      try {
+        const values = row.map((v) =>
+          String(v).replace(trimQuotesRegex, "").trim()
+        );
+        if (values.every((v) => !v)) return;
+
+        const processedRow = values.map((v) => toNumberIfPossible(v)) as T;
+        data.push(processedRow);
+      } catch (rowError) {
+        errors.push(
+          `Error parsing row ${i + 1}: ${
+            rowError instanceof Error ? rowError.message : "Unknown error"
+          }`
+        );
+      }
+    });
+
+    if (data.length === 0) {
+      throw new Error("No valid data rows found");
+    }
+
+    return { data, headers, errors };
+  };
+
+  // Parses a 2D array into structured data - 2
+  parse2DArrayNative = <T extends (string | number)[]>(
+    columns: (string | number)[],
+    rows: (string | number)[][]
+  ): ParsedCSVResult<T> => {
+    const errors: string[] = [];
+
+    if (!columns || columns.length === 0) {
+      throw new Error("No columns provided");
+    }
+
+    if (!rows || rows.length === 0) {
+      throw new Error("No rows provided");
+    }
+
+    const trimQuotesRegex = /^["']|["']$/g;
+
+    const headers = columns
+      .map((h) => String(h).replace(trimQuotesRegex, "").trim())
+      .filter((h) => h.length > 0);
+
+    if (headers.length === 0) {
+      throw new Error("No valid headers found");
+    }
+
+    const data: T[] = [];
+
+    rows.forEach((row, i) => {
+      try {
+        const values = row.map((v) =>
+          String(v).replace(trimQuotesRegex, "").trim()
+        );
+        if (values.every((v) => !v)) return;
+
+        const processedRow = values.map((v) => toNumberIfPossible(v)) as T;
+        data.push(processedRow);
+      } catch (rowError) {
+        errors.push(
+          `Error parsing row ${i + 1}: ${
+            rowError instanceof Error ? rowError.message : "Unknown error"
+          }`
+        );
+      }
+    });
+
+    if (data.length === 0) {
+      throw new Error("No valid data rows found");
+    }
+
+    return { data, headers, errors };
+  };
+}
+
+const parser = new IcarusParser();
+
+// export const parseCSVFromFile = parser.parseCSVFromFileNative;
+// export const parse2DArray = parser.parse2DArrayNative;
+
+export const parseCSVFromFile = parser.parseCSVFromFilePapaParse;
+export const parse2DArray = parser.parse2DArrayNative2;
 
