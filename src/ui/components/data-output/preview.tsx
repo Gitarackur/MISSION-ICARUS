@@ -8,6 +8,7 @@ import { dataOutputStyles } from './variants/data-output.variant';
 import StatisticalAnalysisInstructions from '../statistics/analysis-instructions';
 import StatisticalAnalysisColumns from '../statistics/analysis-columns';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
+import { formatTableCellValue } from '@/app-layer/shared/utils';
 
 const ROWS_PER_PAGE = 10;
 
@@ -139,11 +140,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                 <tr key={idx} className={s.tableBodyRow()}>
                   {selectedColumns.map((column) => (
                     <td key={column} className={getCellStyle(idx + (currentPage - 1) * ROWS_PER_PAGE, column)}>
-                      {typeof row[column] === 'number'
-                        ? Number(row[column]) > 1e3
-                          ? Number(row[column]).toExponential(2)
-                          : Number(row[column]).toFixed(2)
-                        : (row[column] as string) || 'N/A'}
+                      {formatTableCellValue(row[column])}
                     </td>
                   ))}
                 </tr>

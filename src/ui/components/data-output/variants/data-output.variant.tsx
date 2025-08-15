@@ -1,5 +1,6 @@
 import { tv } from "tailwind-variants";
 
+// dataOutputStyles is used in DataPreview component
 export const dataOutputStyles = tv({
   slots: {
     container: 'bg-white rounded-lg shadow p-6',
@@ -40,6 +41,38 @@ export const dataOutputStyles = tv({
     paginationButtonDisabled: {
       true: 'text-gray-400 cursor-not-allowed bg-gray-100',
       false: 'hover:bg-gray-100 text-gray-700 cursor-pointer',
+    },
+  },
+});
+
+
+
+
+// this is used in the Data import component
+export const importDataStyles = tv({
+  slots: {
+    container: 'space-y-6',
+    card: 'bg-white rounded-lg shadow p-6',
+    heading2: 'text-lg font-semibold mb-4',
+    heading3: 'text-md font-medium mb-3',
+    grid: 'grid grid-cols-1 md:grid-cols-2 gap-6',
+    label: 'block text-sm font-medium text-gray-700 mb-2',
+    uploadBox: 'border-2 border-dashed border-gray-300 rounded-lg p-6 text-center',
+    uploadIcon: 'w-12 h-12 text-gray-400 mx-auto mb-4',
+    uploadText: 'text-sm text-gray-600 mb-4',
+    hiddenInput: 'hidden',
+    button: 'bg-blue-600 px-4 py-2 rounded-lg text-white transition-colors duration-200 ease-in-out',
+    buttonDisabled: 'bg-blue-400 opacity-50 cursor-not-allowed',
+    buttonEnabled: 'bg-blue-600 hover:bg-blue-700 cursor-pointer',
+    summaryContainer: 'space-y-2 text-sm',
+    summaryRow: 'flex justify-between',
+    summaryLabel: '',
+    summaryValue: 'font-medium',
+  },
+  variants: {
+    buttonDisabled: {
+      true: 'bg-blue-400 cursor-not-allowed',
+      false: 'bg-blue-600 hover:bg-blue-700 cursor-pointer',
     },
   },
 });
