@@ -260,6 +260,16 @@ export const getNumericColumns = (columns:string[], data: ProteinRow[]): Set<str
 }
 
 
+// Formats a column header string for display
+export const formatColumnHeader = (str: string): string => {
+  if (!str) return '';
+
+  return str
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/^./, (firstChar) => firstChar.toUpperCase()); 
+};
+
+
 // Formats a table cell value for display, handling numbers and strings
 export const formatTableCellValue = (value: unknown): string => {
   if (typeof value === 'number') {

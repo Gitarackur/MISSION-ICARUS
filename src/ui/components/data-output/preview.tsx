@@ -8,7 +8,7 @@ import { dataOutputStyles } from './variants/data-output.variant';
 import StatisticalAnalysisInstructions from '../statistics/analysis-instructions';
 import StatisticalAnalysisColumns from '../statistics/analysis-columns';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
-import { formatTableCellValue } from '@/app-layer/shared/utils';
+import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
 
 const ROWS_PER_PAGE = 10;
 
@@ -123,9 +123,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                   onClick={() => handleColumnClick(column)}
                 >
                   <div className="flex items-center">
-                    {column
-                      .replace(/([A-Z])/g, ' $1')
-                      .replace(/^./, (str) => str.toUpperCase())}
+                    {formatColumnHeader(column)}
                     {numericColumns.has(column) && (
                       <Calculator className="ml-2 h-4 w-4 text-blue-600" />
                     )}
