@@ -20,28 +20,6 @@ export function toNumberIfPossible(s: string | undefined): number | string {
   return trimmed;
 }
 
-// Calculates the mean, median, and standard deviation of an array of numbers
-export function mean(values: number[]) {
-  if (!values.length) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
-}
-
-// Calculates the median of an array of numbers
-export function median(values: number[]) {
-  if (!values.length) return 0;
-  const v = [...values].sort((a, b) => a - b);
-  const mid = Math.floor(v.length / 2);
-  return v.length % 2 === 0 ? (v[mid - 1] + v[mid]) / 2 : v[mid];
-}
-
-// Calculates the standard deviation of an array of numbers
-export function stddev(values: number[]) {
-  if (!values.length) return 0;
-  const m = mean(values);
-  const variance =
-    values.reduce((acc, x) => acc + (x - m) ** 2, 0) / values.length;
-  return Math.sqrt(variance);
-}
 
 // Calculates the log2 ratio of two numbers, returning NaN for invalid inputs
 export function safeLog2Ratio(numerator: number, denominator: number) {
@@ -259,3 +237,24 @@ export const getDataFromMatrix = (
     return dataRow;
   });
 };
+
+
+
+
+// get numeric columns from data
+export const getNumericColumns = (columns:string[], data: ProteinRow[]): Set<string> => {
+  if (data.length === 0) return new Set<string>();
+
+  const numeric = new Set<string>();
+  columns.forEach(column => {
+    const values = data.map(row => row[column]);
+    const isNumeric = values.every(val =>
+      val !== null && val !== undefined && val !== '' &&
+      !isNaN(parseFloat(String(val))) && isFinite(parseFloat(String(val)))
+    );
+    if (isNumeric) {
+      numeric.add(column);
+    }
+  });
+  return numeric;
+}

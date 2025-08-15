@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { ProteinRow } from '@/domain/proteins/index.types';
-import { mean } from '@/app-layer/shared/utils';
+import { mean } from '@/app-layer/shared/statistics';
 
 export function useIntensityDist(filteredData: ProteinRow[], selectedColumns: string[]) {
   return useMemo(() => {
