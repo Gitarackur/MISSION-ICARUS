@@ -1,18 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+// DataPreview.tsx
+import React, { useEffect, useMemo } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
 import { UploadCloud, Calculator, BarChart3 } from 'lucide-react';
 import { DataPreviewProps } from './types';
 import { dataOutputStyles } from './variants/data-output.variant';
-import { calculateColumnStats } from '@/app-layer/shared/statistics';
 import StatisticalAnalysisInstructions from '../statistics/analysis-instructions';
 import StatisticalAnalysisColumns from '../statistics/analysis-columns';
-import { getNumericColumns } from '@/app-layer/shared/utils';
+import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
 
 const ROWS_PER_PAGE = 10;
-
-
-
 
 const DataPreview: React.FC<DataPreviewProps> = ({
   data,
@@ -23,83 +20,16 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 }) => {
   const s = dataOutputStyles();
 
-  // New state for column selection and highlighting
-  const [selectedAnalysisColumn, setSelectedAnalysisColumn] = useState<string | null>(null);
-  const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
-
   const columns = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
 
-  // Identify numeric columns
-  const numericColumns = useMemo(() => {
-    const numeric = getNumericColumns(columns, data);
-    return numeric;
-  }, [columns, data]);
-
-  // Handle column click for analysis
-  const handleColumnClick = (columnName: string) => {
-    if (!numericColumns.has(columnName)) return;
-
-    setSelectedAnalysisColumn(columnName);
-
-    // Highlight ALL cells in the column (across all pages)
-    const newHighlighted = new Set<string>();
-    // Add header highlight
-    newHighlighted.add(`header-${columnName}`);
-    // Add all data rows for this column (using filteredData for all rows)
-    filteredData.forEach((_, rowIndex) => {
-      newHighlighted.add(`${rowIndex}-${columnName}`);
-    });
-    setHighlightedCells(newHighlighted);
-
-    // Log the selected column values
-    const columnValues = filteredData
-      .map(row => row[columnName])
-      .filter(val => val !== null && val !== undefined && val !== '');
-
-    const numericValues = columnValues
-      .map(val => parseFloat(String(val)))
-      .filter(val => !isNaN(val));
-
-    console.log(`Selected Column: ${columnName}`);
-    console.log('Total Rows Affected:', filteredData.length);
-    console.log('Column Values (all rows):', columnValues);
-    console.log('Numeric Values (all rows):', numericValues);
-    console.log('Statistics:', calculateColumnStats(numericColumns, filteredData, columnName));
-    console.log('Highlighted Cells:', Array.from(newHighlighted));
-  };
-
-  // Clear selection
-  const clearAnalysisSelection = () => {
-    setSelectedAnalysisColumn(null);
-    setHighlightedCells(new Set());
-    console.log('Selection cleared - all column highlights removed');
-  };
-
-  // Get cell styling
-  const getCellStyle = (rowIndex: number, columnName: string, isHeader = false) => {
-    const cellKey = isHeader ? `header-${columnName}` : `${(currentPage - 1) * ROWS_PER_PAGE + rowIndex}-${columnName}`;
-    const isHighlighted = highlightedCells.has(cellKey);
-    const isNumeric = numericColumns.has(columnName);
-    const isSelectedColumn = selectedAnalysisColumn === columnName;
-
-    let className = s.tableBodyCell();
-
-    if (isHeader) {
-      className = s.tableHeadCell();
-      if (isNumeric) {
-        className += ' cursor-pointer hover:bg-blue-100 transition-colors duration-200';
-      }
-      if (isSelectedColumn) {
-        className += ' bg-blue-200';
-      }
-    } else if (isHighlighted) {
-      className += ' bg-blue-100 border-blue-200';
-    } else if (isNumeric) {
-      className += ' bg-green-50';
-    }
-
-    return className;
-  };
+  const {
+    selectedAnalysisColumn,
+    numericColumns,
+    stats,
+    handleColumnClick,
+    clearAnalysisSelection,
+    getCellStyle,
+  } = useTableStylingAndInteraction(data, filteredData, columns);
 
   const toggleColumn = (column: string, checked: boolean) => {
     if (checked) setSelectedColumns([...selectedColumns, column]);
@@ -122,12 +52,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     }
   }, [columns, selectedColumns, setSelectedColumns]);
 
-  // Update highlights when pagination changes
-  useEffect(() => {
-    // Don't need to update highlights on pagination change anymore
-    // since we're highlighting based on absolute row indices
-  }, [paginatedData, selectedAnalysisColumn]);
-
   if (!data.length) {
     return (
       <div className={s.emptyState()}>
@@ -146,16 +70,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     );
   }
 
-  const stats = selectedAnalysisColumn ? calculateColumnStats(numericColumns, filteredData, selectedAnalysisColumn) : null;
-
   return (
     <div className={s.container()}>
       <h3 className={s.heading3()}>Data Preview</h3>
 
-      {/* Analysis Instructions */}
       <StatisticalAnalysisInstructions />
 
-      {/* Column Selection */}
       <div className="mb-4">
         <label className={s.label()}>Select Columns to Display:</label>
         <div className={s.columnsContainer()}>
@@ -173,7 +93,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </div>
       </div>
 
-      {/* Statistics Panel */}
       {selectedAnalysisColumn && stats && (
         <>
           <div className="flex justify-between items-center mb-4">
@@ -192,7 +111,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </>
       )}
 
-      {/* Table */}
       <div className={s.tableWrapper()}>
         <table className={s.table()}>
           <thead className={s.tableHead()}>
@@ -220,7 +138,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
               paginatedData.map((row, idx) => (
                 <tr key={idx} className={s.tableBodyRow()}>
                   {selectedColumns.map((column) => (
-                    <td key={column} className={getCellStyle(idx, column)}>
+                    <td key={column} className={getCellStyle(idx + (currentPage - 1) * ROWS_PER_PAGE, column)}>
                       {typeof row[column] === 'number'
                         ? Number(row[column]) > 1e3
                           ? Number(row[column]).toExponential(2)
@@ -241,7 +159,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </table>
       </div>
 
-      {/* Pagination Controls */}
       <div className={s.pagination()}>
         <div>
           Showing {paginatedData.length} of {filteredData.length} proteins
