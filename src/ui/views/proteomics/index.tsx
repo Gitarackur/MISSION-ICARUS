@@ -67,6 +67,9 @@ export default function ProteomicsAnalysisHomeView({
         handleSessionCreate({ columns: headers, matrix });
       },
       onProcessingChange: setIsProcessing,
+      onError: (err) => {
+        alert(`${JSON.stringify(err)}`)
+      }
     });
 
     e.target.value = '';
