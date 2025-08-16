@@ -267,6 +267,43 @@ export const getNumericColumns = (columns:string[], data: ProteinRow[]): Set<str
 }
 
 
+// get numeric columns from data optimized
+export const getNumericColumnsOptimized = (columns: string[], data: ProteinRow[]): Set<string> => {
+  const numericColumns = new Set<string>();
+
+  if (data.length === 0 || columns.length === 0) {
+    return numericColumns;
+  }
+
+  columns.forEach(column => {
+    let isNumeric = true;
+
+    // Iterate through all data points for this column
+    for (const row of data) {
+      const value = row[column];
+      
+      // If a non-numeric value is found, this column is not numeric.
+      // We can stop checking this column immediately.
+      if (
+        value === null ||
+        value === undefined ||
+        value === '' ||
+        isNaN(parseFloat(String(value))) ||
+        !isFinite(parseFloat(String(value)))
+      ) {
+        isNumeric = false;
+        break; // Exit the inner loop early
+      }
+    }
+
+    if (isNumeric) {
+      numericColumns.add(column);
+    }
+  });
+
+  return numericColumns;
+};
+
 // Formats a column header string for display
 export const formatColumnHeader = (str: string): string => {
   if (!str) return '';
