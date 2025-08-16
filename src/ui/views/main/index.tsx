@@ -12,8 +12,11 @@ import { reconstructFromMatrix } from '@/app-layer/shared/utils';
 
 const IcarusApp: React.FC = () => {
   const [activeSession, setActiveSession] = useState<IcarusSessionRecord | IcarusSessionWithWorkflowRecord | null>(null);
-  const [data, setData] = useState<ProteinRow[]>([]);
-  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+
+  const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
+  const [originalDataColumns, setOriginalDataColumns] = useState<string[]>([]);
+  const [selectedDataColumns, setSelectedDataColumns] = useState<string[]>([]);
+
   const [isProcessing, setIsProcessing] = useState(false);
   const isUploadingRef = useRef(false);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
@@ -57,8 +60,10 @@ const IcarusApp: React.FC = () => {
       return;
     }
 
-    setData(result.data as ProteinRow[]);
-    setSelectedColumns(columns);
+    setOriginalDataRows(result.data as ProteinRow[]);
+    setOriginalDataColumns(columns);
+    setSelectedDataColumns(columns);
+
     setActiveSession(sessionWithWorkflows);
   };
 
@@ -66,8 +71,8 @@ const IcarusApp: React.FC = () => {
     await IcarusDBAdapter.deleteSessionWithWorkflows(id);
     if (activeSession?.id === id) {
       setActiveSession(null);
-      setData([]);
-      setSelectedColumns([]);
+      setOriginalDataRows([]);
+      setOriginalDataColumns([]);
     }
   };
 
@@ -86,10 +91,15 @@ const IcarusApp: React.FC = () => {
       <main className="flex-1 overflow-y-auto bg-white p-6">
         <ProteomicsAnalysisHomeView
           handleSessionCreate={handleSessionCreate}
-          data={data}
-          setData={setData}
-          selectedColumns={selectedColumns}
-          setSelectedColumns={setSelectedColumns}
+
+          originalDataRows={originalDataRows}
+          setOriginalDataRows={setOriginalDataRows}
+          originalDataColumns={originalDataColumns}
+          setOriginalDataColumns={setOriginalDataColumns}
+
+          selectedDataColumns={selectedDataColumns}
+          setSelectedDataColumns={setSelectedDataColumns}
+
           isProcessing={isProcessing}
           setIsProcessing={setIsProcessing}
         />

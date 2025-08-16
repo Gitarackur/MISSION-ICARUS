@@ -55,10 +55,12 @@ export async function handleCSVFileUpload(
   file: File,
   {
     onData,
+    onError,
     onProcessingChange,
   }: {
     onData: (rows: ProteinRow[], headers: string[]) => void;
     onProcessingChange: (processing: boolean) => void;
+    onError?: (error: unknown) => void;
   }
 ) {
   onProcessingChange(true);
@@ -67,12 +69,14 @@ export async function handleCSVFileUpload(
     const result = await parseCSVFromFile<ProteinRow>(file);
 
     if (result.errors.length > 0) {
-      console.warn("CSV parsing warnings:", result.errors);
+      onError?.(result.errors);
+      throw new Error(`CSV parsing warnings: ${result.errors}`)
     }
 
     onData(result.data, result.headers);
   } catch (err) {
-    console.error("Error parsing file:", err);
+    onError?.(err);
+    throw new Error(`Error parsing file: ${err}`)
   } finally {
     onProcessingChange(false);
   }
@@ -84,11 +88,12 @@ export async function handleMatrixRowData(
   rows: (string | number)[][],
   {
     onData,
+    onError,
     onProcessingChange,
   }: {
     onData: (rows: ProteinRow[], headers: string[]) => void;
-
     onProcessingChange: (processing: boolean) => void;
+    onError?: (error: unknown) => void;
   }
 ) {
   onProcessingChange(true);
@@ -97,12 +102,14 @@ export async function handleMatrixRowData(
     const result = parse2DArray(columns, rows);
 
     if (result.errors.length > 0) {
-      console.warn("CSV parsing warnings:", result.errors);
+      onError?.(result.errors);
+      throw new Error(`CSV parsing warnings:: ${result.errors}`)
     }
 
     onData(result.data as unknown as ProteinRow[], result.headers);
   } catch (err) {
-    console.error("Error handling row and column matrices:", err);
+    onError?.(err);
+    throw new Error(`Error handling row and column matrices: ${err}`)
   } finally {
     onProcessingChange(false);
   }

@@ -8,9 +8,11 @@ const DataImport: React.FC<DataImportProps> = ({
   fileInputRef,
   onFileChange,
   isProcessing,
-  totalProteins,
-  columnsCount,
-  selectedColumnsCount,
+  
+  // data rows and column values and setters
+  originalDataRowsCount,
+  originalColumnsCount,
+  selectedColumnsCount
 }) => {
   const s = importDataStyles();
 
@@ -48,12 +50,12 @@ const DataImport: React.FC<DataImportProps> = ({
             <h3 className={s.heading3()}>Data Summary</h3>
             <div className={s.summaryContainer()}>
               <div className={s.summaryRow()}>
-                <span className={s.summaryLabel()}>Total Proteins:</span>
-                <span className={s.summaryValue()}>{totalProteins}</span>
+                <span className={s.summaryLabel()}>Total Data Amount:</span>
+                <span className={s.summaryValue()}>{originalDataRowsCount}</span>
               </div>
               <div className={s.summaryRow()}>
                 <span className={s.summaryLabel()}>Columns:</span>
-                <span className={s.summaryValue()}>{columnsCount}</span>
+                <span className={s.summaryValue()}>{originalColumnsCount}</span>
               </div>
               <div className={s.summaryRow()}>
                 <span className={s.summaryLabel()}>Selected Columns:</span>

@@ -5,10 +5,15 @@ import { BareSession } from "@/domain/session";
 
 export type ProteomicsAnalysisHomeViewProps = {
   handleSessionCreate: ({ columns, matrix }: BareSession) => void;
-  data: ProteinRow[];
-  setData: (data: ProteinRow[]) => void;
-  selectedColumns: string[];
-  setSelectedColumns: (columns: string[]) => void;
+
+  originalDataRows: ProteinRow[];
+  setOriginalDataRows: (data: ProteinRow[]) => void;
+  originalDataColumns: string[];
+  setOriginalDataColumns: (columns: string[]) => void;
+
+  selectedDataColumns: string[];
+  setSelectedDataColumns: (columns: string[]) => void;
+
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
 };

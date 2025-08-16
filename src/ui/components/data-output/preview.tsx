@@ -1,5 +1,5 @@
 // DataPreview.ts
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
 import { Calculator, BarChart3 } from 'lucide-react';
@@ -10,72 +10,71 @@ import StatisticalAnalysisColumns from '../statistics/analysis-columns';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
 import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
 import StatisticsMenu from '../statistics/menu';
-import { useTableSelection } from './hooks/useTableSelection';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 
 const ROWS_PER_PAGE = 10;
 
 const DataPreview: React.FC<DataPreviewProps> = ({
-  data,
-  filteredData,
-  selectedColumns,
-  setSelectedColumns,
-  onSelectButtonForUpload,
+  originalDataRows,
+  filteredDataRows,
+
+  // original columns from raw data
+  originalDataColumns,
+
+  // toggled columns for UI view
+  selectedDataColumns,
+  setSelectedDataColumns,
+
+  onSelectButtonForUpload
 }) => {
+
+  // styles for data preview table
   const s = dataOutputStyles();
 
-  const columns = useMemo(() => (data.length > 0 ? Object.keys(data[0]) : []), [data]);
-
+  // use table for styling and interacting with numerical columns
   const {
     selectedAnalysisColumn,
     numericColumns,
     stats,
+    
     handleColumnClick,
     handleColumnDoubleClick,
     clearAnalysisSelection,
     getCellStyle: getBaseCellStyle,
-  } = useTableStylingAndInteraction(data, filteredData, columns);
 
-  const { selectedCells, selectedColumns: selectedTableColumns, handleMouseDown, handleMouseOver, getCellKey } =
-    useTableSelection(columns);
+    selectedRows,
+    selectOneRow,
+    selectAllRows,
+  } = useTableStylingAndInteraction(originalDataRows, filteredDataRows, originalDataColumns);
 
-  const selectedCellKeys = useMemo(
-    () => new Set(selectedCells.map((cell) => getCellKey(cell))),
-    [selectedCells, getCellKey]
+  const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
+    filteredDataRows,
+    ROWS_PER_PAGE
   );
 
   const getCombinedCellStyle = useCallback(
     (rowIndex: number, columnId: string, isHeader: boolean = false) => {
       const baseStyle = getBaseCellStyle(rowIndex, columnId, isHeader);
-      const isSelected = isHeader
-        ? selectedTableColumns.includes(columnId)
-        : selectedCellKeys.has(getCellKey({ rowIndex, columnId }));
-      return `${baseStyle} ${isSelected ? 'bg-blue-200 border-blue-400' : ''}`;
+      return baseStyle;
     },
-    [getBaseCellStyle, selectedTableColumns, selectedCellKeys, getCellKey]
+    [getBaseCellStyle]
   );
 
   const toggleColumn = (column: string, checked: boolean) => {
-    if (checked) setSelectedColumns([...selectedColumns, column]);
-    else setSelectedColumns(selectedColumns.filter((c) => c !== column));
+    if (checked) setSelectedDataColumns([...selectedDataColumns, column]);
+    else setSelectedDataColumns(selectedDataColumns.filter((c) => c !== column));
     reset();
   };
 
-  const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
-    filteredData,
-    ROWS_PER_PAGE
-  );
-
   useEffect(() => {
-    if (selectedColumns.length === 0 && columns.length > 0) {
-      setSelectedColumns(columns);
+    if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
+      setSelectedDataColumns(originalDataColumns);
     }
-  }, [columns, selectedColumns, setSelectedColumns]);
+  }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
 
 
-
-  if (!data.length) {
+  if (!originalDataRows.length) {
     return (
       <PreviewEmptyState onSelectButtonForUpload={onSelectButtonForUpload} />
     );
@@ -90,13 +89,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       <div className="mb-4">
         <label className={s.label()}>Select Columns to Display:</label>
         <div className={s.columnsContainer()}>
-          {columns.map((column) => (
+          {originalDataColumns.map((column) => (
             <div key={column} className={s.columnsItem()}>
               <Checkbox
                 className={s.checkboxStyles()}
                 type="checkbox"
                 label={column}
-                checked={selectedColumns.includes(column)}
+                checked={selectedDataColumns.includes(column)}
                 onChange={(e) => toggleColumn(column, e.target.checked)}
               />
             </div>
@@ -132,12 +131,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                   type="checkbox"
                   className="rounded border-gray-300"
                   onChange={(e) => {
-                    console.log('Select all clicked:', e.target.checked);
+                    selectAllRows(e.target.checked)
                   }}
                 />
               </th>
 
-              {selectedColumns.map((column) => (
+              {selectedDataColumns.map((column) => (
                 <React.Fragment key={column}>
                   <th
                     className={getCombinedCellStyle(0, column, true)}
@@ -168,18 +167,17 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                       <Checkbox
                         type="checkbox"
                         className="rounded border-gray-300"
+                        checked={selectedRows.includes(row)}
                         onChange={(e) => {
-                          console.log(`Row ${actualRowIndex} selected:`, e.target.checked);
-                          console.log('Complete row data:', row);
+                          selectOneRow(row, e.target.checked);
+                          
                         }}
                       />
                     </td>
-                    {selectedColumns.map((column) => (
+                    {selectedDataColumns.map((column) => (
                       <td
-                       key={column}
+                        key={column}
                         className={getCombinedCellStyle(actualRowIndex, column)}
-                        onMouseDown={(e) => handleMouseDown(actualRowIndex, column, e, false)}
-                        onMouseOver={() => handleMouseOver(actualRowIndex, column, false)}
                       >
                         {formatTableCellValue(row[column])}
                       </td>
@@ -189,7 +187,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
               })
             ) : (
               <tr>
-                <td colSpan={selectedColumns.length + 1} className={s.tableBodyEmptyCell()}>
+                <td colSpan={originalDataColumns.length + 1} className={s.tableBodyEmptyCell()}>
                   No data to display
                 </td>
               </tr>
@@ -199,7 +197,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       </div>
 
       <PreviewPagination
-        filteredData={filteredData}
+        filteredDataRows={filteredDataRows}
         selectedAnalysisColumn={selectedAnalysisColumn}
         paginatedData={paginatedData}
         goToPrev={goToPrev}

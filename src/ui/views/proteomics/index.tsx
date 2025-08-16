@@ -19,8 +19,17 @@ import { proteomicsPagestyles } from './variants/proteomics.variants';
 
 export default function ProteomicsAnalysisHomeView({
   handleSessionCreate,
-  data, setData,
-  selectedColumns, setSelectedColumns,
+
+  // data rows and column values and setters
+  originalDataRows, 
+  setOriginalDataRows,
+  originalDataColumns, 
+  setOriginalDataColumns,
+
+  // selected columns
+  selectedDataColumns,
+  setSelectedDataColumns,
+
   isProcessing, setIsProcessing
 }: ProteomicsAnalysisHomeViewProps) {
   const styles = proteomicsPagestyles();
@@ -29,10 +38,10 @@ export default function ProteomicsAnalysisHomeView({
   const [searchTerm, setSearchTerm] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const filteredData = useFilteredData(data, filterCriteria, searchTerm);
-  const stats = useProteomicsStats(filteredData, selectedColumns);
+  const filteredData = useFilteredData(originalDataRows, filterCriteria, searchTerm);
+  const stats = useProteomicsStats(filteredData, originalDataColumns);
   const volcanoData = useVolcanoData(filteredData);
-  const intensityDist = useIntensityDist(filteredData, selectedColumns);
+  const intensityDist = useIntensityDist(filteredData, originalDataColumns);
 
   const handleExport = useCallback(
     () => handleFileExport(filteredData, 'proteomics-data'),
@@ -46,8 +55,8 @@ export default function ProteomicsAnalysisHomeView({
     await handleCSVFileUpload(file, {
       onData: (rows, headers) => {
         // Update local UI state
-        setData(rows);
-        setSelectedColumns(headers);
+        setOriginalDataRows(rows);
+        setOriginalDataColumns(headers);
         // Create a session immediately for this imported dataset (single, explicit action)
         const result = createMatrixDataSafe(rows, headers);
         if (!result) {
@@ -61,7 +70,7 @@ export default function ProteomicsAnalysisHomeView({
     });
 
     e.target.value = '';
-  }, [setData, setSelectedColumns, setIsProcessing, handleSessionCreate]);
+  }, [setIsProcessing, setOriginalDataRows, setOriginalDataColumns, handleSessionCreate]);
 
   return (
     <div className={styles.container()}>
@@ -77,15 +86,17 @@ export default function ProteomicsAnalysisHomeView({
               fileInputRef={fileInputRef}
               onFileChange={handleFileUpload}
               isProcessing={isProcessing}
-              totalProteins={data.length}
-              columnsCount={data[0] ? Object.keys(data[0]).length : 0}
-              selectedColumnsCount={selectedColumns.length}
+              originalDataRowsCount={originalDataRows.length}
+              originalColumnsCount={originalDataColumns.length}
+              selectedColumnsCount={selectedDataColumns.length}
             />
+
             <DataPreview
-              data={data}
-              filteredData={filteredData}
-              selectedColumns={selectedColumns}
-              setSelectedColumns={setSelectedColumns}
+              originalDataRows={originalDataRows}
+              filteredDataRows={filteredData}
+              originalDataColumns={originalDataColumns}
+              selectedDataColumns={selectedDataColumns}
+              setSelectedDataColumns={setSelectedDataColumns}
               onSelectButtonForUpload={() => fileInputRef.current?.click()}
             />
           </div>
@@ -101,7 +112,7 @@ export default function ProteomicsAnalysisHomeView({
             <div className={styles.filterBox()}>
               <h3 className={styles.filterHeader()}>Filter Results</h3>
               <p className={styles.filterText()}>
-                Showing {filteredData.length} of {data.length} proteins
+                Showing {filteredData.length} of {originalDataRows.length} proteins
               </p>
             </div>
           </div>

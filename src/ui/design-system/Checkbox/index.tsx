@@ -2,6 +2,7 @@ import React from 'react';
 import { tv } from 'tailwind-variants';
 
 type CheckboxProps = React.InputHTMLAttributes<HTMLInputElement> & {
+  ref?: React.RefObject<HTMLInputElement>;
   label?: string;
 };
 
@@ -12,12 +13,17 @@ const styles = tv({
   },
 });
 
-export const Checkbox: React.FC<CheckboxProps> = ({ label, className, ...props }) => {
+export const Checkbox: React.FC<CheckboxProps> = ({ ref, label, className, ...props }) => {
   const s = styles();
 
   return (
     <label className={s.wrapper()}>
-      <input type="checkbox" className={s.input({ className })} {...props} />
+      <input 
+        {...props} 
+        type="checkbox" 
+        className={s.input({ className })} 
+        ref={ref}
+      />
       {label && <span>{label}</span>}
     </label>
   );

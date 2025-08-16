@@ -2,7 +2,7 @@ import { DataPreviewPagination } from './types'
 import { dataOutputStyles } from './variants/data-output.variant';
 
 const PreviewPagination = ({
-  filteredData,
+  filteredDataRows,
   paginatedData,
   goToPrev,
   goToNext,
@@ -14,7 +14,7 @@ const PreviewPagination = ({
   return (
     <div className={s.pagination()}>
         <div>
-          Showing {paginatedData.length} of {filteredData.length} proteins
+          Showing {paginatedData.length} of {filteredDataRows.length} proteins
           {selectedAnalysisColumn && (
             <span className="ml-4 text-blue-600 font-medium">
               Analyzing: {selectedAnalysisColumn}
