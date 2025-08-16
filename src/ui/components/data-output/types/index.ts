@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import { ProteinRow } from "@/domain/proteins/index.types";
 
 export type DataPreviewProps = {
@@ -9,7 +9,6 @@ export type DataPreviewProps = {
   onSelectButtonForUpload?: () => void;
 };
 
-
 export type DataImportProps = {
   fileInputRef: React.RefObject<HTMLInputElement>;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -17,4 +16,18 @@ export type DataImportProps = {
   totalProteins: number;
   columnsCount: number;
   selectedColumnsCount: number;
+};
+
+export type DataPreviewEmptyState = {
+  onSelectButtonForUpload?: () => void;
+};
+
+export type DataPreviewPagination = {
+  filteredData: ProteinRow[];
+  paginatedData: ProteinRow[];
+  goToPrev: () => void;
+  goToNext: () => void;
+  currentPage: number;
+  totalPages: number;
+  selectedAnalysisColumn: string | null;
 };

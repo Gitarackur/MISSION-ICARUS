@@ -1,8 +1,8 @@
-// DataPreview.tsx
-import React, { useEffect, useMemo } from 'react';
+// DataPreview.ts
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
-import { UploadCloud, Calculator, BarChart3 } from 'lucide-react';
+import { Calculator, BarChart3 } from 'lucide-react';
 import { DataPreviewProps } from './types';
 import { dataOutputStyles } from './variants/data-output.variant';
 import StatisticalAnalysisInstructions from '../statistics/analysis-instructions';
@@ -10,6 +10,9 @@ import StatisticalAnalysisColumns from '../statistics/analysis-columns';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
 import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
 import StatisticsMenu from '../statistics/menu';
+import { useTableSelection } from './hooks/useTableSelection';
+import PreviewEmptyState from './preview-empty-state';
+import PreviewPagination from './preview-pagination';
 
 const ROWS_PER_PAGE = 10;
 
@@ -31,8 +34,27 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     handleColumnClick,
     handleColumnDoubleClick,
     clearAnalysisSelection,
-    getCellStyle,
+    getCellStyle: getBaseCellStyle,
   } = useTableStylingAndInteraction(data, filteredData, columns);
+
+  const { selectedCells, selectedColumns: selectedTableColumns, handleMouseDown, handleMouseOver, getCellKey } =
+    useTableSelection(columns);
+
+  const selectedCellKeys = useMemo(
+    () => new Set(selectedCells.map((cell) => getCellKey(cell))),
+    [selectedCells, getCellKey]
+  );
+
+  const getCombinedCellStyle = useCallback(
+    (rowIndex: number, columnId: string, isHeader: boolean = false) => {
+      const baseStyle = getBaseCellStyle(rowIndex, columnId, isHeader);
+      const isSelected = isHeader
+        ? selectedTableColumns.includes(columnId)
+        : selectedCellKeys.has(getCellKey({ rowIndex, columnId }));
+      return `${baseStyle} ${isSelected ? 'bg-blue-200 border-blue-400' : ''}`;
+    },
+    [getBaseCellStyle, selectedTableColumns, selectedCellKeys, getCellKey]
+  );
 
   const toggleColumn = (column: string, checked: boolean) => {
     if (checked) setSelectedColumns([...selectedColumns, column]);
@@ -40,14 +62,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     reset();
   };
 
-  const {
-    currentPage,
-    totalPages,
-    paginatedData,
-    goToNext,
-    goToPrev,
-    reset,
-  } = usePagination(filteredData, ROWS_PER_PAGE);
+  const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
+    filteredData,
+    ROWS_PER_PAGE
+  );
 
   useEffect(() => {
     if (selectedColumns.length === 0 && columns.length > 0) {
@@ -55,21 +73,11 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     }
   }, [columns, selectedColumns, setSelectedColumns]);
 
+
+
   if (!data.length) {
     return (
-      <div className={s.emptyState()}>
-        <UploadCloud className={s.emptyIcon()} />
-        <h3 className={s.emptyTitle()}>No data imported</h3>
-        <p className={s.emptyDescription()}>
-          Import your proteomics CSV file to preview data here.
-        </p>
-        <button
-          onClick={() => onSelectButtonForUpload?.()}
-          className={s.button({ buttonDisabled: false })}
-        >
-          Import Data
-        </button>
-      </div>
+      <PreviewEmptyState onSelectButtonForUpload={onSelectButtonForUpload} />
     );
   }
 
@@ -85,7 +93,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           {columns.map((column) => (
             <div key={column} className={s.columnsItem()}>
               <Checkbox
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                className={s.checkboxStyles()}
                 type="checkbox"
                 label={column}
                 checked={selectedColumns.includes(column)}
@@ -105,7 +113,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
             </h4>
             <button
               onClick={clearAnalysisSelection}
-              className="px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors"
+              className={s.clearAnalysisSelection()}
             >
               Clear Selection
             </button>
@@ -119,39 +127,69 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         <table className={s.table()}>
           <thead className={s.tableHead()}>
             <tr>
-              {selectedColumns.map((column) => (
-                <th
-                  key={column}
-                  className={getCellStyle(0, column, true)}
-                  onDoubleClick={() => {
-                    handleColumnDoubleClick()
+              <th className={s.tableCellCheckboxContainer()}>
+                <Checkbox
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  onChange={(e) => {
+                    console.log('Select all clicked:', e.target.checked);
                   }}
-                  onClick={() => handleColumnClick(column)}
-                >
-                  <div className="flex items-center">
-                    {formatColumnHeader(column)}
-                    {numericColumns.has(column) && (
-                      <Calculator className="ml-2 h-4 w-4 text-blue-600" />
-                    )}
-                  </div>
-                </th>
+                />
+              </th>
+
+              {selectedColumns.map((column) => (
+                <React.Fragment key={column}>
+                  <th
+                    className={getCombinedCellStyle(0, column, true)}
+                    onDoubleClick={() => {
+                      handleColumnDoubleClick();
+                    }}
+                    onClick={() => handleColumnClick(column)}
+                  >
+                    <div className="flex items-center">
+                      {formatColumnHeader(column)}
+                      {numericColumns.has(column) && (
+                        <Calculator className="ml-2 h-4 w-4 text-blue-600" />
+                      )}
+                    </div>
+                  </th>
+                </React.Fragment>
               ))}
             </tr>
           </thead>
+
           <tbody className={s.tableBody()}>
             {paginatedData.length > 0 ? (
-              paginatedData.map((row, idx) => (
-                <tr key={idx} className={s.tableBodyRow()}>
-                  {selectedColumns.map((column) => (
-                    <td key={column} className={getCellStyle(idx + (currentPage - 1) * ROWS_PER_PAGE, column)}>
-                      {formatTableCellValue(row[column])}
+              paginatedData.map((row, idx) => {
+                const actualRowIndex = idx + (currentPage - 1) * ROWS_PER_PAGE;
+                return (
+                  <tr key={actualRowIndex} className={s.tableBodyRow()}>
+                    <td className={s.tableCellCheckboxContainer()}>
+                      <Checkbox
+                        type="checkbox"
+                        className="rounded border-gray-300"
+                        onChange={(e) => {
+                          console.log(`Row ${actualRowIndex} selected:`, e.target.checked);
+                          console.log('Complete row data:', row);
+                        }}
+                      />
                     </td>
-                  ))}
-                </tr>
-              ))
+                    {selectedColumns.map((column) => (
+                      <td
+                       key={column}
+                        className={getCombinedCellStyle(actualRowIndex, column)}
+                        onMouseDown={(e) => handleMouseDown(actualRowIndex, column, e, false)}
+                        onMouseOver={() => handleMouseOver(actualRowIndex, column, false)}
+                      >
+                        {formatTableCellValue(row[column])}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             ) : (
               <tr>
-                <td colSpan={selectedColumns.length} className={s.tableBodyEmptyCell()}>
+                <td colSpan={selectedColumns.length + 1} className={s.tableBodyEmptyCell()}>
                   No data to display
                 </td>
               </tr>
@@ -160,35 +198,15 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </table>
       </div>
 
-      <div className={s.pagination()}>
-        <div>
-          Showing {paginatedData.length} of {filteredData.length} proteins
-          {selectedAnalysisColumn && (
-            <span className="ml-4 text-blue-600 font-medium">
-              Analyzing: {selectedAnalysisColumn}
-            </span>
-          )}
-        </div>
-        <div className="flex space-x-2">
-          <button
-            onClick={goToPrev}
-            disabled={currentPage === 1}
-            className={s.paginationButton({ paginationButtonDisabled: currentPage === 1 })}
-          >
-            Previous
-          </button>
-          <span className={s.paginationInfo()}>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            onClick={goToNext}
-            disabled={currentPage === totalPages}
-            className={s.paginationButton({ paginationButtonDisabled: currentPage === totalPages })}
-          >
-            Next
-          </button>
-        </div>
-      </div>
+      <PreviewPagination
+        filteredData={filteredData}
+        selectedAnalysisColumn={selectedAnalysisColumn}
+        paginatedData={paginatedData}
+        goToPrev={goToPrev}
+        goToNext={goToNext}
+        currentPage={currentPage}
+        totalPages={totalPages}
+      />
     </div>
   );
 };

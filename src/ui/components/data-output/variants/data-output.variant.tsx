@@ -32,6 +32,10 @@ export const dataOutputStyles = tv({
     paginationButtonDisabled: 'text-gray-400 cursor-not-allowed bg-gray-100',
     paginationButtonEnabled: 'hover:bg-gray-100 text-gray-700 cursor-pointer',
     paginationInfo: 'px-3 py-1 border border-gray-300 rounded bg-gray-50 text-gray-700 select-none',
+
+    tableCellCheckboxContainer: "px-4 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200",
+    clearAnalysisSelection: "px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors",
+    checkboxStyles: "rounded border-gray-300 text-blue-600 focus:ring-blue-500"
   },
   variants: {
     buttonDisabled: {
