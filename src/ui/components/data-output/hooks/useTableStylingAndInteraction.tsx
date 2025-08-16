@@ -15,6 +15,8 @@ export const useTableStylingAndInteraction = (
   const [selectedAnalysisColumnHeaderValue, setSelectedAnalysisColumnHeaderValue] = useState<string | null>(null);
   const [selectedAnalysisColumnCells, setSelectedAnalysisColumnCells] = useState<Set<string>>(new Set());
   const [selectedAnalysisRowCells, setSelectedAnalysisRowsCells] = useState<ProteinRow[]>([]);
+  // for ui control of the checked input on the columns
+  const [isAllSelectedUI, setIsAllSelectedUI] = useState(false);
 
   const selectedRowsSet = useMemo(() => {
     const set = new WeakSet<ProteinRow>();
@@ -105,6 +107,10 @@ export const useTableStylingAndInteraction = (
     }
   }, [originalDataRows, clearAnalysisSelection]);
 
+  useEffect(() => {
+    setIsAllSelectedUI(false);
+  }, [originalDataRows]);
+
 
   return {
     selectedAnalysisColumnHeaderValue,
@@ -117,5 +123,7 @@ export const useTableStylingAndInteraction = (
     getCellStyle,
     selectOneRow,
     selectAllRows,
+    isAllSelectedUI,
+    setIsAllSelectedUI
   };
 };

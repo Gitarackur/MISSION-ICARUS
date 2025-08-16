@@ -49,6 +49,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
     selectOneRow,
     selectAllRows,
+
+    isAllSelectedUI,
+    setIsAllSelectedUI
   } = useTableStylingAndInteraction(originalDataRows, filteredDataRows, originalDataColumns);
 
   const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
@@ -80,6 +83,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       setSelectedDataColumns(originalDataColumns);
     }
   }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
+
+
 
 
   if (!originalDataRows.length) {
@@ -138,10 +143,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({
             <tr>
               <th className={s.tableCellCheckboxContainer()}>
                 <Checkbox
+                  checked={isAllSelectedUI}
                   type="checkbox"
                   className="rounded border-gray-300"
                   onChange={(e) => {
-                    selectAllRows(e.target.checked)
+                    setIsAllSelectedUI(e.target.checked);
+                    selectAllRows(e.target.checked);
                   }}
                 />
               </th>
