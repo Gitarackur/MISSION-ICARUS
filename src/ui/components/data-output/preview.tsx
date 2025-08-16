@@ -44,6 +44,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     getCellStyle: getBaseCellStyle,
 
     selectedAnalysisRowCells,
+    selectedAnalysisColumnCells,
     selectedAnalysisColumnHeaderValue,
 
     selectOneRow,
@@ -110,7 +111,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </div>
       </div>
 
-      {selectedAnalysisColumnHeaderValue && stats && (
+      {((selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnCells.values.length > 0) || (selectedAnalysisColumnHeaderValue && stats)) && (
         <>
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-semibold flex items-center">
@@ -124,7 +125,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
               Clear Selection
             </button>
           </div>
-          <StatisticalAnalysisColumns stats={stats} />
+          {
+            stats && <StatisticalAnalysisColumns stats={stats} />
+          }
           <StatisticsMenu />
         </>
       )}
