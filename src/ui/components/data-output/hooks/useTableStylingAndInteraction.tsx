@@ -1,6 +1,5 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useMemo, useEffect } from "react";
-import { calculateColumnStats } from "@/app-layer/shared/statistics";
 import { getNumericColumns } from "@/app-layer/shared/utils";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
@@ -8,40 +7,44 @@ import { dataOutputStyles } from "../variants/data-output.variant";
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
-  filteredData: ProteinRow[],
+  filteredDataRows: ProteinRow[],
   columns: string[],
 ) => {
   const styles = dataOutputStyles();
 
   // selecting analysis on data preview table
-  const [selectedAnalysisColumn, setSelectedAnalysisColumn] = useState<string | null>(null);
+  const [selectedAnalysisColumnHeaderValue, setSelectedAnalysisColumnHeaderValue] = useState<string | null>(null);
 
   // highlighted cell -- mostly numeric cells
-  const [highlightedCells, setHighlightedCells] = useState<Set<string>>(new Set());
+  const [selectedAnalysisColumnCells, setSelectedAnalysisColumnCells] = useState<Set<string>>(new Set());
 
   // state for selecting all rows
-  const [selectedRows, setSelectedRows] = useState<ProteinRow[]>([]);
+  const [selectedAnalysisRowCells, setSelectedAnalysisRowCells] = useState<ProteinRow[]>([]);
 
   // get numeric columns in table
   const numericColumns = useMemo(() => getNumericColumns(columns, originalDataRows), [columns, originalDataRows]);
 
 
+  // clear the analysis selection
   const clearAnalysisSelection = () => {
-    setSelectedAnalysisColumn(null);
-    setHighlightedCells(new Set());
+    setSelectedAnalysisColumnHeaderValue(null);
+    setSelectedAnalysisColumnCells(new Set());
   };
 
+  // handle column click, get highlighted columns and styles it
   const handleColumnClick = (columnName: string) => {
     if (!numericColumns.has(columnName)) return;
 
-    setSelectedAnalysisColumn(columnName);
+    setSelectedAnalysisColumnHeaderValue(columnName);
 
     const newHighlighted = new Set<string>();
     newHighlighted.add(`header-${columnName}`);
-    filteredData.forEach((_, rowIndex) => {
+    filteredDataRows.forEach((_, rowIndex) => {
       newHighlighted.add(`${rowIndex}-${columnName}`);
     });
-    setHighlightedCells(newHighlighted);
+
+    console.log("highlighted", newHighlighted)
+    setSelectedAnalysisColumnCells(newHighlighted);
   };
 
   const handleColumnDoubleClick = () => {
@@ -51,9 +54,9 @@ export const useTableStylingAndInteraction = (
   // add color styles to table numeric columns
   const getCellStyle = (rowIndex: number, columnName: string, isHeader = false) => {
     const cellKey = isHeader ? `header-${columnName}` : `${rowIndex}-${columnName}`;
-    const isHighlighted = highlightedCells.has(cellKey);
+    const isHighlighted = selectedAnalysisColumnCells.has(cellKey);
     const isNumeric = numericColumns.has(columnName);
-    const isSelectedColumn = selectedAnalysisColumn === columnName;
+    const isSelectedColumn = selectedAnalysisColumnHeaderValue === columnName;
 
     let className = isHeader ? styles.tableHeadCell() : styles.tableBodyCell();
 
@@ -75,35 +78,28 @@ export const useTableStylingAndInteraction = (
 
   // select all rows on the table including the oness not shown in the paginated data
   const selectAllRows = (checked: boolean) => {
-    console.log('Select all clicked:', checked);
+    // console.log('Select all clicked:', checked);
     if (checked) {
-      setSelectedRows([...originalDataRows])
+      setSelectedAnalysisRowCells([...originalDataRows])
     } else {
-      setSelectedRows([])
+      setSelectedAnalysisRowCells([])
     }
   }
 
   // seletct one row on the table
   const selectOneRow = (row: ProteinRow, checked: boolean) => {
-    console.log(`selected:`, checked);
-    console.log('Complete row data:', row);
-
+    // console.log(`selected:`, checked);
+    // console.log('Complete row data:', row);
     if (checked) {
-      setSelectedRows((prevState) => {
+      setSelectedAnalysisRowCells((prevState) => {
         return [...prevState, row]
       })
     } else {
-      setSelectedRows((prevState) => {
+      setSelectedAnalysisRowCells((prevState) => {
         return prevState.filter((data) => data !== row)
       })
     }
   }
-
-  const stats = useMemo(() => {
-    if (!selectedAnalysisColumn) return null;
-    return calculateColumnStats(numericColumns, filteredData, selectedAnalysisColumn);
-  }, [selectedAnalysisColumn, numericColumns, filteredData]);
-
 
   useEffect(() => {
     // it should clear if there is new data
@@ -114,22 +110,24 @@ export const useTableStylingAndInteraction = (
 
 
   useEffect(() => {
-    console.log('setSelectedRows', selectedRows);
-  }, [selectedRows])
+    console.log('setSelectedRows', selectedAnalysisRowCells);
+  }, [selectedAnalysisRowCells])
 
 
 
   return {
-    selectedAnalysisColumn,
-    highlightedCells,
+    selectedAnalysisColumnHeaderValue,
+
     numericColumns,
-    stats,
+
+    selectedAnalysisColumnCells,
+    selectedAnalysisRowCells,
+    
     handleColumnClick,
     handleColumnDoubleClick,
     clearAnalysisSelection,
     getCellStyle,
-
-    selectedRows,
+   
     selectOneRow,
     selectAllRows,
   };

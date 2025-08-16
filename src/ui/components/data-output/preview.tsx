@@ -1,5 +1,5 @@
 // DataPreview.ts
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
 import { Calculator, BarChart3 } from 'lucide-react';
@@ -12,6 +12,7 @@ import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/uti
 import StatisticsMenu from '../statistics/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
+import { calculateColumnStats } from '@/app-layer/shared/statistics';
 
 const ROWS_PER_PAGE = 10;
 
@@ -34,16 +35,16 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
   // use table for styling and interacting with numerical columns
   const {
-    selectedAnalysisColumn,
     numericColumns,
-    stats,
-    
+
     handleColumnClick,
     handleColumnDoubleClick,
     clearAnalysisSelection,
     getCellStyle: getBaseCellStyle,
 
-    selectedRows,
+    selectedAnalysisRowCells,
+    selectedAnalysisColumnHeaderValue,
+
     selectOneRow,
     selectAllRows,
   } = useTableStylingAndInteraction(originalDataRows, filteredDataRows, originalDataColumns);
@@ -66,6 +67,11 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     else setSelectedDataColumns(selectedDataColumns.filter((c) => c !== column));
     reset();
   };
+
+  const stats = useMemo(() => {
+    if (!selectedAnalysisColumnHeaderValue) return null;
+    return calculateColumnStats(numericColumns, filteredDataRows, selectedAnalysisColumnHeaderValue);
+  }, [selectedAnalysisColumnHeaderValue, numericColumns, filteredDataRows]);
 
   useEffect(() => {
     if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
@@ -103,12 +109,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </div>
       </div>
 
-      {selectedAnalysisColumn && stats && (
+      {selectedAnalysisColumnHeaderValue && stats && (
         <>
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-semibold flex items-center">
               <BarChart3 className="mr-2 h-5 w-5 text-blue-600" />
-              Column Statistics: {selectedAnalysisColumn}
+              Column Statistics: {selectedAnalysisColumnHeaderValue}
             </h4>
             <button
               onClick={clearAnalysisSelection}
@@ -167,10 +173,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                       <Checkbox
                         type="checkbox"
                         className="rounded border-gray-300"
-                        checked={selectedRows.includes(row)}
+                        checked={selectedAnalysisRowCells.includes(row)}
                         onChange={(e) => {
                           selectOneRow(row, e.target.checked);
-                          
+
                         }}
                       />
                     </td>
@@ -198,7 +204,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
       <PreviewPagination
         filteredDataRows={filteredDataRows}
-        selectedAnalysisColumn={selectedAnalysisColumn}
+        selectedAnalysisColumn={selectedAnalysisColumnHeaderValue}
         paginatedData={paginatedData}
         goToPrev={goToPrev}
         goToNext={goToNext}
