@@ -43,7 +43,6 @@ export const useTableStylingAndInteraction = (
       newHighlighted.add(`${rowIndex}-${columnName}`);
     });
 
-    console.log("highlighted", newHighlighted)
     setSelectedAnalysisColumnCells(newHighlighted);
   };
 
@@ -52,11 +51,14 @@ export const useTableStylingAndInteraction = (
   }
 
   // add color styles to table numeric columns
-  const getCellStyle = (rowIndex: number, columnName: string, isHeader = false) => {
+  const getCellStyle = (rowIndex: number, row: ProteinRow | null, columnName: string, isHeader = false) => {
     const cellKey = isHeader ? `header-${columnName}` : `${rowIndex}-${columnName}`;
-    const isHighlighted = selectedAnalysisColumnCells.has(cellKey);
     const isNumeric = numericColumns.has(columnName);
-    const isSelectedColumn = selectedAnalysisColumnHeaderValue === columnName;
+    const isSelectedColumnHeader = selectedAnalysisColumnHeaderValue === columnName;
+
+    // check if the columns and rows are selected
+    const isSelectedColumn = selectedAnalysisColumnCells.has(cellKey);
+    const isSelectedRow = row !== null && selectedAnalysisRowCells.includes(row)
 
     let className = isHeader ? styles.tableHeadCell() : styles.tableBodyCell();
 
@@ -64,10 +66,10 @@ export const useTableStylingAndInteraction = (
       if (isNumeric) {
         className += ' cursor-pointer hover:bg-blue-100 transition-colors duration-200';
       }
-      if (isSelectedColumn) {
+      if (isSelectedColumnHeader ) {
         className += ' bg-blue-200';
       }
-    } else if (isHighlighted) {
+    } else if (isSelectedColumn || isSelectedRow) {
       className += ' bg-blue-100 border-blue-200';
     } else if (isNumeric) {
       className += ' bg-green-50';
@@ -78,7 +80,6 @@ export const useTableStylingAndInteraction = (
 
   // select all rows on the table including the oness not shown in the paginated data
   const selectAllRows = (checked: boolean) => {
-    // console.log('Select all clicked:', checked);
     if (checked) {
       setSelectedAnalysisRowCells([...originalDataRows])
     } else {
@@ -88,8 +89,6 @@ export const useTableStylingAndInteraction = (
 
   // seletct one row on the table
   const selectOneRow = (row: ProteinRow, checked: boolean) => {
-    // console.log(`selected:`, checked);
-    // console.log('Complete row data:', row);
     if (checked) {
       setSelectedAnalysisRowCells((prevState) => {
         return [...prevState, row]
@@ -107,12 +106,6 @@ export const useTableStylingAndInteraction = (
       clearAnalysisSelection();
     }
   }, [originalDataRows])
-
-
-  useEffect(() => {
-    console.log('setSelectedRows', selectedAnalysisRowCells);
-  }, [selectedAnalysisRowCells])
-
 
 
   return {

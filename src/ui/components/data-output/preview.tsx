@@ -13,6 +13,7 @@ import StatisticsMenu from '../statistics/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 import { calculateColumnStats } from '@/app-layer/shared/statistics';
+import { ProteinRow } from '@/domain/proteins/index.types';
 
 const ROWS_PER_PAGE = 10;
 
@@ -55,8 +56,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   );
 
   const getCombinedCellStyle = useCallback(
-    (rowIndex: number, columnId: string, isHeader: boolean = false) => {
-      const baseStyle = getBaseCellStyle(rowIndex, columnId, isHeader);
+    (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
+      const baseStyle = getBaseCellStyle(rowIndex, row, columnId, isHeader);
       return baseStyle;
     },
     [getBaseCellStyle]
@@ -145,7 +146,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
               {selectedDataColumns.map((column) => (
                 <React.Fragment key={column}>
                   <th
-                    className={getCombinedCellStyle(0, column, true)}
+                    className={getCombinedCellStyle(0, null, column, true)}
                     onDoubleClick={() => {
                       handleColumnDoubleClick();
                     }}
@@ -183,7 +184,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                     {selectedDataColumns.map((column) => (
                       <td
                         key={column}
-                        className={getCombinedCellStyle(actualRowIndex, column)}
+                        className={getCombinedCellStyle(actualRowIndex, row, column)}
                       >
                         {formatTableCellValue(row[column])}
                       </td>
