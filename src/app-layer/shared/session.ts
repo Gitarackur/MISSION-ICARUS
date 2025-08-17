@@ -64,12 +64,23 @@ export const createBareSession = ({
 }: CreateSessionUsingRowsColumn) => {
   const session = new IcarusSession();
   const workflow = new IcarusWorkflow();
+
   session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`);
+
   const matrixWorkflowMap = workflow.addMatrix({
     columns,
     data: rowsAs2dMatrix as TableMatrices,
   });
+
+  const activity = workflow.addActivity({
+    inputMatrixIds: rowsAs2dMatrix,
+    inputColumns: columns,
+    outputColumns: null,
+    outputMatrixId: null,
+    pluginId: "",
+  });
+
   const sessionMap = session.addWorkflow(workflow);
 
-  return { matrixWorkflowMap, sessionMap, session, workflow };
+  return { matrixWorkflowMap, sessionMap, session, workflow, activity };
 };

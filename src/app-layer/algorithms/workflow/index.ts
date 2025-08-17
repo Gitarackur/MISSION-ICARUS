@@ -1,84 +1,112 @@
-import { v4 as uuidv4 } from 'uuid';
-import { IcarusActivity, IcarusMatrix, IcarusVisualization, IMapActivityData, IMapMatrixData, IMapVisualizationData } from "./main.types";
-
-
-
-
-
+import { v4 as uuidv4 } from "uuid";
+import {
+  IcarusActivity,
+  IcarusMatrix,
+  IcarusVisualization,
+  IMapActivityData,
+  IMapMatrixData,
+  IMapVisualizationData,
+} from "./main.types";
 
 class IcarusWorkflow {
-    id: string;
-    matrices: IcarusMatrix[] = [];
-    activities: IcarusActivity[] = [];
-    visualizations: IcarusVisualization[] = [];
+  id: string;
+  matrices: IcarusMatrix[] = [];
+  activities: IcarusActivity[] = [];
+  visualizations: IcarusVisualization[] = [];
 
-    constructor() { 
-        this.id = uuidv4();
-    }
+  constructor() {
+    this.id = uuidv4();
+  }
 
+  addToMatricesList({ matrix }: { matrix: IcarusMatrix }) {
+    // check for duplicates and then push
+    this.matrices.push(matrix);
+  }
 
-    addToMatricesList({ matrix }: { matrix: IcarusMatrix }) {
-        // check for duplicates and then push
-        this.matrices.push(matrix);
-    }
+  addToActivityList({ activity }: { activity: IcarusActivity }) {
+    // check for duplicates and then push
+    this.activities.push(activity);
+  }
 
-    addToActivityList({ activity }: { activity: IcarusActivity }) {
-        // check for duplicates and then push
-        this.activities.push(activity);
-    }
+  addToVisualizations({
+    visualization,
+  }: {
+    visualization: IcarusVisualization;
+  }) {
+    // check for duplicates and then push
+    this.visualizations.push(visualization);
+  }
 
-    addToVisualizations({ visualization }: { visualization: IcarusVisualization }) {
-        // check for duplicates and then push
-        this.visualizations.push(visualization);
-    }
+  mapMatrixData({ columns, data, activityId = null }: IMapMatrixData) {
+    return {
+      id: `icarus-matrix-${uuidv4()}`,
+      createdByActivityId: activityId,
+      createdAt: Date.now(),
+      columns,
+      data,
+    };
+  }
 
-    mapMatrixData({ columns, data, activityId = null }: IMapMatrixData) {
-        return {
-            id: `icarus-matrix-${uuidv4()}`,
-            createdByActivityId: activityId,
-            createdAt: Date.now(),
-            columns,
-            data
-        }
-    }
+  addMatrix({ columns, data, activityId = null }: IMapMatrixData) {
+    const matrixWorkflowMap = this.mapMatrixData({
+      activityId,
+      columns,
+      data,
+    });
 
-    addMatrix({ columns, data, activityId = null }: IMapMatrixData) {
-        const matrixWorkflowMap = this.mapMatrixData({
-            activityId,
-            columns,
-            data
-        })
+    // add matrix to the workflow
+    this.addToMatricesList({
+      matrix: matrixWorkflowMap,
+    });
 
-        // add matrix to the workflow
-        this.addToMatricesList({
-            matrix: matrixWorkflowMap
-        })
+    return matrixWorkflowMap;
+  }
 
-        return matrixWorkflowMap;
-    }
+  mapActivityData({
+    inputMatrixIds,
+    outputMatrixId,
+    pluginId,
+  }: IMapActivityData) {
+    return {
+      id: `icarus-matrix-${uuidv4()}`,
+      pluginId,
+      inputMatrixIds,
+      outputMatrixId,
+      timestamp: Date.now(),
+    };
+  }
 
-    mapActivityData({ inputMatrixIds, outputMatrixId, pluginId }: IMapActivityData) {
-        return {
-            id: `icarus-matrix-${uuidv4()}`,
-            pluginId,
-            inputMatrixIds,
-            outputMatrixId: outputMatrixId,
-            timestamp: Date.now()
-        }
-    }
+  addActivity({
+    inputMatrixIds,
+    inputColumns,
+    outputColumns,
+    outputMatrixId,
+    pluginId,
+  }: IMapActivityData) {
+    const activityWorkflowMap = this.mapActivityData({
+      inputMatrixIds,
+      inputColumns,
+      outputColumns,
+      outputMatrixId,
+      pluginId,
+    });
 
-    mapVisualizationData({ data, activityId }: IMapVisualizationData) {
-        return {
-            id: `icarus-matrix-${uuidv4()}`,
-            createdByActivityId: activityId,
-            createdAt: Date.now(),
-            data
-        }
-    }
+    // add activity to the workflow
+    this.addToActivityList({
+      activity: activityWorkflowMap,
+    });
+
+    return activityWorkflowMap;
+  }
+
+  mapVisualizationData({ data, activityId }: IMapVisualizationData) {
+    return {
+      id: `icarus-matrix-${uuidv4()}`,
+      createdByActivityId: activityId,
+      createdAt: Date.now(),
+      data,
+    };
+  }
 }
-
-
-
-
 
 export default IcarusWorkflow;

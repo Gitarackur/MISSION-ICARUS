@@ -2,9 +2,9 @@
 // export type TableMatrices =  (string | number | undefined)[][] | null;
 
 export type TableColumns = string[];
-export type TableMatrices =  (string | number)[][];
+export type TableMatrices = (string | number)[][];
 
-
+// Icarus Matrix
 export interface IcarusMatrix {
   id: string;
   createdByActivityId: string | null;
@@ -12,48 +12,43 @@ export interface IcarusMatrix {
   columns: TableColumns;
   data: TableMatrices;
 }
+export interface IMapMatrixData {
+  columns: TableColumns;
+  data: TableMatrices;
+  activityId?: string | null;
+}
 
+// Icarus Activity
 export interface IcarusActivity {
   id: string;
   pluginId?: string;
-  inputMatrixIds: string[];
-  outputMatrixId: string;
-  timestamp?: string;
+  inputMatrixIds: TableMatrices;
+  outputMatrixId: TableMatrices | null;
+  timestamp: string | number;
+}
+export interface IMapActivityData {
+  inputColumns: TableColumns;
+  inputMatrixIds: TableMatrices;
+  outputColumns: TableColumns | null;
+  outputMatrixId: TableMatrices | null;
+  pluginId?: string;
 }
 
+// Icarus Visualizations
 export interface IcarusVisualization {
-    id: string;
-    createdByActivityId: string | null;
-    createdAt?: number;
-    data: unknown;
+  id: string;
+  createdByActivityId: string | null;
+  createdAt?: number;
+  data: unknown;
+}
+export interface IMapVisualizationData {
+  activityId: string;
+  data: unknown;
 }
 
+// Icarus Plugins
 export interface IcarusPlugin {
-    id: string;
-    createdAt?: string;
-    metadata: unknown;
-}
-
-
-
-
-
-
-
-// map data to workflow types
-export interface IMapMatrixData { 
-    columns: TableColumns;
-    data: TableMatrices;
-    activityId?: string | null;
-}
-
-export interface IMapActivityData{ 
-    inputMatrixIds: string[]; 
-    outputMatrixId: string[];
-    pluginId?: string; 
-}
-
-export interface IMapVisualizationData { 
-    activityId: string;
-    data: unknown 
+  id: string;
+  createdAt?: string;
+  metadata: unknown;
 }
