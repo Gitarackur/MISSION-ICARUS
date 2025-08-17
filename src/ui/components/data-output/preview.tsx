@@ -12,6 +12,7 @@ import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/uti
 import StatisticsMenu from '../statistics/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { calculateColumnStats } from '@/app-layer/shared/statistics';
 import { ProteinRow } from '@/domain/proteins/index.types';
 
@@ -34,18 +35,17 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   // styles for data preview table
   const s = dataOutputStyles();
 
-  // use table for styling and interacting with numerical columns
+  // use table for styling and interacting with its rows and columns
   const {
     numericColumns,
 
     handleColumnClick,
-    handleColumnDoubleClick,
     clearAnalysisSelection,
     getCellStyle: getBaseCellStyle,
 
     selectedAnalysisRowCells,
     selectedAnalysisColumnCells,
-    selectedAnalysisColumnHeaderValue,
+    selectedAnalysisColumnHeaderValues,
 
     selectOneRow,
     selectAllRows,
@@ -74,9 +74,21 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   };
 
   const stats = useMemo(() => {
-    if (!selectedAnalysisColumnHeaderValue) return null;
-    return calculateColumnStats(numericColumns, filteredDataRows, selectedAnalysisColumnHeaderValue);
-  }, [selectedAnalysisColumnHeaderValue, numericColumns, filteredDataRows]);
+    // Only calculate stats if there are selected columns
+    if (!selectedAnalysisColumnHeaderValues || selectedAnalysisColumnHeaderValues.size === 0) return null;
+
+    console.log("selectedAnalysisColumnHeaderValues", selectedAnalysisColumnHeaderValues);
+    console.log("selectedAnalysisRowCells", selectedAnalysisRowCells)
+    console.log("selectedAnalysisColumnCells", selectedAnalysisColumnCells)
+    // return calculateColumnStats(numericColumns, filteredDataRows, selectedAnalysisColumnHeaderValues);
+  }, [selectedAnalysisColumnHeaderValues, selectedAnalysisRowCells, selectedAnalysisColumnCells]);
+
+
+  // Format the selected column names for display in the UI
+  const selectedColumnsDisplay = useMemo(() => {
+    return Array.from(selectedAnalysisColumnHeaderValues).join(', ');
+  }, [selectedAnalysisColumnHeaderValues]);
+
 
   useEffect(() => {
     if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
@@ -87,6 +99,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
 
 
+  // account for empty state from raw data
   if (!originalDataRows.length) {
     return (
       <PreviewEmptyState onSelectButtonForUpload={onSelectButtonForUpload} />
@@ -116,12 +129,12 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </div>
       </div>
 
-      {((selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnCells.values.length > 0) || (selectedAnalysisColumnHeaderValue && stats)) && (
+      {(selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnHeaderValues.size > 0) && (
         <>
           <div className="flex justify-between items-center mb-4">
             <h4 className="text-lg font-semibold flex items-center">
               <BarChart3 className="mr-2 h-5 w-5 text-blue-600" />
-              Column Statistics: {selectedAnalysisColumnHeaderValue}
+              Column Statistics: {selectedColumnsDisplay}
             </h4>
             <button
               onClick={clearAnalysisSelection}
@@ -157,9 +170,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                 <React.Fragment key={column}>
                   <th
                     className={getCombinedCellStyle(0, null, column, true)}
-                    onDoubleClick={() => {
-                      handleColumnDoubleClick();
-                    }}
                     onClick={() => handleColumnClick(column)}
                   >
                     <div className="flex items-center">
@@ -213,15 +223,25 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </table>
       </div>
 
-      <PreviewPagination
-        filteredDataRows={filteredDataRows}
-        selectedAnalysisColumn={selectedAnalysisColumnHeaderValue}
-        paginatedData={paginatedData}
-        goToPrev={goToPrev}
-        goToNext={goToNext}
-        currentPage={currentPage}
-        totalPages={totalPages}
-      />
+      <div className='flex items-center justify-between'>
+        <div>
+          Showing {paginatedData.length} of {filteredDataRows.length} proteins
+          {selectedAnalysisColumnHeaderValues.size > 0 && (
+            <span className="ml-4 text-blue-600 font-medium">
+              Analyzing: {selectedColumnsDisplay}
+            </span>
+          )}
+        </div>
+
+        <div>
+          <PreviewPagination
+            goToPrev={goToPrev}
+            goToNext={goToNext}
+            currentPage={currentPage}
+            totalPages={totalPages}
+          />
+        </div>
+      </div>
     </div>
   );
 };

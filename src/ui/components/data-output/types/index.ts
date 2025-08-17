@@ -27,11 +27,8 @@ export type DataPreviewEmptyState = {
 };
 
 export type DataPreviewPagination = {
-  filteredDataRows: ProteinRow[];
-  paginatedData: ProteinRow[];
   goToPrev: () => void;
   goToNext: () => void;
   currentPage: number;
   totalPages: number;
-  selectedAnalysisColumn: string | null;
 };

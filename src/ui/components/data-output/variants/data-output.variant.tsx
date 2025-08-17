@@ -26,7 +26,7 @@ export const dataOutputStyles = tv({
     tableBodyRow: 'hover:bg-blue-50 transition-colors duration-150',
     tableBodyCell: 'px-4 py-3 text-sm text-gray-900 whitespace-nowrap',
     tableBodyEmptyCell: 'px-4 py-6 text-center text-gray-400 italic',
-    pagination: 'mt-4 flex items-center justify-between text-sm text-gray-600',
+    pagination: 'mt-4 w-full text-sm text-gray-600',
     paginationButton:
       'px-3 py-1 rounded border border-gray-300 transition-colors duration-150',
     paginationButtonDisabled: 'text-gray-400 cursor-not-allowed bg-gray-100',
