@@ -21,12 +21,16 @@ export interface IMapMatrixData {
 // Icarus Activity
 export interface IcarusActivity {
   id: string;
+  name: string;
   pluginId?: string;
+  inputColumns: TableColumns;
   inputMatrixIds: TableMatrices;
+  outputColumns: TableColumns | null;
   outputMatrixId: TableMatrices | null;
   timestamp: string | number;
 }
 export interface IMapActivityData {
+  name: string;
   inputColumns: TableColumns;
   inputMatrixIds: TableMatrices;
   outputColumns: TableColumns | null;

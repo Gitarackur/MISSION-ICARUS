@@ -7,6 +7,7 @@ export type BareSession = {
 }
 
 export type CreateSessionUsingRowsColumn = { 
+  name: string;
   columns: TableColumns,
   rowsAs2dMatrix: TableMatrices
 }

@@ -63,20 +63,27 @@ class IcarusWorkflow {
   }
 
   mapActivityData({
+    name,
     inputMatrixIds,
+    inputColumns,
+    outputColumns,
     outputMatrixId,
     pluginId,
   }: IMapActivityData) {
     return {
       id: `icarus-matrix-${uuidv4()}`,
+      name,
       pluginId,
+      inputColumns,
       inputMatrixIds,
+      outputColumns,
       outputMatrixId,
       timestamp: Date.now(),
     };
   }
 
   addActivity({
+    name,
     inputMatrixIds,
     inputColumns,
     outputColumns,
@@ -84,6 +91,7 @@ class IcarusWorkflow {
     pluginId,
   }: IMapActivityData) {
     const activityWorkflowMap = this.mapActivityData({
+      name,
       inputMatrixIds,
       inputColumns,
       outputColumns,

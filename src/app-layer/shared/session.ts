@@ -59,6 +59,7 @@ export function validateAndExtractWorkflowDataStrict(
 
 // Creates a bare session with a workflow and matrix
 export const createBareSession = ({
+  name,
   columns,
   rowsAs2dMatrix,
 }: CreateSessionUsingRowsColumn) => {
@@ -73,6 +74,7 @@ export const createBareSession = ({
   });
 
   const activity = workflow.addActivity({
+    name,
     inputMatrixIds: rowsAs2dMatrix,
     inputColumns: columns,
     outputColumns: null,

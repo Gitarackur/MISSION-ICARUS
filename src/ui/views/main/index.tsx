@@ -39,7 +39,11 @@ const IcarusApp: React.FC = () => {
     const { rowsAs2dMatrix } = result;
 
     try {
-      const { sessionMap, workflow } = createBareSession({ columns, rowsAs2dMatrix });
+      const { sessionMap, workflow } = createBareSession({ 
+        name: "load CSV", 
+        columns, 
+        rowsAs2dMatrix 
+      });
 
       await IcarusDBAdapter.saveWorkflow({
         id: workflow.id,
