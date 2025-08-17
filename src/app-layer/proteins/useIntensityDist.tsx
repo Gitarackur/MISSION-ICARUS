@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { mean } from '@/app-layer/shared/statistics';
-import { tableCol } from '../algorithms/workflow/main.types';
+import { TableColumns } from '../algorithms/workflow/main.types';
 
-export function useIntensityDist(filteredData: ProteinRow[], selectedColumns: tableCol) {
+export function useIntensityDist(filteredData: ProteinRow[], selectedColumns: TableColumns) {
   return useMemo(() => {
     const intensityCols = (selectedColumns ?? []).filter((c) => c.includes('intensity'));
     if (!intensityCols.length) return [];

@@ -1,6 +1,6 @@
 import { IcarusWorkflowRecord } from "@/app-layer/database/database.types";
 import { ProteinRow } from "../proteins/index.types";
-import { tableCol, tableMatrix } from "@/app-layer/algorithms/workflow/main.types";
+import { TableColumns, TableMatrices } from "@/app-layer/algorithms/workflow/main.types";
 export interface ParsedCSVResult<T> {
   data: T[];
   headers: string[];
@@ -10,16 +10,16 @@ export interface ParsedCSVResult<T> {
 export interface StrictValidationResult {
   workflows: IcarusWorkflowRecord[];
   workflow: IcarusWorkflowRecord;
-  rowsAs2dMatrix: tableMatrix;
-  columns: tableCol;
+  rowsAs2dMatrix: TableMatrices;
+  columns: TableColumns;
 }
 
 export interface MatrixData {
-  columns: tableCol;
-  rowsAs2dMatrix: tableMatrix;
+  columns: TableColumns;
+  rowsAs2dMatrix: TableMatrices;
 }
 
 export interface DataRowsAndColumns { 
   rows: ProteinRow[]; 
-  columns: tableCol
+  columns: TableColumns
 }

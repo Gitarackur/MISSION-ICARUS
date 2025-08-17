@@ -9,7 +9,7 @@ import { ProteinRow } from '@/domain/proteins/index.types';
 import { createBareSession, validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
 import { BareSession } from '@/domain/session';
 import { createMatrixDataSafe, reconstructFromMatrix } from '@/app-layer/shared/utils';
-import { tableCol } from '@/app-layer/algorithms/workflow/main.types';
+import { TableColumns } from '@/app-layer/algorithms/workflow/main.types';
 
 
 
@@ -18,8 +18,8 @@ const IcarusApp: React.FC = () => {
   const [activeSession, setActiveSession] = useState<IcarusSessionRecord | IcarusSessionWithWorkflowRecord | null>(null);
 
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
-  const [originalDataColumns, setOriginalDataColumns] = useState<tableCol>([]);
-  const [selectedDataColumns, setSelectedDataColumns] = useState<tableCol>([]);
+  const [originalDataColumns, setOriginalDataColumns] = useState<TableColumns>([]);
+  const [selectedDataColumns, setSelectedDataColumns] = useState<TableColumns>([]);
 
   const [isProcessing, setIsProcessing] = useState(false);
   const isUploadingRef = useRef(false);

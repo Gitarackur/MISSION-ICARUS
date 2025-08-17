@@ -1,16 +1,16 @@
-// export type tableCol = string[] | null;
-// export type tableMatrix =  (string | number | undefined)[][] | null;
+// export type TableColumns = string[] | null;
+// export type TableMatrices =  (string | number | undefined)[][] | null;
 
-export type tableCol = string[];
-export type tableMatrix =  (string | number)[][];
+export type TableColumns = string[];
+export type TableMatrices =  (string | number)[][];
 
 
 export interface IcarusMatrix {
   id: string;
   createdByActivityId: string | null;
   createdAt?: number;
-  columns: tableCol;
-  data: tableMatrix;
+  columns: TableColumns;
+  data: TableMatrices;
 }
 
 export interface IcarusActivity {
@@ -42,8 +42,8 @@ export interface IcarusPlugin {
 
 // map data to workflow types
 export interface IMapMatrixData { 
-    columns: tableCol;
-    data: tableMatrix;
+    columns: TableColumns;
+    data: TableMatrices;
     activityId?: string | null;
 }
 
