@@ -1,13 +1,14 @@
 import React from "react";
 import { ProteinRow } from "@/domain/proteins/index.types";
+import { tableCol } from "@/app-layer/algorithms/workflow/main.types";
 
 export type DataPreviewProps = {
   originalDataRows: ProteinRow[];
   filteredDataRows: ProteinRow[];
 
-  originalDataColumns: string[];
+  originalDataColumns: tableCol;
 
-  selectedDataColumns: string[];
+  selectedDataColumns: tableCol;
   setSelectedDataColumns: (cols: string[]) => void;
 
   onSelectButtonForUpload?: () => void;

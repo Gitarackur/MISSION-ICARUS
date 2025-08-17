@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
 import { ProteinRow, Stats } from '@/domain/proteins/index.types';
 import { mean, median, stddev } from '@/app-layer/shared/statistics';
+import { tableCol } from '../algorithms/workflow/main.types';
 
-export function useProteomicsStats(filteredData: ProteinRow[], selectedColumns: string[]): Stats | null {
+export function useProteomicsStats(filteredData: ProteinRow[], selectedColumns: tableCol): Stats | null {
   return useMemo(() => {
     if (!filteredData.length) return null;
 
-    const intensityCols = selectedColumns.filter((c) => c.includes('intensity'));
+    const intensityCols = (selectedColumns ?? []).filter((c) => c.includes('intensity'));
     if (!intensityCols.length) {
       const firstCols = Object.keys(filteredData[0]).filter((c) => c.toLowerCase().includes('intensity'));
       intensityCols.push(...firstCols);

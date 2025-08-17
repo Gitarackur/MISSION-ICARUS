@@ -1,5 +1,8 @@
-export type tableCol = string[] | null;
-export type tableMatrix =  number[][] | null;
+// export type tableCol = string[] | null;
+// export type tableMatrix =  (string | number | undefined)[][] | null;
+
+export type tableCol = string[];
+export type tableMatrix =  (string | number)[][];
 
 
 export interface IcarusMatrix {

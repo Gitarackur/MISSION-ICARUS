@@ -9,7 +9,7 @@ import StatisticsPanel from '@/ui/components/statistics/panel';
 import VisualizationPanel from '@/ui/components/visualization';
 import AnalysisPanel from '@/ui/components/analysis';
 
-import { createMatrixDataSafe, handleCSVFileUpload, handleFileExport } from '@/app-layer/shared/utils';
+import { handleCSVFileUpload, handleFileExport } from '@/app-layer/shared/utils';
 import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
 import { useFilteredData } from './hooks/useProteomicsFilter';
 import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
@@ -21,10 +21,8 @@ export default function ProteomicsAnalysisHomeView({
   handleSessionCreate,
 
   // data rows and column values and setters
-  originalDataRows, 
-  setOriginalDataRows,
-  originalDataColumns, 
-  setOriginalDataColumns,
+  originalDataRows,
+  originalDataColumns,
 
   // selected columns
   selectedDataColumns,
@@ -54,17 +52,7 @@ export default function ProteomicsAnalysisHomeView({
 
     await handleCSVFileUpload(file, {
       onData: (rows, headers) => {
-        // Update local UI state
-        setOriginalDataRows(rows);
-        setOriginalDataColumns(headers);
-        // Create a session immediately for this imported dataset (single, explicit action)
-        const result = createMatrixDataSafe(rows, headers);
-        if (!result) {
-          console.error('Failed to create matrix data from imported file');
-          return;
-        }
-        const { matrix } = result;
-        handleSessionCreate({ columns: headers, matrix });
+        handleSessionCreate({ rows, columns: headers });
       },
       onProcessingChange: setIsProcessing,
       onError: (err) => {
@@ -73,7 +61,7 @@ export default function ProteomicsAnalysisHomeView({
     });
 
     e.target.value = '';
-  }, [setIsProcessing, setOriginalDataRows, setOriginalDataColumns, handleSessionCreate]);
+  }, [setIsProcessing, handleSessionCreate]);
 
   return (
     <div className={styles.container()}>
@@ -90,8 +78,8 @@ export default function ProteomicsAnalysisHomeView({
               onFileChange={handleFileUpload}
               isProcessing={isProcessing}
               originalDataRowsCount={originalDataRows.length}
-              originalColumnsCount={originalDataColumns.length}
-              selectedColumnsCount={selectedDataColumns.length}
+              originalColumnsCount={originalDataColumns?.length}
+              selectedColumnsCount={selectedDataColumns?.length}
             />
 
             <DataPreview

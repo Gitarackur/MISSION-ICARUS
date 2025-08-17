@@ -2,7 +2,7 @@ import { StrictValidationResult } from "@/domain/shared/index.types";
 import { IcarusSessionWithWorkflowRecord } from "@/app-layer/database/database.types";
 import IcarusSession from "../session";
 import IcarusWorkflow from "../algorithms/workflow";
-import { BareSession } from "@/domain/session";
+import { CreateSessionUsingRowsColumn } from "@/domain/session";
 import { tableMatrix } from "../algorithms/workflow/main.types";
 
 // Validates and extracts workflow data from a session with workflows
@@ -52,17 +52,23 @@ export function validateAndExtractWorkflowDataStrict(
   return {
     workflows,
     workflow,
-    matrix,
+    rowsAs2dMatrix: matrix,
     columns,
   };
 }
 
 // Creates a bare session with a workflow and matrix
-export const createBareSession = ({ columns, matrix }: BareSession) => {
+export const createBareSession = ({
+  columns,
+  rowsAs2dMatrix,
+}: CreateSessionUsingRowsColumn) => {
   const session = new IcarusSession();
   const workflow = new IcarusWorkflow();
   session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`);
-  const matrixWorkflowMap = workflow.addMatrix({ columns, data: matrix as tableMatrix });
+  const matrixWorkflowMap = workflow.addMatrix({
+    columns,
+    data: rowsAs2dMatrix as tableMatrix,
+  });
   const sessionMap = session.addWorkflow(workflow);
 
   return { matrixWorkflowMap, sessionMap, session, workflow };

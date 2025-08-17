@@ -20,7 +20,6 @@ export function toNumberIfPossible(s: string | undefined): number | string {
   return trimmed;
 }
 
-
 // Calculates the log2 ratio of two numbers, returning NaN for invalid inputs
 export function safeLog2Ratio(numerator: number, denominator: number) {
   if (
@@ -70,13 +69,13 @@ export async function handleCSVFileUpload(
 
     if (result.errors.length > 0) {
       onError?.(result.errors);
-      throw new Error(`CSV parsing warnings: ${result.errors}`)
+      throw new Error(`CSV parsing warnings: ${result.errors}`);
     }
 
     onData(result.data, result.headers);
   } catch (err) {
     onError?.(err);
-    throw new Error(`Error parsing file: ${err}`)
+    throw new Error(`Error parsing file: ${err}`);
   } finally {
     onProcessingChange(false);
   }
@@ -103,13 +102,13 @@ export async function handleMatrixRowData(
 
     if (result.errors.length > 0) {
       onError?.(result.errors);
-      throw new Error(`CSV parsing warnings:: ${result.errors}`)
+      throw new Error(`CSV parsing warnings:: ${result.errors}`);
     }
 
     onData(result.data as unknown as ProteinRow[], result.headers);
   } catch (err) {
     onError?.(err);
-    throw new Error(`Error handling row and column matrices: ${err}`)
+    throw new Error(`Error handling row and column matrices: ${err}`);
   } finally {
     onProcessingChange(false);
   }
@@ -120,18 +119,13 @@ export const createMatrixData = (
   data: ProteinRow[],
   columns: string[]
 ): MatrixData | null => {
-  if (
-    !data ||
-    data.length === 0 ||
-    !columns ||
-    columns.length === 0
-  ) {
+  if (!data || data.length === 0 || !columns || columns.length === 0) {
     return null;
   }
 
   return {
     columns: columns,
-    matrix: data.map((row) =>
+    rowsAs2dMatrix: data.map((row) =>
       columns.map((col) => Number(row[col]) || 0)
     ),
   };
@@ -162,10 +156,10 @@ export const createMatrixDataSafe = (
 
   return {
     columns: validColumns,
-    matrix: data.map((row) =>
+    rowsAs2dMatrix: data.map((row) =>
       validColumns.map((col) => {
         const value = row && row[col];
-        return value as unknown as (string | number)
+        return value as unknown as string | number;
       })
     ),
   };
@@ -176,40 +170,42 @@ export const reconstructFromMatrix = (
   matrixData: MatrixData | null,
   originalData?: ProteinRow[]
 ): DataRowsAndColumns | null => {
-  if (!matrixData || !matrixData.columns || !matrixData.matrix) {
+  if (!matrixData || !matrixData.columns || !matrixData.rowsAs2dMatrix) {
     return null;
   }
 
-  const { columns, matrix } = matrixData;
+  const { columns, rowsAs2dMatrix } = matrixData;
 
-  if (columns.length === 0 || matrix.length === 0) {
+  if (columns.length === 0 || rowsAs2dMatrix.length === 0) {
     return null;
   }
 
   // Reconstruct data from matrix
-  const reconstructedData: ProteinRow[] = matrix.map((row, rowIndex) => {
-    const dataRow: ProteinRow = {};
+  const reconstructedData: ProteinRow[] = rowsAs2dMatrix.map(
+    (row, rowIndex) => {
+      const dataRow: ProteinRow = {};
 
-    // Add the matrix values
-    columns.forEach((col, colIndex) => {
-      dataRow[col] = row[colIndex];
-    });
-
-    // If original data is provided, merge back non-selected columns
-    if (originalData && originalData[rowIndex]) {
-      const originalRow = originalData[rowIndex];
-      Object.keys(originalRow).forEach((key) => {
-        if (!columns.includes(key)) {
-          dataRow[key] = originalRow[key];
-        }
+      // Add the matrix values
+      columns.forEach((col, colIndex) => {
+        dataRow[col] = row[colIndex];
       });
-    }
 
-    return dataRow;
-  });
+      // If original data is provided, merge back non-selected columns
+      if (originalData && originalData[rowIndex]) {
+        const originalRow = originalData[rowIndex];
+        Object.keys(originalRow).forEach((key) => {
+          if (!columns.includes(key)) {
+            dataRow[key] = originalRow[key];
+          }
+        });
+      }
+
+      return dataRow;
+    }
+  );
 
   return {
-    data: reconstructedData,
+    rows: reconstructedData,
     columns: columns,
   };
 };
@@ -225,18 +221,19 @@ export const getcolumnsFromMatrix = (
   return matrixData.columns;
 };
 
-
 // Extracts data rows from a matrix data structure
 export const getDataFromMatrix = (
   matrixData: MatrixData | null
 ): ProteinRow[] | null => {
-  if (!matrixData || !matrixData.columns || !matrixData.matrix) {
+  if (!matrixData || !matrixData.columns || !matrixData.rowsAs2dMatrix) {
     return null;
   }
 
-  const { columns, matrix } = matrixData;
+  const { columns, rowsAs2dMatrix } = matrixData;
 
-  return matrix.map((row) => {
+  if (!rowsAs2dMatrix) return null;
+
+  return rowsAs2dMatrix?.map((row) => {
     const dataRow: ProteinRow = {};
     columns.forEach((col, colIndex) => {
       dataRow[col] = row[colIndex];
@@ -245,49 +242,55 @@ export const getDataFromMatrix = (
   });
 };
 
-
-
-
 // get numeric columns from data
-export const getNumericColumns = (columns:string[], data: ProteinRow[]): Set<string> => {
+export const getNumericColumns = (
+  columns: string[],
+  data: ProteinRow[]
+): Set<string> => {
   if (data.length === 0) return new Set<string>();
 
   const numeric = new Set<string>();
-  columns.forEach(column => {
-    const values = data.map(row => row[column]);
-    const isNumeric = values.every(val =>
-      val !== null && val !== undefined && val !== '' &&
-      !isNaN(parseFloat(String(val))) && isFinite(parseFloat(String(val)))
+  columns.forEach((column) => {
+    const values = data.map((row) => row[column]);
+    const isNumeric = values.every(
+      (val) =>
+        val !== null &&
+        val !== undefined &&
+        val !== "" &&
+        !isNaN(parseFloat(String(val))) &&
+        isFinite(parseFloat(String(val)))
     );
     if (isNumeric) {
       numeric.add(column);
     }
   });
   return numeric;
-}
-
+};
 
 // get numeric columns from data optimized
-export const getNumericColumnsOptimized = (columns: string[], data: ProteinRow[]): Set<string> => {
+export const getNumericColumnsOptimized = (
+  columns: string[],
+  data: ProteinRow[]
+): Set<string> => {
   const numericColumns = new Set<string>();
 
   if (data.length === 0 || columns.length === 0) {
     return numericColumns;
   }
 
-  columns.forEach(column => {
+  columns.forEach((column) => {
     let isNumeric = true;
 
     // Iterate through all data points for this column
     for (const row of data) {
       const value = row[column];
-      
+
       // If a non-numeric value is found, this column is not numeric.
       // We can stop checking this column immediately.
       if (
         value === null ||
         value === undefined ||
-        value === '' ||
+        value === "" ||
         isNaN(parseFloat(String(value))) ||
         !isFinite(parseFloat(String(value)))
       ) {
@@ -306,17 +309,16 @@ export const getNumericColumnsOptimized = (columns: string[], data: ProteinRow[]
 
 // Formats a column header string for display
 export const formatColumnHeader = (str: string): string => {
-  if (!str) return '';
+  if (!str) return "";
 
   return str
-    .replace(/([A-Z])/g, ' $1')
-    .replace(/^./, (firstChar) => firstChar.toUpperCase()); 
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (firstChar) => firstChar.toUpperCase());
 };
-
 
 // Formats a table cell value for display, handling numbers and strings
 export const formatTableCellValue = (value: unknown): string => {
-  if (typeof value === 'number') {
+  if (typeof value === "number") {
     // if (value > 1e3) {
     //   return value.toExponential(2);
     // } else {
@@ -325,6 +327,5 @@ export const formatTableCellValue = (value: unknown): string => {
   }
 
   // Handle other types, including null/undefined
-  return (value as string) || 'N/A';
+  return (value as string) || "N/A";
 };
-
