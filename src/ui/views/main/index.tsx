@@ -10,7 +10,7 @@ import { createBareSession, validateAndExtractWorkflowDataStrict } from '@/app-l
 import { BareSession } from '@/domain/session';
 import { createMatrixDataSafe, reconstructFromMatrix } from '@/app-layer/shared/utils';
 import { TableColumns } from '@/app-layer/algorithms/workflow/main.types';
-
+import ActivityTree from "@/ui/components/activity-tree"
 
 
 
@@ -39,10 +39,10 @@ const IcarusApp: React.FC = () => {
     const { rowsAs2dMatrix } = result;
 
     try {
-      const { sessionMap, workflow } = createBareSession({ 
-        name: "load CSV", 
-        columns, 
-        rowsAs2dMatrix 
+      const { sessionMap, workflow } = createBareSession({
+        name: "load CSV",
+        columns,
+        rowsAs2dMatrix
       });
 
       await IcarusDBAdapter.saveWorkflow({
@@ -126,18 +126,26 @@ const IcarusApp: React.FC = () => {
       />
 
       <main className="flex-1 overflow-y-auto bg-white p-6">
-        <ProteomicsAnalysisHomeView
-          handleSessionCreate={handleSessionCreate}
+        <div>
+          <ProteomicsAnalysisHomeView
+            handleSessionCreate={handleSessionCreate}
 
-          originalDataRows={originalDataRows}
-          originalDataColumns={originalDataColumns}
+            originalDataRows={originalDataRows}
+            originalDataColumns={originalDataColumns}
 
-          selectedDataColumns={selectedDataColumns}
-          setSelectedDataColumns={setSelectedDataColumns}
+            selectedDataColumns={selectedDataColumns}
+            setSelectedDataColumns={setSelectedDataColumns}
 
-          isProcessing={isProcessing}
-          setIsProcessing={setIsProcessing}
-        />
+            isProcessing={isProcessing}
+            setIsProcessing={setIsProcessing}
+          />
+        </div>
+
+        <div>
+          {
+            activeSession && <ActivityTree sessionData={activeSession as IcarusSessionWithWorkflowRecord} />
+          }
+        </div>
       </main>
     </div>
   );
