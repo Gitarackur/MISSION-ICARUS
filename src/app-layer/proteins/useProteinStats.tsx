@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { ProteinRow, Stats } from '@/domain/proteins/index.types';
-import { mean, median, stddev } from '@/app-layer/shared/statistics';
 import { TableColumns } from '../algorithms/workflow/main.types';
+import { mean, median, stddev } from '@/app-layer/statistics/utils/statistical-engine';
 
 export function useProteomicsStats(filteredData: ProteinRow[], selectedColumns: TableColumns): Stats | null {
   return useMemo(() => {

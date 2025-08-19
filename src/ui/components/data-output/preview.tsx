@@ -6,15 +6,14 @@ import { Calculator, BarChart3 } from 'lucide-react';
 import { DataPreviewProps } from './types';
 import { dataOutputStyles } from './variants/data-output.variant';
 import StatisticalAnalysisInstructions from '../statistics/analysis-instructions';
-import StatisticalAnalysisColumns from '../statistics/analysis-columns';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
 import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
 import StatisticsMenu from '../statistics/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { calculateColumnStats } from '@/app-layer/shared/statistics';
 import { ProteinRow } from '@/domain/proteins/index.types';
+import { useStatisticalAnalysis } from '@/app-layer/statistics/hooks/useStatistics';
+import { StatisticalAction } from '@/domain/statistics/index.types';
 
 const ROWS_PER_PAGE = 10;
 
@@ -73,17 +72,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     reset();
   };
 
-  const stats = useMemo(() => {
-    // Only calculate stats if there are selected columns
-    if (!selectedAnalysisColumnHeaderValues || selectedAnalysisColumnHeaderValues.size === 0) return null;
-
-    console.log("selectedAnalysisColumnHeaderValues", selectedAnalysisColumnHeaderValues);
-    console.log("selectedAnalysisRowCells", selectedAnalysisRowCells)
-    console.log("selectedAnalysisColumnCells", selectedAnalysisColumnCells)
-    // return calculateColumnStats(numericColumns, filteredDataRows, selectedAnalysisColumnHeaderValues);
-  }, [selectedAnalysisColumnHeaderValues, selectedAnalysisRowCells, selectedAnalysisColumnCells]);
-
-
   // Format the selected column names for display in the UI
   const selectedColumnsDisplay = useMemo(() => {
     return Array.from(selectedAnalysisColumnHeaderValues).join(', ');
@@ -95,6 +83,22 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       setSelectedDataColumns(originalDataColumns);
     }
   }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
+
+
+  useEffect(() => {
+    if (!selectedAnalysisColumnHeaderValues || selectedAnalysisColumnHeaderValues.size === 0) return;
+    console.log("selectedAnalysisColumnHeaderValues", selectedAnalysisColumnHeaderValues);
+    console.log("selectedAnalysisRowCells", selectedAnalysisRowCells)
+    console.log("selectedAnalysisColumnCells", selectedAnalysisColumnCells)
+  }, [selectedAnalysisColumnHeaderValues, selectedAnalysisRowCells, selectedAnalysisColumnCells])
+
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { stats, performAnalysis } = useStatisticalAnalysis();
+
+  const handleMenuAction = useCallback((action: StatisticalAction) => {
+    performAnalysis(action, selectedAnalysisColumnHeaderValues, numericColumns);
+  }, [performAnalysis, selectedAnalysisColumnHeaderValues, numericColumns]);
 
 
 
@@ -143,10 +147,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
               Clear Selection
             </button>
           </div>
-          {
-            stats && <StatisticalAnalysisColumns stats={stats} />
-          }
-          <StatisticsMenu />
+
+          <StatisticsMenu onMenuAction={handleMenuAction} />
         </>
       )}
 

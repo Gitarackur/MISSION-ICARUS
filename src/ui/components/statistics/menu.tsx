@@ -26,6 +26,7 @@ import {
   Hash, // Specific for f(x) and Count
 } from 'lucide-react';
 import { statisticsMenuStyles } from "./style-variants";
+import { StatisticalAction } from '@/domain/statistics/index.types';
 
 
 
@@ -42,6 +43,11 @@ const {
   sectionLabelContainer,
   sectionLabel,
 } = statisticsMenuStyles();
+
+
+
+
+
 
 const menuData = {
   mainMenu: [],
@@ -91,7 +97,21 @@ const menuData = {
   ],
 };
 
-const StatisticsMenu = () => {
+interface StatisticsMenuProps {
+  onMenuAction: (
+    action: StatisticalAction
+  ) => void;
+}
+
+const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
+  onMenuAction
+}) => {
+  const handleButtonClick = (actionId: string) => {
+    if (['mean', 'median', 'stdDev', 'count'].includes(actionId)) {
+      onMenuAction(actionId as StatisticalAction);
+    }
+  };
+
   return (
     <div className={mainContainer()}>
       <div className={mainContent()}>
@@ -99,7 +119,10 @@ const StatisticsMenu = () => {
           {menuData.toolbarRows.map((row, rowIndex) => (
             <div key={rowIndex} className={toolbarRow()}>
               {row.map((item) => (
-                <button key={item.id} className={toolbarButton()}>
+                <button
+                  key={item.id} className={toolbarButton()}
+                  onClick={() => handleButtonClick(item.id)}
+                >
                   {item.icon}
                   <span className={toolbarButtonText()}>{item.label}</span>
                   {item.hasDropdown && <span className={dropdownArrow()}>▼</span>}
