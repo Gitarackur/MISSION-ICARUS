@@ -49,7 +49,7 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
 
               {node.activity?.timestamp && (
                 <div className={styles.textTimestamp()}>
-                  {new Date(node.activity.timestamp).toLocaleTimeString()}
+                  {new Date(node.activity.timestamp).toString()}
                 </div>
               )}
             </div>
