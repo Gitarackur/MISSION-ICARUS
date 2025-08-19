@@ -1,9 +1,12 @@
 import IcarusApp from "@/ui/views/main"
+import { ModalProvider } from "@/ui/design-system/Modal/provider"
 
 
 const AppRouter = () => {
   return (
-    <IcarusApp />
+    <ModalProvider>
+      <IcarusApp />
+    </ModalProvider>
   )
 }
 

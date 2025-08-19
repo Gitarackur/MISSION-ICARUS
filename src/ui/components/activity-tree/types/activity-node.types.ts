@@ -1,5 +1,7 @@
+import { TableMatrices } from "@/app-layer/algorithms/workflow/main.types";
 
-export interface MatrixModalData {
+export interface ActivityMatrixModal { 
   title: string;
-  data: (number | string | undefined)[][];
+  tableMatrices: TableMatrices | null; 
+  onClose: () => void 
 }

@@ -2,9 +2,10 @@ import { ChevronRight, Activity, GitBranch, Plug, ArrowRight, Clock } from "luci
 import { useState } from "react";
 import { activityStyleVariants } from "./variants/activity.style.variant";
 import MatrixModal from "./modal/matrix-modal";
-import { MatrixModalData } from "./types/activity-node.types";
 import MatrixBadge from "./matrix-badge";
 import { ActivityTreeNode } from "@/app-layer/algorithms/tree/tree.types";
+import { useModal } from "@/ui/design-system/Modal/context";
+import { TableMatrices } from "@/app-layer/algorithms/workflow/main.types";
 
 
 
@@ -12,8 +13,9 @@ import { ActivityTreeNode } from "@/app-layer/algorithms/tree/tree.types";
 const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number }) => {
   const styles = activityStyleVariants();
 
+  const { openModal, closeModal } = useModal();
+
   const [expanded, setExpanded] = useState(level < 1);
-  const [modal, setModal] = useState<MatrixModalData | null>(null);
 
   const hasChildren = node.children?.length > 0;
   const hasDetails = !!(node.activity?.pluginId || node.activity?.inputMatrixIds?.length || node.activity?.outputMatrixId?.length);
@@ -23,6 +25,26 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
     if (!hasChildren) return styles.nodeChevronHidden();
     return `${styles.nodeChevron()} ${expanded ? styles.nodeChevronRotated() : ''}`;
   };
+
+
+  const openMatrixModal = (title: string, matrices: TableMatrices) => {
+    openModal(
+      <MatrixModal
+        title={title}
+        tableMatrices={matrices}
+        onClose={() => closeModal()}
+      />,
+      "Another Example Modal"
+    );
+  };
+
+
+  const openShowMatrixModal = (name: string, matrices: TableMatrices | unknown[][]) => {
+    return openMatrixModal(
+      name,
+      matrices as TableMatrices
+    )
+  }
 
   return (
     <>
@@ -77,7 +99,12 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
                   data={node.activity.inputMatrixIds}
                   label="Input"
                   icon={<ArrowRight className={styles.iconArrowIn()} />}
-                  onOpen={setModal}
+                  onOpen={() => {
+                    openShowMatrixModal(
+                      node.activity?.name as string,
+                      node?.activity?.inputMatrixIds as TableMatrices
+                    )
+                  }}
                 />
               )}
 
@@ -86,7 +113,12 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
                   data={[node.activity.outputMatrixId] as unknown as (number | string | undefined)[][]}
                   label="Output"
                   icon={<ArrowRight className={styles.iconArrowOut()} />}
-                  onOpen={setModal}
+                  onOpen={() => {
+                    openShowMatrixModal(
+                      node.activity?.name as string,
+                      node?.activity?.outputMatrixId as TableMatrices
+                    )
+                  }}
                 />
               )}
 
@@ -109,8 +141,6 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
           </div>
         )}
       </div>
-
-      <MatrixModal modal={modal} onClose={() => setModal(null)} />
     </>
   );
 };
