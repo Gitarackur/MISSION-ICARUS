@@ -1,10 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { v4 as uuidv4 } from "uuid";
 import { useLiveQuery } from 'dexie-react-hooks';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
 import { db } from '@/app-layer/database';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
-import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord } from '@/app-layer/database/database.types';
+import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord, IcarusWorkflowRecord } from '@/app-layer/database/database.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { createBareSession, validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
 import { BareSession } from '@/domain/session';
@@ -115,7 +116,38 @@ const IcarusApp: React.FC = () => {
     }
   };
 
-  const SIDEBAR_WIDTH_CSS = '50rem';
+  const saveActivityInWorkflow = async (
+    outputColumns: TableColumns,
+    outputMatrixId: unknown
+  ) => {
+    try {
+      const id_of_workflow = activeSession?.workflowIds?.[0] as string;
+      const updatedWorkflowRecord = await IcarusDBAdapter.getWorkflowById(id_of_workflow);
+      if (!updatedWorkflowRecord) throw new Error("workflow doesn't exist");
+
+      const result = createMatrixDataSafe(originalDataRows, originalDataColumns);
+      if (!result) {
+        throw new Error("Failed to create matrix data from original data rows and columns");
+      }
+      const { rowsAs2dMatrix } = result;
+
+      updatedWorkflowRecord.data.activities.push({
+        id: `icarus-activity-${uuidv4()}`,
+        name: "statistical analysis",
+        inputMatrixIds: rowsAs2dMatrix,
+        inputColumns: originalDataColumns,
+        outputColumns,
+        outputMatrixId,
+        pluginId: "statistical-engine",
+        timestamp: Date.now(),
+      })
+      await IcarusDBAdapter.updateWorkflow(id_of_workflow, updatedWorkflowRecord as IcarusWorkflowRecord);
+      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(activeSession?.id as string);
+      setActiveSession(sessionWithWorkflows);
+    } catch (err) {
+      throw new Error(`${err as unknown}`)
+    }
+  }
 
   // Open the sheet whenever an active session is set
   useEffect(() => {
@@ -152,6 +184,8 @@ const IcarusApp: React.FC = () => {
 
             isProcessing={isProcessing}
             setIsProcessing={setIsProcessing}
+
+            saveActivityInWorkflow={saveActivityInWorkflow}
           />
         </div>
 
@@ -164,7 +198,7 @@ const IcarusApp: React.FC = () => {
             }}
             position="right"
             title="Activity Session"
-            sidebarWidth={SIDEBAR_WIDTH_CSS}
+            sidebarWidth={"100rem"}
             overlayClassName="!bg-opacity-80"
             panelClassName="bg-blue-50"
             headerClassName="border-blue-300"

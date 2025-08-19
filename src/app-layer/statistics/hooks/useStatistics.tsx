@@ -1,5 +1,7 @@
 import { StatisticalAction, StatisticalResults } from '@/domain/statistics/index.types';
 import { useState, useCallback } from 'react';
+import { mean } from '../utils/statistical-engine';
+import { TableMatrix } from '@/app-layer/algorithms/workflow/main.types';
 
 
 
@@ -9,26 +11,11 @@ export const useStatisticalAnalysis = () => {
   const performAnalysis = useCallback(
     (
       action: StatisticalAction,
-      selectedColumnHeaderValues: Set<string>,
-      numericColumns: Set<string>
+      matrix: TableMatrix
     ) => {
-      if (selectedColumnHeaderValues.size === 0) {
-        alert("Please select at least one numeric column for analysis.");
-        setStats(null);
-        return;
-      }
-
-      const selectedColumns = Array.from(selectedColumnHeaderValues).filter(col => numericColumns.has(col));
-
-      if (selectedColumns.length === 0) {
-        alert("Selected columns are not numeric. Please select numeric columns.");
-        setStats(null);
-        return;
-      }
-
       switch (action) {
         case 'mean': {
-          const results: never[] = [];
+          const results = mean(matrix as unknown as number[])
           setStats({ type: 'Mean', data: results });
           break;
         }

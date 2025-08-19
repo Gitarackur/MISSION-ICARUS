@@ -54,7 +54,10 @@ class DBAdapter {
     await this.db.workflows.delete(id);
   }
 
-
+  // update a workflow by ID
+  async updateWorkflow(id: string, changes: Partial<IcarusWorkflowRecord>) {
+    await this.db.workflows.update(id, changes);
+  }
 
 
 

@@ -28,7 +28,11 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   selectedDataColumns,
   setSelectedDataColumns,
 
-  onSelectButtonForUpload
+  onSelectButtonForUpload,
+
+  // callback to save activity on statistical analysis
+  saveActivityInWorkflow
+  
 }) => {
 
   // styles for data preview table
@@ -97,8 +101,26 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   const { stats, performAnalysis } = useStatisticalAnalysis();
 
   const handleMenuAction = useCallback((action: StatisticalAction) => {
-    performAnalysis(action, selectedAnalysisColumnHeaderValues, numericColumns);
-  }, [performAnalysis, selectedAnalysisColumnHeaderValues, numericColumns]);
+    console.log('action', action);
+
+    // convert selectedAnalysisRowCells into suitable data shape for statistical engine
+    // selectedAnalysisRowCells
+
+    // convert selectedAnalysisColumnCells into suitable data shape for statistical engine
+    const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
+    const selectedAnalysisColumnCellsValues = Array.from(selectedAnalysisColumnCells.values());
+
+    // perform the analysis on the engine
+    performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
+
+    // save statistical analysis as activity to workflow
+    saveActivityInWorkflow?.(
+      // output column
+      selectedAnalysisColumnCellsKeys, 
+      // output matrix Value
+      stats?.data
+    );
+  }, [selectedAnalysisColumnCells, performAnalysis, saveActivityInWorkflow, stats]);
 
 
 

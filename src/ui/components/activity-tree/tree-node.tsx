@@ -18,7 +18,11 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
   const [expanded, setExpanded] = useState(level < 1);
 
   const hasChildren = node.children?.length > 0;
-  const hasDetails = !!(node.activity?.pluginId || node.activity?.inputMatrixIds?.length || node.activity?.outputMatrixId?.length);
+  const hasDetails = !!(
+    node.activity?.pluginId ||
+    (Array.isArray(node.activity?.inputMatrixIds) && node.activity.inputMatrixIds.length) ||
+    (typeof node.activity?.outputMatrixId === "string" && node.activity.outputMatrixId.length)
+  );
   const canInteract = hasChildren || hasDetails;
 
   const getChevronClass = () => {
@@ -79,44 +83,46 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
             {node.activity?.pluginId && (
               <div className={styles.badgeContainer()}>
                 <Plug className={styles.iconPlug()} />
-                <span className={styles.textPlugin()}>{node.activity.pluginId}</span>
+                <span className={styles.textPlugin()}>
+                  {node.activity.pluginId}
+                </span>
               </div>
             )}
 
-            {!node.activity && node.inputMatrixKey && (
+            {/* {!node.activity && node.inputMatrixKey && (
               <div className={styles.textMatrixKey()}>
                 {node.inputMatrixKey.length > 20 ? `${node.inputMatrixKey.slice(0, 20)}...` : node.inputMatrixKey}
               </div>
-            )}
+            )} */}
           </div>
         </div>
 
         {expanded && node.activity && hasDetails && (
           <div className={styles.detailsContainer()}>
             <div className={styles.detailsWrapper()}>
-              {node.activity.inputMatrixIds && (
+              {Array.isArray(node.activity.inputMatrixIds) && (
                 <MatrixBadge
-                  data={node.activity.inputMatrixIds}
+                  data={node.activity.inputMatrixIds as (string | number | undefined)[][]}
                   label="Input"
                   icon={<ArrowRight className={styles.iconArrowIn()} />}
                   onOpen={() => {
                     openShowMatrixModal(
                       node.activity?.name as string,
-                      node?.activity?.inputMatrixIds as TableMatrices
+                      node.activity?.inputMatrixIds as TableMatrices
                     )
                   }}
                 />
               )}
 
-              {node.activity.outputMatrixId && (
+              {Array.isArray(node.activity.outputMatrixId) && (
                 <MatrixBadge
-                  data={[node.activity.outputMatrixId] as unknown as (number | string | undefined)[][]}
-                  label="Output"
-                  icon={<ArrowRight className={styles.iconArrowOut()} />}
+                  data={node.activity.outputMatrixId as (string | number | undefined)[][]}
+                  label="Input"
+                  icon={<ArrowRight className={styles.iconArrowIn()} />}
                   onOpen={() => {
                     openShowMatrixModal(
                       node.activity?.name as string,
-                      node?.activity?.outputMatrixId as TableMatrices
+                      node.activity?.outputMatrixId as TableMatrices
                     )
                   }}
                 />

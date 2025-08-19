@@ -64,13 +64,16 @@ interface SheetProps {
   bodyClassName?: string;
 }
 
+const SIDEBAR_WIDTH_CSS = '50rem';
+
 const SlidingSheet: React.FC<SheetProps> = ({
   isOpen,
   onClose,
   children,
   position = 'right',
   title,
-  sidebarWidth = '0px',
+  sidebarWidth = SIDEBAR_WIDTH_CSS,
+  // sidebarWidth = "0px",
   overlayClassName = '',
   panelClassName = '',
   headerClassName = '',

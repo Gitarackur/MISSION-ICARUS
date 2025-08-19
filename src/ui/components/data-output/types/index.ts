@@ -12,6 +12,11 @@ export type DataPreviewProps = {
   setSelectedDataColumns: (cols: string[]) => void;
 
   onSelectButtonForUpload?: () => void;
+
+  saveActivityInWorkflow?: ( 
+    outputColumns: TableColumns, 
+    outputMatrixId: unknown
+  ) => void
 };
 
 export type DataImportProps = {

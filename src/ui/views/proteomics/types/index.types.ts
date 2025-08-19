@@ -13,6 +13,11 @@ export type ProteomicsAnalysisHomeViewProps = {
 
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
+
+  saveActivityInWorkflow?: ( 
+    outputColumns: TableColumns, 
+    outputMatrixId: unknown
+  ) => void
 };
 
 export type tabTypes =

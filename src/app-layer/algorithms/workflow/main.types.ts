@@ -3,6 +3,7 @@
 
 export type TableColumns = string[];
 export type TableMatrices = (string | number)[][];
+export type TableMatrix = (string | number)[];
 
 // Icarus Matrix
 export interface IcarusMatrix {
@@ -24,17 +25,17 @@ export interface IcarusActivity {
   name: string;
   pluginId?: string;
   inputColumns: TableColumns;
-  inputMatrixIds: TableMatrices;
+  inputMatrixIds: TableMatrices | unknown;
   outputColumns: TableColumns | null;
-  outputMatrixId: TableMatrices | null;
+  outputMatrixId: TableMatrices | unknown | null;
   timestamp: string | number;
 }
 export interface IMapActivityData {
   name: string;
   inputColumns: TableColumns;
-  inputMatrixIds: TableMatrices;
+  inputMatrixIds: TableMatrices | unknown;
   outputColumns: TableColumns | null;
-  outputMatrixId: TableMatrices | null;
+  outputMatrixId: TableMatrices | unknown | null;
   pluginId?: string;
 }
 
