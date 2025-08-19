@@ -100,32 +100,50 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
         {expanded && node.activity && hasDetails && (
           <div className={styles.detailsContainer()}>
             <div className={styles.detailsWrapper()}>
-              {Array.isArray(node.activity.inputMatrixIds) && (
-                <MatrixBadge
-                  data={node.activity.inputMatrixIds as (string | number | undefined)[][]}
-                  label="Input"
-                  icon={<ArrowRight className={styles.iconArrowIn()} />}
-                  onOpen={() => {
-                    openShowMatrixModal(
-                      node.activity?.name as string,
-                      node.activity?.inputMatrixIds as TableMatrices
-                    )
-                  }}
-                />
+
+              {node.activity.inputMatrixIds !== null && node.activity.inputMatrixIds !== undefined && (
+                Array.isArray(node.activity.inputMatrixIds) ? (
+                  <MatrixBadge
+                    data={node.activity.inputMatrixIds}
+                    label="Input"
+                    icon={<ArrowRight className={styles.iconArrowIn()} />}
+                    onOpen={() => {
+                      if (node.activity?.name && node.activity.inputMatrixIds && Array.isArray(node.activity.inputMatrixIds)) {
+                        openShowMatrixModal(node.activity.name, node.activity.inputMatrixIds);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
+                    <span className={styles.textLabel()}>
+                      Input: Unknown Type - {typeof node.activity.inputMatrixIds}
+                      </span>
+                  </div>
+                )
               )}
 
-              {Array.isArray(node.activity.outputMatrixId) && (
-                <MatrixBadge
-                  data={node.activity.outputMatrixId as (string | number | undefined)[][]}
-                  label="Input"
-                  icon={<ArrowRight className={styles.iconArrowIn()} />}
-                  onOpen={() => {
-                    openShowMatrixModal(
-                      node.activity?.name as string,
-                      node.activity?.outputMatrixId as TableMatrices
-                    )
-                  }}
-                />
+              {node.activity.outputMatrixId !== null && node.activity.outputMatrixId !== undefined && (
+                Array.isArray(node.activity.outputMatrixId) ? (
+                  <MatrixBadge
+                    data={node.activity.outputMatrixId}
+                    label="Output"
+                    icon={<ArrowRight className={styles.iconArrowOut()} />}
+                    onOpen={() => {
+                      if (node.activity?.name && node.activity.outputMatrixId && Array.isArray(node.activity.outputMatrixId)) {
+                        openShowMatrixModal(node.activity.name, node.activity.outputMatrixId);
+                      }
+                    }}
+                  />
+                ) : (
+                  <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
+                    <span className={styles.textLabel()}>
+                      {/* Output: Unknown Type - {typeof node.activity.outputMatrixId} */}
+                       Output:
+                      { JSON.stringify(node.activity.outputMatrixId) }
+                      {/* { node.activity.outputMatrixId as number } */}
+                    </span>
+                  </div>
+                )
               )}
 
               {node.activity.timestamp && (

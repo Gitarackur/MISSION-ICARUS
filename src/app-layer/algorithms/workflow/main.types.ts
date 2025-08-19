@@ -24,8 +24,8 @@ export interface IcarusActivity {
   id: string;
   name: string;
   pluginId?: string;
-  inputColumns: TableColumns;
-  inputMatrixIds: TableMatrices | unknown;
+  inputColumns: TableColumns | null;
+  inputMatrixIds: TableMatrices | unknown | null;
   outputColumns: TableColumns | null;
   outputMatrixId: TableMatrices | unknown | null;
   timestamp: string | number;

@@ -1,6 +1,5 @@
 import { Eye } from "lucide-react";
 import { activityStyleVariants } from "./variants/activity.style.variant";
-import { MatrixModalData } from "./types/activity-node.types";
 
 const MatrixBadge = ({
   data,
@@ -11,7 +10,7 @@ const MatrixBadge = ({
   data: (number | string | undefined)[][];
   label: string;
   icon: React.ReactNode;
-  onOpen: (modal: MatrixModalData) => void;
+  onOpen: () => void;
 }) => {
   const styles = activityStyleVariants();
 
@@ -24,7 +23,7 @@ const MatrixBadge = ({
       {icon}
       <span className={styles.badgeLabel()}>{label}:</span>
       <button
-        onClick={() => onOpen({ title: label, data })}
+        onClick={() => onOpen()}
         className={styles.badgeButton()}
       >
         {preview} <Eye className={styles.iconEye()} />
