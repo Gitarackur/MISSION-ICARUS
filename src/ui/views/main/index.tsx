@@ -5,11 +5,11 @@ import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
 import { db } from '@/app-layer/database';
 import { IcarusDBAdapter } from '@/app-layer/database/store';
-import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord, IcarusWorkflowRecord } from '@/app-layer/database/database.types';
+import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord } from '@/app-layer/database/database.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
-import { createBareSession, validateAndExtractWorkflowDataStrict } from '@/app-layer/shared/session';
+import { generateActiveSessionWitNestedWorkflow, reconstructOriginalRowsAndColumnsFromSessionWorkflows, saveActivityInSessionWorkflow } from '@/app-layer/session/utils/main';
 import { BareSession } from '@/domain/session';
-import { createMatrixDataSafe, reconstructFromMatrix } from '@/app-layer/shared/utils';
+import { createMatrixDataSafe } from '@/app-layer/shared/utils';
 import { TableColumns } from '@/app-layer/algorithms/workflow/main.types';
 import ActivityTree from "@/ui/components/activity-tree"
 import SlidingSheet from '@/ui/design-system/Sheet/main';
@@ -33,38 +33,13 @@ const IcarusApp: React.FC = () => {
   const handleSessionCreate = async ({ rows, columns }: BareSession) => {
     isUploadingRef.current = true;
     setIsProcessing(true);
-
-    const result = createMatrixDataSafe(rows, columns);
-    if (!result) {
-      console.error('Failed to create matrix data from imported file');
-      setIsProcessing(false);
-      return;
-    }
-    const { rowsAs2dMatrix } = result;
-
     try {
-      const { sessionMap, workflow } = createBareSession({
-        name: "load CSV",
-        columns,
-        rowsAs2dMatrix
+      const sessionWithWorkflows = await generateActiveSessionWitNestedWorkflow({
+        rows,
+        columns
       });
 
-      await IcarusDBAdapter.saveWorkflow({
-        id: workflow.id,
-        createdAt: Date.now(),
-        data: workflow,
-      });
-
-      await IcarusDBAdapter.saveSession({
-        id: sessionMap.id,
-        name: sessionMap.name,
-        date: sessionMap.date,
-        workflowIds: [workflow.id],
-      });
-
-      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(sessionMap.id);
       setActiveSession(sessionWithWorkflows);
-
       setOriginalDataRows(rows);
       setOriginalDataColumns(columns);
       setSelectedDataColumns(columns);
@@ -81,23 +56,14 @@ const IcarusApp: React.FC = () => {
   const handleSessionClick = async (session: IcarusSessionRecord) => {
     setIsProcessing(true);
     try {
-      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(session.id);
-      if (!sessionWithWorkflows) {
-        console.error('Session with workflows not found:', session.id);
-        return;
-      }
-
-      const { rowsAs2dMatrix, columns } = validateAndExtractWorkflowDataStrict(sessionWithWorkflows);
-      const result = reconstructFromMatrix({ rowsAs2dMatrix, columns });
-
-      if (!result) {
-        console.error('Failed to reconstruct data from matrix');
-        return;
-      }
+      const {
+        result,
+        sessionWithWorkflows
+      } = await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
 
       setOriginalDataRows(result.rows as ProteinRow[]);
-      setOriginalDataColumns(columns);
-      setSelectedDataColumns(columns);
+      setOriginalDataColumns(result.columns);
+      setSelectedDataColumns(result.columns);
       setActiveSession(sessionWithWorkflows);
     } catch (error) {
       console.error('Error handling session click:', error);
@@ -121,17 +87,13 @@ const IcarusApp: React.FC = () => {
     outputMatrixId: unknown
   ) => {
     try {
-      const id_of_workflow = activeSession?.workflowIds?.[0] as string;
-      const updatedWorkflowRecord = await IcarusDBAdapter.getWorkflowById(id_of_workflow);
-      if (!updatedWorkflowRecord) throw new Error("workflow doesn't exist");
-
       const result = createMatrixDataSafe(originalDataRows, originalDataColumns);
       if (!result) {
         throw new Error("Failed to create matrix data from original data rows and columns");
       }
       const { rowsAs2dMatrix } = result;
 
-      updatedWorkflowRecord.data.activities.push({
+      const activity = {
         id: `icarus-activity-${uuidv4()}`,
         name: "statistical analysis",
         inputMatrixIds: rowsAs2dMatrix,
@@ -140,9 +102,12 @@ const IcarusApp: React.FC = () => {
         outputMatrixId,
         pluginId: "statistical-engine",
         timestamp: Date.now(),
-      })
-      await IcarusDBAdapter.updateWorkflow(id_of_workflow, updatedWorkflowRecord as IcarusWorkflowRecord);
-      const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(activeSession?.id as string);
+      }
+
+      const sessionWithWorkflows = await saveActivityInSessionWorkflow(
+        activeSession, activity
+      );
+
       setActiveSession(sessionWithWorkflows);
     } catch (err) {
       throw new Error(`${err as unknown}`)
@@ -200,7 +165,7 @@ const IcarusApp: React.FC = () => {
             title="Activity Session"
             sidebarWidth={"100rem"}
             overlayClassName="!bg-opacity-80"
-            panelClassName="bg-blue-50"
+            panelClassName="bg-blue-50 w-150"
             headerClassName="border-blue-300"
             bodyClassName="p-0"
           >

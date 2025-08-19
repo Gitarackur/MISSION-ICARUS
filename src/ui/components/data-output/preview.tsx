@@ -14,6 +14,7 @@ import PreviewPagination from './preview-pagination';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { useStatisticalAnalysis } from '@/app-layer/statistics/hooks/useStatistics';
 import { StatisticalAction } from '@/domain/statistics/index.types';
+import { mean } from '@/app-layer/statistics/utils/statistical-engine';
 
 const ROWS_PER_PAGE = 10;
 
@@ -101,7 +102,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   const { stats, performAnalysis } = useStatisticalAnalysis();
 
   const handleMenuAction = useCallback((action: StatisticalAction) => {
-    console.log('action', action);
+    console.log('mean action', action);
 
     // convert selectedAnalysisRowCells into suitable data shape for statistical engine
     // selectedAnalysisRowCells
@@ -118,7 +119,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       // output column
       selectedAnalysisColumnCellsKeys, 
       // output matrix Value
-      stats?.data
+      stats?.data || mean(selectedAnalysisColumnCellsValues as unknown as number[])
     );
   }, [selectedAnalysisColumnCells, performAnalysis, saveActivityInWorkflow, stats]);
 
