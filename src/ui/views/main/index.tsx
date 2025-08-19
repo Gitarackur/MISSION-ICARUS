@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import ProteomicsAnalysisHomeView from '@/ui/views/proteomics';
 import Sidebar from '@/ui/components/sidebar';
@@ -11,6 +11,7 @@ import { BareSession } from '@/domain/session';
 import { createMatrixDataSafe, reconstructFromMatrix } from '@/app-layer/shared/utils';
 import { TableColumns } from '@/app-layer/algorithms/workflow/main.types';
 import ActivityTree from "@/ui/components/activity-tree"
+import SlidingSheet from '@/ui/design-system/Sheet/main';
 
 
 
@@ -24,6 +25,8 @@ const IcarusApp: React.FC = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const isUploadingRef = useRef(false);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
+
+  const [isSheetOpen, setIsSheetOpen] = useState(false); // State to control the sheet
 
   // Handler for creating a new session from imported data
   const handleSessionCreate = async ({ rows, columns }: BareSession) => {
@@ -112,6 +115,17 @@ const IcarusApp: React.FC = () => {
     }
   };
 
+  const SIDEBAR_WIDTH_CSS = '50rem';
+
+  // Open the sheet whenever an active session is set
+  useEffect(() => {
+    if (activeSession) {
+      setIsSheetOpen(true);
+    } else {
+      setIsSheetOpen(false);
+    }
+  }, [activeSession]);
+
 
   return (
     <div className="flex h-screen bg-white text-gray-800">
@@ -142,9 +156,22 @@ const IcarusApp: React.FC = () => {
         </div>
 
         <div>
-          {
-            activeSession && <ActivityTree sessionData={activeSession as IcarusSessionWithWorkflowRecord} />
-          }
+          <SlidingSheet
+            isOpen={isSheetOpen && !!activeSession}
+            onClose={() => {
+              // setIsSheetOpen(false);
+              // setActiveSession(null);
+            }}
+            position="right"
+            title="Activity Session"
+            sidebarWidth={SIDEBAR_WIDTH_CSS}
+            overlayClassName="!bg-opacity-80"
+            panelClassName="bg-blue-50"
+            headerClassName="border-blue-300"
+            bodyClassName="p-0"
+          >
+            {activeSession && <ActivityTree sessionData={activeSession as IcarusSessionWithWorkflowRecord} />}
+          </SlidingSheet>
         </div>
       </main>
     </div>
