@@ -1,19 +1,7 @@
-export type MatrixNode = {
-  id: string;
-  createdByActivityId: string | null;
-  createdAt?: string;
-  children?: TreeNode[];
-};
+import { IcarusActivity } from "@/app-layer/algorithms/workflow/main.types";
 
-export type ActivityNode = {
-  id: string;
-  pluginId: string;
-  params: Record<string, unknown>;
-  inputMatrixIds: string[];
-  outputMatrixId: string;
-  timestamp?: string;
-  humanLabel?: string;
-  children?: TreeNode[];
-};
-
-type TreeNode = MatrixNode | ActivityNode;
+export interface ActivityTreeNode {
+  activity?: IcarusActivity;
+  inputMatrixKey?: string;
+  children: ActivityTreeNode[];
+}

@@ -2,8 +2,9 @@ import { ChevronRight, Activity, GitBranch, Plug, ArrowRight, Clock } from "luci
 import { useState } from "react";
 import { activityStyleVariants } from "./variants/activity.style.variant";
 import MatrixModal from "./modal/matrix-modal";
-import { ActivityTreeNode, MatrixModalData } from "./types/activity-node.types";
+import { MatrixModalData } from "./types/activity-node.types";
 import MatrixBadge from "./matrix-badge";
+import { ActivityTreeNode } from "@/app-layer/algorithms/tree/tree.types";
 
 
 
@@ -43,7 +44,7 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
               </div>
 
               <div className={styles.textPrimary()}>
-                { node.activity?.name.toLocaleUpperCase() }
+                {node.activity?.name.toLocaleUpperCase()}
               </div>
 
               {node.activity?.timestamp && (

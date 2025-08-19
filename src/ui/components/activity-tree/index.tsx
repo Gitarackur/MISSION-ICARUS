@@ -1,52 +1,22 @@
 import { useState, useMemo } from 'react';
-import { IcarusActivity } from '@/app-layer/algorithms/workflow/main.types';
 import { IcarusSessionWithWorkflowRecord } from '@/app-layer/database/database.types';
 import { activityStyleVariants } from './variants/activity.style.variant.tsx';
-import { ActivityTreeNode } from './types/activity-node.types.ts';
 import TreeNode from './tree-node.tsx';
+import { generateIcarusActivityNode } from '@/app-layer/algorithms/tree/index.ts';
 
 
 
 const ActivityTree = ({ sessionData }: { sessionData: IcarusSessionWithWorkflowRecord }) => {
   const styles = activityStyleVariants();
 
+
   const [selectedWorkflow, setSelectedWorkflow] = useState(0);
   const currentWorkflow = sessionData.workflows?.[selectedWorkflow];
 
+  generateIcarusActivityNode(currentWorkflow?.data?.activities)
+
   const activityTree = useMemo(() => {
-    const activities = currentWorkflow.data.activities;
-
-    const createKey = (matrices: (number | string | undefined)[][]): string =>
-      matrices?.length ? matrices.map(row => row.map(id => id ?? 'undefined').join(',')).join('|') : 'no-input';
-
-    const groups = activities.reduce((acc, activity) => {
-      const key = createKey(activity.inputMatrixIds);
-      (acc[key] ||= []).push(activity);
-      return acc;
-    }, {} as Record<string, IcarusActivity[]>);
-
-    Object.values(groups).forEach(group =>
-      group.sort((a, b) => {
-        if (!a.timestamp && !b.timestamp) return 0;
-        if (!a.timestamp) return 1;
-        if (!b.timestamp) return -1;
-        return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-      })
-    );
-
-    const nodes: ActivityTreeNode[] = Object.entries(groups).map(([key, acts]) =>
-      acts.length === 1
-        ? { activity: acts[0], children: [] }
-        : { inputMatrixKey: key, children: acts.map(activity => ({ activity, children: [] })) }
-    );
-
-    return nodes.sort((a, b) => {
-      const getTime = (node: ActivityTreeNode): number => {
-        const time = node.activity?.timestamp || node.children[0]?.activity?.timestamp;
-        return time ? new Date(time).getTime() : Infinity;
-      };
-      return getTime(a) - getTime(b);
-    });
+    return generateIcarusActivityNode(currentWorkflow?.data?.activities);
   }, [currentWorkflow]);
 
   return (
