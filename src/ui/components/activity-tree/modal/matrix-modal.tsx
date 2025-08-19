@@ -1,14 +1,13 @@
-// import { MatrixData } from "@/domain/shared/index.types";
 import { X } from "lucide-react";
-import { activityStyleVariants } from "../variants/activity.style.variant";
 import { ActivityMatrixModal } from "../types/activity-node.types";
+import { modalStyleVariants } from "@/ui/design-system/Modal/variants/modal.variants";
 
 
 
 const MatrixModal = ({ title, tableMatrices, onClose }: ActivityMatrixModal) => {
   if (!tableMatrices) return null;
 
-  const styles = activityStyleVariants();
+  const styles = modalStyleVariants();
 
   return (
     <div className={styles.modalOverlay()} onClick={onClose}>
@@ -20,7 +19,7 @@ const MatrixModal = ({ title, tableMatrices, onClose }: ActivityMatrixModal) => 
           </button>
         </div>
 
-        <div className={styles.modalDataContainer()}>
+        <div className={styles.modalDataContainer()}>          
           {tableMatrices.map((row, i) => (
             <div key={i} className={styles.modalRow()}>
               <span className={styles.modalRowLabel()}>Row {i + 1}:</span>
