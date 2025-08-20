@@ -33,7 +33,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
   // callback to save activity on statistical analysis
   saveActivityInWorkflow
-  
+
 }) => {
 
   // styles for data preview table
@@ -82,22 +82,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     return Array.from(selectedAnalysisColumnHeaderValues).join(', ');
   }, [selectedAnalysisColumnHeaderValues]);
 
-
-  useEffect(() => {
-    if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
-      setSelectedDataColumns(originalDataColumns);
-    }
-  }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
-
-
-  useEffect(() => {
-    if (!selectedAnalysisColumnHeaderValues || selectedAnalysisColumnHeaderValues.size === 0) return;
-    console.log("selectedAnalysisColumnHeaderValues", selectedAnalysisColumnHeaderValues);
-    console.log("selectedAnalysisRowCells", selectedAnalysisRowCells)
-    console.log("selectedAnalysisColumnCells", selectedAnalysisColumnCells)
-  }, [selectedAnalysisColumnHeaderValues, selectedAnalysisRowCells, selectedAnalysisColumnCells])
-
-
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { stats, performAnalysis } = useStatisticalAnalysis();
 
@@ -106,6 +90,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
     // convert selectedAnalysisRowCells into suitable data shape for statistical engine
     // selectedAnalysisRowCells
+    // selectedAnalysisColumnHeaderValues
 
     // convert selectedAnalysisColumnCells into suitable data shape for statistical engine
     const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
@@ -117,11 +102,20 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     // save statistical analysis as activity to workflow
     saveActivityInWorkflow?.(
       // output column
-      selectedAnalysisColumnCellsKeys, 
+      selectedAnalysisColumnCellsKeys,
       // output matrix Value
       stats?.data || mean(selectedAnalysisColumnCellsValues as unknown as number[])
     );
   }, [selectedAnalysisColumnCells, performAnalysis, saveActivityInWorkflow, stats]);
+
+
+  useEffect(() => {
+    if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
+      setSelectedDataColumns(originalDataColumns);
+    }
+  }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
+
+
 
 
 
