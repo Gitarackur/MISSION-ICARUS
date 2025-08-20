@@ -104,9 +104,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       // output column
       selectedAnalysisColumnCellsKeys,
       // output matrix Value
-      stats?.data || mean(selectedAnalysisColumnCellsValues as unknown as number[])
+      mean(selectedAnalysisColumnCellsValues as unknown as number[])
     );
-  }, [selectedAnalysisColumnCells, performAnalysis, saveActivityInWorkflow, stats]);
+  }, [selectedAnalysisColumnCells, performAnalysis, saveActivityInWorkflow]);
 
 
   useEffect(() => {

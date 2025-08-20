@@ -13,6 +13,8 @@ import { createMatrixDataSafe } from '@/app-layer/shared/utils';
 import { TableColumns } from '@/app-layer/algorithms/workflow/main.types';
 import ActivityTree from "@/ui/components/activity-tree"
 import SlidingSheet from '@/ui/design-system/Sheet/main';
+import { Menu } from 'lucide-react'; // Import the Menu icon from lucide-react
+import { activityFloatingButton } from './variants/main.variants';
 
 
 
@@ -154,11 +156,21 @@ const IcarusApp: React.FC = () => {
           />
         </div>
 
+        {activeSession && (
+          <div
+            className={activityFloatingButton({ intent: 'primary' })}
+            onClick={() => setIsSheetOpen(true)}
+          >
+            <Menu size={24} className="text-blue-600" />
+            <span>View Activity Log</span>
+          </div>
+        )}
+
         <div>
           <SlidingSheet
             isOpen={isSheetOpen && !!activeSession}
             onClose={() => {
-              // setIsSheetOpen(false);
+              setIsSheetOpen(false);
               // setActiveSession(null);
             }}
             position="right"
