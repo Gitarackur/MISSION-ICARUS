@@ -1,4 +1,4 @@
-import { IcarusActivity } from "@/app-layer/algorithms/workflow/main.types";
+import { IcarusActivity } from "@/domain/workflow/main.types";
 
 export interface ActivityTreeNode {
   activity?: IcarusActivity;

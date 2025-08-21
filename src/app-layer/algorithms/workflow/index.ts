@@ -6,7 +6,7 @@ import {
   IMapActivityData,
   IMapMatrixData,
   IMapVisualizationData,
-} from "./main.types";
+} from "@/domain/workflow/main.types";
 
 class IcarusWorkflow {
   id: string;
@@ -64,6 +64,7 @@ class IcarusWorkflow {
 
   mapActivityData({
     name,
+    sourceMatrixId,
     inputMatrixIds,
     inputColumns,
     outputColumns,
@@ -74,6 +75,7 @@ class IcarusWorkflow {
       id: `icarus-matrix-${uuidv4()}`,
       name,
       pluginId,
+      sourceMatrixId,
       inputColumns,
       inputMatrixIds,
       outputColumns,
@@ -84,6 +86,7 @@ class IcarusWorkflow {
 
   addActivity({
     name,
+    sourceMatrixId,
     inputMatrixIds,
     inputColumns,
     outputColumns,
@@ -92,6 +95,7 @@ class IcarusWorkflow {
   }: IMapActivityData) {
     const activityWorkflowMap = this.mapActivityData({
       name,
+      sourceMatrixId,
       inputMatrixIds,
       inputColumns,
       outputColumns,

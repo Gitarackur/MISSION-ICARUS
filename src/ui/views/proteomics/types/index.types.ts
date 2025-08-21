@@ -1,7 +1,9 @@
-import { TableColumns, TableMatrices, TableMatrix } from "@/app-layer/algorithms/workflow/main.types";
+import {
+  SaveStatisticalActivity,
+  TableColumns,
+} from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { BareSession } from "@/domain/session";
-import { StatisticalAction } from "@/domain/statistics/index.types";
 
 export type ProteomicsAnalysisHomeViewProps = {
   handleSessionCreate: ({ rows, columns }: BareSession) => void;
@@ -15,13 +17,13 @@ export type ProteomicsAnalysisHomeViewProps = {
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
 
-  saveActivityInWorkflow?: ( 
-    inputMatrix: TableMatrices | TableMatrix | null,
-    inputColumns: TableColumns | null,
-    outputColumns: TableColumns, 
-    outputMatrixId: unknown,
-    action?: StatisticalAction, 
-  ) => void
+  saveActivityInWorkflow?: ({
+    inputMatrixIds,
+    inputColumns,
+    outputColumns,
+    outputMatrixId,
+    action,
+  }:Partial<SaveStatisticalActivity>) => void;
 };
 
 export type tabTypes =

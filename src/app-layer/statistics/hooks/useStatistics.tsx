@@ -1,7 +1,7 @@
 import { StatisticalAction } from '@/domain/statistics/index.types';
 import { useCallback } from 'react';
-import { mean } from '../utils/statistical-engine';
-import { TableMatrix } from '@/app-layer/algorithms/workflow/main.types';
+import { mean } from '@/app-layer/statistics/utils/statistical-engine';
+import { TableMatrix } from '@/domain/workflow/main.types';
 
 
 

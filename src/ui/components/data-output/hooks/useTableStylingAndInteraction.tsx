@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect, useCallback } from "react";
 import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
-import { TableMatrix } from "@/app-layer/algorithms/workflow/main.types";
+import { TableMatrix } from "@/domain/workflow/main.types";
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],

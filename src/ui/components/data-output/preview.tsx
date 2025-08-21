@@ -92,18 +92,18 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     const result = performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
 
     if (result !== undefined) {
-      saveActivityInWorkflow?.(
+      saveActivityInWorkflow?.({
         // input keys and values
-        selectedAnalysisColumnCellsValues,
-        selectedAnalysisColumnCellsKeys,
+        inputMatrixIds: selectedAnalysisColumnCellsValues,
+        inputColumns: selectedAnalysisColumnCellsKeys,
 
         // output keys and values
-        selectedAnalysisColumnCellsKeys,
-        result,
+        outputColumns: selectedAnalysisColumnCellsKeys,
+        outputMatrixId: result,
 
         // statistical action
-        action
-      );
+        action: action
+      });
     }
   };
 

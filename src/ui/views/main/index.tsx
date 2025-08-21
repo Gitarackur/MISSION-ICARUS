@@ -9,17 +9,16 @@ import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord } from '@/app-laye
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { generateActiveSessionWitNestedWorkflow, reconstructOriginalRowsAndColumnsFromSessionWorkflows, saveActivityInSessionWorkflow } from '@/app-layer/session/utils/main';
 import { BareSession } from '@/domain/session';
-import { TableColumns, TableMatrices, TableMatrix } from '@/app-layer/algorithms/workflow/main.types';
+import { SaveStatisticalActivity, TableColumns } from '@/domain/workflow/main.types';
 import ActivityTree from "@/ui/components/activity-tree"
 import SlidingSheet from '@/ui/design-system/Sheet/main';
 import { Menu } from 'lucide-react';
 import { activityFloatingButton } from './variants/main.variants';
-import { StatisticalAction } from '@/domain/statistics/index.types';
 
 
 
 const IcarusApp: React.FC = () => {
-  const [activeSession, setActiveSession] = useState<IcarusSessionRecord | IcarusSessionWithWorkflowRecord | null>(null);
+  const [activeSession, setActiveSession] = useState<IcarusSessionWithWorkflowRecord | null>(null);
 
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
   const [originalDataColumns, setOriginalDataColumns] = useState<TableColumns>([]);
@@ -84,19 +83,22 @@ const IcarusApp: React.FC = () => {
     }
   };
 
-  const saveActivityInWorkflow = async (
-    inputMatrix: TableMatrices | TableMatrix | null,
-    inputColumns: TableColumns | null,
-    outputColumns: TableColumns,
-    outputMatrixId: unknown,
-    action?: StatisticalAction, 
-  ) => {
+  const saveActivityInWorkflow = async ({
+    sourceMatrixId,
+    inputMatrixIds,
+    inputColumns,
+    outputColumns,
+    outputMatrixId,
+    action,
+  }: Partial<SaveStatisticalActivity>) => {
     try {
       const activity = {
         id: `icarus-activity-${uuidv4()}`,
         name: `statistical analysis--${action}`,
-        inputMatrixIds: inputMatrix,
-        inputColumns: inputColumns,
+        // get the first (and probably the only matrix) on the session workflow
+        sourceMatrixId: sourceMatrixId || activeSession?.workflows?.[0]?.data?.matrices?.[0]?.id,
+        inputMatrixIds,
+        inputColumns,
         outputColumns,
         outputMatrixId,
         pluginId: "statistical-engine",
@@ -148,7 +150,6 @@ const IcarusApp: React.FC = () => {
 
             isProcessing={isProcessing}
             setIsProcessing={setIsProcessing}
-
             saveActivityInWorkflow={saveActivityInWorkflow}
           />
         </div>

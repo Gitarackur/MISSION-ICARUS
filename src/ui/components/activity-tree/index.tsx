@@ -9,15 +9,24 @@ import { generateIcarusActivityNode } from '@/app-layer/algorithms/tree/index.ts
 const ActivityTree = ({ sessionData }: { sessionData: IcarusSessionWithWorkflowRecord }) => {
   const styles = activityStyleVariants();
 
+  // sourceMatrixId
+  const sourceMatrixId = useMemo(() => sessionData?.workflows?.[0]?.data?.matrices?.[0]?.id, [sessionData?.workflows])
+
 
   const [selectedWorkflow, setSelectedWorkflow] = useState(0);
   const currentWorkflow = sessionData.workflows?.[selectedWorkflow];
 
-  generateIcarusActivityNode(currentWorkflow?.data?.activities)
+  generateIcarusActivityNode({
+    sourceMatrixId: sourceMatrixId,
+    activities: currentWorkflow?.data?.activities
+  })
 
   const activityTree = useMemo(() => {
-    return generateIcarusActivityNode(currentWorkflow?.data?.activities);
-  }, [currentWorkflow]);
+    return generateIcarusActivityNode({
+      sourceMatrixId: sourceMatrixId,
+      activities: currentWorkflow?.data?.activities
+    });
+  }, [currentWorkflow?.data?.activities, sourceMatrixId]);
 
   return (
     <div className={styles.layoutRoot()}>

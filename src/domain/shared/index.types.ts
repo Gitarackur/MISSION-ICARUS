@@ -1,6 +1,6 @@
 import { IcarusWorkflowRecord } from "@/app-layer/database/database.types";
-import { ProteinRow } from "../proteins/index.types";
-import { TableColumns, TableMatrices } from "@/app-layer/algorithms/workflow/main.types";
+import { ProteinRow } from "@/domain/proteins/index.types";
+import { TableColumns, TableMatrices } from "@/domain/workflow/main.types";
 export interface ParsedCSVResult<T> {
   data: T[];
   headers: string[];

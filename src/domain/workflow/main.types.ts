@@ -1,6 +1,8 @@
 // export type TableColumns = string[] | null;
 // export type TableMatrices =  (string | number | undefined)[][] | null;
 
+import { StatisticalAction } from "@/domain/statistics/index.types";
+
 export type TableColumns = string[];
 export type TableMatrices = (string | number)[][];
 export type TableMatrix = (string | number)[];
@@ -24,20 +26,28 @@ export interface IcarusActivity {
   id: string;
   name: string;
   pluginId?: string;
+  sourceMatrixId?: string;
   inputColumns: TableColumns | unknown | null;
   inputMatrixIds: TableMatrices | unknown | null;
-  outputColumns: TableColumns | null;
+  outputColumns: TableColumns | unknown | null;
   outputMatrixId: TableMatrices | unknown | null;
   timestamp: string | number;
 }
 export interface IMapActivityData {
   name: string;
+  sourceMatrixId?: string;
   inputColumns: TableColumns | unknown | null;
   inputMatrixIds: TableMatrices | unknown | null;
   outputColumns: TableColumns | null;
   outputMatrixId: TableMatrices | unknown | null;
   pluginId?: string;
 }
+
+export type SaveStatisticalActivity = IcarusActivity & {
+  action?: StatisticalAction, 
+}
+
+
 
 // Icarus Visualizations
 export interface IcarusVisualization {

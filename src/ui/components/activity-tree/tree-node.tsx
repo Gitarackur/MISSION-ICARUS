@@ -3,9 +3,9 @@ import { useState } from "react";
 import { activityStyleVariants } from "./variants/activity.style.variant";
 import MatrixModal from "./modal/matrix-modal";
 import MatrixBadge from "./matrix-badge";
-import { ActivityTreeNode } from "@/app-layer/algorithms/tree/tree.types";
+import { ActivityTreeNode } from "@/domain/tree/tree.types";
 import { useModal } from "@/ui/design-system/Modal/context";
-import { TableMatrices } from "@/app-layer/algorithms/workflow/main.types";
+import { TableMatrices } from "@/domain/workflow/main.types";
 
 
 

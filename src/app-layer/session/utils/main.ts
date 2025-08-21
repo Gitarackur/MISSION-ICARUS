@@ -5,16 +5,14 @@ import {
   IcarusWorkflowRecord,
 } from "@/app-layer/database/database.types";
 import IcarusSession from "..";
-import IcarusWorkflow from "../../algorithms/workflow";
+import IcarusWorkflow from "@/app-layer/algorithms/workflow";
 import { BareSession } from "@/domain/session";
-import {
-  IcarusActivity,
-} from "../../algorithms/workflow/main.types";
+import { IcarusActivity } from "@/domain/workflow/main.types";
 import {
   createMatrixDataSafe,
   reconstructFromMatrix,
-} from "../../shared/utils";
-import { IcarusDBAdapter } from "../../database/store";
+} from "@/app-layer/shared/utils";
+import { IcarusDBAdapter } from "@/app-layer/database/store";
 
 //-----------------------------------------------------------------------------
 //
@@ -95,7 +93,9 @@ export const generateActiveSessionWitNestedWorkflow = async ({
 
     // cerate icarus session instance
     const session = new IcarusSession();
-    session.changeSessionName(name || `Test Session - ${Math.random() * 6 + 1}`);
+    session.changeSessionName(
+      name || `Test Session - ${Math.random() * 6 + 1}`
+    );
 
     // create icarus workflow
     const workflow = new IcarusWorkflow();
@@ -110,7 +110,7 @@ export const generateActiveSessionWitNestedWorkflow = async ({
     });
 
     // add initial activity to workflow
-     workflow.addActivity({
+    workflow.addActivity({
       name: "load CSV",
       inputMatrixIds: null,
       inputColumns: null,
@@ -118,7 +118,6 @@ export const generateActiveSessionWitNestedWorkflow = async ({
       outputMatrixId: rowsAs2dMatrix,
       pluginId: "",
     });
-    
 
     await IcarusDBAdapter.saveWorkflow({
       id: workflow.id,
