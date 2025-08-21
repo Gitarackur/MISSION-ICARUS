@@ -6,10 +6,9 @@ import {
 } from "@/app-layer/database/database.types";
 import IcarusSession from "..";
 import IcarusWorkflow from "../../algorithms/workflow";
-import { BareSession, CreateSessionUsingRowsColumn } from "@/domain/session";
+import { BareSession } from "@/domain/session";
 import {
   IcarusActivity,
-  TableMatrices,
 } from "../../algorithms/workflow/main.types";
 import {
   createMatrixDataSafe,
@@ -73,40 +72,6 @@ export function validateAndExtractWorkflowDataStrict(
   };
 }
 
-// --------------------------------------------------------------------
-//
-// Creates a bare session with a workflow and matrix
-//
-//----------------------------------------------------------------------
-export const createBareSession = ({
-  name,
-  columns,
-  rowsAs2dMatrix,
-}: CreateSessionUsingRowsColumn) => {
-  const session = new IcarusSession();
-  const workflow = new IcarusWorkflow();
-
-  session.changeSessionName(`Test Session - ${Math.random() * 6 + 1}`);
-
-  const matrixWorkflowMap = workflow.addMatrix({
-    columns,
-    data: rowsAs2dMatrix as TableMatrices,
-  });
-
-  const activity = workflow.addActivity({
-    name,
-    inputMatrixIds: rowsAs2dMatrix,
-    inputColumns: columns,
-    outputColumns: null,
-    outputMatrixId: null,
-    pluginId: "",
-  });
-
-  const sessionMap = session.addWorkflow(workflow);
-
-  return { matrixWorkflowMap, sessionMap, session, workflow, activity };
-};
-
 //--------------------------------------------------------------------------------------------------------------
 // creates an active session with Nested Workflow using loaded rows and column data from the imported  data file
 // It creates the session, workflow amd saves it ti the db
@@ -114,10 +79,12 @@ export const createBareSession = ({
 //
 //--------------------------------------------------------------------------------------------------------------
 export const generateActiveSessionWitNestedWorkflow = async ({
+  name,
   rows,
   columns,
 }: BareSession) => {
   try {
+    // generate table matrices(row as 2D matrices)
     const result = createMatrixDataSafe(rows, columns);
 
     if (!result) {
@@ -126,11 +93,32 @@ export const generateActiveSessionWitNestedWorkflow = async ({
 
     const { rowsAs2dMatrix } = result;
 
-    const { sessionMap, workflow } = createBareSession({
-      name: "load CSV",
+    // cerate icarus session instance
+    const session = new IcarusSession();
+    session.changeSessionName(name || `Test Session - ${Math.random() * 6 + 1}`);
+
+    // create icarus workflow
+    const workflow = new IcarusWorkflow();
+
+    // add workflow to session
+    const sessionMap = session.addWorkflow(workflow);
+
+    // add matrix to workflow
+    workflow.addMatrix({
       columns,
-      rowsAs2dMatrix,
+      data: rowsAs2dMatrix,
     });
+
+    // add initial activity to workflow
+     workflow.addActivity({
+      name: "load CSV",
+      inputMatrixIds: null,
+      inputColumns: null,
+      outputColumns: columns,
+      outputMatrixId: rowsAs2dMatrix,
+      pluginId: "",
+    });
+    
 
     await IcarusDBAdapter.saveWorkflow({
       id: workflow.id,

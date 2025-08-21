@@ -24,7 +24,7 @@ export interface IcarusActivity {
   id: string;
   name: string;
   pluginId?: string;
-  inputColumns: TableColumns | null;
+  inputColumns: TableColumns | unknown | null;
   inputMatrixIds: TableMatrices | unknown | null;
   outputColumns: TableColumns | null;
   outputMatrixId: TableMatrices | unknown | null;
@@ -32,8 +32,8 @@ export interface IcarusActivity {
 }
 export interface IMapActivityData {
   name: string;
-  inputColumns: TableColumns;
-  inputMatrixIds: TableMatrices | unknown;
+  inputColumns: TableColumns | unknown | null;
+  inputMatrixIds: TableMatrices | unknown | null;
   outputColumns: TableColumns | null;
   outputMatrixId: TableMatrices | unknown | null;
   pluginId?: string;
