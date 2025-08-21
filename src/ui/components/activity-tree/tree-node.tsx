@@ -14,8 +14,6 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
   const styles = activityStyleVariants();
 
   const { openModal, closeModal } = useModal();
-
-  // const [expanded, setExpanded] = useState(level < 1);
   const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children?.length > 0;
   const canInteract = hasChildren;
@@ -96,54 +94,44 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
           <div className={styles.detailsContainer()}>
             <div className={styles.detailsWrapper()}>
 
-              {
-                // node.activity.inputMatrixIds !== null && node.activity.inputMatrixIds !== undefined && (
-                Array.isArray(node.activity.inputMatrixIds) ? (
-                  <MatrixBadge
-                    data={node.activity.inputMatrixIds}
-                    label="Input"
-                    icon={<ArrowRight className={styles.iconArrowIn()} />}
-                    onOpen={() => {
-                      if (node.activity?.name && node.activity.inputMatrixIds && Array.isArray(node.activity.inputMatrixIds)) {
-                        openShowMatrixModal(node.activity.name, node.activity.inputMatrixIds);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
-                    <span className={styles.textLabel()}>
-                      Input:
-                      {/* Unknown Type */}
-                      {/* - {typeof node.activity.inputMatrixIds} */}
-                      - {node.activity.inputMatrixIds ? JSON.stringify(node.activity.inputMatrixIds) : "------"}
-                    </span>
-                  </div>
-                )
-                // )
-              }
+              {Array.isArray(node.activity.inputMatrixIds) ? (
+                <MatrixBadge
+                  data={node.activity.inputMatrixIds}
+                  label="Input"
+                  icon={<ArrowRight className={styles.iconArrowIn()} />}
+                  onOpen={() => {
+                    if (node.activity?.name && node.activity.inputMatrixIds && Array.isArray(node.activity.inputMatrixIds)) {
+                      openShowMatrixModal(node.activity.name, node.activity.inputMatrixIds);
+                    }
+                  }}
+                />
+              ) : (
+                <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
+                  <span className={styles.textLabel()}>
+                    Input:
+                    - {node.activity.inputMatrixIds ? JSON.stringify(node.activity.inputMatrixIds) : "------"}
+                  </span>
+                </div>
+              )}
 
-              {node.activity.outputMatrixId !== null && node.activity.outputMatrixId !== undefined && (
-                Array.isArray(node.activity.outputMatrixId) ? (
-                  <MatrixBadge
-                    data={node.activity.outputMatrixId}
-                    label="Output"
-                    icon={<ArrowRight className={styles.iconArrowOut()} />}
-                    onOpen={() => {
-                      if (node.activity?.name && node.activity.outputMatrixId && Array.isArray(node.activity.outputMatrixId)) {
-                        openShowMatrixModal(node.activity.name, node.activity.outputMatrixId);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
-                    <span className={styles.textLabel()}>
-                      {/* Output: Unknown Type - {typeof node.activity.outputMatrixId} */}
-                      Output:
-                      {JSON.stringify(node.activity.outputMatrixId)}
-                      {/* { node.activity.outputMatrixId as number } */}
-                    </span>
-                  </div>
-                )
+              {Array.isArray(node.activity.outputMatrixId) ? (
+                <MatrixBadge
+                  data={node.activity.outputMatrixId}
+                  label="Output"
+                  icon={<ArrowRight className={styles.iconArrowOut()} />}
+                  onOpen={() => {
+                    if (node.activity?.name && node.activity.outputMatrixId && Array.isArray(node.activity.outputMatrixId)) {
+                      openShowMatrixModal(node.activity.name, node.activity.outputMatrixId);
+                    }
+                  }}
+                />
+              ) : (
+                <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
+                  <span className={styles.textLabel()}>
+                    Output:
+                    {JSON.stringify(node.activity.outputMatrixId)}
+                  </span>
+                </div>
               )}
 
               {node.activity.timestamp && (
