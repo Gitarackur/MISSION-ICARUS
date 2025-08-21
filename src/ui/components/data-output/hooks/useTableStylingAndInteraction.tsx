@@ -1,9 +1,8 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useState, useMemo, useEffect, useCallback } from "react";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import { getNumericColumns, getNumericColumnsOptimized } from "@/app-layer/shared/utils";
+import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
+import { TableMatrix } from "@/app-layer/algorithms/workflow/main.types";
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
@@ -32,14 +31,14 @@ export const useTableStylingAndInteraction = (
   const numericColumns = useMemo(() => getNumericColumnsOptimized(columns, originalDataRows), [columns, originalDataRows]);
 
   const allColumnarData = useMemo(() => {
-    const dataMap = new Map<string, (string | number | undefined)[]>();
+    const dataMap = new Map<string, TableMatrix>();
     if (!originalDataRows.length || !columns.length) return dataMap;
 
     columns.forEach(colName => {
-      const values: (string | number | undefined)[] = [];
+      const values: TableMatrix = [];
       originalDataRows.forEach(row => {
         if (Object.prototype.hasOwnProperty.call(row, colName)) {
-          values.push(row[colName]);
+          values.push(row[colName] as string | number);
         }
       });
       dataMap.set(colName, values);
@@ -64,7 +63,7 @@ export const useTableStylingAndInteraction = (
   }, [originalDataRows, columns]);
 
   const selectedAnalysisColumnCells = useMemo(() => {
-    const dataMap = new Map<string, (string | number | undefined)[]>();
+    const dataMap = new Map<string, TableMatrix>();
     selectedAnalysisColumnHeaderValues.forEach(colName => {
       const values = allColumnarData.get(colName);
       if (values) {

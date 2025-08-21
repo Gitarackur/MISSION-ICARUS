@@ -14,7 +14,6 @@ import PreviewPagination from './preview-pagination';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { useStatisticalAnalysis } from '@/app-layer/statistics/hooks/useStatistics';
 import { StatisticalAction } from '@/domain/statistics/index.types';
-import { mean } from '@/app-layer/statistics/utils/statistical-engine';
 
 const ROWS_PER_PAGE = 10;
 
@@ -63,6 +62,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     ROWS_PER_PAGE
   );
 
+  // hook that attaches to statistical engine
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  // get cell style (based on which cells are numeric values and/or which are highlighted)
   const getCombinedCellStyle = useCallback(
     (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
       const baseStyle = getBaseCellStyle(rowIndex, row, columnId, isHeader);
@@ -82,31 +85,28 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     return Array.from(selectedAnalysisColumnHeaderValues).join(', ');
   }, [selectedAnalysisColumnHeaderValues]);
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { stats, performAnalysis } = useStatisticalAnalysis();
-
-  const handleMenuAction = useCallback((action: StatisticalAction) => {
-    console.log('mean action', action);
-
-    // convert selectedAnalysisRowCells into suitable data shape for statistical engine
-    // selectedAnalysisRowCells
-    // selectedAnalysisColumnHeaderValues
-
-    // convert selectedAnalysisColumnCells into suitable data shape for statistical engine
+  const handleMenuAction = (action: StatisticalAction) => {
     const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
     const selectedAnalysisColumnCellsValues = Array.from(selectedAnalysisColumnCells.values());
 
-    // perform the analysis on the engine
-    performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
+    const result = performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
 
-    // save statistical analysis as activity to workflow
-    saveActivityInWorkflow?.(
-      // output column
-      selectedAnalysisColumnCellsKeys,
-      // output matrix Value
-      mean(selectedAnalysisColumnCellsValues as unknown as number[])
-    );
-  }, [selectedAnalysisColumnCells, performAnalysis, saveActivityInWorkflow]);
+    if (result !== undefined) {
+      saveActivityInWorkflow?.(
+        // input keys and values
+        selectedAnalysisColumnCellsValues,
+        selectedAnalysisColumnCellsKeys,
+
+        // output keys and values
+        selectedAnalysisColumnCellsKeys,
+        result,
+
+        // statistical action
+        action
+      );
+    }
+  };
+
 
 
   useEffect(() => {

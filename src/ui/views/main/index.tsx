@@ -9,12 +9,12 @@ import { IcarusSessionRecord, IcarusSessionWithWorkflowRecord } from '@/app-laye
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { generateActiveSessionWitNestedWorkflow, reconstructOriginalRowsAndColumnsFromSessionWorkflows, saveActivityInSessionWorkflow } from '@/app-layer/session/utils/main';
 import { BareSession } from '@/domain/session';
-import { createMatrixDataSafe } from '@/app-layer/shared/utils';
-import { TableColumns } from '@/app-layer/algorithms/workflow/main.types';
+import { TableColumns, TableMatrices, TableMatrix } from '@/app-layer/algorithms/workflow/main.types';
 import ActivityTree from "@/ui/components/activity-tree"
 import SlidingSheet from '@/ui/design-system/Sheet/main';
-import { Menu } from 'lucide-react'; // Import the Menu icon from lucide-react
+import { Menu } from 'lucide-react';
 import { activityFloatingButton } from './variants/main.variants';
+import { StatisticalAction } from '@/domain/statistics/index.types';
 
 
 
@@ -85,21 +85,18 @@ const IcarusApp: React.FC = () => {
   };
 
   const saveActivityInWorkflow = async (
+    inputMatrix: TableMatrices | TableMatrix | null,
+    inputColumns: TableColumns | null,
     outputColumns: TableColumns,
-    outputMatrixId: unknown
+    outputMatrixId: unknown,
+    action?: StatisticalAction, 
   ) => {
     try {
-      const result = createMatrixDataSafe(originalDataRows, originalDataColumns);
-      if (!result) {
-        throw new Error("Failed to create matrix data from original data rows and columns");
-      }
-      const { rowsAs2dMatrix } = result;
-
       const activity = {
         id: `icarus-activity-${uuidv4()}`,
-        name: "statistical analysis",
-        inputMatrixIds: rowsAs2dMatrix,
-        inputColumns: originalDataColumns,
+        name: `statistical analysis--${action}`,
+        inputMatrixIds: inputMatrix,
+        inputColumns: inputColumns,
         outputColumns,
         outputMatrixId,
         pluginId: "statistical-engine",
@@ -171,7 +168,6 @@ const IcarusApp: React.FC = () => {
             isOpen={isSheetOpen && !!activeSession}
             onClose={() => {
               setIsSheetOpen(false);
-              // setActiveSession(null);
             }}
             position="right"
             title="Activity Session"

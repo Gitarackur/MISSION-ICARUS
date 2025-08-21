@@ -1,6 +1,7 @@
 import React from "react";
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { TableColumns } from "@/app-layer/algorithms/workflow/main.types";
+import { TableColumns, TableMatrices, TableMatrix } from "@/app-layer/algorithms/workflow/main.types";
+import { StatisticalAction } from "@/domain/statistics/index.types";
 
 export type DataPreviewProps = {
   originalDataRows: ProteinRow[];
@@ -13,9 +14,12 @@ export type DataPreviewProps = {
 
   onSelectButtonForUpload?: () => void;
 
-  saveActivityInWorkflow?: ( 
+  saveActivityInWorkflow?: (
+    inputMatrix: TableMatrices | TableMatrix | null,
+    inputColumns: TableColumns | null,
     outputColumns: TableColumns, 
-    outputMatrixId: unknown
+    outputMatrixId: unknown,
+    action?: StatisticalAction, 
   ) => void
 };
 
