@@ -10,7 +10,8 @@ export const generateIcarusActivityNode = (activities: IcarusActivity[]) => {
       : "no-input";
 
   const groups = activities.reduce((acc, activity) => {
-    const key = createKey(activity.inputMatrixIds);
+    // TODO: I have to find a way to group these activities based on a shared source /data which i may include intp the IcarusActivity interface soon
+    const key = createKey(activity.inputMatrixIds as unknown as never);
     (acc[key] ||= []).push(activity);
     return acc;
   }, {} as Record<string, IcarusActivity[]>);
