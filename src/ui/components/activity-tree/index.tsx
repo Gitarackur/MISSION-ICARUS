@@ -12,14 +12,8 @@ const ActivityTree = ({ sessionData }: { sessionData: IcarusSessionWithWorkflowR
   // sourceMatrixId
   const sourceMatrixId = useMemo(() => sessionData?.workflows?.[0]?.data?.matrices?.[0]?.id, [sessionData?.workflows])
 
-
   const [selectedWorkflow, setSelectedWorkflow] = useState(0);
   const currentWorkflow = sessionData.workflows?.[selectedWorkflow];
-
-  generateIcarusActivityNode({
-    sourceMatrixId: sourceMatrixId,
-    activities: currentWorkflow?.data?.activities
-  })
 
   const activityTree = useMemo(() => {
     return generateIcarusActivityNode({

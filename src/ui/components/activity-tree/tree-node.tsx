@@ -15,15 +15,10 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
 
   const { openModal, closeModal } = useModal();
 
-  const [expanded, setExpanded] = useState(level < 1);
-
+  // const [expanded, setExpanded] = useState(level < 1);
+  const [expanded, setExpanded] = useState(true);
   const hasChildren = node.children?.length > 0;
-  const hasDetails = !!(
-    node.activity?.pluginId ||
-    (Array.isArray(node.activity?.inputMatrixIds) && node.activity.inputMatrixIds.length) ||
-    (typeof node.activity?.outputMatrixId === "string" && node.activity.outputMatrixId.length)
-  );
-  const canInteract = hasChildren || hasDetails;
+  const canInteract = hasChildren;
 
   const getChevronClass = () => {
     if (!hasChildren) return styles.nodeChevronHidden();
@@ -89,19 +84,20 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
               </div>
             )}
 
-            {/* {!node.activity && node.inputMatrixKey && (
+            {!node.activity && node.inputMatrixKey && (
               <div className={styles.textMatrixKey()}>
                 {node.inputMatrixKey.length > 20 ? `${node.inputMatrixKey.slice(0, 20)}...` : node.inputMatrixKey}
               </div>
-            )} */}
+            )}
           </div>
         </div>
 
-        {expanded && node.activity && hasDetails && (
+        {expanded && node.activity && (
           <div className={styles.detailsContainer()}>
             <div className={styles.detailsWrapper()}>
 
-              {node.activity.inputMatrixIds !== null && node.activity.inputMatrixIds !== undefined && (
+              {
+                // node.activity.inputMatrixIds !== null && node.activity.inputMatrixIds !== undefined && (
                 Array.isArray(node.activity.inputMatrixIds) ? (
                   <MatrixBadge
                     data={node.activity.inputMatrixIds}
@@ -116,11 +112,15 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
                 ) : (
                   <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                     <span className={styles.textLabel()}>
-                      Input: Unknown Type - {typeof node.activity.inputMatrixIds}
-                      </span>
+                      Input:
+                      {/* Unknown Type */}
+                      {/* - {typeof node.activity.inputMatrixIds} */}
+                      - {node.activity.inputMatrixIds ? JSON.stringify(node.activity.inputMatrixIds) : "------"}
+                    </span>
                   </div>
                 )
-              )}
+                // )
+              }
 
               {node.activity.outputMatrixId !== null && node.activity.outputMatrixId !== undefined && (
                 Array.isArray(node.activity.outputMatrixId) ? (
@@ -138,8 +138,8 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
                   <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                     <span className={styles.textLabel()}>
                       {/* Output: Unknown Type - {typeof node.activity.outputMatrixId} */}
-                       Output:
-                      { JSON.stringify(node.activity.outputMatrixId) }
+                      Output:
+                      {JSON.stringify(node.activity.outputMatrixId)}
                       {/* { node.activity.outputMatrixId as number } */}
                     </span>
                   </div>

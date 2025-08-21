@@ -22,7 +22,9 @@ const MatrixModal = ({ title, tableMatrices, onClose }: ActivityMatrixModal) => 
         <div className={styles.modalDataContainer()}>          
           {tableMatrices.map((row, i) => (
             <div key={i} className={styles.modalRow()}>
-              <span className={styles.modalRowLabel()}>Row {i + 1}:</span>
+              <span className={styles.modalRowLabel()}>
+                Data :
+              </span>
               <div className={styles.modalRowItems()}>
                 {row.map((item, j) => (
                   <span key={j} className={styles.modalItem()}>
