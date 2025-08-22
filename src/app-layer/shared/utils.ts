@@ -317,7 +317,7 @@ export const formatColumnHeader = (str: string): string => {
 };
 
 // Formats a table cell value for display, handling numbers and strings
-export const formatTableCellValue = (value: unknown): string => {
+export const formatTableCellValue = (value: unknown): string | number => {
   if (typeof value === "number") {
     // if (value > 1e3) {
     //   return value.toExponential(2);
@@ -327,5 +327,5 @@ export const formatTableCellValue = (value: unknown): string => {
   }
 
   // Handle other types, including null/undefined
-  return (value as string) || "N/A";
+  return (value as string) || 0;
 };
