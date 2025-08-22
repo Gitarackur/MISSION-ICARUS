@@ -324,6 +324,7 @@ export const formatTableCellValue = (value: unknown): string | number => {
     // } else {
     //   return value.toFixed(2);
     // }
+    return value;
   }
 
   // Handle other types, including null/undefined
