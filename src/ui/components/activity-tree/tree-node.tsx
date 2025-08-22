@@ -128,8 +128,7 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
               ) : (
                 <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                   <span className={styles.textLabel()}>
-                    Output:
-                    - {node.activity.outputMatrixId ? JSON.stringify(node.activity.outputMatrixId): "------"}
+                    Output: {node.activity.outputMatrixId ? JSON.stringify(node.activity.outputMatrixId): "------"}
                   </span>
                 </div>
               )}
