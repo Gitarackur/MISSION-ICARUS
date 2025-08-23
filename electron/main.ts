@@ -1,5 +1,5 @@
 import { app, BrowserWindow, ipcMain } from 'electron'
-import { createRequire } from 'node:module'
+// import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 
@@ -7,7 +7,7 @@ import EmbeddedPythonManager from './src/python/python-manager'
 import EmbeddedRManager from './src/r/r-manager'
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const require = createRequire(import.meta.url)
+// const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 process.env.APP_ROOT = path.join(__dirname, '..')
@@ -22,7 +22,8 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    // icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
+    icon: path.join(process.env.APP_ROOT, "public", "assets", 'icarus.png'),
     resizable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
@@ -47,11 +48,11 @@ function createWindow() {
 const pythonManager = new EmbeddedPythonManager();
 const rManager = new EmbeddedRManager();
 
-ipcMain.handle('run-python', async (event, { scriptPath, args }: { scriptPath: string; args?: string[] }) => {
+ipcMain.handle('run-python', async (_event, { scriptPath, args }: { scriptPath: string; args?: string[] }) => {
   return pythonManager.runPythonScript(scriptPath, args || [])
 })
 
-ipcMain.handle('run-r', async (event, { scriptPath, args }: { scriptPath?: string; args?: string[] }) => {
+ipcMain.handle('run-r', async (_event, { scriptPath, args }: { scriptPath?: string; args?: string[] }) => {
   if (!scriptPath) {
     throw new Error('No R script path provided.');
   }

@@ -31,6 +31,7 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
+    "@electron/packager": "^18.4.2",
     "@types/d3": "^7.4.3",
     "@types/lodash": "^4.17.20",
     "@types/node": "^24.2.0",
