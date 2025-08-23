@@ -4,9 +4,9 @@ import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
 import { TableMatrix } from "@/domain/workflow/main.types";
 
+
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
-  filteredDataRows: ProteinRow[], // Keeping this here as it's a prop, though not directly used in the new optimized memos
   columns: string[],
 ) => {
   const styles = dataOutputStyles();
@@ -94,6 +94,9 @@ export const useTableStylingAndInteraction = (
   const handleColumnClick = useCallback((columnName: string) => {
     if (!numericColumns.has(columnName)) return;
 
+    // clear row selection because only one of either row or column can be selected
+    setSelectedAnalysisRowsCells([]);
+
     setSelectedAnalysisColumnHeaderValues(prev => {
       const newSet = new Set(prev);
       if (newSet.has(columnName)) {
@@ -151,6 +154,10 @@ export const useTableStylingAndInteraction = (
 
   // Selects or deselects a single row
   const selectOneRow = useCallback((row: ProteinRow, checked: boolean) => {
+
+    // clear column selection because only one of either row or column can be selected
+    setSelectedAnalysisColumnHeaderValues(new Set());
+
     setSelectedAnalysisRowsCells(prevRows => {
       if (checked) {
         if (!prevRows.includes(row)) {
@@ -191,3 +198,25 @@ export const useTableStylingAndInteraction = (
     setIsAllSelectedUI
   };
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

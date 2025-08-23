@@ -1,4 +1,5 @@
 import {
+  IcarusMatrix,
   SaveStatisticalActivity,
   TableColumns,
 } from "@/domain/workflow/main.types";
@@ -18,12 +19,19 @@ export type ProteomicsAnalysisHomeViewProps = {
   setIsProcessing: (isProcessing: boolean) => void;
 
   saveActivityInWorkflow?: ({
-    inputMatrixIds,
-    inputColumns,
-    outputColumns,
-    outputMatrixId,
-    action,
-  }:Partial<SaveStatisticalActivity>) => void;
+    inputColumnNames,
+    outputColumnNames,
+
+    inputParameters,
+    outputMetrics,
+
+    inputMatrixReferences,
+    outputMatrixReference,
+
+    action
+  }: Partial<SaveStatisticalActivity>) => void;
+
+  sessionSourceMatrix?: IcarusMatrix
 };
 
 export type tabTypes =

@@ -1,6 +1,5 @@
 import {
   IcarusActivity,
-  TableMatrices,
 } from "@/domain/workflow/main.types";
 import { ActivityTreeNode } from "@/domain/tree/tree.types";
 import { IcarusActivityNodeParams } from "@/domain/activity/main.types";
@@ -9,14 +8,6 @@ export const generateIcarusActivityNode = ({
   sourceMatrixId,
   activities,
 }: IcarusActivityNodeParams) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const createKeyFromTableMatrices = (matrices: TableMatrices): string =>
-    matrices?.length
-      ? matrices
-          .map((row) => row.map((id) => id ?? "undefined").join(","))
-          .join("|")
-      : "no-input";
-
   const groups = activities.reduce((acc, activity) => {
     // TODO: I have to find a way to group these activities based on a shared source /data which i may include intp the IcarusActivity interface soon
 

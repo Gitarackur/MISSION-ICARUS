@@ -94,41 +94,43 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
           <div className={styles.detailsContainer()}>
             <div className={styles.detailsWrapper()}>
 
-              {Array.isArray(node.activity.inputMatrixIds) ? (
+              {Array.isArray(node.activity.inputColumnNames) ? (
                 <MatrixBadge
-                  data={node.activity.inputMatrixIds}
+                  data={node.activity.inputColumnNames}
                   label="Input"
                   icon={<ArrowRight className={styles.iconArrowIn()} />}
                   onOpen={() => {
-                    if (node.activity?.name && node.activity.inputMatrixIds && Array.isArray(node.activity.inputMatrixIds)) {
-                      openShowMatrixModal(node.activity.name, node.activity.inputMatrixIds);
+                    if (node.activity?.name && node.activity.inputParameters && Array.isArray(node.activity.inputParameters)) {
+                      openShowMatrixModal(node.activity.name, node.activity.inputParameters);
                     }
                   }}
                 />
+                
               ) : (
                 <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                   <span className={styles.textLabel()}>
                     Input:
-                    - {node.activity.inputMatrixIds ? JSON.stringify(node.activity.inputMatrixIds) : "------"}
+                    - {node.activity.inputColumnNames ? JSON.stringify(node.activity.inputParameters) : "------"}
                   </span>
                 </div>
               )}
 
-              {Array.isArray(node.activity.outputMatrixId) ? (
+              {Array.isArray(node.activity.outputMetrics) ? (
                 <MatrixBadge
-                  data={node.activity.outputMatrixId}
+                  data={node.activity.outputMetrics}
                   label="Output"
                   icon={<ArrowRight className={styles.iconArrowOut()} />}
                   onOpen={() => {
-                    if (node.activity?.name && node.activity.outputMatrixId && Array.isArray(node.activity.outputMatrixId)) {
-                      openShowMatrixModal(node.activity.name, node.activity.outputMatrixId);
+                    if (node.activity?.name && node.activity.outputMetrics && Array.isArray(node.activity.outputMetrics)) {
+                      openShowMatrixModal(node.activity.name, node.activity.outputMetrics);
                     }
                   }}
                 />
               ) : (
                 <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                   <span className={styles.textLabel()}>
-                    Output: {node.activity.outputMatrixId ? JSON.stringify(node.activity.outputMatrixId): "------"}
+                    Output: 
+                      {node.activity.outputMetrics ? JSON.stringify(node.activity.outputMetrics): "------"}
                   </span>
                 </div>
               )}

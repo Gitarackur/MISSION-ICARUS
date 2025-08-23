@@ -1,5 +1,6 @@
 import { Eye } from "lucide-react";
 import { activityStyleVariants } from "./variants/activity.style.variant";
+import { TableColumns } from "@/domain/workflow/main.types";
 
 const MatrixBadge = ({
   data,
@@ -7,7 +8,7 @@ const MatrixBadge = ({
   icon,
   onOpen
 }: {
-  data: (number | string | undefined)[][];
+  data: TableColumns;
   label: string;
   icon: React.ReactNode;
   onOpen: () => void;
@@ -16,7 +17,8 @@ const MatrixBadge = ({
 
   if (!data?.length) return null;
 
-  const preview = `${data.length}×${Math.max(...data.map(row => row.length))}`;
+  // const preview = `${data.length}×${Math.max(...data.map(row => row.length))}`;
+  const preview = data.reduce((acc, col) => acc + "," + col)
 
   return (
     <div className={styles.badgeContainer()}>
@@ -26,7 +28,9 @@ const MatrixBadge = ({
         onClick={() => onOpen()}
         className={styles.badgeButton()}
       >
-        {preview} <Eye className={styles.iconEye()} />
+        {preview} 
+        {/* { data.length > 0 && JSON.stringify(data)} */}
+        <Eye className={styles.iconEye()} />
       </button>
     </div>
   );

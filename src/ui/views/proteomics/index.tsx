@@ -29,12 +29,16 @@ export default function ProteomicsAnalysisHomeView({
   setSelectedDataColumns,
 
   // state for watching processing of dta -- from csv or raw matrix processing
-  isProcessing, 
+  isProcessing,
   setIsProcessing,
 
   // callback to save activity on statistical analysis
-  saveActivityInWorkflow
-  
+  saveActivityInWorkflow,
+
+
+  // session source matrix
+  sessionSourceMatrix
+
 }: ProteomicsAnalysisHomeViewProps) {
   const styles = proteomicsPagestyles();
   const [activeTab, setActiveTab] = useState<tabTypes>('import');
@@ -96,6 +100,7 @@ export default function ProteomicsAnalysisHomeView({
               setSelectedDataColumns={setSelectedDataColumns}
               onSelectButtonForUpload={() => fileInputRef.current?.click()}
               saveActivityInWorkflow={saveActivityInWorkflow}
+              sessionSourceMatrix={sessionSourceMatrix}
             />
           </div>
         )}

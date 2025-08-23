@@ -104,18 +104,28 @@ export const generateActiveSessionWitNestedWorkflow = async ({
     const sessionMap = session.addWorkflow(workflow);
 
     // add matrix to workflow
-    workflow.addMatrix({
+    const matrixWorkflowMap = workflow.addMatrix({
       columns,
       data: rowsAs2dMatrix,
+      createdByFirstActivity: true,
     });
 
     // add initial activity to workflow
     workflow.addActivity({
       name: "load CSV",
-      inputMatrixIds: null,
-      inputColumns: null,
-      outputColumns: columns,
-      outputMatrixId: rowsAs2dMatrix,
+
+      sourceMatrixId: undefined,
+      
+      inputColumnNames: [],
+      inputMatrixReferences: [],
+      inputParameters: {},
+
+      outputColumnNames: [],
+      outputMatrixReference: matrixWorkflowMap.id,
+      outputMetrics: {
+        // matrix: rowsAs2dMatrix as unknown as (string | number)[][]
+      },
+
       pluginId: "",
     });
 

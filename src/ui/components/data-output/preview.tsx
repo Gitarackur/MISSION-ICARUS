@@ -31,7 +31,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   onSelectButtonForUpload,
 
   // callback to save activity on statistical analysis
-  saveActivityInWorkflow
+  saveActivityInWorkflow,
+
+  // the source session matrix
+  sessionSourceMatrix
 
 }) => {
 
@@ -54,8 +57,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     selectAllRows,
 
     isAllSelectedUI,
-    setIsAllSelectedUI
-  } = useTableStylingAndInteraction(originalDataRows, filteredDataRows, originalDataColumns);
+    setIsAllSelectedUI,
+
+  } = useTableStylingAndInteraction(originalDataRows, originalDataColumns);
 
   const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
     filteredDataRows,
@@ -91,15 +95,30 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
     const result = performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
 
+    console.log(result, selectedAnalysisColumnCellsKeys, selectedAnalysisColumnCellsValues);
+
+    const inputMatrixReferences: string[] = [];
+    if(sessionSourceMatrix) {
+      inputMatrixReferences.push(sessionSourceMatrix?.id)
+    }
+
     if (result !== undefined) {
       saveActivityInWorkflow?.({
-        // input keys and values
-        inputMatrixIds: selectedAnalysisColumnCellsValues,
-        inputColumns: selectedAnalysisColumnCellsKeys,
-
-        // output keys and values
-        outputColumns: selectedAnalysisColumnCellsKeys,
-        outputMatrixId: result,
+        // input keys, values and references
+        inputColumnNames: selectedAnalysisColumnCellsKeys,
+        // add sourceMatrixId to the input reference 
+        inputMatrixReferences,
+        inputParameters: {
+          column_of_calculation: selectedAnalysisColumnCellsKeys
+        },
+  
+        // output column names, parameters and references
+        outputColumnNames: selectedAnalysisColumnCellsKeys,
+        // save the matrix and then add the output matrix id to the reference 
+        outputMatrixReference: '',
+        outputMetrics: {
+          mean : result
+        },
 
         // statistical action
         action: action
@@ -189,7 +208,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                 <React.Fragment key={column}>
                   <th
                     className={getCombinedCellStyle(0, null, column, true)}
-                    onClick={() => handleColumnClick(column)}
+                    onClick={() => {
+                      handleColumnClick(column)
+                      console.log("column", column)
+                    }}
                   >
                     <div className="flex items-center">
                       {formatColumnHeader(column)}
@@ -216,7 +238,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                         checked={selectedAnalysisRowCells.includes(row)}
                         onChange={(e) => {
                           selectOneRow(row, e.target.checked);
-
+                          console.log("row", row)
                         }}
                       />
                     </td>

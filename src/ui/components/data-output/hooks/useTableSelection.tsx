@@ -44,8 +44,7 @@ export const useTableSelection = (allColumns: string[]) => {
   );
 
   const handleMouseOver = useCallback(
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    (rowIndex: number, columnId: string | null, isHeader: boolean) => {
+    (rowIndex: number, columnId: string | null) => {
       if (!isDraggingRef.current || !startCellRef.current) return;
       isClickRef.current = false;
 

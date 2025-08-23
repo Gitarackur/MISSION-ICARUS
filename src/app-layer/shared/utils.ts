@@ -13,9 +13,9 @@ export function isNumericString(s: string | undefined) {
 
 // Converts a string to a number if possible, otherwise returns the original string
 export function toNumberIfPossible(s: string | undefined): number | string {
-  if (s == null) return "";
+  if (s == null) return 0;
   const trimmed = s.trim();
-  if (trimmed === "") return "";
+  if (trimmed === "") return 0;
   if (isNumericString(trimmed)) return Number(trimmed);
   return trimmed;
 }

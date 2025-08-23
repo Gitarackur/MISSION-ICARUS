@@ -37,19 +37,19 @@ class IcarusWorkflow {
     this.visualizations.push(visualization);
   }
 
-  mapMatrixData({ columns, data, activityId = null }: IMapMatrixData) {
+  mapMatrixData({ columns, data, createdByFirstActivity}: IMapMatrixData) {
     return {
       id: `icarus-matrix-${uuidv4()}`,
-      createdByActivityId: activityId,
+      createdByFirstActivity,
       createdAt: Date.now(),
       columns,
       data,
     };
   }
 
-  addMatrix({ columns, data, activityId = null }: IMapMatrixData) {
+  addMatrix({ columns, data, createdByFirstActivity }: IMapMatrixData) {
     const matrixWorkflowMap = this.mapMatrixData({
-      activityId,
+      createdByFirstActivity,
       columns,
       data,
     });
@@ -64,42 +64,60 @@ class IcarusWorkflow {
 
   mapActivityData({
     name,
+
     sourceMatrixId,
-    inputMatrixIds,
-    inputColumns,
-    outputColumns,
-    outputMatrixId,
+    
+    inputColumnNames,
+    inputMatrixReferences,
+    inputParameters,
+    outputColumnNames,
+    outputMatrixReference,
+    outputMetrics,
     pluginId,
   }: IMapActivityData) {
     return {
       id: `icarus-matrix-${uuidv4()}`,
       name,
       pluginId,
+
       sourceMatrixId,
-      inputColumns,
-      inputMatrixIds,
-      outputColumns,
-      outputMatrixId,
+
+      inputColumnNames,
+      inputMatrixReferences,
+      inputParameters,
+      outputColumnNames,
+      outputMatrixReference,
+      outputMetrics,
+
       timestamp: Date.now(),
     };
   }
 
   addActivity({
     name,
+
     sourceMatrixId,
-    inputMatrixIds,
-    inputColumns,
-    outputColumns,
-    outputMatrixId,
+
+    inputColumnNames,
+    inputMatrixReferences,
+    inputParameters,
+    outputColumnNames,
+    outputMatrixReference,
+    outputMetrics,
+
     pluginId,
   }: IMapActivityData) {
     const activityWorkflowMap = this.mapActivityData({
       name,
+
       sourceMatrixId,
-      inputMatrixIds,
-      inputColumns,
-      outputColumns,
-      outputMatrixId,
+
+      inputColumnNames,
+      inputMatrixReferences,
+      inputParameters,
+      outputColumnNames,
+      outputMatrixReference,
+      outputMetrics,
       pluginId,
     });
 

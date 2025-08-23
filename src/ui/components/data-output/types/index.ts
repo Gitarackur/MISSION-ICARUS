@@ -1,6 +1,10 @@
 import React from "react";
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { SaveStatisticalActivity, TableColumns } from "@/domain/workflow/main.types";
+import {
+  IcarusMatrix,
+  SaveStatisticalActivity,
+  TableColumns,
+} from "@/domain/workflow/main.types";
 
 export type DataPreviewProps = {
   originalDataRows: ProteinRow[];
@@ -13,21 +17,20 @@ export type DataPreviewProps = {
 
   onSelectButtonForUpload?: () => void;
 
-  // saveActivityInWorkflow?: (
-  //   inputMatrix: TableMatrices | TableMatrix | null,
-  //   inputColumns: TableColumns | null,
-  //   outputColumns: TableColumns, 
-  //   outputMatrixId: unknown,
-  //   action?: StatisticalAction, 
-  // ) => void
-
   saveActivityInWorkflow?: ({
-    inputMatrixIds,
-    inputColumns,
-    outputColumns,
-    outputMatrixId,
+    inputColumnNames,
+    outputColumnNames,
+
+    inputParameters,
+    outputMetrics,
+
+    inputMatrixReferences,
+    outputMatrixReference,
+
     action,
   }: Partial<SaveStatisticalActivity>) => void;
+
+  sessionSourceMatrix?: IcarusMatrix
 };
 
 export type DataImportProps = {
