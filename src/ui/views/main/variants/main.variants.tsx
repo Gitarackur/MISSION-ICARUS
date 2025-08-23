@@ -20,23 +20,3 @@ export const activityFloatingButton = tv({
   },
 });
 
-
-
-// Define the Tailwind Variants for the tab navigation
-export const tabNavigationVariants = tv({
-  slots: {
-    tabList: "fixed top-0 z-10 flex w-full overflow-x-auto border-b border-gray-200 bg-white p-2 mb-4",
-    tabButton: "px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200 ease-in-out",
-  },
-  variants: {
-    active: {
-      true: {
-        tabButton: "bg-gray-100 text-blue-600 border-b-2 border-blue-600",
-      },
-      false: {
-        tabButton: "text-gray-600 hover:bg-gray-50",
-      },
-    },
-  },
-});
-

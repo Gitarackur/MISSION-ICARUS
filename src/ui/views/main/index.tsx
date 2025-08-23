@@ -23,7 +23,8 @@ import {
 import ActivityTree from "@/ui/components/activity-tree";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import { Menu } from "lucide-react";
-import { activityFloatingButton, tabNavigationVariants } from "./variants/main.variants";
+import { activityFloatingButton } from "./variants/main.variants";
+import MatrixTab from "@/ui/components/header/matrix-tab";
 
 
 
@@ -32,8 +33,6 @@ import { activityFloatingButton, tabNavigationVariants } from "./variants/main.v
 
 
 const IcarusApp: React.FC = () => {
-  const { tabList, tabButton } = tabNavigationVariants();
-
   const [activeSession, setActiveSession] =
     useState<IcarusSessionWithWorkflowRecord | null>(null);
 
@@ -52,7 +51,7 @@ const IcarusApp: React.FC = () => {
   const [isSheetOpen, setIsSheetOpen] = useState(false); // State to control the sheet
 
   // session source matrix
-  // const sessionSourceMatrix = useMemo(() => activeSession?.workflows?.[0]?.data?.matrices.find((matrix) => matrix.createdByFirstActivity), [activeSession])
+  const sessionSourceMatrix = useMemo(() => activeSession?.workflows?.[0]?.data?.matrices.find((matrix) => matrix.createdByFirstActivity), [activeSession])
 
   // Handler for creating a new session from imported data
   const handleSessionCreate = async ({ rows, columns }: BareSession) => {
@@ -192,18 +191,17 @@ const IcarusApp: React.FC = () => {
       <main className="flex-1 overflow-y-auto bg-white p-6">
         {activeMatrix ? (
           <>
-            {/* Tab Navigation UI - Using Tailwind Variants slots */}
-            <div className={tabList()}>
-              {matrices.map((matrix) => (
-                <button
-                  key={matrix.id}
-                  onClick={() => setActiveMatrixId(matrix.id)}
-                  className={tabButton({ active: activeMatrixId === matrix.id })}
-                >
-                  { matrix.id }
-                </button>
-              ))}
-            </div>
+            {
+              matrices && (
+                <MatrixTab
+                  matrices={matrices}
+                  activeMatrixId={activeMatrix.id}
+                  setActiveMatrixId={function (id: string): void {
+                    setActiveMatrixId(id)
+                  }}
+                />
+              )
+            }
 
             <div>
               <ProteomicsAnalysisHomeView
@@ -264,8 +262,7 @@ const IcarusApp: React.FC = () => {
               isProcessing={isProcessing}
               setIsProcessing={setIsProcessing}
               saveActivityInWorkflow={saveActivityInWorkflow}
-              // sessionSourceMatrix will be null or undefined when no active session/matrices
-              sessionSourceMatrix={undefined}
+              sessionSourceMatrix={sessionSourceMatrix}
             />
           </div>
         )}
