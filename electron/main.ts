@@ -22,8 +22,7 @@ let win: BrowserWindow | null
 
 function createWindow() {
   win = new BrowserWindow({
-    // icon: path.join(process.env.VITE_PUBLIC, 'electron-vite.svg'),
-    icon: path.join(process.env.APP_ROOT, "public", "assets", 'icarus.png'),
+    icon: path.join(process.env.VITE_PUBLIC, "assets", 'icarus.png'),
     resizable: true,
     webPreferences: {
       preload: path.join(__dirname, 'preload.mjs'),
