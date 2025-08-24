@@ -116,12 +116,6 @@ const IcarusApp: React.FC = () => {
   useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
 
   useEffect(() => {
-    if (matrices.length > 0) {
-      setActiveMatrixId(matrices[0].id);
-    }
-  }, [matrices]);
-
-  useEffect(() => {
     if (!activeMatrix) return;
 
     const result = reconstructFromMatrix({
