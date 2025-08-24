@@ -90,39 +90,48 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   }, [selectedAnalysisColumnHeaderValues]);
 
   const handleMenuAction = (action: StatisticalAction) => {
-    const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
-    const selectedAnalysisColumnCellsValues = Array.from(selectedAnalysisColumnCells.values());
+    try {
+      const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
+      const selectedAnalysisColumnCellsValues = Array.from(selectedAnalysisColumnCells.values());
 
-    const result = performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
+      console.log(selectedAnalysisColumnCells);
+      console.log("selected rows", selectedAnalysisRowCells)
 
-    console.log(result, selectedAnalysisColumnCellsKeys, selectedAnalysisColumnCellsValues);
+      // statistical calculations
+      const result = performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
 
-    const inputMatrixReferences: string[] = [];
-    if(sessionSourceMatrix) {
-      inputMatrixReferences.push(sessionSourceMatrix?.id)
-    }
+      // result
+      console.log(result);
 
-    if (result !== undefined) {
-      saveActivityInWorkflow?.({
-        // input keys, values and references
-        inputColumnNames: selectedAnalysisColumnCellsKeys,
-        // add sourceMatrixId to the input reference 
-        inputMatrixReferences,
-        inputParameters: {
-          column_of_calculation: selectedAnalysisColumnCellsKeys
-        },
-  
-        // output column names, parameters and references
-        outputColumnNames: selectedAnalysisColumnCellsKeys,
-        // save the matrix and then add the output matrix id to the reference 
-        outputMatrixReference: '',
-        outputMetrics: {
-          mean : result
-        },
+      const inputMatrixReferences: string[] = [];
+      if (sessionSourceMatrix) {
+        inputMatrixReferences.push(sessionSourceMatrix?.id)
+      }
 
-        // statistical action
-        action: action
-      });
+      if (result !== undefined) {
+        saveActivityInWorkflow?.({
+          // input keys, values and references
+          inputColumnNames: selectedAnalysisColumnCellsKeys,
+          // add sourceMatrixId to the input reference 
+          inputMatrixReferences,
+          inputParameters: {
+            column_of_calculation: selectedAnalysisColumnCellsKeys
+          },
+
+          // output column names, parameters and references
+          outputColumnNames: selectedAnalysisColumnCellsKeys,
+          // save the matrix and then add the output matrix id to the reference 
+          outputMatrixReference: '',
+          outputMetrics: {
+            mean: result
+          },
+
+          // statistical action
+          action: action
+        });
+      }
+    } catch (err) {
+      throw new Error(`unable to handle menu selection: ${err}`)
     }
   };
 
