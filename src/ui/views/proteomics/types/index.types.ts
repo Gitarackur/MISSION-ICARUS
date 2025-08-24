@@ -25,6 +25,8 @@ export type ProteomicsAnalysisHomeViewProps = {
     inputParameters,
     outputMetrics,
 
+    outputData,
+
     inputMatrixReferences,
     outputMatrixReference,
 

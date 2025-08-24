@@ -27,6 +27,8 @@ export type DataPreviewProps = {
     inputMatrixReferences,
     outputMatrixReference,
 
+    outputData, 
+
     action,
   }: Partial<SaveStatisticalActivity>) => void;
 

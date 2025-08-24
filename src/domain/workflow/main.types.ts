@@ -63,6 +63,7 @@ export interface IMapActivityData {
 }
 
 export type SaveStatisticalActivity = IcarusActivity & {
+  outputData: TableMatrices,
   action?: StatisticalAction, 
 }
 

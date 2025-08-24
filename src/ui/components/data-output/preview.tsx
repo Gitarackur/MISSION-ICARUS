@@ -108,6 +108,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       // it should also generate the matrix(that would be stored) with the results
       const result = performAnalysis(action, cellValues);
 
+      
       const {
         inputParameters,
         newly_created_columns: outputColumns,
@@ -115,12 +116,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         outputParameters
       } = result
 
-      // save the result as a matrix and save its reference id
-      console.log(outputData)
-
-      // result
-      console.log(result);
-
+  
+      // get the input matrix reference
       const inputMatrixReferences: string[] = [];
       if (sessionSourceMatrix) {
         inputMatrixReferences.push(sessionSourceMatrix?.id)
@@ -136,6 +133,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
           // output column names, parameters and references
           outputColumnNames: outputColumns,
+
+          outputData,
+
           // save the matrix and then add the output matrix id to the reference 
           outputMatrixReference: '',
           outputMetrics: outputParameters,

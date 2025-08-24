@@ -1,3 +1,5 @@
+import { TableColumns, TableMatrices } from "../workflow/main.types";
+
 export interface ColumnStats {
   mean: number;
   sum: number;
@@ -15,13 +17,13 @@ export type StatisticalAction = "mean" | "median" | "stdDev" | "count";
 // statistical analysis result
 export interface StatisticalAnalysisResult {
   inputParameters: {
-    columns: string[];
+    columns: TableColumns;
     action: StatisticalAction;
     rowCount: number;
     metadata?: Record<string, unknown>;
   };
   newly_created_columns: string[];
-  data: number[][];
+  data: TableMatrices;
   outputParameters: {
     columns: string[];
     calculationMethod: StatisticalAction;

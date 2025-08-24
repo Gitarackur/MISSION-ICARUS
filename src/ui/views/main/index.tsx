@@ -13,11 +13,13 @@ import {
   generateActiveSessionWitNestedWorkflow,
   reconstructOriginalRowsAndColumnsFromSessionWorkflows,
   saveActivityInSessionWorkflow,
+  saveMatrixInSessionWorkflow,
 } from "@/app-layer/session/utils/main";
 import { BareSession } from "@/domain/session";
 import {
   SaveStatisticalActivity,
   TableColumns,
+  TableMatrices,
 } from "@/domain/workflow/main.types";
 import ActivityTree from "@/ui/components/activity-tree";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
@@ -107,7 +109,9 @@ const IcarusApp: React.FC = () => {
     inputMatrixReferences,
     inputParameters,
 
+    outputData,
     outputColumnNames,
+
     outputMatrixReference,
     outputMetrics,
     action,
@@ -115,7 +119,11 @@ const IcarusApp: React.FC = () => {
     try {
 
       // save as matrix
-
+      const matrix = {
+        columns: outputColumnNames as TableColumns || [],
+        data: outputData as TableMatrices || []
+      }
+      saveMatrixInSessionWorkflow(activeSession, matrix);
 
       // save as activity
       const activity = {
