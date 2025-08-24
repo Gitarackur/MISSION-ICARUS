@@ -26,22 +26,53 @@ export const headerVariants = tv({
 // tab navigation variants
 export const tabNavigationVariants = tv({
   slots: {
-    tabList: "sticky left-0 right-0 -top-5 flex w-full overflow-x-auto border-b border-gray-200 bg-white pt-0 mb-4",
-    tabButton: "px-4 py-4 text-sm font-medium rounded-t-lg transition-colors duration-200 ease-in-out",
+    tabList: "sticky left-0 right-0 -top-5 flex w-full overflow-x-auto border-b border-gray-200 bg-white pt-0 mb-4 z-40",
+    tabButton: [
+      "relative",
+      "px-6",
+      "py-2",
+      "text-sm",
+      "font-medium",
+      "transition-colors",
+      "duration-200",
+      "ease-in-out",
+      "cursor-pointer",
+      "max-w-[200px]",
+      "overflow-auto",
+      "whitespace-nowrap",
+      "text-ellipsis",
+    ],
   },
   variants: {
     active: {
       true: {
-        tabButton: "bg-gray-100 text-blue-600 border-b-2 border-blue-600",
+        tabButton: [
+          "bg-white",
+          "text-blue-600",
+          "border-x",
+          "border-t",
+          "border-gray-300",
+          "border-b-white",
+          "z-20",
+          "rounded-t-lg",
+          "-mb-[1px]",
+          "shadow-md",
+        ],
       },
       false: {
-        tabButton: "text-gray-600 hover:bg-gray-50",
-      },
-    },
-    isScrolled: {
-      true: {
-        tabList: "fixed top-0 z-50", // Use 'fixed' for this effect
+        tabButton: [
+          "bg-gray-100",
+          "text-gray-600",
+          "hover:bg-gray-50",
+          "hover:text-gray-900",
+          "border-x",
+          "border-t",
+          "border-transparent",
+          "rounded-t-lg",
+          "border-b-gray-200",
+        ],
       },
     },
   },
 });
+
