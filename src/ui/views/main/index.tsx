@@ -26,6 +26,7 @@ import SlidingSheet from "@/ui/design-system/Sheet/main";
 import { Menu } from "lucide-react";
 import { activityFloatingButton } from "./variants/main.variants";
 import MatrixTab from "@/ui/components/header/matrix-tab";
+import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 
 
 
@@ -148,7 +149,20 @@ const IcarusApp: React.FC = () => {
         activity
       );
 
+      // convert matrix and columns to data table format
+      const result = reconstructFromMatrix({
+        columns: outputColumnNames as TableColumns,
+        rowsAs2dMatrix: outputData as TableMatrices
+      });
+      
       setActiveSession(sessionWithWorkflows);
+      setActiveMatrixId(insertedMatrix.id);
+
+      if(!result) throw new Error(`unable to load inserted matrix into preview table`);
+
+      setOriginalDataRows(result.rows as ProteinRow[]);
+      setOriginalDataColumns(result.columns);
+      setSelectedDataColumns(result.columns);
     } catch (err) {
       throw new Error(`${err as unknown}`);
     }
@@ -192,7 +206,7 @@ const IcarusApp: React.FC = () => {
         activeSession={activeSession}
         onSessionClick={handleSessionClick}
         onCreateSession={() => {
-          console.log("Create session clicked");
+          setActiveSession(null);
         }}
         onDeleteSession={handleDeleteSession}
       />
