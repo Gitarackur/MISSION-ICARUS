@@ -5,17 +5,22 @@ export function getCellValues(
   selectedAnalysisRowCells?: ProteinRow[],
   selectedAnalysisColumnCells?: Map<string, TableMatrix>
 ): ProteinRow[] | Map<string, TableMatrix> {
-  if (selectedAnalysisRowCells && !selectedAnalysisColumnCells) {
-    return selectedAnalysisRowCells;
-  } else if (selectedAnalysisColumnCells && !selectedAnalysisRowCells) {
-    return selectedAnalysisColumnCells;
-  } else if (selectedAnalysisRowCells && selectedAnalysisColumnCells) {
-    // Handle case where both exist - prioritize row cells by default
-    return selectedAnalysisRowCells;
-  } else {
-    // Handle case where neither exists
+  const hasRowData =
+    selectedAnalysisRowCells && selectedAnalysisRowCells.length > 0;
+  const hasColumnData =
+    selectedAnalysisColumnCells && selectedAnalysisColumnCells.size > 0;
+
+  if (hasRowData && hasColumnData) {
     throw new Error(
-      "Neither selectedAnalysisRowCells nor selectedAnalysisColumnCells is available"
+      "Both selectedAnalysisRowCells and selectedAnalysisColumnCells contain data. Only one should have data at a time."
+    );
+  } else if (hasRowData) {
+    return selectedAnalysisRowCells;
+  } else if (hasColumnData) {
+    return selectedAnalysisColumnCells;
+  } else {
+    throw new Error(
+      "Both selectedAnalysisRowCells and selectedAnalysisColumnCells are empty or undefined"
     );
   }
 }

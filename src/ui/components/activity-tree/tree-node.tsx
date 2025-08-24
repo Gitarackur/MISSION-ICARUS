@@ -130,7 +130,7 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
                 <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                   <span className={styles.textLabel()}>
                     Output: 
-                      {node.activity.outputMetrics ? JSON.stringify(node.activity.outputMetrics): "------"}
+                      {node.activity.outputColumnNames ? JSON.stringify(node.activity.outputColumnNames): "------"}
                   </span>
                 </div>
               )}

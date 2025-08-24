@@ -8,11 +8,12 @@ export interface ColumnStats {
   count: number;
   median: number;
   standardDeviation: number;
-  variance?: number; // Optional variance if needed
+  variance?: number;
 }
 
 // Define the actions handled by the hook
 export type StatisticalAction = "mean" | "median" | "stdDev" | "count";
+
 
 // statistical analysis result
 export interface StatisticalAnalysisResult {

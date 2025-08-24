@@ -112,7 +112,6 @@ const IcarusApp: React.FC = () => {
     outputData,
     outputColumnNames,
 
-    outputMatrixReference,
     outputMetrics,
     action,
   }: Partial<SaveStatisticalActivity>) => {
@@ -121,9 +120,9 @@ const IcarusApp: React.FC = () => {
       // save as matrix
       const matrix = {
         columns: outputColumnNames as TableColumns || [],
-        data: outputData as TableMatrices || []
+        data: outputData as TableMatrices || [],
       }
-      saveMatrixInSessionWorkflow(activeSession, matrix);
+      const { insertedMatrix } = await saveMatrixInSessionWorkflow(activeSession, matrix);
 
       // save as activity
       const activity = {
@@ -138,7 +137,7 @@ const IcarusApp: React.FC = () => {
         inputParameters,
 
         outputColumnNames,
-        outputMatrixReference,
+        outputMatrixReference: insertedMatrix.id,
         outputMetrics,
 
         pluginId: "statistical-engine",

@@ -252,12 +252,14 @@ export const saveMatrixInSessionWorkflow = async (
 
     if (!updatedWorkflowRecord) throw new Error("workflow doesn't exist");
 
-    //push the activity to the workflow record to be used to update the database
-    updatedWorkflowRecord.data.matrices.push({
+    const insertedMatrix = {
       ...matrix,
       id: `icarus-matrix-${uuidv4()}`,
       createdAt: Date.now(),
-    });
+    }
+
+    //push the activity to the workflow record to be used to update the database
+    updatedWorkflowRecord.data.matrices.push(insertedMatrix);
 
     // update the record in the database
     await IcarusDBAdapter.updateWorkflow(
@@ -269,7 +271,7 @@ export const saveMatrixInSessionWorkflow = async (
       activeSession?.id as string
     );
 
-    return sessionWithWorkflows;
+    return { sessionWithWorkflows, insertedMatrix };
   } catch (err) {
     throw new Error(`unable to save matrix: ${err as unknown}`);
   }

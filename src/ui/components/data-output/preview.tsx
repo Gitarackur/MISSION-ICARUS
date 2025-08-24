@@ -90,7 +90,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
 
-  const handleMenuAction = (action: StatisticalAction) => {
+
+  const handleMenuAction = useCallback((action: StatisticalAction) => {
     try {
       // confirm if its row or column data sent
       const cellValues = getCellValues(selectedAnalysisRowCells, selectedAnalysisColumnCells);
@@ -127,7 +128,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           outputData,
 
           // save the matrix and then add the output matrix id to the reference 
-          outputMatrixReference: '',
+          // outputMatrixReference: '',
           outputMetrics: outputParameters,
 
           // statistical action
@@ -137,7 +138,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     } catch (err) {
       throw new Error(`unable to handle menu selection: ${err}`)
     }
-  };
+  }, [performAnalysis, saveActivityInWorkflow, selectedAnalysisColumnCells, selectedAnalysisRowCells, sessionSourceMatrix]);
 
 
 
