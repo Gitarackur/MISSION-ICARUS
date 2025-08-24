@@ -3,14 +3,19 @@ import { useState } from "react";
 import { activityStyleVariants } from "./variants/activity.style.variant";
 import MatrixModal from "./modal/matrix-modal";
 import MatrixBadge from "./matrix-badge";
-import { ActivityTreeNode } from "@/domain/tree/tree.types";
 import { useModal } from "@/ui/design-system/Modal/context";
-import { TableMatrices } from "@/domain/workflow/main.types";
+import { TableColumns } from "@/domain/workflow/main.types";
+import { TreeNodeUI } from "./types/activity-node.types";
 
 
 
 
-const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number }) => {
+const TreeNode = ({
+  node,
+  level = 0,
+  onClickOfInputButton,
+  onClickOfOutputButton
+}: TreeNodeUI) => {
   const styles = activityStyleVariants();
 
   const { openModal, closeModal } = useModal();
@@ -24,11 +29,12 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
   };
 
 
-  const openMatrixModal = (title: string, matrices: TableMatrices) => {
-    openModal(
+  const openMatrixModal = (title: string, columns: TableColumns) => {
+    return;
+    return openModal(
       <MatrixModal
         title={title}
-        tableMatrices={matrices}
+        tableColumns={columns}
         onClose={() => closeModal()}
       />,
       "Another Example Modal"
@@ -36,10 +42,11 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
   };
 
 
-  const openShowMatrixModal = (name: string, matrices: TableMatrices | unknown[][]) => {
+  const openShowMatrixModal = (name: string, columns: TableColumns) => {
+    return;
     return openMatrixModal(
       name,
-      matrices as TableMatrices
+      columns as TableColumns
     )
   }
 
@@ -100,37 +107,39 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
                   label="Input"
                   icon={<ArrowRight className={styles.iconArrowIn()} />}
                   onOpen={() => {
-                    if (node.activity?.name && node.activity.inputParameters && Array.isArray(node.activity.inputParameters)) {
-                      openShowMatrixModal(node.activity.name, node.activity.inputParameters);
+                    if (node.activity?.name && node.activity.inputMatrixReferences && Array.isArray(node.activity.inputMatrixReferences)) {
+                      onClickOfInputButton?.(node.activity.inputMatrixReferences as string[]);
+                      openShowMatrixModal(node.activity.name, node.activity.inputMatrixReferences);
                     }
                   }}
                 />
-                
+
               ) : (
                 <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                   <span className={styles.textLabel()}>
                     Input:
-                    - {node.activity.inputColumnNames ? JSON.stringify(node.activity.inputParameters) : "------"}
+                    - {node.activity.inputColumnNames ? JSON.stringify(node.activity.inputColumnNames) : "------"}
                   </span>
                 </div>
               )}
 
-              {Array.isArray(node.activity.outputMetrics) ? (
+              {Array.isArray(node.activity.outputColumnNames) ? (
                 <MatrixBadge
-                  data={node.activity.outputMetrics}
+                  data={node.activity.outputColumnNames}
                   label="Output"
                   icon={<ArrowRight className={styles.iconArrowOut()} />}
                   onOpen={() => {
-                    if (node.activity?.name && node.activity.outputMetrics && Array.isArray(node.activity.outputMetrics)) {
-                      openShowMatrixModal(node.activity.name, node.activity.outputMetrics);
+                    if (node.activity?.name && node.activity.outputColumnNames && Array.isArray(node.activity.outputColumnNames)) {
+                      onClickOfOutputButton?.(node.activity.outputMatrixReference as string);
+                      openShowMatrixModal(node.activity.name, node.activity.outputColumnNames);
                     }
                   }}
                 />
               ) : (
                 <div className={`${styles.badgeContainer()} bg-red-100 text-red-700`}>
                   <span className={styles.textLabel()}>
-                    Output: 
-                      {node.activity.outputColumnNames ? JSON.stringify(node.activity.outputColumnNames): "------"}
+                    Output:
+                    {node.activity.outputMatrixReference ? JSON.stringify(node.activity.outputMatrixReference) : "------"}
                   </span>
                 </div>
               )}
@@ -149,7 +158,13 @@ const TreeNode = ({ node, level = 0 }: { node: ActivityTreeNode; level?: number 
         {expanded && hasChildren && (
           <div>
             {node.children.map((child, i) => (
-              <TreeNode key={child.activity?.id || child.inputMatrixKey || i} node={child} level={level + 1} />
+              <TreeNode
+                key={child.activity?.id || child.inputMatrixKey || i}
+                node={child}
+                level={level + 1}
+                onClickOfInputButton={onClickOfInputButton}
+                onClickOfOutputButton={onClickOfOutputButton}
+              />
             ))}
           </div>
         )}

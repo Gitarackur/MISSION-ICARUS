@@ -1,12 +1,16 @@
 import { useState, useMemo } from 'react';
-import { IcarusSessionWithWorkflowRecord } from '@/app-layer/database/database.types';
 import { activityStyleVariants } from './variants/activity.style.variant.tsx';
 import TreeNode from './tree-node.tsx';
 import { generateIcarusActivityNode } from '@/app-layer/algorithms/tree/index.ts';
+import { DiplayedActivityTree } from './types/activity-node.types.ts';
 
 
 
-const ActivityTree = ({ sessionData }: { sessionData: IcarusSessionWithWorkflowRecord }) => {
+const ActivityTree = ({ 
+  sessionData,
+  onClickOfInputButton,
+  onClickOfOutputButton
+}: DiplayedActivityTree) => {
   const styles = activityStyleVariants();
 
   // sourceMatrixId
@@ -48,7 +52,12 @@ const ActivityTree = ({ sessionData }: { sessionData: IcarusSessionWithWorkflowR
         {activityTree.length ? (
           <div>
             {activityTree.map((node, i) => (
-              <TreeNode key={node.activity?.id || node.inputMatrixKey || i} node={node} />
+              <TreeNode 
+                key={node.activity?.id || node.inputMatrixKey || i} 
+                node={node} 
+                onClickOfInputButton={onClickOfInputButton}
+                onClickOfOutputButton={onClickOfOutputButton}
+              />
             ))}
           </div>
         ) : (

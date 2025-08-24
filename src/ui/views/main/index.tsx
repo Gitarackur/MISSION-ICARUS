@@ -156,7 +156,19 @@ const IcarusApp: React.FC = () => {
       headerClassName="border-blue-300"
       bodyClassName="p-0"
     >
-      {activeSession && <ActivityTree sessionData={activeSession} />}
+      {activeSession && (
+        <ActivityTree
+          sessionData={activeSession}
+          onClickOfOutputButton={(matrixId) => {
+            setActiveMatrixId(matrixId);
+            setIsSheetOpen(false);
+          }}
+          onClickOfInputButton={(inputMatrixReferences) => {
+            setActiveMatrixId(inputMatrixReferences?.[0]);
+            setIsSheetOpen(false);
+          }}
+        />
+      )}
     </SlidingSheet>
   );
 
