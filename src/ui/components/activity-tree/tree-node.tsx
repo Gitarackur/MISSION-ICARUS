@@ -148,7 +148,9 @@ const TreeNode = ({
                 <div className={styles.detailsTimeContainer()}>
                   <Clock className={styles.iconClock()} />
                   <span className={styles.textLabel()}>Time:</span>
-                  <span className={styles.textValue()}>{node.activity.timestamp}</span>
+                  <span className={styles.textValue()}>
+                    {new Date(node.activity.timestamp).toLocaleTimeString()}
+                  </span>
                 </div>
               )}
             </div>
