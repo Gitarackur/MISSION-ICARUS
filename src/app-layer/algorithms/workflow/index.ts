@@ -76,7 +76,7 @@ class IcarusWorkflow {
     pluginId,
   }: IMapActivityData) {
     return {
-      id: `icarus-matrix-${uuidv4()}`,
+      id: `icarus-activity-${uuidv4()}`,
       name,
       pluginId,
 
