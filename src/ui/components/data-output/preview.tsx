@@ -95,8 +95,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     try {
       // confirm if its row or column data sent
       const cellValues = getCellValues(selectedAnalysisRowCells, selectedAnalysisColumnCells);
-      console.log(cellValues, selectedAnalysisRowCells, selectedAnalysisColumnCells)
-
       // statistical calculations -- performAnalysis should be able to know which is row or column and do proper analysis on them
       // it should also generate the matrix(that would be stored) with the results
       const result = performAnalysis(action, cellValues);
@@ -224,7 +222,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                     className={getCombinedCellStyle(0, null, column, true)}
                     onClick={() => {
                       handleColumnClick(column)
-                      console.log("column", column)
                     }}
                   >
                     <div className="flex items-center">

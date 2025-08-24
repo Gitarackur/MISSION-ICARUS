@@ -59,6 +59,14 @@ export const useStatisticalAnalysis = () => {
           newColumnNames = numericColumns.map(col => `${col}_stddev`);
           break;
         }
+        case 'count': {
+          results = numericData.map((value) => {
+            const count = value.reduce((acc, value) => acc += value);
+            return [count];
+          });
+          newColumnNames = numericColumns.map(col => `${col}_count`);
+          break;
+        }
         default: {
           throw new Error(`Action '${action}' not supported.`);
         }
