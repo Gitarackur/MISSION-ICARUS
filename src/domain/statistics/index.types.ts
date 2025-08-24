@@ -11,3 +11,21 @@ export interface ColumnStats {
 
 // Define the actions handled by the hook
 export type StatisticalAction = "mean" | "median" | "stdDev" | "count";
+
+// statistical analysis result
+export interface StatisticalAnalysisResult {
+  inputParameters: {
+    columns: string[];
+    action: StatisticalAction;
+    rowCount: number;
+    metadata?: Record<string, unknown>;
+  };
+  newly_created_columns: string[];
+  data: number[][];
+  outputParameters: {
+    columns: string[];
+    calculationMethod: StatisticalAction;
+    resultType: string;
+    metadata?: Record<string, unknown>;
+  };
+}

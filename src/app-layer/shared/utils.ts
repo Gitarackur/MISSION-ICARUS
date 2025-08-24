@@ -4,6 +4,7 @@ import {
 } from "@/app-layer/shared/csv_tsc_parser";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
+import { TableMatrix } from "@/domain/workflow/main.types";
 
 /* calculation specific utils */
 export function isNumericString(s: string | undefined) {
@@ -319,14 +320,71 @@ export const formatColumnHeader = (str: string): string => {
 // Formats a table cell value for display, handling numbers and strings
 export const formatTableCellValue = (value: unknown): string | number => {
   if (typeof value === "number") {
-    // if (value > 1e3) {
-    //   return value.toExponential(2);
-    // } else {
-    //   return value.toFixed(2);
-    // }
     return value;
   }
-
   // Handle other types, including null/undefined
   return (value as string) || 0;
 };
+
+// export numeric data
+export const extractNumericData = (
+  data: ProteinRow[] | Map<string, TableMatrix>
+): {
+  numericColumns: string[];
+  numericData: number[][];
+} => {
+  if (Array.isArray(data)) {
+    // Handle Row[] input
+    if (data.length === 0) return { numericColumns: [], numericData: [] };
+
+    const allKeys = Object.keys(data[0]);
+    const numericColumns: string[] = [];
+    const numericData: number[][] = [];
+
+    // Identify numeric columns
+    allKeys.forEach((key) => {
+      const values = data
+        .map((row) => row[key])
+        .filter((val) => val !== undefined);
+      const isNumeric = values.every(
+        (val) => typeof val === "number" || !isNaN(Number(val))
+      );
+      if (isNumeric && values.length > 0) {
+        numericColumns.push(key);
+      }
+    });
+
+    // Extract numeric data for each column
+    numericColumns.forEach((column) => {
+      const columnData = data
+        .map((row) => row[column])
+        .filter((val) => val !== undefined)
+        .map((val) => (typeof val === "number" ? val : Number(val)))
+        .filter((val) => !isNaN(val));
+      numericData.push(columnData);
+    });
+
+    return { numericColumns, numericData };
+  } else {
+    // Handle Map<string, TableMatrix> input
+    const numericColumns: string[] = [];
+    const numericData: number[][] = [];
+
+    data.forEach((values, key) => {
+      const numericValues = values
+        .filter((val) => typeof val === "number" || !isNaN(Number(val)))
+        .map((val) => (typeof val === "number" ? val : Number(val)));
+
+      if (numericValues.length > 0) {
+        numericColumns.push(key);
+        numericData.push(numericValues);
+      }
+    });
+
+    return { numericColumns, numericData };
+  }
+};
+
+// Transpose results to match expected format (rows x columns)
+export const transposedStatisticalResults = (results: number[][]) =>
+  results[0].map((_, rowIndex) => results.map((col) => col[rowIndex]));

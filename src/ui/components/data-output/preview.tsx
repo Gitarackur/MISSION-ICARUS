@@ -66,9 +66,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     ROWS_PER_PAGE
   );
 
-  // hook that attaches to statistical engine
-  const { performAnalysis } = useStatisticalAnalysis();
-
   // get cell style (based on which cells are numeric values and/or which are highlighted)
   const getCombinedCellStyle = useCallback(
     (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
@@ -89,16 +86,37 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     return Array.from(selectedAnalysisColumnHeaderValues).join(', ');
   }, [selectedAnalysisColumnHeaderValues]);
 
+  // hook that attaches to statistical engine
+  const { performAnalysis } = useStatisticalAnalysis();
+
   const handleMenuAction = (action: StatisticalAction) => {
     try {
-      const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
-      const selectedAnalysisColumnCellsValues = Array.from(selectedAnalysisColumnCells.values());
-
+      // const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
+ 
       console.log(selectedAnalysisColumnCells);
       console.log("selected rows", selectedAnalysisRowCells)
 
-      // statistical calculations
-      const result = performAnalysis(action, selectedAnalysisColumnCellsValues?.[0] as number[]);
+      // confirm if its row or column data sent
+      let cellValues;
+      if (selectedAnalysisRowCells) {
+        cellValues = selectedAnalysisRowCells
+      } else {
+        cellValues = selectedAnalysisColumnCells
+      }
+
+      // statistical calculations -- performAnalysis should be able to know which is row or column and do proper analysis on them
+      // it should also generate the matrix(that would be stored) with the results
+      const result = performAnalysis(action, cellValues);
+
+      const {
+        inputParameters,
+        newly_created_columns: outputColumns,
+        data: outputData,
+        outputParameters
+      } = result
+
+      // save the result as a matrix and save its reference id
+      console.log(outputData)
 
       // result
       console.log(result);
@@ -111,23 +129,19 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       if (result !== undefined) {
         saveActivityInWorkflow?.({
           // input keys, values and references
-          inputColumnNames: selectedAnalysisColumnCellsKeys,
+          inputColumnNames: inputParameters.columns,
           // add sourceMatrixId to the input reference 
           inputMatrixReferences,
-          inputParameters: {
-            column_of_calculation: selectedAnalysisColumnCellsKeys
-          },
+          inputParameters,
 
           // output column names, parameters and references
-          outputColumnNames: selectedAnalysisColumnCellsKeys,
+          outputColumnNames: outputColumns,
           // save the matrix and then add the output matrix id to the reference 
           outputMatrixReference: '',
-          outputMetrics: {
-            mean: result
-          },
+          outputMetrics: outputParameters,
 
           // statistical action
-          action: action
+          action: inputParameters.action || outputParameters.calculationMethod
         });
       }
     } catch (err) {
