@@ -12,7 +12,7 @@ export interface ColumnStats {
 }
 
 // Define the actions handled by the hook
-export type StatisticalAction = "mean" | "median" | "stdDev" | "count";
+export type StatisticalAction = "mean" | "median" | "stdDev" | "count" | "normalization";
 
 
 // statistical analysis result

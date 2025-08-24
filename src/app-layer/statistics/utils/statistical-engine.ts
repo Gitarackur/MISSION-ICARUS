@@ -34,3 +34,15 @@ export function variance(values: number[]) {
 export function sum(values: number[]) {
   return values.reduce((acc, val) => acc + val, 0);
 }
+
+// calculate the normalization of the data
+export function normalization(values: number[][]) {
+  // max-min normalization: (x - min) / (max - min)
+  return values.map((firstNestedValue) => {
+    const max_value = Math.max.apply(Math, [...firstNestedValue]);
+    const min_value = Math.min.apply(Math, [...firstNestedValue]);
+    return firstNestedValue.map((value) => {
+      return (value - min_value) / (max_value - min_value)
+    })
+  })
+}

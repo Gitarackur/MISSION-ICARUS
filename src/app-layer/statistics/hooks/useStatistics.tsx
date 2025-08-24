@@ -1,6 +1,6 @@
 import { StatisticalAction, StatisticalAnalysisResult } from '@/domain/statistics/index.types';
 import { useCallback } from 'react';
-import { mean, median, stddev } from '@/app-layer/statistics/utils/statistical-engine';
+import { mean, median, normalization, stddev } from '@/app-layer/statistics/utils/statistical-engine';
 import { TableMatrix } from '@/domain/workflow/main.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { extractNumericData, transposedStatisticalResults } from '@/app-layer/shared/utils';
@@ -65,6 +65,11 @@ export const useStatisticalAnalysis = () => {
             return [count];
           });
           newColumnNames = numericColumns.map(col => `${col}_count`);
+          break;
+        }
+        case 'normalization': {
+          results =  normalization(numericData);
+          newColumnNames = numericColumns.map(col => `${col}_normalized`);
           break;
         }
         default: {

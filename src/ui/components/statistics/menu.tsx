@@ -107,7 +107,7 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
   onMenuAction
 }) => {
   const handleButtonClick = (actionId: string) => {
-    if (['mean', 'median', 'stdDev', 'count'].includes(actionId)) {
+    if (['mean', 'median', 'stdDev', 'count', 'normalization'].includes(actionId)) {
       onMenuAction(actionId as StatisticalAction);
     }
   };
