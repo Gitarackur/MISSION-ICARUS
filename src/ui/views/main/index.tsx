@@ -60,16 +60,14 @@ const IcarusApp: React.FC = () => {
     isUploadingRef.current = true;
     setIsProcessing(true);
     try {
-      const sessionWithWorkflows = await generateActiveSessionWitNestedWorkflow(
+      const { matrixWorkflowMap: activeMatrix, sessionWithWorkflows } = await generateActiveSessionWitNestedWorkflow(
         {
           rows,
           columns,
         }
       );
       setActiveSession(sessionWithWorkflows);
-      setOriginalDataRows(rows);
-      setOriginalDataColumns(columns);
-      setSelectedDataColumns(columns);
+      setActiveMatrixId(activeMatrix.id);
     } catch (error) {
       console.error("Error creating session:", error);
     } finally {
@@ -81,12 +79,15 @@ const IcarusApp: React.FC = () => {
   const handleSessionClick = async (session: IcarusSessionRecord) => {
     setIsProcessing(true);
     try {
-      const { result, sessionWithWorkflows } =
+      const { sessionWithWorkflows } =
         await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
-      setOriginalDataRows(result.rows as ProteinRow[]);
-      setOriginalDataColumns(result.columns);
-      setSelectedDataColumns(result.columns);
+
       setActiveSession(sessionWithWorkflows);
+
+      // set the matrix Id to the last matrix created
+      const lastMatrixIdOnSession = sessionWithWorkflows?.workflows?.[0].data.matrices.slice(-1)[0]?.id;
+      setActiveMatrixId(lastMatrixIdOnSession)
+
     } catch (error) {
       console.error("Error handling session click:", error);
     } finally {
@@ -149,20 +150,8 @@ const IcarusApp: React.FC = () => {
         activity
       );
 
-      // convert matrix and columns to data table format
-      const result = reconstructFromMatrix({
-        columns: outputColumnNames as TableColumns,
-        rowsAs2dMatrix: outputData as TableMatrices
-      });
-      
       setActiveSession(sessionWithWorkflows);
       setActiveMatrixId(insertedMatrix.id);
-
-      if(!result) throw new Error(`unable to load inserted matrix into preview table`);
-
-      setOriginalDataRows(result.rows as ProteinRow[]);
-      setOriginalDataColumns(result.columns);
-      setSelectedDataColumns(result.columns);
     } catch (err) {
       throw new Error(`${err as unknown}`);
     }
@@ -198,6 +187,24 @@ const IcarusApp: React.FC = () => {
   const activeMatrix = useMemo(() => {
     return matrices.find((matrix) => matrix.id === activeMatrixId);
   }, [matrices, activeMatrixId]);
+
+
+  useEffect(() => {
+    if (activeMatrix) {
+      // convert matrix and columns to data table format
+      const result = reconstructFromMatrix({
+        columns: activeMatrix.columns as TableColumns,
+        rowsAs2dMatrix: activeMatrix.data as TableMatrices
+      });
+
+      if (!result) throw new Error(`unable to load inserted matrix into preview table`);
+
+      setOriginalDataRows(result.rows as ProteinRow[]);
+      setOriginalDataColumns(result.columns);
+      setSelectedDataColumns(result.columns);
+    }
+  }, [activeMatrix, activeMatrixId])
+
 
   return (
     <div className="flex h-screen bg-white text-gray-800">

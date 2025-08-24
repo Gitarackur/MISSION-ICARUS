@@ -147,7 +147,7 @@ export const generateActiveSessionWitNestedWorkflow = async ({
       sessionMap.id
     );
 
-    return sessionWithWorkflows;
+    return { sessionWithWorkflows, matrixWorkflowMap };
   } catch (error) {
     throw new Error(`Error creating session: ${error}`);
   }
