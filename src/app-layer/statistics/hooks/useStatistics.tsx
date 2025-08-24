@@ -13,7 +13,11 @@ export const useStatisticalAnalysis = () => {
       action: StatisticalAction,
       data: ProteinRow[] | Map<string, TableMatrix>
     ): StatisticalAnalysisResult => {
+      console.log('data', data);
+
       const { numericColumns, numericData } = extractNumericData(data);
+
+      console.log('numericColumns and numericData', numericColumns, numericData);
 
       if (numericColumns.length === 0 || numericData.length === 0) {
         return {

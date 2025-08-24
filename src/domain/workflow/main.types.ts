@@ -4,8 +4,8 @@
 import { StatisticalAction } from "@/domain/statistics/index.types";
 
 export type TableColumns = string[];
-export type TableMatrices = (string | number)[][];
-export type TableMatrix = (string | number)[];
+export type TableMatrices<T = string | number> = T[][];
+export type TableMatrix<T = (string | number)> = T[];
 
 // Icarus Matrix
 export interface IcarusMatrix {

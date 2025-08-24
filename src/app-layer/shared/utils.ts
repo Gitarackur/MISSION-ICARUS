@@ -4,7 +4,7 @@ import {
 } from "@/app-layer/shared/csv_tsc_parser";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
-import { TableMatrix } from "@/domain/workflow/main.types";
+import { TableColumns, TableMatrices, TableMatrix } from "@/domain/workflow/main.types";
 
 /* calculation specific utils */
 export function isNumericString(s: string | undefined) {
@@ -330,8 +330,8 @@ export const formatTableCellValue = (value: unknown): string | number => {
 export const extractNumericData = (
   data: ProteinRow[] | Map<string, TableMatrix>
 ): {
-  numericColumns: string[];
-  numericData: number[][];
+  numericColumns: TableColumns;
+  numericData: TableMatrices<number>;
 } => {
   if (Array.isArray(data)) {
     // Handle Row[] input
