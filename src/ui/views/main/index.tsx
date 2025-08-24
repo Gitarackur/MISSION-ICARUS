@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, useMemo } from "react";
-import { v4 as uuidv4 } from "uuid";
 import { useLiveQuery } from "dexie-react-hooks";
 import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
@@ -114,8 +113,12 @@ const IcarusApp: React.FC = () => {
     action,
   }: Partial<SaveStatisticalActivity>) => {
     try {
+
+      // save as matrix
+
+
+      // save as activity
       const activity = {
-        id: `icarus-activity-${uuidv4()}`,
         name: `statistical analysis--${action}`,
         // get the first (and probably the only matrix) on the session workflow
         sourceMatrixId:
@@ -131,7 +134,6 @@ const IcarusApp: React.FC = () => {
         outputMetrics,
 
         pluginId: "statistical-engine",
-        timestamp: Date.now(),
       };
 
       const sessionWithWorkflows = await saveActivityInSessionWorkflow(
