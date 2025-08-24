@@ -14,6 +14,7 @@ import PreviewPagination from './preview-pagination';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { useStatisticalAnalysis } from '@/app-layer/statistics/hooks/useStatistics';
 import { StatisticalAction } from '@/domain/statistics/index.types';
+import { getCellValues } from './utils';
 
 const ROWS_PER_PAGE = 10;
 
@@ -91,24 +92,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
   const handleMenuAction = (action: StatisticalAction) => {
     try {
-      // const selectedAnalysisColumnCellsKeys: string[] = Array.from(selectedAnalysisColumnCells.keys());
- 
-      console.log(selectedAnalysisColumnCells);
-      console.log("selected rows", selectedAnalysisRowCells)
-
       // confirm if its row or column data sent
-      let cellValues;
-      if (selectedAnalysisRowCells) {
-        cellValues = selectedAnalysisRowCells
-      } else {
-        cellValues = selectedAnalysisColumnCells
-      }
+      const cellValues = getCellValues(selectedAnalysisRowCells, selectedAnalysisColumnCells);
+      console.log(cellValues, selectedAnalysisRowCells, selectedAnalysisColumnCells)
 
       // statistical calculations -- performAnalysis should be able to know which is row or column and do proper analysis on them
       // it should also generate the matrix(that would be stored) with the results
       const result = performAnalysis(action, cellValues);
-
-      
       const {
         inputParameters,
         newly_created_columns: outputColumns,
@@ -116,7 +106,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         outputParameters
       } = result
 
-  
+
       // get the input matrix reference
       const inputMatrixReferences: string[] = [];
       if (sessionSourceMatrix) {

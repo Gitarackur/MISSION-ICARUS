@@ -20,7 +20,7 @@ export const useStatisticalAnalysis = () => {
       console.log('numericColumns and numericData', numericColumns, numericData);
 
       if (numericColumns.length === 0 || numericData.length === 0) {
-        return {
+        const output = {
           inputParameters: {
             columns: [],
             action,
@@ -36,6 +36,7 @@ export const useStatisticalAnalysis = () => {
             metadata: { error: 'No numeric data to process' }
           }
         };
+        throw new Error(`unable to extract numeric data: ${JSON.stringify(output)}`)
       }
 
       let results: number[][] = [];
