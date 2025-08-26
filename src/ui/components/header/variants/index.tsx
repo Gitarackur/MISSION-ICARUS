@@ -38,7 +38,7 @@ export const tabNavigationVariants = tv({
       "ease-in-out",
       "cursor-pointer",
       "max-w-[200px]",
-      "overflow-auto",
+      "overflow-hidden",
       "whitespace-nowrap",
       "text-ellipsis",
     ],

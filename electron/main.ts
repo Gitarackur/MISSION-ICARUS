@@ -31,6 +31,11 @@ function createWindow() {
     },
   })
 
+  // Open the DevTools only in a non-production environment.
+  if (process.env.NODE_ENV !== 'production') {
+    win.webContents.openDevTools();
+  }
+
   win.webContents.on('did-finish-load', () => {
     win?.webContents.send('main-process-message', new Date().toLocaleString())
   })
