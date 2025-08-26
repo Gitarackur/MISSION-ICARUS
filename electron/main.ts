@@ -84,7 +84,7 @@ function createWindow() {
   } else {
     console.log('Running in development mode. DevTools access is enabled.');
     // In development, you might want to open DevTools automatically for convenience
-    // mainWindow.webContents.openDevTools();
+    win.webContents.openDevTools();
   }
 }
 
