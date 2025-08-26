@@ -48,36 +48,44 @@ function createWindow() {
     win.loadFile(path.join(RENDERER_DIST, "index.html"));
   }
 
-  Menu.setApplicationMenu(null);
+  if (app.isPackaged) {
+    console.log('Running in production mode. Disabling DevTools access.');
 
-  win.webContents.on("devtools-opened", () => {
-    console.log("Developer Tools tried to open! Closing them.");
-  });
+    Menu.setApplicationMenu(null);
 
-  globalShortcut.register("F12", () => {
-    console.log("F12 pressed, DevTools access blocked.");
-  });
+    win.webContents.on("devtools-opened", () => {
+      console.log("Developer Tools tried to open! Closing them.");
+    });
 
-  globalShortcut.register("CommandOrControl+Shift+I", () => {
-    console.log("Ctrl+Shift+I pressed, DevTools access blocked.");
-    // Do nothing.
-  });
+    globalShortcut.register("F12", () => {
+      console.log("F12 pressed, DevTools access blocked.");
+    });
 
-  // Optional: Register for common macOS shortcuts if you want to be extra thorough
-  globalShortcut.register("Command+Alt+I", () => {
-    console.log("Cmd+Opt+I pressed, DevTools access blocked.");
-  });
+    globalShortcut.register("CommandOrControl+Shift+I", () => {
+      console.log("Ctrl+Shift+I pressed, DevTools access blocked.");
+      // Do nothing.
+    });
 
-  win.webContents.on("context-menu", (event) => {
-    const customContextMenuTemplate = [
-      { label: "Go Back", click: () => win?.webContents.goBack() },
-    ];
+    // Optional: Register for common macOS shortcuts if you want to be extra thorough
+    globalShortcut.register("Command+Alt+I", () => {
+      console.log("Cmd+Opt+I pressed, DevTools access blocked.");
+    });
 
-    const customContextMenu = Menu.buildFromTemplate(customContextMenuTemplate);
-    if (win) customContextMenu.popup({ window: win });
+    win.webContents.on("context-menu", (event) => {
+      const customContextMenuTemplate = [
+        { label: "Go Back", click: () => win?.webContents.goBack() },
+      ];
 
-    event.preventDefault();
-  });
+      const customContextMenu = Menu.buildFromTemplate(customContextMenuTemplate);
+      if (win) customContextMenu.popup({ window: win });
+
+      event.preventDefault();
+    });
+  } else {
+    console.log('Running in development mode. DevTools access is enabled.');
+    // In development, you might want to open DevTools automatically for convenience
+    // mainWindow.webContents.openDevTools();
+  }
 }
 
 // Embedded Python Manager
