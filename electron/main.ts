@@ -49,7 +49,7 @@ function createWindow() {
   }
 
   if (app.isPackaged) {
-    console.log('Running in production mode. Disabling DevTools access.');
+    console.log("Running in production mode. Disabling DevTools access.");
 
     Menu.setApplicationMenu(null);
 
@@ -76,15 +76,50 @@ function createWindow() {
         { label: "Go Back", click: () => win?.webContents.goBack() },
       ];
 
-      const customContextMenu = Menu.buildFromTemplate(customContextMenuTemplate);
+      const customContextMenu = Menu.buildFromTemplate(
+        customContextMenuTemplate
+      );
       if (win) customContextMenu.popup({ window: win });
 
       event.preventDefault();
     });
   } else {
-    console.log('Running in development mode. DevTools access is enabled.');
-    // In development, you might want to open DevTools automatically for convenience
-    win.webContents.openDevTools();
+    // --- DEVELOPMENT MODE ---
+    console.log("Running in development mode. DevTools access is enabled.");
+
+    globalShortcut.register("F12", () => {
+      console.log("F12 pressed in dev mode, opening DevTools.");
+      win?.webContents.openDevTools();
+    });
+
+    globalShortcut.register("CommandOrControl+Shift+I", () => {
+      console.log("Ctrl+Shift+I pressed in dev mode, opening DevTools.");
+      win?.webContents.openDevTools();
+    });
+
+    globalShortcut.register("Command+Alt+I", () => {
+      console.log("Cmd+Opt+I pressed in dev mode, opening DevTools.");
+      win?.webContents.openDevTools();
+    });
+
+    win.webContents.on(
+      "context-menu",
+      (_event: Electron.Event, params: Electron.ContextMenuParams) => {
+        const devContextMenuTemplate = [
+          { label: "Reload", role: "reload" },
+          { label: "Force Reload", role: "forcereload" },
+          { type: "separator" },
+          { label: "Inspect Element", role: "toggleDevTools" },
+          { type: "separator" },
+          { label: "Copy", role: "copy" },
+          { label: "Paste", role: "paste" },
+          // Add other useful dev-mode context menu items here if needed
+        ] as (Electron.MenuItemConstructorOptions | Electron.MenuItem)[];
+
+        const devContextMenu = Menu.buildFromTemplate(devContextMenuTemplate);
+        win && devContextMenu.popup({ window: win, x: params.x, y: params.y });
+      }
+    );
   }
 }
 
