@@ -1,6 +1,6 @@
 {
   "name": "mission-icarus",
-	"author": "Gitarackur--Peter",
+  "author": "Gitarackur--Peter",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -46,6 +46,7 @@
     "eslint": "^8.57.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "react-is": "^19.1.1",
     "typescript": "^5.2.2",
     "vite": "^5.1.6",
     "vite-plugin-electron": "^0.28.6",
