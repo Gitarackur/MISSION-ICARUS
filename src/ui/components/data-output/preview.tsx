@@ -17,7 +17,7 @@ import { StatisticalAction } from '@/domain/statistics/index.types';
 import { getCellValues } from './utils';
 import ClearTableSelection from './clear-table-selection';
 
-const ROWS_PER_PAGE = 10;
+const ROWS_PER_PAGE = 20;
 
 const DataPreview: React.FC<DataPreviewProps> = ({
   originalDataRows,
@@ -165,7 +165,24 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
       <StatisticalAnalysisInstructions />
 
-      <div className="mb-4">
+      <>
+        {
+          // (selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnHeaderValues.size > 0) && (
+          (selectedAnalysisColumnHeaderValues.size > 0) && (
+            <>
+              <ClearTableSelection
+                selectedColumnsDisplay={selectedColumnsDisplay}
+                clearAnalysisSelection={() => {
+                  clearAnalysisSelection()
+                }}
+              />
+            </>
+          )
+        }
+        <StatisticsMenu onMenuAction={handleMenuAction} />
+      </>
+
+      <div className="my-10">
         <label className={s.label()}>Select Columns to Display:</label>
         <div className={s.columnsContainer()}>
           {originalDataColumns.map((column) => (
@@ -181,24 +198,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           ))}
         </div>
       </div>
-
-
-      <>
-        {
-          (selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnHeaderValues.size > 0) && (
-            <>
-              <ClearTableSelection
-                selectedColumnsDisplay={selectedColumnsDisplay}
-                clearAnalysisSelection={() => {
-                  clearAnalysisSelection()
-                }}
-              />
-            </>
-          )
-        }
-        <StatisticsMenu onMenuAction={handleMenuAction} />
-      </>
-
 
       <div className={s.tableWrapper()}>
         <table className={s.table()}>
