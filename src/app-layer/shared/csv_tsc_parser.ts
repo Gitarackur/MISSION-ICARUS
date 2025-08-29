@@ -59,12 +59,21 @@ class IcarusParser {
       throw new Error("File is empty");
     }
 
-    const result: ParseResult<Record<string, string>> = Papa.parse(csvText, {
-      header: true,
-      skipEmptyLines: true,
-      dynamicTyping: false,
-      transform: (value) => value.trim(),
-    });
+    // cleaned csv string with comments with `#`, `//`, or `;`
+    const cleanedCsvText: string = csvText.replace(
+      /^(#|\/\/|;).*$\r?\n?/gm,
+      ""
+    );
+
+    const result: ParseResult<Record<string, string>> = Papa.parse(
+      cleanedCsvText,
+      {
+        header: true,
+        skipEmptyLines: true,
+        dynamicTyping: false,
+        transform: (value) => value.trim(),
+      }
+    );
 
     // Handle Papa Parse errors and convert them to your custom format
     const errors: string[] = result.errors.map(
@@ -137,7 +146,13 @@ class IcarusParser {
       throw new Error("File is empty");
     }
 
-    const lines = csvText.split(/\r?\n/).filter((line) => line.trim());
+    // cleaned csv string with comments with `#`, `//`, or `;`
+    const cleanedCsvText: string = csvText.replace(
+      /^(#|\/\/|;).*$\r?\n?/gm,
+      ""
+    );
+
+    const lines = cleanedCsvText.split(/\r?\n/).filter((line) => line.trim());
 
     if (lines.length < 2) {
       throw new Error("File must contain at least a header and one data row");
