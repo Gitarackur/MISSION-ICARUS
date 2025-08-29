@@ -1,10 +1,57 @@
-import { ParsedCSVResult } from "@/domain/shared/index.types";
+import { ColumnType, ParsedCSVResult } from "@/domain/shared/index.types";
 import { toNumberIfPossible } from "./utils";
 import Papa, { ParseResult } from "papaparse";
 
 // Parses a CSV, TSV, or other delimited string and returns structured data
 class IcarusParser {
   constructor() {}
+
+  inferColumnTypes<T>(data: T[]): Record<string, ColumnType> {
+    const columnTypes: Record<string, ColumnType> = {};
+    if (data.length === 0) {
+      return columnTypes;
+    }
+
+    const headers = Object.keys(data[0] as object);
+
+    for (const header of headers) {
+      let hasNumeric = true;
+      let hasBoolean = true;
+
+      for (const row of data) {
+        const value = (row as Record<string, unknown>)[header];
+        const stringValue = String(value).trim();
+
+        // Check for number type
+        if (hasNumeric && stringValue !== "" && isNaN(Number(stringValue))) {
+          hasNumeric = false;
+        }
+
+        // Check for boolean type
+        if (hasBoolean && stringValue !== "") {
+          const lowerCaseValue = stringValue.toLowerCase();
+          if (lowerCaseValue !== "true" && lowerCaseValue !== "false") {
+            hasBoolean = false;
+          }
+        }
+
+        // If both tests fail, no need to check further for this column
+        if (!hasNumeric && !hasBoolean) {
+          break;
+        }
+      }
+
+      if (hasNumeric) {
+        columnTypes[header] = "number";
+      } else if (hasBoolean) {
+        columnTypes[header] = "boolean";
+      } else {
+        columnTypes[header] = "string";
+      }
+    }
+
+    return columnTypes;
+  }
 
   // Parses a CSV, TSV, or other delimited string and returns structured data
   parseCSVPapaParse = <T>(csvText: string): ParsedCSVResult<T> => {
@@ -64,9 +111,12 @@ class IcarusParser {
       throw new Error("No valid data rows found in file");
     }
 
+    const columnTypes = this.inferColumnTypes(result.data);
+
     return {
       data,
       headers,
+      columnTypes,
       errors,
     };
   };
@@ -214,11 +264,15 @@ class IcarusParser {
       throw new Error("No valid data rows found in file");
     }
 
-    return { data, headers, errors };
+    const columnTypes = this.inferColumnTypes(data);
+
+    return { data, headers, columnTypes, errors };
   };
 
   // Parses a CSV file and returns structured data
-  parseCSVFromFileNative = async <T>(file: File): Promise<ParsedCSVResult<T>> => {
+  parseCSVFromFileNative = async <T>(
+    file: File
+  ): Promise<ParsedCSVResult<T>> => {
     const text = await file.text();
     return this.parseCSVNative<T>(text);
   };
@@ -270,7 +324,9 @@ class IcarusParser {
       throw new Error("No valid data rows found");
     }
 
-    return { data, headers, errors };
+    const columnTypes = this.inferColumnTypes(data);
+
+    return { data, headers, columnTypes, errors };
   };
 
   // Parses a 2D array into structured data - 2
@@ -322,7 +378,9 @@ class IcarusParser {
       throw new Error("No valid data rows found");
     }
 
-    return { data, headers, errors };
+    const columnTypes = this.inferColumnTypes(data);
+
+    return { data, headers, columnTypes, errors };
   };
 }
 
@@ -333,4 +391,4 @@ const parser = new IcarusParser();
 
 export const parseCSVFromFile = parser.parseCSVFromFilePapaParse;
 export const parse2DArray = parser.parse2DArrayNative2;
-
+export const inferColumnTypes = parser.inferColumnTypes;

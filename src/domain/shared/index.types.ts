@@ -1,9 +1,12 @@
 import { IcarusWorkflowRecord } from "@/app-layer/database/database.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { TableColumns, TableMatrices } from "@/domain/workflow/main.types";
+
+export type ColumnType = 'number' | 'boolean' | 'string' | 'unknown';
 export interface ParsedCSVResult<T> {
   data: T[];
   headers: string[];
+  columnTypes: Record<string, ColumnType>;
   errors: string[];
 }
 
@@ -23,3 +26,4 @@ export interface DataRowsAndColumns {
   rows: ProteinRow[]; 
   columns: TableColumns
 }
+
