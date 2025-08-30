@@ -42,18 +42,20 @@ export const statisticsStyles = tv({
 // statistics menu styles
 export const statisticsMenuStyles = tv({
   slots: {
-    mainContainer: "w-full bg-white rounded-lg shadow-xl p-6 flex flex-col font-sans text-gray-800", 
-    mainContent: "flex flex-row", 
+    mainContainer: "w-full bg-white rounded-lg shadow-xl p-6 flex flex-col font-sans text-gray-800",
+    mainContent: "flex flex-row",
 
-    rightToolbarArea: "flex-1 flex flex-col gap-2", 
-    toolbarRow: "flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm", 
-  
-    toolbarButton: "flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm cursor-pointer hover:bg-gray-200 transition-colors space-x-1", 
-    toolbarButtonIcon: "text-lg", 
-    toolbarButtonText: "", 
-    dropdownArrow: "ml-auto text-xs", 
+    rightToolbarArea: "flex-1 flex flex-col gap-2",
+    toolbarRow: "flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm",
 
-    // Labels below the toolbars (Processing, Analysis).
+    toolbarButton: "flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm cursor-pointer hover:bg-gray-200 transition-colors space-x-1",
+    toolbarButtonIcon: "text-lg",
+    toolbarButtonText: "",
+    dropdownArrow: "ml-auto text-xs",
+
+    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 w-48 mt-2 p-1 rounded-lg shadow-lg bg-white border border-gray-300 max-h-60 overflow-y-auto",
+    dropdownItem: "flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors duration-150",
+
     sectionLabelContainer: "flex-1 flex items-center justify-center pt-2 text-xs text-gray-500",
     sectionLabel: "border-b border-gray-300 pb-1 px-4",
   },

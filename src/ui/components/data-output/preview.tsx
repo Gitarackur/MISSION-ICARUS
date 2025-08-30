@@ -179,7 +179,11 @@ const DataPreview: React.FC<DataPreviewProps> = ({
             </>
           )
         }
-        <StatisticsMenu onMenuAction={handleMenuAction} />
+        <StatisticsMenu 
+          onMenuAction={handleMenuAction} 
+          dataRows={originalDataRows}
+          dataColumns={originalDataColumns}
+        />
       </>
 
       <div className="my-10">

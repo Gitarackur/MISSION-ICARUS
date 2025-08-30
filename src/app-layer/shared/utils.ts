@@ -14,9 +14,11 @@ export function isNumericString(s: string | undefined) {
 
 // Converts a string to a number if possible, otherwise returns the original string
 export function toNumberIfPossible(s: string | undefined): number | string {
-  if (s == null) return 0;
+  // if (s == null) return 0;
+  if(s == null) return 'N/A'
   const trimmed = s.trim();
-  if (trimmed === "") return 0;
+  // if (trimmed === "") return 0;
+  if (trimmed === "") return "N/A";
   if (isNumericString(trimmed)) return Number(trimmed);
   return trimmed;
 }
@@ -323,7 +325,8 @@ export const formatTableCellValue = (value: unknown): string | number => {
     return value;
   }
   // Handle other types, including null/undefined
-  return (value as string) || 0;
+  // return (value as string) || 0;
+  return (value as string) || 'N/A'
 };
 
 // export numeric data
