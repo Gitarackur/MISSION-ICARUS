@@ -26,11 +26,10 @@ import {
   SquareDashedKanban,
   Hash,
 } from "lucide-react";
-import { ProteinRow } from "@/domain/proteins/index.types";
-import { TableColumns } from "@/domain/workflow/main.types";
 import { StatisticalAction } from "@/domain/statistics/index.types";
 import { statisticsMenuStyles } from "./style-variants";
 import { useClickOutside } from "@/ui/hooks/useClickOutside";
+import { StatisticsMenuDropdownItem, StatisticsMenuProps, StatisticsMenuItem } from "./types/index.types";
 
 const {
   mainContainer,
@@ -46,26 +45,6 @@ const {
   dropdownContainer,
   dropdownItem,
 } = statisticsMenuStyles();
-
-// Define the types for the menu items and props
-type MenuItem = {
-  id: string;
-  label: string;
-  icon: React.ReactElement;
-  hasDropdown?: boolean;
-};
-
-type DropdownItem = {
-  id: string;
-  label: string;
-};
-
-// Define the props interface
-interface StatisticsMenuProps {
-  onMenuAction: (action: StatisticalAction) => void;
-  dataRows: ProteinRow[];
-  dataColumns: TableColumns;
-}
 
 // The menu data structure, now including dropdown content
 const menuData = {
@@ -250,7 +229,7 @@ const menuData = {
   ],
 };
 
-const dropdownData: Record<string, DropdownItem[]> = {
+const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
   count: [
     { id: "count", label: "Count" },
     { id: "count-missing", label: "Count Missing" },
@@ -375,13 +354,13 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({ onMenuAction }) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(menuRef, () => setOpenDropdownId(null));
-  useClickOutside(dropdownRef, () => setOpenDropdownId(null));
+  // useClickOutside(dropdownRef, () => setOpenDropdownId(null));
 
-  const handleButtonClick = (item: MenuItem) => {
-    if (item.hasDropdown) {
-      setOpenDropdownId(openDropdownId === item.id ? null : item.id);
-    } else {
-      setOpenDropdownId(null);
+  const handleButtonClick = (item: StatisticsMenuItem) => {
+    const newOpenDropdownId = item.hasDropdown ? (openDropdownId === item.id ? null : item.id) : null;
+    setOpenDropdownId(newOpenDropdownId);
+
+    if (!item.hasDropdown) {
       onMenuAction(item.id as StatisticalAction);
     }
   };
@@ -412,11 +391,12 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({ onMenuAction }) => {
                         <span className={dropdownArrow()}>▼</span>
                       )}
                     </button>
+
                     {item.hasDropdown && openDropdownId === item.id && (
                       <div ref={dropdownRef} className={dropdownContainer()}>
                         {dropdownData[item.id] &&
                           dropdownData[item.id].map(
-                            (dropdownItemData: DropdownItem) => (
+                            (dropdownItemData: StatisticsMenuDropdownItem) => (
                               <button
                                 key={dropdownItemData.id}
                                 className={dropdownItem()}
