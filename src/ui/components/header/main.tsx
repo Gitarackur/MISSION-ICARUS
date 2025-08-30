@@ -1,5 +1,5 @@
 import React from 'react';
-import { Download, Settings, Database } from 'lucide-react';
+import { Download, Settings } from 'lucide-react';
 import { headerVariants } from './variants';
 
 
@@ -12,7 +12,12 @@ const Header: React.FC<{ onExport?: () => void }> = ({ onExport }) => {
         <div className={s.flexMain()}>
           <div className={s.logoWrapper()}>
             <div className={s.iconBg()}>
-              <Database className={s.icon()} />
+              <img 
+                alt='icarus-image' 
+                src={"assets/icarus-compressed.png"} 
+                loading='lazy' 
+                className={s.icon()}
+              />
             </div>
             <div className={s.titleWrapper()}>
               <h1 className={s.title()}>Icarus</h1>
