@@ -903,7 +903,7 @@ export const ReorderColumns = ({
     <p className={descriptionClass}>Allows for manual reordering of columns in the dataset.</p>
     <div className="mb-6">
       <label htmlFor="reorder-column-list" className={labelClass}>Drag & Drop Columns to Reorder</label>
-      <div id="reorder-column-list" className="mt-1 p-4 bg-gray-50 border border-gray-300 rounded-md">
+      <div id="reorder-column-list" className="mt-1 p-4 bg-gray-50 border border-gray-300 rounded-md max-h-64 overflow-y-auto">
         {dataColumns.map(col => (
           <div key={col} className="bg-white p-3 mb-2 rounded-md shadow-sm border border-gray-200 cursor-move hover:bg-gray-50 transition-colors">
             {col}
