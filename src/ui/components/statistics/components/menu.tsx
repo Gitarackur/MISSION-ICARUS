@@ -27,14 +27,14 @@ import {
   Hash,
 } from "lucide-react";
 import { StatisticalAction } from "@/domain/statistics/index.types";
-import { statisticsMenuStyles } from "./style-variants";
+import { statisticsMenuStyles } from "../style-variants";
 import { useClickOutside } from "@/ui/hooks/useClickOutside";
 import {
   StatisticsMenuDropdownItem,
   StatisticsMenuProps,
   StatisticsMenuItem,
-} from "./types/index.types";
-import useStatisticsMenu from "./hooks/useStatisticsMenu";
+} from "../types/index.types";
+import useStatisticsMenu from "../hooks/useStatisticsMenu";
 
 const {
   mainContainer,
