@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { X } from 'lucide-react';
 import { modalStyleVariants } from './variants/modal.variants';
 
@@ -16,15 +16,32 @@ interface ModalProps {
 }
 
 export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
+  const [isVisible, setIsVisible] = useState(false);
   const styles = modalStyleVariants();
 
+  useEffect(() => {
+    if (isOpen) {
+      requestAnimationFrame(() => setIsVisible(true));
+    } else {
+      setIsVisible(false);
+    }
+  }, [isOpen]);
+
   if (!isOpen) {
-    return null; 
+    return null;
   }
 
   return (
-    <div className={styles.modalOverlay()} onClick={onClose}>
-      <div className={styles.modalContent()} onClick={e => e.stopPropagation()}>
+    <div
+      className={styles.modalOverlay()}
+      data-open={isVisible}
+      onClick={onClose}
+    >
+      <div
+        className={styles.modalContent()}
+        data-open={isVisible}
+        onClick={e => e.stopPropagation()}
+      >
         <div className={styles.modalHeader()}>
           <h3 className={styles.modalTitle()}>{title}</h3>
           <button onClick={onClose} className={styles.modalCloseBtn()}>
@@ -36,4 +53,3 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
     </div>
   );
 };
-

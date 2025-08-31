@@ -1,5 +1,5 @@
 import { BarChart3 } from "lucide-react";
-import { statisticsStyles } from "./style-variants";
+import { statisticsStyles } from "../style-variants";
 
 
 const StatisticsEmptyState = () => {

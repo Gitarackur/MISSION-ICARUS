@@ -32,6 +32,7 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
       'main@': path.resolve(__dirname),
+      'pub@': path.resolve(__dirname, 'public'),
     },
   },
 })

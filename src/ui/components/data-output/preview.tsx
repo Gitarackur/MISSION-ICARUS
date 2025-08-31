@@ -2,21 +2,22 @@
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
-import { Calculator, BarChart3 } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 import { DataPreviewProps } from './types';
 import { dataOutputStyles } from './variants/data-output.variant';
-import StatisticalAnalysisInstructions from '../statistics/analysis-instructions';
+import StatisticalAnalysisInstructions from '../statistics/components/analysis-instructions';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
 import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
-import StatisticsMenu from '../statistics/menu';
+import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { useStatisticalAnalysis } from '@/app-layer/statistics/hooks/useStatistics';
 import { StatisticalAction } from '@/domain/statistics/index.types';
 import { getCellValues } from './utils';
+import ClearTableSelection from './clear-table-selection';
 
-const ROWS_PER_PAGE = 10;
+const ROWS_PER_PAGE = 20;
 
 const DataPreview: React.FC<DataPreviewProps> = ({
   originalDataRows,
@@ -98,6 +99,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       // statistical calculations -- performAnalysis should be able to know which is row or column and do proper analysis on them
       // it should also generate the matrix(that would be stored) with the results
       const result = performAnalysis(action, cellValues);
+      console.log("result", result)
       const {
         inputParameters,
         newly_created_columns: outputColumns,
@@ -164,7 +166,28 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
       <StatisticalAnalysisInstructions />
 
-      <div className="mb-4">
+      <>
+        {
+          // (selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnHeaderValues.size > 0) && (
+          (selectedAnalysisColumnHeaderValues.size > 0) && (
+            <>
+              <ClearTableSelection
+                selectedColumnsDisplay={selectedColumnsDisplay}
+                clearAnalysisSelection={() => {
+                  clearAnalysisSelection()
+                }}
+              />
+            </>
+          )
+        }
+        <StatisticsMenu 
+          onMenuAction={handleMenuAction} 
+          dataRows={originalDataRows}
+          dataColumns={originalDataColumns}
+        />
+      </>
+
+      <div className="my-10">
         <label className={s.label()}>Select Columns to Display:</label>
         <div className={s.columnsContainer()}>
           {originalDataColumns.map((column) => (
@@ -180,25 +203,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           ))}
         </div>
       </div>
-
-      {(selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnHeaderValues.size > 0) && (
-        <>
-          <div className="flex justify-between items-center mb-4">
-            <h4 className="text-lg font-semibold flex items-center">
-              <BarChart3 className="mr-2 h-5 w-5 text-blue-600" />
-              Column Statistics: {selectedColumnsDisplay}
-            </h4>
-            <button
-              onClick={clearAnalysisSelection}
-              className={s.clearAnalysisSelection()}
-            >
-              Clear Selection
-            </button>
-          </div>
-
-          <StatisticsMenu onMenuAction={handleMenuAction} />
-        </>
-      )}
 
       <div className={s.tableWrapper()}>
         <table className={s.table()}>

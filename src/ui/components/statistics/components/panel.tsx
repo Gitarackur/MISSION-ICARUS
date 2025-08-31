@@ -15,7 +15,7 @@ import {
   Bar,
 } from 'recharts';
 import { Stats } from '@/domain/proteins/index.types';
-import { statisticsStyles } from './style-variants';
+import { statisticsStyles } from '../style-variants';
 import StatisticsEmptyState from './empty-state';
 
 

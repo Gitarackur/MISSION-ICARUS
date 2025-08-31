@@ -208,9 +208,9 @@ const IcarusApp: React.FC = () => {
           <div className="w-full">
             <ProteomicsAnalysisHomeView
               handleSessionCreate={handleSessionCreate}
-              originalDataRows={originalDataRows}
-              originalDataColumns={originalDataColumns}
-              selectedDataColumns={selectedDataColumns}
+              originalDataRows={[]}
+              originalDataColumns={[]}
+              selectedDataColumns={[]}
               setSelectedDataColumns={setSelectedDataColumns}
               isProcessing={isProcessing}
               setIsProcessing={setIsProcessing}

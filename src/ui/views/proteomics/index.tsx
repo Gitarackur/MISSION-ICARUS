@@ -5,7 +5,7 @@ import NavTabs from '@/ui/components/tabs';
 import DataImport from '@/ui/components/data-output/import';
 import DataPreview from '@/ui/components/data-output/preview';
 import Filters from '@/ui/components/filter';
-import StatisticsPanel from '@/ui/components/statistics/panel';
+import StatisticsPanel from '@/ui/components/statistics/components/panel';
 import VisualizationPanel from '@/ui/components/visualization';
 import AnalysisPanel from '@/ui/components/analysis';
 

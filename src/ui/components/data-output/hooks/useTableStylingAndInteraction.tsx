@@ -3,6 +3,7 @@ import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
 import { TableMatrix } from "@/domain/workflow/main.types";
+import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
 
 
 export const useTableStylingAndInteraction = (
@@ -29,6 +30,7 @@ export const useTableStylingAndInteraction = (
 
   // Identifies which columns contain numeric data
   const numericColumns = useMemo(() => getNumericColumnsOptimized(columns, originalDataRows), [columns, originalDataRows]);
+  const mapColumnType = useMemo(() => inferColumnTypes(originalDataRows), [originalDataRows])
 
   const allColumnarData = useMemo(() => {
     const dataMap = new Map<string, TableMatrix>();
@@ -116,7 +118,10 @@ export const useTableStylingAndInteraction = (
   // Determines the CSS class for each cell based on its selection state
   const getCellStyle = useCallback((rowIndex: number, row: ProteinRow | null, columnName: string, isHeader = false) => {
     const cellKey = isHeader ? `header-${columnName}` : `${rowIndex}-${columnName}`;
-    const isNumeric = numericColumns.has(columnName);
+    // const isNumeric = numericColumns.has(columnName);
+    const isNumeric = mapColumnType[columnName] === "number";
+    const isString = mapColumnType[columnName] === "string";
+    const isBoolean = mapColumnType[columnName] === "boolean";
     // Check if the current column's header is selected
     const isSelectedColumnHeader = selectedAnalysisColumnHeaderValues.has(columnName);
 
@@ -129,6 +134,15 @@ export const useTableStylingAndInteraction = (
       if (isNumeric) {
         className += ' cursor-pointer hover:bg-blue-100 transition-colors duration-200';
       }
+
+      if (isString) {
+        className += ' cursor-pointer hover:bg-yellow-100 transition-colors duration-200';
+      }
+
+      if (isBoolean) {
+        className += ' cursor-pointer hover:bg-red-100 transition-colors duration-200';
+      }
+
       if (isSelectedColumnHeader) {
         className += ' bg-blue-200';
       }
@@ -136,16 +150,14 @@ export const useTableStylingAndInteraction = (
       className += ' bg-blue-100 border-blue-200';
     } else if (isNumeric) {
       className += ' bg-green-50'; // Numeric cells have a default background
+    }else if (isString) {
+      className += ' bg-yellow-50'; // Numeric cells have a default background
+    }else if (isBoolean) {
+      className += ' bg-red-50'; // Numeric cells have a default background
     }
 
     return className;
-  }, [
-    selectedAnalysisColumnHeaderValues,
-    highlightedAnalysisColumnCellKeys,
-    selectedRowsSet,
-    numericColumns,
-    styles,
-  ]);
+  }, [mapColumnType, selectedAnalysisColumnHeaderValues, highlightedAnalysisColumnCellKeys, selectedRowsSet, styles]);
 
   // Selects or deselects all rows
   const selectAllRows = useCallback((checked: boolean) => {
