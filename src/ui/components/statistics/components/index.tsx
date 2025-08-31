@@ -7,7 +7,7 @@ const containerClass = "bg-white rounded-xl";
 const headingClass = "text-2xl font-semibold text-gray-800 mb-2";
 const descriptionClass = "text-gray-600 mb-6";
 const labelClass = "block text-sm font-medium text-gray-700 mb-2";
-const inputClass = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
+const inputClass = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-500";
 const selectClass = "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
 const buttonClass = "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors";
 const dangerButtonClass = "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors";
@@ -960,18 +960,45 @@ export const FilterColumnsByType = () => (
   </div>
 );
 
-export const AddRow = () => (
+export const AddRow = ({
+  dataColumns
+}: {
+  dataColumns: TableColumns
+}) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Add New Row</h1>
     <p className={descriptionClass}>Adds a new, empty row to the dataset.</p>
     <p className="text-sm text-gray-500 mb-6">A new row will be added at the bottom of the dataset. You can fill in the values manually afterwards.</p>
-    <div className="flex justify-end">
+    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+      {
+        dataColumns.map(col => {
+          return (
+            <div>
+              <label htmlFor="add-row" className={labelClass}>
+                {col}
+              </label>
+              <input 
+                // type="number" 
+                id="add-row" 
+                className={inputClass} 
+                placeholder={col}
+              />
+            </div>
+          )
+        })
+      }
+    </div>
+    <div className="flex flex-col mt-4">
       <button className={buttonClass}>Add Row</button>
     </div>
   </div>
 );
 
-export const RenameRow = () => (
+export const RenameRow = ({
+  dataColumns
+}: {
+  dataColumns: TableColumns
+}) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Rename Row</h1>
     <p className={descriptionClass}>Renames a selected row based on its ID.</p>
@@ -979,9 +1006,7 @@ export const RenameRow = () => (
       <div>
         <label htmlFor="old-row-id" className={labelClass}>Select Row ID</label>
         <select id="old-row-id" className={selectClass}>
-          <option>Row 1</option>
-          <option>Row 2</option>
-          <option>Row 3</option>
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
       <div>
@@ -995,16 +1020,18 @@ export const RenameRow = () => (
   </div>
 );
 
-export const DeleteRow = () => (
+export const DeleteRow = ({
+  dataColumns
+}: {
+  dataColumns: TableColumns
+}) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Delete Row</h1>
     <p className={descriptionClass}>Deletes a selected row from the dataset.</p>
     <div className="mb-6">
       <label htmlFor="delete-row-id" className={labelClass}>Select Row ID to Delete</label>
       <select id="delete-row-id" className={selectClass}>
-        <option>Row 1</option>
-        <option>Row 2</option>
-        <option>Row 3</option>
+        {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
       </select>
     </div>
     <div className="flex justify-end">

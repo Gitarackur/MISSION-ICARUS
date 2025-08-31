@@ -381,7 +381,7 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
   const handleDropdownItemClick = (actionId: StatisticalAction) => {
     setOpenDropdownId(null);
     handleMenuSelection(actionId);
-    onMenuAction(actionId as StatisticalAction);
+    // onMenuAction(actionId as StatisticalAction);
   };
 
   return (

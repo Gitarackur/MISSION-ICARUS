@@ -141,13 +141,13 @@ const useStatisticsMenu = ({
         content = <FilterColumnsByType />;
         break;
       case "add-row":
-        content = <AddRow />;
+        content = <AddRow dataColumns={dataColumns} />;
         break;
       case "rename-row":
-        content = <RenameRow />;
+        content = <RenameRow dataColumns={dataColumns} />;
         break;
       case "delete-row":
-        content = <DeleteRow />;
+        content = <DeleteRow dataColumns={dataColumns} />;
         break;
       case "pca-learning":
         content = <PcaLearning dataColumns={dataColumns} />;
