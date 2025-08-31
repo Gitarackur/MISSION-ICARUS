@@ -99,6 +99,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       // statistical calculations -- performAnalysis should be able to know which is row or column and do proper analysis on them
       // it should also generate the matrix(that would be stored) with the results
       const result = performAnalysis(action, cellValues);
+      console.log("result", result)
       const {
         inputParameters,
         newly_created_columns: outputColumns,

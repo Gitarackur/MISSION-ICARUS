@@ -10,7 +10,7 @@ export type StatisticsMenuItem = {
 };
 
 export type StatisticsMenuDropdownItem = {
-  id: string;
+  id: StatisticalAction;
   label: string;
 };
 

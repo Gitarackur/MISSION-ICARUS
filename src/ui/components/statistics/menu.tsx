@@ -29,7 +29,12 @@ import {
 import { StatisticalAction } from "@/domain/statistics/index.types";
 import { statisticsMenuStyles } from "./style-variants";
 import { useClickOutside } from "@/ui/hooks/useClickOutside";
-import { StatisticsMenuDropdownItem, StatisticsMenuProps, StatisticsMenuItem } from "./types/index.types";
+import {
+  StatisticsMenuDropdownItem,
+  StatisticsMenuProps,
+  StatisticsMenuItem,
+} from "./types/index.types";
+import useStatisticsMenu from "./hooks/useStatisticsMenu";
 
 const {
   mainContainer,
@@ -348,16 +353,24 @@ const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
   ],
 };
 
-const StatisticsMenu: React.FC<StatisticsMenuProps> = ({ onMenuAction }) => {
+const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
+  dataColumns,
+  onMenuAction,
+}) => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(menuRef, () => setOpenDropdownId(null));
   // useClickOutside(dropdownRef, () => setOpenDropdownId(null));
+  const { handleMenuSelection } = useStatisticsMenu({ dataColumns });
 
   const handleButtonClick = (item: StatisticsMenuItem) => {
-    const newOpenDropdownId = item.hasDropdown ? (openDropdownId === item.id ? null : item.id) : null;
+    const newOpenDropdownId = item.hasDropdown
+      ? openDropdownId === item.id
+        ? null
+        : item.id
+      : null;
     setOpenDropdownId(newOpenDropdownId);
 
     if (!item.hasDropdown) {
@@ -365,8 +378,9 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({ onMenuAction }) => {
     }
   };
 
-  const handleDropdownItemClick = (actionId: string) => {
+  const handleDropdownItemClick = (actionId: StatisticalAction) => {
     setOpenDropdownId(null);
+    handleMenuSelection(actionId);
     onMenuAction(actionId as StatisticalAction);
   };
 
