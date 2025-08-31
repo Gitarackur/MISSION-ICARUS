@@ -9,8 +9,7 @@ const useStatisticsMenu = ({
 }: {
   dataColumns: TableColumns
 }) => {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const { openModal, closeModal } = useModal();
+  const { openModal } = useModal();
 
   const handleMenuSelection = (actionId: StatisticalAction) => {
     let content;

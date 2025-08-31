@@ -2,7 +2,8 @@ import { StatisticalAction } from "@/domain/statistics/index.types";
 import { TableColumns } from "@/domain/workflow/main.types";
 
 // Common styles for consistency
-const containerClass = "p-6 bg-white rounded-xl shadow-sm border border-gray-200";
+const containerClass = "bg-white rounded-xl";
+//  p-6 shadow-sm border border-gray-200
 const headingClass = "text-2xl font-semibold text-gray-800 mb-2";
 const descriptionClass = "text-gray-600 mb-6";
 const labelClass = "block text-sm font-medium text-gray-700 mb-2";
@@ -603,13 +604,13 @@ export const Anova = ({
       <div>
         <label htmlFor="anova-column" className={labelClass}>Select Numeric Column</label>
         <select id="anova-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
       <div>
         <label htmlFor="anova-group-column" className={labelClass}>Select Grouping Column</label>
         <select id="anova-group-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Group')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
     </div>
@@ -631,14 +632,14 @@ export const Limma = ({
       <div>
         <label htmlFor="limma-column" className={labelClass}>Select Numeric Columns</label>
         <select multiple id="limma-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value') || col.includes('Change')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
         <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple columns.</p>
       </div>
       <div>
         <label htmlFor="limma-group-column" className={labelClass}>Select Grouping Column</label>
         <select id="limma-group-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Group')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
     </div>
@@ -660,7 +661,7 @@ export const FoldChange = ({
       <div>
         <label htmlFor="fc-column" className={labelClass}>Select Numeric Column</label>
         <select id="fc-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value') || col.includes('Change')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
       <div>
@@ -690,7 +691,7 @@ export const NormalizeReporterIons = ({
       <div>
         <label htmlFor="norm-ri-columns" className={labelClass}>Select Reporter Ion Columns</label>
         <select multiple id="norm-ri-columns" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
         <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple columns.</p>
       </div>
@@ -717,7 +718,7 @@ export const CorrectForPurity = ({
       <div>
         <label htmlFor="correct-purity-columns" className={labelClass}>Select Reporter Ion Columns</label>
         <select multiple id="correct-purity-columns" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
         <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple columns.</p>
       </div>
@@ -815,13 +816,13 @@ export const VolcanoPlot = ({
       <div>
         <label htmlFor="volcano-pvalue" className={labelClass}>Select P-value Column</label>
         <select id="volcano-pvalue" className={selectClass}>
-          {dataColumns.filter(col => col.includes('P-value')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
       <div>
         <label htmlFor="volcano-foldchange" className={labelClass}>Select Fold Change Column</label>
         <select id="volcano-foldchange" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Fold Change')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
     </div>
@@ -1024,7 +1025,7 @@ export const PcaLearning = ({
       <div>
         <label htmlFor="pca-learning-columns" className={labelClass}>Select Columns for PCA</label>
         <select multiple id="pca-learning-columns" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value') || col.includes('Change')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
         <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple columns.</p>
       </div>
@@ -1051,14 +1052,14 @@ export const PlsdaLearning = ({
       <div>
         <label htmlFor="plsda-learning-data" className={labelClass}>Select Data Columns</label>
         <select multiple id="plsda-learning-data" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value') || col.includes('Change')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
         <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple columns.</p>
       </div>
       <div>
         <label htmlFor="plsda-learning-group" className={labelClass}>Select Grouping Column</label>
         <select id="plsda-learning-group" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Group')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
     </div>
@@ -1080,7 +1081,7 @@ export const TsneLearning = ({
       <div>
         <label htmlFor="tsne-learning-data" className={labelClass}>Select Data Columns</label>
         <select multiple id="tsne-learning-data" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value') || col.includes('Change')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
         <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple columns.</p>
       </div>
@@ -1137,7 +1138,7 @@ export const RemovePtm = ({
       <div>
         <label htmlFor="remove-ptm-column" className={labelClass}>Select Peptide Column</label>
         <select id="remove-ptm-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Peptide')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
       <div>
@@ -1404,13 +1405,13 @@ export const FTest = ({
       <div>
         <label htmlFor="f-test-column" className={labelClass}>Select Numeric Column</label>
         <select id="f-test-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Intensity') || col.includes('P-value')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
       <div>
         <label htmlFor="f-test-group-column" className={labelClass}>Select Grouping Column</label>
         <select id="f-test-group-column" className={selectClass}>
-          {dataColumns.filter(col => col.includes('Group')).map(col => <option key={col} value={col}>{col}</option>)}
+          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
         </select>
       </div>
     </div>
