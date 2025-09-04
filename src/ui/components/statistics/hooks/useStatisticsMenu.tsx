@@ -85,7 +85,7 @@ const useStatisticsMenu = ({
   dataRows: ProteinRow[];
   allColumnarData: Map<string, TableMatrix>;
 }) => {
-  const { openModal } = useModal();
+  const { openModal, closeModal } = useModal();
 
   const handleMenuSelection = (
     actionId: StatisticalAction,
@@ -199,8 +199,14 @@ const useStatisticsMenu = ({
             dataColumns={dataColumns}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
-            onSuccess={onSuccess}
-            onError={onError}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result)
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
             actionId={actionId}
           />
         );
