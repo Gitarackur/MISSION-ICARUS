@@ -197,6 +197,7 @@ export const useTableStylingAndInteraction = (
   return {
     selectedAnalysisColumnHeaderValues,
     numericColumns,
+    allColumnarData,
     highlightedAnalysisColumnCellKeys,
     selectedAnalysisColumnCells,
     selectedAnalysisRowCells,

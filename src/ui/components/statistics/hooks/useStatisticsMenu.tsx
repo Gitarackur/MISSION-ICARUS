@@ -2,12 +2,17 @@ import { StatisticalAction } from '@/domain/statistics/index.types';
 import { useModal } from '@/ui/design-system/Modal/context';
 import { SortAsc, SortDesc } from 'lucide-react';
 import { CountMissing, CountValid, MeanValues, MedianValues, Variance, StdDevValues, Sum, Product, Min, Max, FilterByValue, FilterByMissing, FilterByRange, FilterByOutlier, AddColumn, RenameColumn, DeleteColumn, FillColumn, ImputeMean, ImputeMedian, ImputeKnn, ImputeZero, MovingAverage, RollingStdDev, TTest, Anova, Limma, FoldChange, NormalizeReporterIons, CorrectForPurity, BoxPlot, ScatterPlot, Heatmap, VolcanoPlot, PcaPlot, ReorderColumns, Transpose, FilterColumnsByName, FilterColumnsByType, AddRow, RenameRow, DeleteRow, PcaLearning, PlsdaLearning, TsneLearning, AddPtm, RemovePtm, GoAnalysis, PathwayAnalysis, HierarchicalClustering, KmeansClustering, PcaAnalysis, ZScoreNorm, LogTransform, QuantileNormalization, MeanCentering, QcPlot, MissingValuesPlot, FTest, ChiSquareTest, ZScoreOutliers, IqrOutliers, GrubbsTest, WgcnaAnalysis, SaveData, ExportCsv, NoUiFound } from '../components';
-import { TableColumns } from '@/domain/workflow/main.types';
+import { TableColumns, TableMatrix } from '@/domain/workflow/main.types';
+import { ProteinRow } from '@/domain/proteins/index.types';
 
 const useStatisticsMenu = ({
-  dataColumns
+  allColumnarData,
+  dataColumns,
+  dataRows
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  dataRows: ProteinRow[],
+  allColumnarData: Map<string, TableMatrix>
 }) => {
   const { openModal } = useModal();
 
@@ -90,7 +95,7 @@ const useStatisticsMenu = ({
         break;
       case "t-test":
       case "t-test-test": // Both t-test actions can use the same UI
-        content = <TTest dataColumns={dataColumns} />;
+        content = <TTest dataColumns={dataColumns} dataRows={dataRows} allColumnarData={allColumnarData} />;
         break;
       case "anova":
         content = <Anova dataColumns={dataColumns} />;

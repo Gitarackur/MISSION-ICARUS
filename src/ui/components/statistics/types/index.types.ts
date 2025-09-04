@@ -1,6 +1,6 @@
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { StatisticalAction } from "@/domain/statistics/index.types";
-import { TableColumns } from "@/domain/workflow/main.types";
+import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 
 export type StatisticsMenuItem = {
   id: string;
@@ -18,6 +18,7 @@ export interface StatisticsMenuProps {
   onMenuAction: (action: StatisticalAction) => void;
   dataRows: ProteinRow[];
   dataColumns: TableColumns;
+  allColumnarData: Map<string, TableMatrix>;
 }
 
 

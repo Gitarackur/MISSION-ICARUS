@@ -1,5 +1,6 @@
+import { ProteinRow } from "@/domain/proteins/index.types";
 import { StatisticalAction } from "@/domain/statistics/index.types";
-import { TableColumns } from "@/domain/workflow/main.types";
+import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
@@ -565,32 +566,39 @@ export const RollingStdDev = ({
 );
 
 export const TTest = ({
-  dataColumns
+  dataColumns,
+  // dataRows,
+  allColumnarData,
 }: {
-  dataColumns: TableColumns
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>T-Test</h1>
-    <p className={descriptionClass}>Performs a T-Test to compare the means of two groups.</p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <label htmlFor="ttest-column" className={labelClass}>Select Numeric Column</label>
-        <select id="ttest-column" className={selectClass}>
-          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
-        </select>
+  dataColumns: TableColumns,
+  dataRows: ProteinRow[],
+  allColumnarData: Map<string, TableMatrix>
+}) => {
+  console.log('DATA columns', allColumnarData)
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>T-Test</h1>
+      <p className={descriptionClass}>Performs a T-Test to compare the means of two groups.</p>
+      <div className="space-y-4 mb-6">
+        <div>
+          <label htmlFor="ttest-column" className={labelClass}>Select Numeric Column</label>
+          <select multiple id="ttest-column" className={selectClass}>
+            {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
+          </select>
+        </div>
+        <div>
+          <label htmlFor="ttest-group-column" className={labelClass}>Select Grouping Column</label>
+          <select id="ttest-group-column" className={selectClass}>
+            {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
+          </select>
+        </div>
       </div>
-      <div>
-        <label htmlFor="ttest-group-column" className={labelClass}>Select Grouping Column</label>
-        <select id="ttest-group-column" className={selectClass}>
-          {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
-        </select>
+      <div className="flex justify-end">
+        <button className={buttonClass}>Run T-Test</button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run T-Test</button>
-    </div>
-  </div>
-);
+  )
+};
 
 export const Anova = ({
   dataColumns

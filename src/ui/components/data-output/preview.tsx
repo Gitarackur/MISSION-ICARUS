@@ -45,6 +45,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
   // use table for styling and interacting with its rows and columns
   const {
+    allColumnarData,
     numericColumns,
 
     handleColumnClick,
@@ -183,6 +184,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         <StatisticsMenu 
           onMenuAction={handleMenuAction} 
           dataRows={originalDataRows}
+          allColumnarData={allColumnarData}
           dataColumns={originalDataColumns}
         />
       </>

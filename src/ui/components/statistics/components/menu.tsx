@@ -354,7 +354,9 @@ const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
 };
 
 const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
+  allColumnarData,
   dataColumns,
+  dataRows,
   onMenuAction,
 }) => {
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null);
@@ -363,7 +365,7 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
 
   useClickOutside(menuRef, () => setOpenDropdownId(null));
   // useClickOutside(dropdownRef, () => setOpenDropdownId(null));
-  const { handleMenuSelection } = useStatisticsMenu({ dataColumns });
+  const { handleMenuSelection } = useStatisticsMenu({ dataColumns, dataRows, allColumnarData });
 
   const handleButtonClick = (item: StatisticsMenuItem) => {
     const newOpenDropdownId = item.hasDropdown
