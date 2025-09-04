@@ -3,7 +3,7 @@ import { useStatisticalAnalysis } from "@/app-layer/statistics/hooks/useStatisti
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { StatisticalAction, StatisticalAnalysisResult } from "@/domain/statistics/index.types";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
@@ -635,22 +635,53 @@ export const TTest = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
 
-  const numericColumns = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
-  console.log(numericColumns);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumns = [...numericColumnsSet];
+
+  const [firstGroup, setFirstGroup] = useState(numericColumns[0] || '');
+  const [secondGroup, setSecondGroup] = useState(numericColumns[1] || '');
+  const [error, setError] = useState<string | null>(null);
 
   const runTTEST = () => {
+    setError(null);
+
+    if (!firstGroup || !secondGroup) {
+      setError("Please select two groups to perform the T-Test.");
+      onError?.();
+      return;
+    }
+
+    if (firstGroup === secondGroup) {
+      setError("Please select two different groups for the T-Test.");
+      onError?.();
+      return;
+    }
+
     try {
-      const cellValues = allColumnarData;
-      const result = performAnalysis(actionId, cellValues);
-      if (cellValues.size === 0) {
-        console.log(cellValues)
+      const filteredData = new Map();
+      if (allColumnarData.has(firstGroup)) {
+        filteredData.set(firstGroup, allColumnarData.get(firstGroup));
+      }
+      if (allColumnarData.has(secondGroup)) {
+        filteredData.set(secondGroup, allColumnarData.get(secondGroup));
+      }
+
+      if (filteredData.size < 2) {
+        setError("The selected groups were not found in the data.");
+        onError?.();
         return;
       }
+
+      const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
+      setError("An error occurred during the T-Test. Please check your data.");
+      console.error("T-Test failed:", err);
       onError?.();
     }
-  }
+  };
+
+  const isRunButtonDisabled = !firstGroup || !secondGroup || firstGroup === secondGroup;
 
   return (
     <div className={containerClass}>
@@ -658,22 +689,39 @@ export const TTest = ({
       <p className={descriptionClass}>Performs a T-Test to compare the means of two groups.</p>
       <div className="space-y-4 mb-6">
         <div>
-          <label htmlFor="ttest-column" className={labelClass}>Select Numeric Column</label>
-          <select multiple id="ttest-column" className={selectClass}>
+          <label htmlFor="ttest-column" className={labelClass}>Select First Numeric Column</label>
+          <select
+            id="ttest-column-1"
+            className={selectClass}
+            value={firstGroup}
+            onChange={(e) => setFirstGroup(e.target.value)}
+          >
             {[...numericColumns].map(col => <option key={col} value={col}>{col}</option>)}
           </select>
         </div>
         <div>
-          <label htmlFor="ttest-group-column" className={labelClass}>Select Grouping Column</label>
-          <select id="ttest-group-column" className={selectClass}>
-            {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
+          <label htmlFor="ttest-group-column" className={labelClass}>Select Second Numeric Column</label>
+          <select
+            id="ttest-column-2"
+            className={selectClass}
+            value={secondGroup}
+            onChange={(e) => setSecondGroup(e.target.value)}
+          >
+            {[...numericColumns].map(col => <option key={col} value={col}>{col}</option>)}
           </select>
         </div>
       </div>
 
+      {error && (
+        <div className="text-red-500 text-sm mb-4">
+          {error}
+        </div>
+      )}
+
       <div className="flex justify-end">
         <button
           className={buttonClass}
+          disabled={isRunButtonDisabled}
           onClick={runTTEST}
         >
           Run T-Test

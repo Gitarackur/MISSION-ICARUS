@@ -42,7 +42,62 @@ export function normalization(values: number[][]) {
     const max_value = Math.max.apply(Math, [...firstNestedValue]);
     const min_value = Math.min.apply(Math, [...firstNestedValue]);
     return firstNestedValue.map((value) => {
-      return (value - min_value) / (max_value - min_value)
-    })
-  })
+      return (value - min_value) / (max_value - min_value);
+    });
+  });
+}
+
+// calcuate the t-test of the data
+export function tTest(data: number[][]) {
+  if (data.length !== 2) {
+    console.error(
+      "T-Test requires exactly two groups of data, but received a different number."
+    );
+    return null;
+  }
+
+  const group1Data = data[0];
+  const group2Data = data[1];
+
+  if (group1Data.length < 2 || group2Data.length < 2) {
+    console.error(
+      "Each group must have at least two data points to perform the t-test."
+    );
+    return null;
+  }
+
+  // Calculate means
+  const n1 = group1Data.length;
+  const n2 = group2Data.length;
+
+  const mean1 = mean(group1Data);
+  const mean2 = mean(group2Data);
+
+  // Calculate variances
+  const variance1 = variance(group1Data);
+  const variance2 = variance(group2Data);
+
+  // Calculate pooled standard deviation
+  const degreesOfFreedom = n1 + n2 - 2;
+  const pooledVariance =
+    ((n1 - 1) * variance1 + (n2 - 1) * variance2) / degreesOfFreedom;
+  const pooledStdDev = Math.sqrt(pooledVariance);
+
+  // Calculate t-statistic
+  let tStatistic =
+    (mean1 - mean2) / (pooledStdDev * Math.sqrt(1 / n1 + 1 / n2));
+
+  // Handle case where pooledStdDev is zero
+  if (!isFinite(tStatistic)) {
+    tStatistic = 0;
+  }
+
+  return {
+    tStatistic,
+    degreesOfFreedom,
+    mean1,
+    mean2,
+    stdDev1: Math.sqrt(variance1),
+    stdDev2: Math.sqrt(variance2),
+  };
 }
