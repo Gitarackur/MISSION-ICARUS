@@ -72,6 +72,8 @@ export const useStatisticalAnalysis = () => {
           newColumnNames = numericColumns.map(col => `${col}_normalized`);
           break;
         }
+        case 't-test':
+        case "t-test-test":
         default: {
           throw new Error(`Action '${action}' not supported.`);
         }

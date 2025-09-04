@@ -1,8 +1,6 @@
-// DataPreview.ts
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
-import { Calculator } from 'lucide-react';
 import { DataPreviewProps } from './types';
 import { dataOutputStyles } from './variants/data-output.variant';
 import StatisticalAnalysisInstructions from '../statistics/components/analysis-instructions';
@@ -12,32 +10,28 @@ import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 import { ProteinRow } from '@/domain/proteins/index.types';
-import { useStatisticalAnalysis } from '@/app-layer/statistics/hooks/useStatistics';
-import { StatisticalAction } from '@/domain/statistics/index.types';
-import { getCellValues } from './utils';
-import ClearTableSelection from './clear-table-selection';
+import { StatisticalAnalysisResult } from '@/domain/statistics/index.types';
+
+
+
 
 const ROWS_PER_PAGE = 20;
+
+
 
 const DataPreview: React.FC<DataPreviewProps> = ({
   originalDataRows,
   filteredDataRows,
-
   // original columns from raw data
   originalDataColumns,
-
   // toggled columns for UI view
   selectedDataColumns,
   setSelectedDataColumns,
-
   onSelectButtonForUpload,
-
   // callback to save activity on statistical analysis
   saveActivityInWorkflow,
-
   // the source session matrix
   sessionSourceMatrix
-
 }) => {
 
   // styles for data preview table
@@ -46,22 +40,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   // use table for styling and interacting with its rows and columns
   const {
     allColumnarData,
-    numericColumns,
-
-    handleColumnClick,
-    clearAnalysisSelection,
     getCellStyle: getBaseCellStyle,
-
-    selectedAnalysisRowCells,
-    selectedAnalysisColumnCells,
-    selectedAnalysisColumnHeaderValues,
-
-    selectOneRow,
-    selectAllRows,
-
-    isAllSelectedUI,
-    setIsAllSelectedUI,
-
   } = useTableStylingAndInteraction(originalDataRows, originalDataColumns);
 
   const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
@@ -84,30 +63,16 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     reset();
   };
 
-  // Format the selected column names for display in the UI
-  const selectedColumnsDisplay = useMemo(() => {
-    return Array.from(selectedAnalysisColumnHeaderValues).join(', ');
-  }, [selectedAnalysisColumnHeaderValues]);
-
-  // hook that attaches to statistical engine
-  const { performAnalysis } = useStatisticalAnalysis();
-
-
-  const handleMenuAction = useCallback((action: StatisticalAction) => {
+  const handleMenuAction = useCallback((result: StatisticalAnalysisResult) => {
     try {
-      // confirm if its row or column data sent
-      const cellValues = getCellValues(selectedAnalysisRowCells, selectedAnalysisColumnCells);
-      // statistical calculations -- performAnalysis should be able to know which is row or column and do proper analysis on them
-      // it should also generate the matrix(that would be stored) with the results
-      const result = performAnalysis(action, cellValues);
       console.log("result", result)
+
       const {
         inputParameters,
         newly_created_columns: outputColumns,
         data: outputData,
         outputParameters
       } = result
-
 
       // get the input matrix reference
       const inputMatrixReferences: string[] = [];
@@ -139,20 +104,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     } catch (err) {
       throw new Error(`unable to handle menu selection: ${err}`)
     }
-  }, [performAnalysis, saveActivityInWorkflow, selectedAnalysisColumnCells, selectedAnalysisRowCells, sessionSourceMatrix]);
-
-
+  }, [saveActivityInWorkflow, sessionSourceMatrix]);
 
   useEffect(() => {
     if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
       setSelectedDataColumns(originalDataColumns);
     }
   }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
-
-
-
-
-
 
   // account for empty state from raw data
   if (!originalDataRows.length) {
@@ -164,25 +122,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   return (
     <div className={s.container()}>
       <h3 className={s.heading3()}>Data Preview</h3>
-
       <StatisticalAnalysisInstructions />
-
       <>
-        {
-          // (selectedAnalysisRowCells.length > 0 || selectedAnalysisColumnHeaderValues.size > 0) && (
-          (selectedAnalysisColumnHeaderValues.size > 0) && (
-            <>
-              <ClearTableSelection
-                selectedColumnsDisplay={selectedColumnsDisplay}
-                clearAnalysisSelection={() => {
-                  clearAnalysisSelection()
-                }}
-              />
-            </>
-          )
-        }
-        <StatisticsMenu 
-          onMenuAction={handleMenuAction} 
+        <StatisticsMenu
+          onMenuAction={handleMenuAction}
           dataRows={originalDataRows}
           allColumnarData={allColumnarData}
           dataColumns={originalDataColumns}
@@ -210,31 +153,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         <table className={s.table()}>
           <thead className={s.tableHead()}>
             <tr>
-              <th className={s.tableCellCheckboxContainer()}>
-                <Checkbox
-                  checked={isAllSelectedUI}
-                  type="checkbox"
-                  className="rounded border-gray-300"
-                  onChange={(e) => {
-                    setIsAllSelectedUI(e.target.checked);
-                    selectAllRows(e.target.checked);
-                  }}
-                />
-              </th>
-
               {selectedDataColumns.map((column) => (
                 <React.Fragment key={column}>
                   <th
                     className={getCombinedCellStyle(0, null, column, true)}
-                    onClick={() => {
-                      handleColumnClick(column)
-                    }}
                   >
                     <div className="flex items-center">
                       {formatColumnHeader(column)}
-                      {numericColumns.has(column) && (
-                        <Calculator className="ml-2 h-4 w-4 text-blue-600" />
-                      )}
                     </div>
                   </th>
                 </React.Fragment>
@@ -248,17 +173,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                 const actualRowIndex = idx + (currentPage - 1) * ROWS_PER_PAGE;
                 return (
                   <tr key={actualRowIndex} className={s.tableBodyRow()}>
-                    <td className={s.tableCellCheckboxContainer()}>
-                      <Checkbox
-                        type="checkbox"
-                        className="rounded border-gray-300"
-                        checked={selectedAnalysisRowCells.includes(row)}
-                        onChange={(e) => {
-                          selectOneRow(row, e.target.checked);
-                          console.log("row", row)
-                        }}
-                      />
-                    </td>
                     {selectedDataColumns.map((column) => (
                       <td
                         key={column}
@@ -284,11 +198,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       <div className='flex items-center justify-between'>
         <div>
           Showing {paginatedData.length} of {filteredDataRows.length} proteins
-          {selectedAnalysisColumnHeaderValues.size > 0 && (
-            <span className="ml-4 text-blue-600 font-medium">
-              Analyzing: {selectedColumnsDisplay}
-            </span>
-          )}
+          <span className="ml-4 text-blue-600 font-medium">
+            Analyzing All Columns
+          </span>
         </div>
 
         <div>

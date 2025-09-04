@@ -1,6 +1,9 @@
+import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
+import { useStatisticalAnalysis } from "@/app-layer/statistics/hooks/useStatistics";
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { StatisticalAction } from "@/domain/statistics/index.types";
+import { StatisticalAction, StatisticalAnalysisResult } from "@/domain/statistics/index.types";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
+import { useMemo } from "react";
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
@@ -15,9 +18,11 @@ const dangerButtonClass = "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-r
 
 // --- UI COMPONENTS FOR EACH STATISTICAL ACTION ---
 export const Count = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Count All Values</h1>
@@ -35,9 +40,11 @@ export const Count = ({
 );
 
 export const CountMissing = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Count Missing Values</h1>
@@ -55,9 +62,11 @@ export const CountMissing = ({
 );
 
 export const CountValid = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Count Valid Values</h1>
@@ -75,9 +84,11 @@ export const CountValid = ({
 );
 
 export const MeanValues = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Calculate Mean</h1>
@@ -95,9 +106,11 @@ export const MeanValues = ({
 );
 
 export const MedianValues = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Calculate Median</h1>
@@ -115,9 +128,11 @@ export const MedianValues = ({
 );
 
 export const Variance = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Calculate Variance</h1>
@@ -135,9 +150,11 @@ export const Variance = ({
 );
 
 export const StdDevValues = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Calculate Standard Deviation</h1>
@@ -155,9 +172,11 @@ export const StdDevValues = ({
 );
 
 export const Sum = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Calculate Sum</h1>
@@ -175,9 +194,11 @@ export const Sum = ({
 );
 
 export const Product = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Calculate Product</h1>
@@ -195,9 +216,11 @@ export const Product = ({
 );
 
 export const Min = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Find Minimum</h1>
@@ -215,9 +238,11 @@ export const Min = ({
 );
 
 export const Max = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Find Maximum</h1>
@@ -235,9 +260,11 @@ export const Max = ({
 );
 
 export const FilterByValue = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Filter By Value</h1>
@@ -272,9 +299,11 @@ export const FilterByValue = ({
 );
 
 export const FilterByMissing = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Filter By Missing Values</h1>
@@ -292,9 +321,11 @@ export const FilterByMissing = ({
 );
 
 export const FilterByRange = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Filter By Range</h1>
@@ -322,9 +353,11 @@ export const FilterByRange = ({
 );
 
 export const FilterByOutlier = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Filter By Outliers</h1>
@@ -356,9 +389,11 @@ export const AddColumn = () => (
 );
 
 export const RenameColumn = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Rename Column</h1>
@@ -382,9 +417,11 @@ export const RenameColumn = ({
 );
 
 export const DeleteColumn = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Delete Column</h1>
@@ -402,9 +439,11 @@ export const DeleteColumn = ({
 );
 
 export const FillColumn = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Fill Column</h1>
@@ -428,9 +467,11 @@ export const FillColumn = ({
 );
 
 export const ImputeMean = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Mean Imputation</h1>
@@ -448,9 +489,11 @@ export const ImputeMean = ({
 );
 
 export const ImputeMedian = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Median Imputation</h1>
@@ -468,9 +511,11 @@ export const ImputeMedian = ({
 );
 
 export const ImputeKnn = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>KNN Imputation</h1>
@@ -494,9 +539,11 @@ export const ImputeKnn = ({
 );
 
 export const ImputeZero = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Zero Imputation</h1>
@@ -514,9 +561,11 @@ export const ImputeZero = ({
 );
 
 export const MovingAverage = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Moving Average</h1>
@@ -540,9 +589,11 @@ export const MovingAverage = ({
 );
 
 export const RollingStdDev = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Rolling Standard Deviation</h1>
@@ -566,15 +617,41 @@ export const RollingStdDev = ({
 );
 
 export const TTest = ({
+  actionId,
   dataColumns,
-  // dataRows,
+  dataRows,
   allColumnarData,
+  onSuccess,
+  onError,
 }: {
+  actionId: StatisticalAction,
   dataColumns: TableColumns,
   dataRows: ProteinRow[],
   allColumnarData: Map<string, TableMatrix>
+  onSuccess?: (result: StatisticalAnalysisResult) => void,
+  onError?: () => void
 }) => {
-  console.log('DATA columns', allColumnarData)
+
+  // hook that attaches to statistical engine
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const numericColumns = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  console.log(numericColumns);
+
+  const runTTEST = () => {
+    try {
+      const cellValues = allColumnarData;
+      const result = performAnalysis(actionId, cellValues);
+      if (cellValues.size === 0) {
+        console.log(cellValues)
+        return;
+      }
+      onSuccess?.(result);
+    } catch (err) {
+      onError?.();
+    }
+  }
+
   return (
     <div className={containerClass}>
       <h1 className={headingClass}>T-Test</h1>
@@ -583,7 +660,7 @@ export const TTest = ({
         <div>
           <label htmlFor="ttest-column" className={labelClass}>Select Numeric Column</label>
           <select multiple id="ttest-column" className={selectClass}>
-            {dataColumns.map(col => <option key={col} value={col}>{col}</option>)}
+            {[...numericColumns].map(col => <option key={col} value={col}>{col}</option>)}
           </select>
         </div>
         <div>
@@ -593,17 +670,25 @@ export const TTest = ({
           </select>
         </div>
       </div>
+
       <div className="flex justify-end">
-        <button className={buttonClass}>Run T-Test</button>
+        <button
+          className={buttonClass}
+          onClick={runTTEST}
+        >
+          Run T-Test
+        </button>
       </div>
     </div>
   )
 };
 
 export const Anova = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>ANOVA</h1>
@@ -629,9 +714,11 @@ export const Anova = ({
 );
 
 export const Limma = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>LIMMA</h1>
@@ -658,9 +745,11 @@ export const Limma = ({
 );
 
 export const FoldChange = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Fold Change</h1>
@@ -688,9 +777,11 @@ export const FoldChange = ({
 );
 
 export const NormalizeReporterIons = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Normalize Reporter Ions</h1>
@@ -715,9 +806,11 @@ export const NormalizeReporterIons = ({
 );
 
 export const CorrectForPurity = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Correct for Purity</h1>
@@ -742,9 +835,11 @@ export const CorrectForPurity = ({
 );
 
 export const BoxPlot = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Box Plot</h1>
@@ -762,9 +857,11 @@ export const BoxPlot = ({
 );
 
 export const ScatterPlot = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Scatter Plot</h1>
@@ -790,9 +887,11 @@ export const ScatterPlot = ({
 );
 
 export const Heatmap = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Heatmap</h1>
@@ -813,9 +912,11 @@ export const Heatmap = ({
 );
 
 export const VolcanoPlot = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Volcano Plot</h1>
@@ -841,9 +942,11 @@ export const VolcanoPlot = ({
 );
 
 export const PcaPlot = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>PCA Plot</h1>
@@ -862,9 +965,11 @@ export const PcaPlot = ({
 );
 
 export const SortAsc = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Sort Ascending</h1>
@@ -882,9 +987,11 @@ export const SortAsc = ({
 );
 
 export const SortDesc = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Sort Descending</h1>
@@ -902,9 +1009,11 @@ export const SortDesc = ({
 );
 
 export const ReorderColumns = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Reorder Columns</h1>
@@ -969,9 +1078,11 @@ export const FilterColumnsByType = () => (
 );
 
 export const AddRow = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Add New Row</h1>
@@ -985,10 +1096,10 @@ export const AddRow = ({
               <label htmlFor="add-row" className={labelClass}>
                 {col}
               </label>
-              <input 
+              <input
                 // type="number" 
-                id="add-row" 
-                className={inputClass} 
+                id="add-row"
+                className={inputClass}
                 placeholder={col}
               />
             </div>
@@ -1003,9 +1114,11 @@ export const AddRow = ({
 );
 
 export const RenameRow = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Rename Row</h1>
@@ -1029,9 +1142,11 @@ export const RenameRow = ({
 );
 
 export const DeleteRow = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Delete Row</h1>
@@ -1049,9 +1164,11 @@ export const DeleteRow = ({
 );
 
 export const PcaLearning = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>PCA</h1>
@@ -1076,9 +1193,11 @@ export const PcaLearning = ({
 );
 
 export const PlsdaLearning = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>PLS-DA</h1>
@@ -1105,9 +1224,11 @@ export const PlsdaLearning = ({
 );
 
 export const TsneLearning = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>t-SNE</h1>
@@ -1132,9 +1253,11 @@ export const TsneLearning = ({
 );
 
 export const AddPtm = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Add PTM</h1>
@@ -1162,9 +1285,11 @@ export const AddPtm = ({
 );
 
 export const RemovePtm = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Remove PTM</h1>
@@ -1236,9 +1361,11 @@ export const PathwayAnalysis = () => (
 );
 
 export const HierarchicalClustering = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Hierarchical Clustering</h1>
@@ -1267,9 +1394,11 @@ export const HierarchicalClustering = ({
 );
 
 export const KmeansClustering = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>K-Means Clustering</h1>
@@ -1294,9 +1423,11 @@ export const KmeansClustering = ({
 );
 
 export const PcaAnalysis = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>PCA Analysis</h1>
@@ -1321,9 +1452,11 @@ export const PcaAnalysis = ({
 );
 
 export const ZScoreNorm = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Z-Score Normalization</h1>
@@ -1341,9 +1474,11 @@ export const ZScoreNorm = ({
 );
 
 export const LogTransform = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Log Transformation</h1>
@@ -1361,9 +1496,11 @@ export const LogTransform = ({
 );
 
 export const QuantileNormalization = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Quantile Normalization</h1>
@@ -1382,9 +1519,11 @@ export const QuantileNormalization = ({
 );
 
 export const MeanCentering = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Mean Centering</h1>
@@ -1429,9 +1568,11 @@ export const MissingValuesPlot = () => (
 );
 
 export const FTest = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>F-Test</h1>
@@ -1457,9 +1598,11 @@ export const FTest = ({
 );
 
 export const ChiSquareTest = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Chi-Square Test</h1>
@@ -1485,9 +1628,11 @@ export const ChiSquareTest = ({
 );
 
 export const ZScoreOutliers = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Z-Score Outliers</h1>
@@ -1511,9 +1656,11 @@ export const ZScoreOutliers = ({
 );
 
 export const IqrOutliers = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>IQR Outliers</h1>
@@ -1537,9 +1684,11 @@ export const IqrOutliers = ({
 );
 
 export const GrubbsTest = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Grubbs' Test</h1>
@@ -1557,9 +1706,11 @@ export const GrubbsTest = ({
 );
 
 export const WgcnaAnalysis = ({
-  dataColumns
+  dataColumns,
+  // actionId,
 }: {
-  dataColumns: TableColumns
+  dataColumns: TableColumns,
+  actionId: StatisticalAction
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>WGCNA Analysis</h1>

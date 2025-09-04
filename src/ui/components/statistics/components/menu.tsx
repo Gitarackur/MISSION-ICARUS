@@ -364,26 +364,43 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useClickOutside(menuRef, () => setOpenDropdownId(null));
+
   // useClickOutside(dropdownRef, () => setOpenDropdownId(null));
-  const { handleMenuSelection } = useStatisticsMenu({ dataColumns, dataRows, allColumnarData });
+  const { handleMenuSelection } = useStatisticsMenu({
+    dataColumns,
+    dataRows,
+    allColumnarData,
+  });
 
   const handleButtonClick = (item: StatisticsMenuItem) => {
-    const newOpenDropdownId = item.hasDropdown
-      ? openDropdownId === item.id
-        ? null
-        : item.id
-      : null;
+    let newOpenDropdownId = null;
+
+    // check for dropdown
+    if (item.hasDropdown) {
+      if (openDropdownId === item.id) {
+        newOpenDropdownId = null;
+      } else {
+        newOpenDropdownId = item.id;
+      }
+    }
+
     setOpenDropdownId(newOpenDropdownId);
 
     if (!item.hasDropdown) {
-      onMenuAction(item.id as StatisticalAction);
+      // call the handling of menu selection
+      handleMenuSelection(item.id, (result) => {
+        // emit the selection result values
+        onMenuAction(result);
+      });
     }
   };
 
   const handleDropdownItemClick = (actionId: StatisticalAction) => {
     setOpenDropdownId(null);
-    handleMenuSelection(actionId);
-    // onMenuAction(actionId as StatisticalAction);
+    handleMenuSelection(actionId, (result) => {
+      // emit the selection result values
+      onMenuAction(result);
+    });
   };
 
   return (
@@ -397,7 +414,9 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
                   <div key={item.id} className="relative">
                     <button
                       className={toolbarButton()}
-                      onClick={() => handleButtonClick(item)}
+                      onClick={() =>
+                        handleButtonClick(item as StatisticsMenuItem)
+                      }
                     >
                       {React.cloneElement(item.icon, {
                         className: toolbarButtonIcon(),

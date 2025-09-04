@@ -1,131 +1,246 @@
-import { StatisticalAction } from '@/domain/statistics/index.types';
-import { useModal } from '@/ui/design-system/Modal/context';
-import { SortAsc, SortDesc } from 'lucide-react';
-import { CountMissing, CountValid, MeanValues, MedianValues, Variance, StdDevValues, Sum, Product, Min, Max, FilterByValue, FilterByMissing, FilterByRange, FilterByOutlier, AddColumn, RenameColumn, DeleteColumn, FillColumn, ImputeMean, ImputeMedian, ImputeKnn, ImputeZero, MovingAverage, RollingStdDev, TTest, Anova, Limma, FoldChange, NormalizeReporterIons, CorrectForPurity, BoxPlot, ScatterPlot, Heatmap, VolcanoPlot, PcaPlot, ReorderColumns, Transpose, FilterColumnsByName, FilterColumnsByType, AddRow, RenameRow, DeleteRow, PcaLearning, PlsdaLearning, TsneLearning, AddPtm, RemovePtm, GoAnalysis, PathwayAnalysis, HierarchicalClustering, KmeansClustering, PcaAnalysis, ZScoreNorm, LogTransform, QuantileNormalization, MeanCentering, QcPlot, MissingValuesPlot, FTest, ChiSquareTest, ZScoreOutliers, IqrOutliers, GrubbsTest, WgcnaAnalysis, SaveData, ExportCsv, NoUiFound } from '../components';
-import { TableColumns, TableMatrix } from '@/domain/workflow/main.types';
-import { ProteinRow } from '@/domain/proteins/index.types';
+import {
+  StatisticalAction,
+  StatisticalAnalysisResult,
+} from "@/domain/statistics/index.types";
+import { useModal } from "@/ui/design-system/Modal/context";
+import { SortAsc, SortDesc } from "lucide-react";
+import {
+  CountMissing,
+  CountValid,
+  MeanValues,
+  MedianValues,
+  Variance,
+  StdDevValues,
+  Sum,
+  Product,
+  Min,
+  Max,
+  FilterByValue,
+  FilterByMissing,
+  FilterByRange,
+  FilterByOutlier,
+  AddColumn,
+  RenameColumn,
+  DeleteColumn,
+  FillColumn,
+  ImputeMean,
+  ImputeMedian,
+  ImputeKnn,
+  ImputeZero,
+  MovingAverage,
+  RollingStdDev,
+  TTest,
+  Anova,
+  Limma,
+  FoldChange,
+  NormalizeReporterIons,
+  CorrectForPurity,
+  BoxPlot,
+  ScatterPlot,
+  Heatmap,
+  VolcanoPlot,
+  PcaPlot,
+  ReorderColumns,
+  Transpose,
+  FilterColumnsByName,
+  FilterColumnsByType,
+  AddRow,
+  RenameRow,
+  DeleteRow,
+  PcaLearning,
+  PlsdaLearning,
+  TsneLearning,
+  AddPtm,
+  RemovePtm,
+  GoAnalysis,
+  PathwayAnalysis,
+  HierarchicalClustering,
+  KmeansClustering,
+  PcaAnalysis,
+  ZScoreNorm,
+  LogTransform,
+  QuantileNormalization,
+  MeanCentering,
+  QcPlot,
+  MissingValuesPlot,
+  FTest,
+  ChiSquareTest,
+  ZScoreOutliers,
+  IqrOutliers,
+  GrubbsTest,
+  WgcnaAnalysis,
+  SaveData,
+  ExportCsv,
+  NoUiFound,
+} from "../components";
+import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
+import { ProteinRow } from "@/domain/proteins/index.types";
 
 const useStatisticsMenu = ({
   allColumnarData,
   dataColumns,
-  dataRows
+  dataRows,
 }: {
-  dataColumns: TableColumns,
-  dataRows: ProteinRow[],
-  allColumnarData: Map<string, TableMatrix>
+  dataColumns: TableColumns;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
 }) => {
   const { openModal } = useModal();
 
-  const handleMenuSelection = (actionId: StatisticalAction) => {
+  const handleMenuSelection = (
+    actionId: StatisticalAction,
+    onSuccess?: (result: StatisticalAnalysisResult) => void,
+    onError?: () => void
+  ) => {
     let content;
 
     // Use a switch statement to render the correct component
     switch (actionId) {
       case "count-missing":
-        content = <CountMissing dataColumns={dataColumns} />;
+        content = (
+          <CountMissing dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "count-valid":
-        content = <CountValid dataColumns={dataColumns} />;
+        content = <CountValid dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "mean-values":
-        content = <MeanValues dataColumns={dataColumns} />;
+        content = <MeanValues dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "median-values":
-        content = <MedianValues dataColumns={dataColumns} />;
+        content = (
+          <MedianValues dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "variance":
-        content = <Variance dataColumns={dataColumns} />;
+        content = <Variance dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "stddev-values":
-        content = <StdDevValues dataColumns={dataColumns} />;
+        content = (
+          <StdDevValues dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "sum":
-        content = <Sum dataColumns={dataColumns} />;
+        content = <Sum dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "product":
-        content = <Product dataColumns={dataColumns} />;
+        content = <Product dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "min":
-        content = <Min dataColumns={dataColumns} />;
+        content = <Min dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "max":
-        content = <Max dataColumns={dataColumns} />;
+        content = <Max dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "filter-by-value":
-        content = <FilterByValue dataColumns={dataColumns} />;
+        content = (
+          <FilterByValue dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "filter-by-missing":
-        content = <FilterByMissing dataColumns={dataColumns} />;
+        content = (
+          <FilterByMissing dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "filter-by-range":
-        content = <FilterByRange dataColumns={dataColumns} />;
+        content = (
+          <FilterByRange dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "filter-by-outlier":
-        content = <FilterByOutlier dataColumns={dataColumns} />;
+        content = (
+          <FilterByOutlier dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "add-column":
         content = <AddColumn />;
         break;
       case "rename-column":
-        content = <RenameColumn dataColumns={dataColumns} />;
+        content = (
+          <RenameColumn dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "delete-column":
-        content = <DeleteColumn dataColumns={dataColumns} />;
+        content = (
+          <DeleteColumn dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "fill-column":
-        content = <FillColumn dataColumns={dataColumns} />;
+        content = <FillColumn dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "impute-mean":
-        content = <ImputeMean dataColumns={dataColumns} />;
+        content = <ImputeMean dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "impute-median":
-        content = <ImputeMedian dataColumns={dataColumns} />;
+        content = (
+          <ImputeMedian dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "impute-knn":
-        content = <ImputeKnn dataColumns={dataColumns} />;
+        content = <ImputeKnn dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "impute-zero":
-        content = <ImputeZero dataColumns={dataColumns} />;
+        content = <ImputeZero dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "moving-average":
-        content = <MovingAverage dataColumns={dataColumns} />;
+        content = (
+          <MovingAverage dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "rolling-stddev":
-        content = <RollingStdDev dataColumns={dataColumns} />;
+        content = (
+          <RollingStdDev dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "t-test":
       case "t-test-test": // Both t-test actions can use the same UI
-        content = <TTest dataColumns={dataColumns} dataRows={dataRows} allColumnarData={allColumnarData} />;
+        content = (
+          <TTest
+            dataColumns={dataColumns}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={onSuccess}
+            onError={onError}
+            actionId={actionId}
+          />
+        );
         break;
       case "anova":
-        content = <Anova dataColumns={dataColumns} />;
+        content = <Anova dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "limma":
-        content = <Limma dataColumns={dataColumns} />;
+        content = <Limma dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "fold-change":
-        content = <FoldChange dataColumns={dataColumns} />;
+        content = <FoldChange dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "normalize-reporter-ions":
-        content = <NormalizeReporterIons dataColumns={dataColumns} />;
+        content = (
+          <NormalizeReporterIons
+            dataColumns={dataColumns}
+            actionId={actionId}
+          />
+        );
         break;
       case "correct-for-purity":
-        content = <CorrectForPurity dataColumns={dataColumns} />;
+        content = (
+          <CorrectForPurity dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "box-plot":
-        content = <BoxPlot dataColumns={dataColumns} />;
+        content = <BoxPlot dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "scatter-plot":
-        content = <ScatterPlot dataColumns={dataColumns} />;
+        content = <ScatterPlot dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "heatmap":
-        content = <Heatmap dataColumns={dataColumns} />;
+        content = <Heatmap dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "volcano-plot":
-        content = <VolcanoPlot dataColumns={dataColumns} />;
+        content = <VolcanoPlot dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "pca-plot":
-        content = <PcaPlot dataColumns={dataColumns} />;
+        content = <PcaPlot dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "sort-asc":
         content = <SortAsc />;
@@ -134,7 +249,9 @@ const useStatisticsMenu = ({
         content = <SortDesc />;
         break;
       case "reorder-columns":
-        content = <ReorderColumns dataColumns={dataColumns} />;
+        content = (
+          <ReorderColumns dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "transpose":
         content = <Transpose />;
@@ -146,28 +263,32 @@ const useStatisticsMenu = ({
         content = <FilterColumnsByType />;
         break;
       case "add-row":
-        content = <AddRow dataColumns={dataColumns} />;
+        content = <AddRow dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "rename-row":
-        content = <RenameRow dataColumns={dataColumns} />;
+        content = <RenameRow dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "delete-row":
-        content = <DeleteRow dataColumns={dataColumns} />;
+        content = <DeleteRow dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "pca-learning":
-        content = <PcaLearning dataColumns={dataColumns} />;
+        content = <PcaLearning dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "plsda-learning":
-        content = <PlsdaLearning dataColumns={dataColumns} />;
+        content = (
+          <PlsdaLearning dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "tsne-learning":
-        content = <TsneLearning dataColumns={dataColumns} />;
+        content = (
+          <TsneLearning dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "add-ptm":
-        content = <AddPtm dataColumns={dataColumns} />;
+        content = <AddPtm dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "remove-ptm":
-        content = <RemovePtm dataColumns={dataColumns} />;
+        content = <RemovePtm dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "go-analysis":
         content = <GoAnalysis />;
@@ -177,26 +298,42 @@ const useStatisticsMenu = ({
         break;
       case "hierarchical-clustering":
       case "hierarchical-clustering-run":
-        content = <HierarchicalClustering dataColumns={dataColumns} />;
+        content = (
+          <HierarchicalClustering
+            dataColumns={dataColumns}
+            actionId={actionId}
+          />
+        );
         break;
       case "k-means-clustering":
       case "k-means-clustering-run":
-        content = <KmeansClustering dataColumns={dataColumns} />;
+        content = (
+          <KmeansClustering dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "pca-analysis":
-        content = <PcaAnalysis dataColumns={dataColumns} />;
+        content = <PcaAnalysis dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "z-score-norm":
-        content = <ZScoreNorm dataColumns={dataColumns} />;
+        content = <ZScoreNorm dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "log-transform":
-        content = <LogTransform dataColumns={dataColumns} />;
+        content = (
+          <LogTransform dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "quantile-normalization":
-        content = <QuantileNormalization dataColumns={dataColumns} />;
+        content = (
+          <QuantileNormalization
+            dataColumns={dataColumns}
+            actionId={actionId}
+          />
+        );
         break;
       case "mean-centering":
-        content = <MeanCentering dataColumns={dataColumns} />;
+        content = (
+          <MeanCentering dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "qc-plot":
         content = <QcPlot />;
@@ -205,22 +342,28 @@ const useStatisticsMenu = ({
         content = <MissingValuesPlot />;
         break;
       case "f-test-test":
-        content = <FTest dataColumns={dataColumns} />;
+        content = <FTest dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "chi-square-test":
-        content = <ChiSquareTest dataColumns={dataColumns} />;
+        content = (
+          <ChiSquareTest dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "z-score-outliers":
-        content = <ZScoreOutliers dataColumns={dataColumns} />;
+        content = (
+          <ZScoreOutliers dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "iqr-outliers":
-        content = <IqrOutliers dataColumns={dataColumns} />;
+        content = <IqrOutliers dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "grubbs-test":
-        content = <GrubbsTest dataColumns={dataColumns} />;
+        content = <GrubbsTest dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "wgcna-analysis":
-        content = <WgcnaAnalysis dataColumns={dataColumns} />;
+        content = (
+          <WgcnaAnalysis dataColumns={dataColumns} actionId={actionId} />
+        );
         break;
       case "save-data":
         content = <SaveData />;
@@ -235,15 +378,11 @@ const useStatisticsMenu = ({
     }
 
     // open modal
-    openModal(
-      <div className='max-w-full h-full'>
-        {content}
-      </div>
-    );
-  }
+    openModal(<div className="max-w-full h-full">{content}</div>);
+  };
 
   return {
-    handleMenuSelection
-  }
-}
+    handleMenuSelection,
+  };
+};
 export default useStatisticsMenu;
