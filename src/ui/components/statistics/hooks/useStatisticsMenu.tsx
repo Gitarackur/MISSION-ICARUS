@@ -72,6 +72,7 @@ import {
   SaveData,
   ExportCsv,
   NoUiFound,
+  Count,
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -98,33 +99,168 @@ const useStatisticsMenu = ({
     switch (actionId) {
       case "count-missing":
         content = (
-          <CountMissing dataColumns={dataColumns} actionId={actionId} />
+          <CountMissing 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "count":
+        content = (
+          <Count
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "count-valid":
-        content = <CountValid dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <CountValid 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
+      case "mean":
       case "mean-values":
-        content = <MeanValues dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <MeanValues
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
+      case "median":
       case "median-values":
         content = (
-          <MedianValues dataColumns={dataColumns} actionId={actionId} />
+          <MedianValues 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "variance":
-        content = <Variance dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <Variance 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
+      case "stdDev":
       case "stddev-values":
         content = (
-          <StdDevValues dataColumns={dataColumns} actionId={actionId} />
+          <StdDevValues 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "sum":
-        content = <Sum dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <Sum 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "product":
-        content = <Product dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <Product 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "min":
         content = <Min dataColumns={dataColumns} actionId={actionId} />;
@@ -201,7 +337,7 @@ const useStatisticsMenu = ({
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
-              onSuccess?.(result)
+              onSuccess?.(result);
             }}
             onError={() => {
               closeModal();

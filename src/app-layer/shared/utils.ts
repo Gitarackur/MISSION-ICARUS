@@ -277,6 +277,14 @@ export const getNumericColumnsOptimized = (
 ): Set<string> => {
   const numericColumns = new Set<string>();
 
+  if (!data || !data.length) {
+    return numericColumns;
+  }
+
+  if (!columns || !columns.length) {
+    return numericColumns;
+  }
+
   if (data.length === 0 || columns.length === 0) {
     return numericColumns;
   }
