@@ -21,73 +21,74 @@ class IcarusParser {
     }
 
     const {
-      minValidPercentage = 0.1, // At least 10% of values must be valid
+      minValidPercentage = 0.1,
       allowedMissingValues = ['N/A', 'n/a', 'NA', 'na', 'NULL', 'null', '#N/A', '-', '']
     } = options;
 
+    // Pre-process missing values into a Set for O(1) lookup
+    const missingValuesSet = new Set(
+      allowedMissingValues.map(val => val.toLowerCase())
+    );
+
     const headers = Object.keys(data[0] as object);
 
-    // Helper function to check if a value represents a missing/null value
+    // Helper function to check if a value is missing
     const isMissingValue = (value: unknown): boolean => {
       if (value === null || value === undefined) return true;
       
       const stringValue = String(value).trim();
       if (stringValue === '') return true;
       
-      return allowedMissingValues.some(missing => 
-        stringValue.toLowerCase() === missing.toLowerCase()
-      );
-    };
-
-    // Helper function to check if a value represents NaN
-    const isNaNValue = (value: unknown): boolean => {
-      if (typeof value === 'number' && isNaN(value)) return true;
-      const stringValue = String(value).trim().toLowerCase();
-      return stringValue === 'nan';
+      const lowerValue = stringValue.toLowerCase();
+      return lowerValue === 'nan' || missingValuesSet.has(lowerValue);
     };
 
     for (const header of headers) {
-      let numericCount = 0;
-      let booleanCount = 0;
+      let isNumeric = true;
+      let isBoolean = true;
       let totalValidValues = 0;
 
-      // Check each value in the column
+      // Single pass through the data
       for (const row of data) {
         const value = (row as Record<string, unknown>)[header];
 
-        // Skip missing values and NaN
-        if (isMissingValue(value) || isNaNValue(value)) {
+        // Skip missing values
+        if (isMissingValue(value)) {
           continue;
         }
 
         totalValidValues++;
         const stringValue = String(value).trim();
 
-        // Test for number
-        const numericValue = parseFloat(stringValue);
-        if (!isNaN(numericValue) && isFinite(numericValue)) {
-          numericCount++;
+        // Early exit optimization: if both tests already failed, break
+        if (!isNumeric && !isBoolean) {
+          break;
         }
 
-        // Test for boolean (only exact matches)
-        const lowerValue = stringValue.toLowerCase();
-        if (lowerValue === 'true' || lowerValue === 'false') {
-          booleanCount++;
+        // Test for boolean first (cheaper operation)
+        if (isBoolean) {
+          const lowerValue = stringValue.toLowerCase();
+          if (lowerValue !== 'true' && lowerValue !== 'false') {
+            isBoolean = false;
+          }
+        }
+
+        // Test for numeric (only if still potentially numeric)
+        if (isNumeric) {
+          const numericValue = parseFloat(stringValue);
+          if (isNaN(numericValue) || !isFinite(numericValue)) {
+            isNumeric = false;
+          }
         }
       }
 
-      // Determine type based on what percentage of valid values match each type
-      const numericPercentage = totalValidValues > 0 ? numericCount / totalValidValues : 0;
-      const booleanPercentage = totalValidValues > 0 ? booleanCount / totalValidValues : 0;
+      // Determine type
       const validDataPercentage = data.length > 0 ? totalValidValues / data.length : 0;
-
-      // Only classify as numeric/boolean if we have enough valid data overall
+      
       if (validDataPercentage >= minValidPercentage) {
-        if (booleanPercentage === 1.0) {
-          // All valid values are boolean
+        if (isBoolean) {
           columnTypes[header] = 'boolean';
-        } else if (numericPercentage >= 1.0) {
-          // All valid values are numeric
+        } else if (isNumeric) {
           columnTypes[header] = 'number';
         } else {
           columnTypes[header] = 'string';
