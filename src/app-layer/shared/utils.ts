@@ -362,7 +362,6 @@ export const getNumericColumnsOptimized = (
 
 // get numeric columns from data optimized without conditions 
 // (ie - looking at if all values are numerical)
-
 export const getNumericColumnsOptimized1 = (
   columns: string[],
   data: ProteinRow[]
