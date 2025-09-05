@@ -1,4 +1,4 @@
-import { useMemo, useCallback } from "react";
+import { useMemo, useCallback, useEffect } from "react";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
@@ -7,7 +7,7 @@ import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
-  columns: string[],
+  columns: TableColumns,
   selectedDataColumns: TableColumns,
   setSelectedDataColumns: (cols: TableColumns) => void
 ) => {
@@ -93,6 +93,14 @@ export const useTableStylingAndInteraction = (
     const newSelectedColumns = columns.filter(c => updatedSelectedSet.has(c));
     setSelectedDataColumns(newSelectedColumns);
     onToggle?.();
+  }, [columns, selectedDataColumns, setSelectedDataColumns]);
+
+
+  // effect to fill the selected columns with the default columns listed
+  useEffect(() => {
+    if (selectedDataColumns.length === 0 && columns.length > 0) {
+      setSelectedDataColumns(columns);
+    }
   }, [columns, selectedDataColumns, setSelectedDataColumns]);
 
   return {

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
 import { DataPreviewProps } from './types';
@@ -104,11 +104,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     }
   }, [saveActivityInWorkflow, sessionSourceMatrix]);
 
-  useEffect(() => {
-    if (selectedDataColumns.length === 0 && originalDataColumns.length > 0) {
-      setSelectedDataColumns(originalDataColumns);
-    }
-  }, [originalDataColumns, selectedDataColumns, setSelectedDataColumns]);
 
   // account for empty state from raw data
   if (!originalDataRows.length) {
