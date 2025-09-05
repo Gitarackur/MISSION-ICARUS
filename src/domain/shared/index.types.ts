@@ -3,6 +3,12 @@ import { ProteinRow } from "@/domain/proteins/index.types";
 import { TableColumns, TableMatrices } from "@/domain/workflow/main.types";
 
 export type ColumnType = 'number' | 'boolean' | 'string' | 'unknown';
+
+export interface ColumnTypeInferenceOptions {
+  minValidPercentage?: number; // Minimum percentage of valid (non-missing) values required
+  allowedMissingValues?: string[]; // Custom missing value representations
+}
+
 export interface ParsedCSVResult<T> {
   data: T[];
   headers: string[];

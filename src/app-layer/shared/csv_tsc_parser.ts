@@ -1,12 +1,109 @@
-import { ColumnType, ParsedCSVResult } from "@/domain/shared/index.types";
+import { ColumnType, ParsedCSVResult, ColumnTypeInferenceOptions } from "@/domain/shared/index.types";
 import { toNumberIfPossible } from "./utils";
 import Papa, { ParseResult } from "papaparse";
+
 
 // Parses a CSV, TSV, or other delimited string and returns structured data
 class IcarusParser {
   constructor() {}
 
-  inferColumnTypes<T>(data: T[]): Record<string, ColumnType> {
+
+  // infer column types by fully checking the types of most the values on the column not strictly
+  // if any one value is remotely different from the others, it takes the higher percentage of the types in the column
+  inferColumnTypes<T>(
+    data: T[], 
+    options: ColumnTypeInferenceOptions = {}
+  ): Record<string, ColumnType> {
+    const columnTypes: Record<string, ColumnType> = {};
+    
+    if (data.length === 0) {
+      return columnTypes;
+    }
+
+    const {
+      minValidPercentage = 0.1, // At least 10% of values must be valid
+      allowedMissingValues = ['N/A', 'n/a', 'NA', 'na', 'NULL', 'null', '#N/A', '-', '']
+    } = options;
+
+    const headers = Object.keys(data[0] as object);
+
+    // Helper function to check if a value represents a missing/null value
+    const isMissingValue = (value: unknown): boolean => {
+      if (value === null || value === undefined) return true;
+      
+      const stringValue = String(value).trim();
+      if (stringValue === '') return true;
+      
+      return allowedMissingValues.some(missing => 
+        stringValue.toLowerCase() === missing.toLowerCase()
+      );
+    };
+
+    // Helper function to check if a value represents NaN
+    const isNaNValue = (value: unknown): boolean => {
+      if (typeof value === 'number' && isNaN(value)) return true;
+      const stringValue = String(value).trim().toLowerCase();
+      return stringValue === 'nan';
+    };
+
+    for (const header of headers) {
+      let numericCount = 0;
+      let booleanCount = 0;
+      let totalValidValues = 0;
+
+      // Check each value in the column
+      for (const row of data) {
+        const value = (row as Record<string, unknown>)[header];
+
+        // Skip missing values and NaN
+        if (isMissingValue(value) || isNaNValue(value)) {
+          continue;
+        }
+
+        totalValidValues++;
+        const stringValue = String(value).trim();
+
+        // Test for number
+        const numericValue = parseFloat(stringValue);
+        if (!isNaN(numericValue) && isFinite(numericValue)) {
+          numericCount++;
+        }
+
+        // Test for boolean (only exact matches)
+        const lowerValue = stringValue.toLowerCase();
+        if (lowerValue === 'true' || lowerValue === 'false') {
+          booleanCount++;
+        }
+      }
+
+      // Determine type based on what percentage of valid values match each type
+      const numericPercentage = totalValidValues > 0 ? numericCount / totalValidValues : 0;
+      const booleanPercentage = totalValidValues > 0 ? booleanCount / totalValidValues : 0;
+      const validDataPercentage = data.length > 0 ? totalValidValues / data.length : 0;
+
+      // Only classify as numeric/boolean if we have enough valid data overall
+      if (validDataPercentage >= minValidPercentage) {
+        if (booleanPercentage === 1.0) {
+          // All valid values are boolean
+          columnTypes[header] = 'boolean';
+        } else if (numericPercentage >= 1.0) {
+          // All valid values are numeric
+          columnTypes[header] = 'number';
+        } else {
+          columnTypes[header] = 'string';
+        }
+      } else {
+        columnTypes[header] = 'string';
+      }
+    }
+
+    return columnTypes;
+  }
+
+
+  // infer column types by fully checking the types of all the values on the column strictly
+  // if any one value is remotely different from the others, it invalidates the type of the column 
+  inferColumnTypes1<T>(data: T[]): Record<string, ColumnType> {
     const columnTypes: Record<string, ColumnType> = {};
     if (data.length === 0) {
       return columnTypes;

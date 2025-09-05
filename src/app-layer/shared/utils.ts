@@ -3,7 +3,7 @@ import {
   parseCSVFromFile,
 } from "@/app-layer/shared/csv_tsc_parser";
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
+import { ColumnTypeInferenceOptions, DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
 import { TableColumns, TableMatrices, TableMatrix } from "@/domain/workflow/main.types";
 
 /* calculation specific utils */
@@ -270,8 +270,100 @@ export const getNumericColumns = (
   return numeric;
 };
 
+
+
 // get numeric columns from data optimized
 export const getNumericColumnsOptimized = (
+  columns: string[],
+  data: ProteinRow[],
+  options: ColumnTypeInferenceOptions = {}
+): Set<string> => {
+  const numericColumns = new Set<string>();
+
+  if (!data || !data.length || !columns || !columns.length) {
+    return numericColumns;
+  }
+
+  const {
+    minValidPercentage = 0.1, // At least 10% of values must be valid numbers
+    allowedMissingValues = ['N/A', 'n/a', 'NA', 'na', 'NULL', 'null', '#N/A', '-', '']
+  } = options;
+
+  // Helper function to check if a value represents a missing/null value
+  const isMissingValue = (value: unknown): boolean => {
+    if (value === null || value === undefined) return true;
+    
+    const stringValue = String(value).trim();
+    if (stringValue === '') return true;
+    
+    // Check against allowed missing value representations (case-insensitive)
+    return allowedMissingValues.some(missing => 
+      stringValue.toLowerCase() === missing.toLowerCase()
+    );
+  };
+
+  // Helper function to check if a value represents NaN
+  const isNaNValue = (value: unknown): boolean => {
+    if (typeof value === 'number' && isNaN(value)) return true;
+    
+    const stringValue = String(value).trim().toLowerCase();
+    return stringValue === 'nan';
+  };
+
+  columns.forEach((column) => {
+    let validNumericCount = 0;
+    let totalNonMissingCount = 0;
+    let isNumeric = true;
+
+    // Iterate through all data points for this column
+    for (const row of data) {
+      const value = row[column];
+
+      // Skip missing values - they don't disqualify a column from being numeric
+      if (isMissingValue(value)) {
+        continue;
+      }
+
+      // Skip NaN values - they don't disqualify a column from being numeric
+      if (isNaNValue(value)) {
+        continue;
+      }
+
+      totalNonMissingCount++;
+
+      // Try to parse as number
+      const numericValue = parseFloat(String(value));
+      
+      // Check if it's a valid finite number
+      if (!isNaN(numericValue) && isFinite(numericValue)) {
+        validNumericCount++;
+      } else {
+        // Found a non-missing, non-NaN value that can't be parsed as a number
+        isNumeric = false;
+        break;
+      }
+    }
+
+    // Column is numeric if:
+    // 1. All non-missing, non-NaN values are valid numbers, AND
+    // 2. We have enough valid numeric data (meets minimum percentage threshold)
+    if (isNumeric && totalNonMissingCount > 0) {
+      const validPercentage = validNumericCount / data.length;
+      if (validPercentage >= minValidPercentage) {
+        numericColumns.add(column);
+      }
+    }
+  });
+
+  return numericColumns;
+};
+
+
+
+// get numeric columns from data optimized without conditions 
+// (ie - looking at if all values are numerical)
+
+export const getNumericColumnsOptimized1 = (
   columns: string[],
   data: ProteinRow[]
 ): Set<string> => {
