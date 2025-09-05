@@ -13,7 +13,7 @@ export type DataPreviewProps = {
   originalDataColumns: TableColumns;
 
   selectedDataColumns: TableColumns;
-  setSelectedDataColumns: (cols: string[]) => void;
+  setSelectedDataColumns: (cols: TableColumns) => void;
 
   onSelectButtonForUpload?: () => void;
 

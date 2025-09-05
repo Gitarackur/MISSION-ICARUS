@@ -9,7 +9,6 @@ import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/uti
 import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
-import { ProteinRow } from '@/domain/proteins/index.types';
 import { StatisticalAnalysisResult } from '@/domain/statistics/index.types';
 
 
@@ -40,27 +39,26 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   // use table for styling and interacting with its rows and columns
   const {
     allColumnarData,
-    getCellStyle: getBaseCellStyle,
-  } = useTableStylingAndInteraction(originalDataRows, originalDataColumns);
+    getCombinedCellStyle,
+    toggleViewOfColumnOnPreviewTable,
+  } = useTableStylingAndInteraction(
+    originalDataRows,
+    originalDataColumns,
+    selectedDataColumns,
+    setSelectedDataColumns
+  );
 
   const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
     filteredDataRows,
     ROWS_PER_PAGE
   );
 
-  // get cell style (based on which cells are numeric values and/or which are highlighted)
-  const getCombinedCellStyle = useCallback(
-    (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
-      const baseStyle = getBaseCellStyle(rowIndex, row, columnId, isHeader);
-      return baseStyle;
-    },
-    [getBaseCellStyle]
-  );
-
   const toggleColumn = (column: string, checked: boolean) => {
-    if (checked) setSelectedDataColumns([...selectedDataColumns, column]);
-    else setSelectedDataColumns(selectedDataColumns.filter((c) => c !== column));
-    reset();
+    const ontoggle = () => {
+      reset();
+    };
+
+    toggleViewOfColumnOnPreviewTable(column, checked, ontoggle)
   };
 
   const handleMenuAction = useCallback((result: StatisticalAnalysisResult) => {

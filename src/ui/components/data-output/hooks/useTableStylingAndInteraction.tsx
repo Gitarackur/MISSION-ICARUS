@@ -1,19 +1,19 @@
 import { useMemo, useCallback } from "react";
-import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
-import { TableMatrix } from "@/domain/workflow/main.types";
+import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
 
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
   columns: string[],
+  selectedDataColumns: TableColumns,
+  setSelectedDataColumns: (cols: TableColumns) => void
 ) => {
   const styles = dataOutputStyles();
 
-  // Identifies which columns contain numeric data
-  const numericColumns = useMemo(() => getNumericColumnsOptimized(columns, originalDataRows), [columns, originalDataRows]);
+  // Identifies the column type of the data
   const mapColumnType = useMemo(() => inferColumnTypes(originalDataRows), [originalDataRows])
 
   const allColumnarData = useMemo(() => {
@@ -36,7 +36,6 @@ export const useTableStylingAndInteraction = (
 
   // Determines the CSS class for each cell based on its selection state
   const getCellStyle = useCallback((_rowIndex: number, _row: ProteinRow | null, columnName: string, isHeader = false) => {
-    // const isNumeric = numericColumns.has(columnName);
     const isNumeric = mapColumnType[columnName] === "number";
     const isString = mapColumnType[columnName] === "string";
     const isBoolean = mapColumnType[columnName] === "boolean";
@@ -67,9 +66,38 @@ export const useTableStylingAndInteraction = (
     return className;
   }, [mapColumnType, styles]);
 
+
+  // get cell style (based on which cells are numeric values and/or which are highlighted)
+  const getCombinedCellStyle = useCallback(
+    (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
+      const baseStyle = getCellStyle(rowIndex, row, columnId, isHeader);
+      return baseStyle;
+    },
+    [getCellStyle]
+  );
+
+  // toggle the fields to show on the preview ui table
+  const toggleViewOfColumnOnPreviewTable = useCallback((
+    column: string, 
+    checked: boolean, 
+    onToggle?: () => void
+  ) => {
+    // Determine the set of selected columns based on the new state
+    const updatedSelectedSet = new Set(selectedDataColumns);
+    if (checked) {
+      updatedSelectedSet.add(column);
+    } else {
+      updatedSelectedSet.delete(column);
+    }
+    // Filter the original ALL_COLUMNS array to create the new ordered array
+    const newSelectedColumns = columns.filter(c => updatedSelectedSet.has(c));
+    setSelectedDataColumns(newSelectedColumns);
+    onToggle?.();
+  }, [columns, selectedDataColumns, setSelectedDataColumns]);
+
   return {
-    numericColumns,
     allColumnarData,
-    getCellStyle,
+    getCombinedCellStyle,
+    toggleViewOfColumnOnPreviewTable
   };
 };
