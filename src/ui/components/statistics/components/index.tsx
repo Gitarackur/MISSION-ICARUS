@@ -132,7 +132,7 @@ export const Count = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -258,7 +258,7 @@ export const CountMissing = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -385,7 +385,7 @@ export const CountValid = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -511,7 +511,7 @@ export const MeanValues = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -637,7 +637,7 @@ export const MedianValues = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -764,7 +764,7 @@ export const Variance = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -890,7 +890,7 @@ export const StdDevValues = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -1015,7 +1015,7 @@ export const Sum = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -1139,7 +1139,7 @@ export const Product = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2">
+          <div className="mt-2 h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
