@@ -132,7 +132,7 @@ export const Count = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-max-h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
