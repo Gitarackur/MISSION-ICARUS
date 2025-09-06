@@ -130,7 +130,7 @@ export const Count = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -256,7 +256,7 @@ export const CountMissing = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -383,7 +383,7 @@ export const CountValid = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -509,7 +509,7 @@ export const MeanValues = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -635,7 +635,7 @@ export const MedianValues = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -762,7 +762,7 @@ export const Variance = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -888,7 +888,7 @@ export const StdDevValues = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -1013,7 +1013,7 @@ export const Sum = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -1137,7 +1137,7 @@ export const Product = ({
         <p className="text-xs text-gray-500 mt-1">
           Hold Ctrl/Cmd to select multiple columns.
         </p>
-        
+
         {selectedDataSets.length > 0 && (
           <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
@@ -1240,54 +1240,250 @@ FILTER COLUMN VALUES
 
 export const FilterByValue = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Filter By Value</h1>
-    <p className={descriptionClass}>
-      Filters rows based on a specific value and a comparison operator.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <label htmlFor="filter-by-value-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="filter-by-value-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [operator, setOperator] = useState<string>("==");
+  const [filterValue, setFilterValue] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
+    setSelectedDataSets(selectedOptions);
+  };
+
+  const runFilterCalc = () => {
+    setError(null);
+
+    if (selectedDataSets.length === 0) {
+      setError("Please select at least one column for the Filter operation.");
+      onError?.();
+      return;
+    }
+
+    if (!filterValue.trim()) {
+      setError("Please enter a value to filter by.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+
+      // Handle multiple selections - add all selected columns to filteredData
+      selectedDataSets.forEach(column => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column));
+        }
+      });
+
+      // Verify that we have data for the selected columns
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Actually filter the data based on the selected criteria
+      const filterValueNumeric = parseFloat(filterValue.trim());
+      const isNumericFilter = !isNaN(filterValueNumeric);
+
+      // Get the first column to determine number of rows
+      const firstColumn = filteredData.values().next().value;
+      const totalRows = firstColumn ? firstColumn.length : 0;
+
+      const filteredRows: (string | number)[][] = [];
+
+      // Filter each row
+      for (let rowIndex = 0; rowIndex < totalRows; rowIndex++) {
+        let shouldIncludeRow = false;
+
+        // Check if any selected column matches the filter criteria
+        for (const column of selectedDataSets) {
+          const columnData = filteredData.get(column);
+          if (columnData && columnData[rowIndex] !== undefined) {
+            const cellValue = columnData[rowIndex];
+            const cellNumeric = parseFloat(String(cellValue));
+
+            let matches = false;
+
+            if (isNumericFilter && !isNaN(cellNumeric)) {
+              // Numeric comparison
+              switch (operator) {
+                case "==": matches = cellNumeric === filterValueNumeric; break;
+                case "!=": matches = cellNumeric !== filterValueNumeric; break;
+                case ">": matches = cellNumeric > filterValueNumeric; break;
+                case "<": matches = cellNumeric < filterValueNumeric; break;
+                case ">=": matches = cellNumeric >= filterValueNumeric; break;
+                case "<=": matches = cellNumeric <= filterValueNumeric; break;
+              }
+            } else {
+              // String comparison
+              const cellString = String(cellValue);
+              const filterString = filterValue.trim();
+
+              switch (operator) {
+                case "==": matches = cellString === filterString; break;
+                case "!=": matches = cellString !== filterString; break;
+              }
+            }
+
+            if (matches) {
+              shouldIncludeRow = true;
+              break;
+            }
+          }
+        }
+
+        // If row matches criteria, add it to filtered results
+        if (shouldIncludeRow) {
+          const row: (string | number)[] = [];
+          selectedDataSets.forEach(column => {
+            const columnData = filteredData.get(column);
+            row.push(columnData ? columnData[rowIndex] : '');
+          });
+          filteredRows.push(row);
+        }
+      }
+
+      const result: StatisticalAnalysisResult = {
+        inputParameters: {
+          columns: selectedDataSets,
+          action: actionId,
+          rowCount: dataRows.length,
+          metadata: {
+            originalDataType: 'Map<string, TableMatrix>',
+            columnsProcessed: selectedDataSets.length
+          }
+        },
+        newly_created_columns: selectedDataSets,
+        data: filteredRows,
+        outputParameters: {
+          columns: selectedDataSets,
+          calculationMethod: 'filter_by_value',
+          resultType: 'filtered_data',
+          metadata: {
+            calculationTimestamp: new Date().toISOString(),
+            resultCount: filteredRows.length,
+            filterOperator: operator,
+            filterValue: filterValue.trim(),
+            originalRowCount: totalRows
+          }
+        }
+      };
+
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Filter operation. Please check your data and parameters.");
+      console.error("Filter operation failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = selectedDataSets.length === 0 || !filterValue.trim();
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Filter By Value</h1>
+      <p className={descriptionClass}>
+        Filters rows based on a specific value and a comparison operator for the selected column{selectedDataSets.length > 1 ? 's' : ''}.
+      </p>
+      <div className="space-y-4 mb-6">
+        <div>
+          <label htmlFor="filter-by-value-column" className={labelClass}>
+            Select Column{selectedDataSets.length > 1 ? 's' : ''}
+          </label>
+          <select
+            multiple
+            id="filter-by-value-column"
+            className={selectClass}
+            value={selectedDataSets}
+            onChange={handleColumnSelection}
+          >
+            {numericColumns.map((col) => (
+              <option key={col} value={col}>
+                {col}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">
+            Hold Ctrl/Cmd to select multiple columns.
+          </p>
+
+          {selectedDataSets.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm text-gray-600">
+                Selected: {selectedDataSets.join(', ')}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label htmlFor="filter-by-value-operator" className={labelClass}>
+            Operator
+          </label>
+          <select
+            id="filter-by-value-operator"
+            className={selectClass}
+            value={operator}
+            onChange={(e) => setOperator(e.target.value)}
+          >
+            <option value="==">Equals</option>
+            <option value="!=">Does not equal</option>
+            <option value=">">Greater than</option>
+            <option value="<">Less than</option>
+            <option value=">=">Greater than or equal to</option>
+            <option value="<=">Less than or equal to</option>
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="filter-by-value-value" className={labelClass}>
+            Value
+          </label>
+          <input
+            type="text"
+            id="filter-by-value-value"
+            className={inputClass}
+            value={filterValue}
+            onChange={(e) => setFilterValue(e.target.value)}
+            placeholder="Enter value to filter by"
+          />
+        </div>
       </div>
-      <div>
-        <label htmlFor="filter-by-value-operator" className={labelClass}>
-          Operator
-        </label>
-        <select id="filter-by-value-operator" className={selectClass}>
-          <option value="==">Equals</option>
-          <option value="!=">Does not equal</option>
-          <option value=">">Greater than</option>
-          <option value="<">Less than</option>
-          <option value=">=">Greater than or equal to</option>
-          <option value="<=">Less than or equal to</option>
-        </select>
-      </div>
-      <div>
-        <label htmlFor="filter-by-value-value" className={labelClass}>
-          Value
-        </label>
-        <input type="text" id="filter-by-value-value" className={inputClass} />
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runFilterCalc}
+        >
+          Filter
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Filter</button>
-    </div>
-  </div>
-);
+  );
+};
 
 
 /*---------------------------------------------------

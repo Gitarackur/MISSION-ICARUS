@@ -116,7 +116,8 @@ export type StatisticalAction =
   | "hierarchical-clustering-run"
   | "k-means-clustering-run"
   | "save-data"
-  | "export-csv";
+  | "export-csv"
+  | "filter_by_value";
 
 
 // statistical analysis result

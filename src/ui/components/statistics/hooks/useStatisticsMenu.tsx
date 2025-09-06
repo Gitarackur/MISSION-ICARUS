@@ -270,7 +270,20 @@ const useStatisticsMenu = ({
         break;
       case "filter-by-value":
         content = (
-          <FilterByValue dataColumns={dataColumns} actionId={actionId} />
+          <FilterByValue 
+            dataColumns={dataColumns} 
+            actionId={actionId} 
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "filter-by-missing":
