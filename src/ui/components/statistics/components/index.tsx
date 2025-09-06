@@ -6,6 +6,7 @@ import {
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
+import SingleSelect from "@/ui/design-system/Select/select";
 import { useMemo, useState } from "react";
 
 // Common styles for consistency
@@ -23,6 +24,7 @@ const buttonClass =
 const dangerButtonClass =
   "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors";
 
+// import MultiSelect from "@/ui/design-system/Select/Multi/select";  
 
 
 
@@ -65,6 +67,10 @@ export const Count = ({
     const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
     setSelectedDataSets(selectedOptions);
   };
+
+  // const handleColumnSelection1 = (values: string[]) => {
+  //   setSelectedDataSets(values);
+  // };
 
   const runCountCalc = () => {
     setError(null);
@@ -138,6 +144,16 @@ export const Count = ({
             </p>
           </div>
         )}
+
+        {/* <MultiSelect
+          id="data-columns"
+          label={`Select Column${selectedDataSets.length > 1 ? 's' : ''}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={selectedDataSets}
+          onChange={handleColumnSelection1}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        /> */}
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -1226,6 +1242,9 @@ export const Max = ({
           </option>
         ))}
       </select>
+
+      
+
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Calculate</button>
@@ -1258,6 +1277,39 @@ export const FilterByValue = ({
     [dataColumns, dataRows]
   );
   const numericColumns = [...numericColumnsSet];
+
+  const operatorData = [
+    {
+      value: "==",
+      label: "Equals",
+      disabled: false
+    },
+    {
+      value: "!=",
+      label: "Does not equal",
+      disabled: false
+    },
+    {
+      value: ">",
+      label: "Greater than",
+      disabled: false
+    },
+    {
+      value: "<",
+      label: "Less than",
+      disabled: false
+    },
+    {
+      value: ">=",
+      label: "Greater than or equal to",
+      disabled: false
+    },
+    {
+      value: "<=",
+      label: "Less than or equal to",
+      disabled: false
+    }
+  ] as const;
 
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [operator, setOperator] = useState<string>("==");
@@ -1437,22 +1489,15 @@ export const FilterByValue = ({
         </div>
 
         <div>
-          <label htmlFor="filter-by-value-operator" className={labelClass}>
-            Operator
-          </label>
-          <select
+          <SingleSelect
             id="filter-by-value-operator"
-            className={selectClass}
-            value={operator}
-            onChange={(e) => setOperator(e.target.value)}
-          >
-            <option value="==">Equals</option>
-            <option value="!=">Does not equal</option>
-            <option value=">">Greater than</option>
-            <option value="<">Less than</option>
-            <option value=">=">Greater than or equal to</option>
-            <option value="<=">Less than or equal to</option>
-          </select>
+            label={`Select P-value Column`}
+            placeholder="Select data columns to analyze..."
+            options={operatorData.map(curr => ({value: curr.value, label: curr.label, disabled: curr.disabled}))}
+            value={''}
+            onChange={(value) => setOperator(value as string)}
+            helperText="Choose the numeric columns you want to include in your analysis"
+          />
         </div>
 
         <div>
@@ -1503,16 +1548,15 @@ export const FilterByMissing = ({
       Filters rows to show only those with missing values in a specific column.
     </p>
     <div className="mb-6">
-      <label htmlFor="filter-missing-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="filter-missing-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="filter-missing-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Filter</button>
@@ -1539,17 +1583,17 @@ export const FilterByRange = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="filter-range-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="filter-range-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="filter-range-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
+
       <div>
         <label htmlFor="filter-range-min" className={labelClass}>
           Minimum Value
@@ -1587,16 +1631,15 @@ export const FilterByOutlier = ({
       Filters rows to show only the detected outliers in a column.
     </p>
     <div className="mb-6">
-      <label htmlFor="filter-outlier-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="filter-outlier-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="filter-outlier-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Filter</button>
@@ -1639,16 +1682,15 @@ export const RenameColumn = ({
     <p className={descriptionClass}>Renames an existing column.</p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="old-column-name" className={labelClass}>
-          Old Column Name
-        </label>
-        <select id="old-column-name" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="old-column-name"
+          label={`Old Column Name`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="new-column-name-rename" className={labelClass}>
@@ -1681,16 +1723,15 @@ export const DeleteColumn = ({
       Deletes a selected column from the dataset.
     </p>
     <div className="mb-6">
-      <label htmlFor="delete-column-name" className={labelClass}>
-        Select Column to Delete
-      </label>
-      <select id="delete-column-name" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="delete-column-name"
+        label={`Select Column to Delete`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={dangerButtonClass}>Delete Column</button>
@@ -1717,16 +1758,15 @@ export const FillColumn = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="fill-column-name" className={labelClass}>
-          Select Column to Fill
-        </label>
-        <select id="fill-column-name" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="fill-column-name"
+          label={`Select Column to Fill`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="fill-value" className={labelClass}>
@@ -1759,16 +1799,15 @@ export const ImputeMean = ({
       Fills missing values with the mean of the column.
     </p>
     <div className="mb-6">
-      <label htmlFor="impute-mean-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="impute-mean-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="impute-mean-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Run Imputation</button>
@@ -1794,16 +1833,15 @@ export const ImputeMedian = ({
       Fills missing values with the median of the column.
     </p>
     <div className="mb-6">
-      <label htmlFor="impute-median-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="impute-median-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="impute-median-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Run Imputation</button>
@@ -1830,17 +1868,17 @@ export const ImputeKnn = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="impute-knn-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="impute-knn-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="impute-knn-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
+
       <div>
         <label htmlFor="impute-knn-k" className={labelClass}>
           Number of Neighbors (k)
@@ -1877,16 +1915,15 @@ export const ImputeZero = ({
       Fills missing values with the value zero.
     </p>
     <div className="mb-6">
-      <label htmlFor="impute-zero-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="impute-zero-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="impute-zero-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Run Imputation</button>
@@ -1913,16 +1950,15 @@ export const MovingAverage = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="ma-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="ma-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="ma-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="ma-window" className={labelClass}>
@@ -1961,16 +1997,15 @@ export const RollingStdDev = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="rolling-stddev-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="rolling-stddev-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="rolling-stddev-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="rolling-stddev-window" className={labelClass}>
@@ -2073,38 +2108,26 @@ export const TTest = ({
       </p>
       <div className="space-y-4 mb-6">
         <div>
-          <label htmlFor="ttest-column" className={labelClass}>
-            Select First Numeric Column
-          </label>
-          <select
+          <SingleSelect
             id="ttest-column-1"
-            className={selectClass}
+            label={`Select First Numeric Column`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
             value={firstGroup}
-            onChange={(e) => setFirstGroup(e.target.value)}
-          >
-            {[...numericColumns].map((col) => (
-              <option key={col} value={col}>
-                {col}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => setFirstGroup(value as string)}
+            helperText="Choose the numeric columns you want to include in your analysis"
+          />
         </div>
         <div>
-          <label htmlFor="ttest-group-column" className={labelClass}>
-            Select Second Numeric Column
-          </label>
-          <select
+          <SingleSelect
             id="ttest-column-2"
-            className={selectClass}
+            label={`Select Second Numeric Column`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
             value={secondGroup}
-            onChange={(e) => setSecondGroup(e.target.value)}
-          >
-            {[...numericColumns].map((col) => (
-              <option key={col} value={col}>
-                {col}
-              </option>
-            ))}
-          </select>
+            onChange={(value) => setSecondGroup(value as string)}
+            helperText="Choose the numeric columns you want to include in your analysis"
+          />
         </div>
       </div>
 
@@ -2143,28 +2166,27 @@ export const Anova = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="anova-column" className={labelClass}>
-          Select Numeric Column
-        </label>
-        <select id="anova-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="anova-column"
+          label={`Select Numeric Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
+
       <div>
-        <label htmlFor="anova-group-column" className={labelClass}>
-          Select Grouping Column
-        </label>
-        <select id="anova-group-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="anova-group-column"
+          label={`Select Grouping Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -2207,16 +2229,15 @@ export const Limma = ({
         </p>
       </div>
       <div>
-        <label htmlFor="limma-group-column" className={labelClass}>
-          Select Grouping Column
-        </label>
-        <select id="limma-group-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="limma-group-column"
+          label={`Select Grouping Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -2244,16 +2265,15 @@ export const FoldChange = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="fc-column" className={labelClass}>
-          Select Numeric Column
-        </label>
-        <select id="fc-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="fc-column"
+          label={`Select Numeric Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="fc-group-1" className={labelClass}>
@@ -2406,16 +2426,15 @@ export const BoxPlot = ({
       Generates a box plot visualization for a selected column.
     </p>
     <div className="mb-6">
-      <label htmlFor="boxplot-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="boxplot-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="boxplot-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Generate Plot</button>
@@ -2443,28 +2462,26 @@ export const ScatterPlot = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="scatter-x-column" className={labelClass}>
-          Select X-Axis Column
-        </label>
-        <select id="scatter-x-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="scatter-x-column"
+          label={`Select X-Axis Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
-        <label htmlFor="scatter-y-column" className={labelClass}>
-          Select Y-Axis Column
-        </label>
-        <select id="scatter-y-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="scatter-y-column"
+          label={`Select Y-Axis Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -2530,16 +2547,15 @@ export const VolcanoPlot = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="volcano-pvalue" className={labelClass}>
-          Select P-value Column
-        </label>
-        <select id="volcano-pvalue" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="volcano-pvalue"
+          label={`Select P-value Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="volcano-foldchange" className={labelClass}>
@@ -2616,16 +2632,15 @@ export const SortAsc = ({
       Sorts the data in a selected column in ascending order.
     </p>
     <div className="mb-6">
-      <label htmlFor="sort-asc-column" className={labelClass}>
-        Select Column to Sort
-      </label>
-      <select id="sort-asc-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="sort-asc-column"
+        label={`Select Column to Sort`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Sort</button>
@@ -2651,16 +2666,15 @@ export const SortDesc = ({
       Sorts the data in a selected column in descending order.
     </p>
     <div className="mb-6">
-      <label htmlFor="sort-desc-column" className={labelClass}>
-        Select Column to Sort
-      </label>
-      <select id="sort-desc-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="sort-desc-column"
+        label={`Select Column to Sort`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Sort</button>
@@ -2844,16 +2858,15 @@ export const RenameRow = ({
     <p className={descriptionClass}>Renames a selected row based on its ID.</p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="old-row-id" className={labelClass}>
-          Select Row ID
-        </label>
-        <select id="old-row-id" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="old-row-id"
+          label={`Select Row ID`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="new-row-name" className={labelClass}>
@@ -2884,16 +2897,15 @@ export const DeleteRow = ({
     <h1 className={headingClass}>Delete Row</h1>
     <p className={descriptionClass}>Deletes a selected row from the dataset.</p>
     <div className="mb-6">
-      <label htmlFor="delete-row-id" className={labelClass}>
-        Select Row ID to Delete
-      </label>
-      <select id="delete-row-id" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="delete-row-id"
+        label={`Select Row ID to Delete`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={dangerButtonClass}>Delete Row</button>
@@ -3077,26 +3089,26 @@ export const AddPtm = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="add-ptm-column" className={labelClass}>
-          Select Peptide Column
-        </label>
-        <select id="add-ptm-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="add-ptm-column"
+          label={`Select Peptide Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
-        <label htmlFor="add-ptm-type" className={labelClass}>
-          Select PTM Type
-        </label>
-        <select id="add-ptm-type" className={selectClass}>
-          <option>Phosphorylation</option>
-          <option>Acetylation</option>
-          <option>Methylation</option>
-        </select>
+        <SingleSelect
+          id="add-ptm-type"
+          label={`Select PTM Type`}
+          placeholder="Select PTM type "
+          options={["Phosphorylation", "Acetylation", "Methylation"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the PTM type you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -3124,27 +3136,26 @@ export const RemovePtm = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="remove-ptm-column" className={labelClass}>
-          Select Peptide Column
-        </label>
-        <select id="remove-ptm-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="remove-ptm-column"
+          label={`Select Peptide Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
       <div>
-        <label htmlFor="remove-ptm-type" className={labelClass}>
-          Select PTM Type
-        </label>
-        <select id="remove-ptm-type" className={selectClass}>
-          <option>All PTMs</option>
-          <option>Phosphorylation</option>
-          <option>Acetylation</option>
-          <option>Methylation</option>
-        </select>
+        <SingleSelect
+          id="add-ptm-type"
+          label={`Select PTM Type`}
+          placeholder="Select PTM type "
+          options={["All PTMs", "Phosphorylation", "Acetylation", "Methylation"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the PTM type you want to delete in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -3225,6 +3236,16 @@ export const PathwayAnalysis = () => (
           <option>KEGG</option>
           <option>Reactome</option>
         </select>
+
+        <SingleSelect
+          id="pathway-analysis-db"
+          label={`Pathway Database`}
+          placeholder="Select data columns to analyze..."
+          options={["KEGG", "Reactome"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the Pathway"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -3406,16 +3427,15 @@ export const ZScoreNorm = ({
       deviation.
     </p>
     <div className="mb-6">
-      <label htmlFor="z-score-norm-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="z-score-norm-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="z-score-norm-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to delete from your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Normalize</button>
@@ -3441,16 +3461,15 @@ export const LogTransform = ({
       Applies a logarithmic transformation to the data.
     </p>
     <div className="mb-6">
-      <label htmlFor="log-transform-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="log-transform-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="log-transform-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to delete from your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Transform</button>
@@ -3514,16 +3533,15 @@ export const MeanCentering = ({
       Subtracts the mean from each value in a column.
     </p>
     <div className="mb-6">
-      <label htmlFor="mean-centering-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="mean-centering-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="mean-centering-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to delete from your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Center</button>
@@ -3543,13 +3561,15 @@ export const QcPlot = () => (
       Generates a quality control plot to assess data quality.
     </p>
     <div className="mb-6">
-      <label htmlFor="qc-plot-type" className={labelClass}>
-        Select Plot Type
-      </label>
-      <select id="qc-plot-type" className={selectClass}>
-        <option>Box Plot</option>
-        <option>Density Plot</option>
-      </select>
+      <SingleSelect
+        id="qc-plot-type"
+        label={`Select Plot Type`}
+        placeholder="Select data columns to analyze..."
+        options={["Box Plot", "Density Plot"].map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to delete from your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Generate Plot</button>
@@ -3593,28 +3613,26 @@ export const FTest = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="f-test-column" className={labelClass}>
-          Select Numeric Column
-        </label>
-        <select id="f-test-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="f-test-column"
+          label={`Select Numeric Column`}
+          placeholder="Select data columns to analyze..."
+          options={["Box Plot", "Density Plot"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
       <div>
-        <label htmlFor="f-test-group-column" className={labelClass}>
-          Select Grouping Column
-        </label>
-        <select id="f-test-group-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="f-test-group-column"
+          label={`Select Grouping Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -3643,28 +3661,26 @@ export const ChiSquareTest = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="chi-square-col1" className={labelClass}>
-          Column 1
-        </label>
-        <select id="chi-square-col1" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="chi-square-col1"
+          label={`Column 1`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
       <div>
-        <label htmlFor="chi-square-col2" className={labelClass}>
-          Column 2
-        </label>
-        <select id="chi-square-col2" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="chi-square-col2"
+          label={`Column 2`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -3692,16 +3708,15 @@ export const ZScoreOutliers = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="z-score-outlier-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="z-score-outlier-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="z-score-outlier-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
       <div>
         <label htmlFor="z-score-threshold" className={labelClass}>
@@ -3741,16 +3756,15 @@ export const IqrOutliers = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="iqr-outlier-column" className={labelClass}>
-          Select Column
-        </label>
-        <select id="iqr-outlier-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="iqr-outlier-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          value={''}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to delete from your analysis"
+        />
       </div>
       <div>
         <label htmlFor="iqr-factor" className={labelClass}>
@@ -3789,16 +3803,15 @@ export const GrubbsTest = ({
       Performs Grubbs' test to detect outliers in a dataset.
     </p>
     <div className="mb-6">
-      <label htmlFor="grubbs-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="grubbs-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="grubbs-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        value={''}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to delete from your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Run Grubbs' Test</button>
