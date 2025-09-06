@@ -132,7 +132,7 @@ export const Count = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -258,7 +258,7 @@ export const CountMissing = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -385,7 +385,7 @@ export const CountValid = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -511,7 +511,7 @@ export const MeanValues = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -637,7 +637,7 @@ export const MedianValues = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -764,7 +764,7 @@ export const Variance = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -890,7 +890,7 @@ export const StdDevValues = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -1015,7 +1015,7 @@ export const Sum = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -1139,7 +1139,7 @@ export const Product = ({
         </p>
         
         {selectedDataSets.length > 0 && (
-          <div className="mt-2 h-64 overflow-y-auto">
+          <div className="mt-2 max-h-64 overflow-y-auto">
             <p className="text-sm text-gray-600">
               Selected: {selectedDataSets.join(', ')}
             </p>
@@ -2495,7 +2495,7 @@ export const ReorderColumns = ({
       </label>
       <div
         id="reorder-column-list"
-        className="mt-1 p-4 bg-gray-50 border border-gray-300 rounded-md max-h-64 overflow-y-auto"
+        className="mt-1 p-4 bg-gray-50 border border-gray-300 rounded-md max-max-h-64 overflow-y-auto"
       >
         {dataColumns.map((col) => (
           <div
@@ -2608,7 +2608,7 @@ export const AddRow = ({
       A new row will be added at the bottom of the dataset. You can fill in the
       values manually afterwards.
     </p>
-    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+    <div className="flex flex-col gap-2 max-max-h-64 overflow-y-auto">
       {dataColumns.map((col, idx) => {
         return (
           <div key={idx}>

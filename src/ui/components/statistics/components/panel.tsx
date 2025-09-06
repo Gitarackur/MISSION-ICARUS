@@ -14,20 +14,12 @@ import {
   BarChart,
   Bar,
 } from 'recharts';
-import { Stats } from '@/domain/proteins/index.types';
 import { statisticsStyles } from '../style-variants';
 import StatisticsEmptyState from './empty-state';
+import { ProteinDataPanelProps } from '../types/index.types';
 
 
-
-type StatisticsPanelProps = {
-  stats?: Stats;
-  intensityDist?: { sample: string; meanIntensity: number; count: number }[];
-};
-
-
-
-const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
+const ProteinDataPanel: React.FC<ProteinDataPanelProps> = ({
   stats,
   intensityDist,
 }) => {
@@ -46,14 +38,11 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
   };
 
   // Empty state
-  // !stats || !intensityDist || intensityDist.length === 0
   if (!stats || stats === null || !intensityDist || intensityDist.length === 0) {
     return (
       <StatisticsEmptyState />
     );
   }
-
-  console.log(stats, intensityDist)
 
   return (
     <div className={style.container()}>
@@ -135,4 +124,4 @@ const StatisticsPanel: React.FC<StatisticsPanelProps> = ({
   );
 };
 
-export default StatisticsPanel;
+export default ProteinDataPanel;

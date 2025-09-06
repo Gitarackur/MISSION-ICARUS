@@ -5,6 +5,7 @@ import {
 } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { BareSession } from "@/domain/session";
+import { tabsIdTypes } from "@/ui/components/tabs/types/index.types";
 
 export type ProteomicsAnalysisHomeViewProps = {
   handleSessionCreate: ({ rows, columns }: BareSession) => void;
@@ -36,9 +37,4 @@ export type ProteomicsAnalysisHomeViewProps = {
   sessionSourceMatrix?: IcarusMatrix
 };
 
-export type tabTypes =
-  | "import"
-  | "filter"
-  | "statistics"
-  | "visualization"
-  | "analysis";
+export type tabTypes = tabsIdTypes;

@@ -1,4 +1,4 @@
-import { ProteinRow } from "@/domain/proteins/index.types";
+import { ProteinRow, Stats } from "@/domain/proteins/index.types";
 import { StatisticalAction, StatisticalAnalysisResult } from "@/domain/statistics/index.types";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 
@@ -20,6 +20,12 @@ export interface StatisticsMenuProps {
   dataColumns: TableColumns;
   allColumnarData: Map<string, TableMatrix>;
 }
+
+
+export type ProteinDataPanelProps = {
+  stats?: Stats;
+  intensityDist?: { sample: string; meanIntensity: number; count: number }[];
+};
 
 
 

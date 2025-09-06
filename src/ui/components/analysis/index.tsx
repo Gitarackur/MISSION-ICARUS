@@ -23,24 +23,6 @@ const AnalysisPanel: React.FC = () => {
   return (
     <div className={styles.container()}>
       <div className={styles.card()}>
-        <h2 className={styles.heading2()}>Statistical Analysis</h2>
-        <div className={styles.grid()}>
-          <button className={styles.button()}>
-            <h3 className={styles.title()}>t-Test</h3>
-            <p className={styles.description()}>Compare two groups</p>
-          </button>
-          <button className={styles.button()}>
-            <h3 className={styles.title()}>ANOVA</h3>
-            <p className={styles.description()}>Multiple group comparison</p>
-          </button>
-          <button className={styles.button()}>
-            <h3 className={styles.title()}>PCA</h3>
-            <p className={styles.description()}>Principal component analysis</p>
-          </button>
-        </div>
-      </div>
-
-      <div className={styles.card()}>
         <h3 className={styles.heading3()}>Gene Ontology Enrichment</h3>
         <div className={styles.placeholderBox()}>
           <p className={styles.placeholderText()}>
