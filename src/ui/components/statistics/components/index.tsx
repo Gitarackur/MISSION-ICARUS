@@ -6,6 +6,7 @@ import {
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
+import MultiSelect from "@/ui/design-system/Select/Multi/select";
 import SingleSelect from "@/ui/design-system/Select/select";
 import { useMemo, useState } from "react";
 
@@ -63,14 +64,9 @@ export const Count = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection1 = (values: string[]) => {
+    setSelectedDataSets(values);
   };
-
-  // const handleColumnSelection1 = (values: string[]) => {
-  //   setSelectedDataSets(values);
-  // };
 
   const runCountCalc = () => {
     setError(null);
@@ -116,44 +112,15 @@ export const Count = ({
         Counts the total number of values in selected column(s).
       </p>
       <div className="mb-6">
-        <label htmlFor="count-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="count-column"
-          className={selectClass}
-          value={selectedDataSets}
-          onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
-
-        {/* <MultiSelect
-          id="data-columns"
           label={`Select Column${selectedDataSets.length > 1 ? 's' : ''}`}
           placeholder="Select data columns to analyze..."
-          options={numericColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={numericColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={selectedDataSets}
           onChange={handleColumnSelection1}
           helperText="Choose the numeric columns you want to include in your analysis"
-        /> */}
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -1243,7 +1210,7 @@ export const Max = ({
         ))}
       </select>
 
-      
+
 
     </div>
     <div className="flex justify-end">
@@ -1493,7 +1460,7 @@ export const FilterByValue = ({
             id="filter-by-value-operator"
             label={`Select P-value Column`}
             placeholder="Select data columns to analyze..."
-            options={operatorData.map(curr => ({value: curr.value, label: curr.label, disabled: curr.disabled}))}
+            options={operatorData.map(curr => ({ value: curr.value, label: curr.label, disabled: curr.disabled }))}
             value={''}
             onChange={(value) => setOperator(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
@@ -1552,7 +1519,7 @@ export const FilterByMissing = ({
         id="filter-missing-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -1587,7 +1554,7 @@ export const FilterByRange = ({
           id="filter-range-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -1635,7 +1602,7 @@ export const FilterByOutlier = ({
         id="filter-outlier-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -1686,7 +1653,7 @@ export const RenameColumn = ({
           id="old-column-name"
           label={`Old Column Name`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -1727,7 +1694,7 @@ export const DeleteColumn = ({
         id="delete-column-name"
         label={`Select Column to Delete`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -1762,7 +1729,7 @@ export const FillColumn = ({
           id="fill-column-name"
           label={`Select Column to Fill`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -1803,7 +1770,7 @@ export const ImputeMean = ({
         id="impute-mean-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -1837,7 +1804,7 @@ export const ImputeMedian = ({
         id="impute-median-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -1872,7 +1839,7 @@ export const ImputeKnn = ({
           id="impute-knn-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -1919,7 +1886,7 @@ export const ImputeZero = ({
         id="impute-zero-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -1954,7 +1921,7 @@ export const MovingAverage = ({
           id="ma-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2001,7 +1968,7 @@ export const RollingStdDev = ({
           id="rolling-stddev-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2112,7 +2079,7 @@ export const TTest = ({
             id="ttest-column-1"
             label={`Select First Numeric Column`}
             placeholder="Select data columns to analyze..."
-            options={numericColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+            options={numericColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
             value={firstGroup}
             onChange={(value) => setFirstGroup(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
@@ -2123,7 +2090,7 @@ export const TTest = ({
             id="ttest-column-2"
             label={`Select Second Numeric Column`}
             placeholder="Select data columns to analyze..."
-            options={numericColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+            options={numericColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
             value={secondGroup}
             onChange={(value) => setSecondGroup(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
@@ -2170,7 +2137,7 @@ export const Anova = ({
           id="anova-column"
           label={`Select Numeric Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2182,7 +2149,7 @@ export const Anova = ({
           id="anova-group-column"
           label={`Select Grouping Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2233,7 +2200,7 @@ export const Limma = ({
           id="limma-group-column"
           label={`Select Grouping Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2269,7 +2236,7 @@ export const FoldChange = ({
           id="fc-column"
           label={`Select Numeric Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2430,7 +2397,7 @@ export const BoxPlot = ({
         id="boxplot-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -2466,7 +2433,7 @@ export const ScatterPlot = ({
           id="scatter-x-column"
           label={`Select X-Axis Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2477,7 +2444,7 @@ export const ScatterPlot = ({
           id="scatter-y-column"
           label={`Select Y-Axis Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2551,7 +2518,7 @@ export const VolcanoPlot = ({
           id="volcano-pvalue"
           label={`Select P-value Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2636,7 +2603,7 @@ export const SortAsc = ({
         id="sort-asc-column"
         label={`Select Column to Sort`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -2670,7 +2637,7 @@ export const SortDesc = ({
         id="sort-desc-column"
         label={`Select Column to Sort`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -2862,7 +2829,7 @@ export const RenameRow = ({
           id="old-row-id"
           label={`Select Row ID`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -2901,7 +2868,7 @@ export const DeleteRow = ({
         id="delete-row-id"
         label={`Select Row ID to Delete`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
@@ -3093,7 +3060,7 @@ export const AddPtm = ({
           id="add-ptm-column"
           label={`Select Peptide Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -3104,7 +3071,7 @@ export const AddPtm = ({
           id="add-ptm-type"
           label={`Select PTM Type`}
           placeholder="Select PTM type "
-          options={["Phosphorylation", "Acetylation", "Methylation"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={["Phosphorylation", "Acetylation", "Methylation"].map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the PTM type you want to include in your analysis"
@@ -3140,7 +3107,7 @@ export const RemovePtm = ({
           id="remove-ptm-column"
           label={`Select Peptide Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3151,7 +3118,7 @@ export const RemovePtm = ({
           id="add-ptm-type"
           label={`Select PTM Type`}
           placeholder="Select PTM type "
-          options={["All PTMs", "Phosphorylation", "Acetylation", "Methylation"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={["All PTMs", "Phosphorylation", "Acetylation", "Methylation"].map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the PTM type you want to delete in your analysis"
@@ -3241,7 +3208,7 @@ export const PathwayAnalysis = () => (
           id="pathway-analysis-db"
           label={`Pathway Database`}
           placeholder="Select data columns to analyze..."
-          options={["KEGG", "Reactome"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={["KEGG", "Reactome"].map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the Pathway"
@@ -3431,7 +3398,7 @@ export const ZScoreNorm = ({
         id="z-score-norm-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3465,7 +3432,7 @@ export const LogTransform = ({
         id="log-transform-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3537,7 +3504,7 @@ export const MeanCentering = ({
         id="mean-centering-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3565,7 +3532,7 @@ export const QcPlot = () => (
         id="qc-plot-type"
         label={`Select Plot Type`}
         placeholder="Select data columns to analyze..."
-        options={["Box Plot", "Density Plot"].map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={["Box Plot", "Density Plot"].map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3617,7 +3584,7 @@ export const FTest = ({
           id="f-test-column"
           label={`Select Numeric Column`}
           placeholder="Select data columns to analyze..."
-          options={["Box Plot", "Density Plot"].map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={["Box Plot", "Density Plot"].map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3628,7 +3595,7 @@ export const FTest = ({
           id="f-test-group-column"
           label={`Select Grouping Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3665,7 +3632,7 @@ export const ChiSquareTest = ({
           id="chi-square-col1"
           label={`Column 1`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3676,7 +3643,7 @@ export const ChiSquareTest = ({
           id="chi-square-col2"
           label={`Column 2`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3712,7 +3679,7 @@ export const ZScoreOutliers = ({
           id="z-score-outlier-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3760,7 +3727,7 @@ export const IqrOutliers = ({
           id="iqr-outlier-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
           value={''}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
@@ -3807,7 +3774,7 @@ export const GrubbsTest = ({
         id="grubbs-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({value: curr, label: curr, disabled: false}))}
+        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
         value={''}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
