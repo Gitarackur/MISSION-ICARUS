@@ -1,0 +1,17 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+matplotlib = "*"
+
+[dev-packages]
+nuitka = "*"
+
+[scripts]
+prepare = "nuitka --onefile --standalone --output-dir=./bin ./commander.py"
+command = "python ./commander.py"
+
+[requires]
+python_version = "3.13"
