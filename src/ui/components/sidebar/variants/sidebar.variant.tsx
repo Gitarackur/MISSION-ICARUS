@@ -2,8 +2,9 @@ import { tv } from "tailwind-variants";
 
 const sidebarStyles = tv({
   slots: {
-    aside: "w-64 bg-gray-900 text-white flex flex-col border-r border-gray-800 h-screen",
-    header: "p-4 border-b border-gray-800",
+    aside:
+      "w-64 bg-gray-900 text-white flex flex-col border-r border-gray-800 h-screen",
+    header: "p-4 border-b border-gray-800 flex items-center justify-between",
     headerTitle: "text-lg font-semibold tracking-wide",
 
     list: "overflow-y-auto",
@@ -14,16 +15,16 @@ const sidebarStyles = tv({
       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1
     `,
     sessionButtonActive: "bg-indigo-600 text-white shadow-md",
-    sessionButtonInactive: "hover:bg-gray-800 hover:text-indigo-300 text-gray-300",
+    sessionButtonInactive:
+      "hover:bg-gray-800 hover:text-indigo-300 text-gray-300",
 
-    createSection:
-      "flex justify-center items-center flex-grow p-4",
+    createSection: "flex justify-center items-center flex-grow p-4",
     createCard:
       "bg-gray-800 border border-gray-700 rounded-lg p-4 w-full max-w-xs text-center",
 
     createButton: `
       flex items-center justify-center space-x-2
-      px-4 py-3 rounded-md
+      px-2 py-1 rounded-md
       border-2 border-indigo-600
       bg-indigo-600 text-white
       hover:bg-indigo-700
@@ -33,6 +34,7 @@ const sidebarStyles = tv({
       mx-auto
     `,
     createSubtext: "mt-2 text-sm text-gray-400",
+    emptyStateWrapper: "flex flex-col gap-1 text-center text-gray-400",
 
     deleteButton: "p-1 text-red-500 hover:text-red-700",
 
@@ -41,4 +43,3 @@ const sidebarStyles = tv({
 });
 
 export default sidebarStyles;
-

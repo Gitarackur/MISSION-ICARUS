@@ -14,7 +14,10 @@ import {
 } from "@/app-layer/database/database.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { BareSession } from "@/domain/session";
-import { SaveStatisticalActivity, TableColumns } from "@/domain/workflow/main.types";
+import {
+  SaveStatisticalActivity,
+  TableColumns,
+} from "@/domain/workflow/main.types";
 import {
   generateActiveSessionWitNestedWorkflow,
   reconstructOriginalRowsAndColumnsFromSessionWorkflows,
@@ -25,10 +28,15 @@ import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 import { activityFloatingButton } from "./variants/main.variants";
 
 const IcarusApp: React.FC = () => {
-  const [activeSession, setActiveSession] = useState<IcarusSessionWithWorkflowRecord | null>(null);
+  const [activeSession, setActiveSession] =
+    useState<IcarusSessionWithWorkflowRecord | null>(null);
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
-  const [originalDataColumns, setOriginalDataColumns] = useState<TableColumns>([]);
-  const [selectedDataColumns, setSelectedDataColumns] = useState<TableColumns>([]);
+  const [originalDataColumns, setOriginalDataColumns] = useState<TableColumns>(
+    []
+  );
+  const [selectedDataColumns, setSelectedDataColumns] = useState<TableColumns>(
+    []
+  );
   const [activeMatrixId, setActiveMatrixId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -37,16 +45,26 @@ const IcarusApp: React.FC = () => {
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
 
   // Memoized derived values
-  const matrices = useMemo(() => activeSession?.workflows?.[0]?.data?.matrices || [], [activeSession]);
-  const activeMatrix = useMemo(() => matrices.find(m => m.id === activeMatrixId), [matrices, activeMatrixId]);
-  const sessionSourceMatrix = useMemo(() => matrices.find(m => m.createdByFirstActivity), [matrices]);
+  const matrices = useMemo(
+    () => activeSession?.workflows?.[0]?.data?.matrices || [],
+    [activeSession]
+  );
+  const activeMatrix = useMemo(
+    () => matrices.find((m) => m.id === activeMatrixId),
+    [matrices, activeMatrixId]
+  );
+  const sessionSourceMatrix = useMemo(
+    () => matrices.find((m) => m.createdByFirstActivity),
+    [matrices]
+  );
 
   // Session management
   const handleSessionCreate = async ({ rows, columns }: BareSession) => {
     isUploadingRef.current = true;
     setIsProcessing(true);
     try {
-      const { matrixWorkflowMap, sessionWithWorkflows } = await generateActiveSessionWitNestedWorkflow({ rows, columns });
+      const { matrixWorkflowMap, sessionWithWorkflows } =
+        await generateActiveSessionWitNestedWorkflow({ rows, columns });
       setActiveSession(sessionWithWorkflows);
       setActiveMatrixId(matrixWorkflowMap.id);
     } catch (error) {
@@ -60,10 +78,12 @@ const IcarusApp: React.FC = () => {
   const handleSessionClick = async (session: IcarusSessionRecord) => {
     setIsProcessing(true);
     try {
-      const { sessionWithWorkflows } = await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
+      const { sessionWithWorkflows } =
+        await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
       setActiveSession(sessionWithWorkflows);
 
-      const lastMatrix = sessionWithWorkflows?.workflows?.[0].data.matrices.slice(-1)[0];
+      const lastMatrix =
+        sessionWithWorkflows?.workflows?.[0].data.matrices.slice(-1)[0];
       setActiveMatrixId(lastMatrix?.id || null);
     } catch (error) {
       console.error("Error handling session click:", error);
@@ -81,20 +101,35 @@ const IcarusApp: React.FC = () => {
     }
   };
 
-  const saveActivityInWorkflow = async (params: Partial<SaveStatisticalActivity>) => {
-    const { sourceMatrixId, inputColumnNames, inputMatrixReferences, inputParameters,
-      outputData, outputColumnNames, outputMetrics, action } = params;
+  const saveActivityInWorkflow = async (
+    params: Partial<SaveStatisticalActivity>
+  ) => {
+    const {
+      sourceMatrixId,
+      inputColumnNames,
+      inputMatrixReferences,
+      inputParameters,
+      outputData,
+      outputColumnNames,
+      outputMetrics,
+      action,
+    } = params;
 
     try {
       const matrix = {
         columns: outputColumnNames || [],
         data: outputData || [],
       };
-      const { insertedMatrix } = await saveMatrixInSessionWorkflow(activeSession, matrix);
+      const { insertedMatrix } = await saveMatrixInSessionWorkflow(
+        activeSession,
+        matrix
+      );
 
       const activity = {
         name: `statistical analysis--${action}`,
-        sourceMatrixId: sourceMatrixId || activeSession?.workflows?.[0]?.data?.matrices?.[0]?.id,
+        sourceMatrixId:
+          sourceMatrixId ||
+          activeSession?.workflows?.[0]?.data?.matrices?.[0]?.id,
         inputColumnNames,
         inputMatrixReferences,
         inputParameters,
@@ -104,7 +139,10 @@ const IcarusApp: React.FC = () => {
         pluginId: "statistical-engine",
       };
 
-      const sessionWithWorkflows = await saveActivityInSessionWorkflow(activeSession, activity);
+      const sessionWithWorkflows = await saveActivityInSessionWorkflow(
+        activeSession,
+        activity
+      );
       setActiveSession(sessionWithWorkflows);
       setActiveMatrixId(insertedMatrix.id);
     } catch (err) {
@@ -120,7 +158,7 @@ const IcarusApp: React.FC = () => {
 
     const result = reconstructFromMatrix({
       columns: activeMatrix.columns as TableColumns,
-      rowsAs2dMatrix: activeMatrix.data
+      rowsAs2dMatrix: activeMatrix.data,
     });
 
     if (!result) throw new Error("Unable to load matrix into preview table");
@@ -131,12 +169,16 @@ const IcarusApp: React.FC = () => {
   }, [activeMatrix]);
 
   // Render helpers
-  const renderFloatingButton = () => activeSession && (
-    <div className={activityFloatingButton({ intent: "primary" })} onClick={() => setIsSheetOpen(true)}>
-      <Menu size={24} className="text-blue-600" />
-      <span>View Activity Log</span>
-    </div>
-  );
+  const renderFloatingButton = () =>
+    activeSession && (
+      <div
+        className={activityFloatingButton({ intent: "primary" })}
+        onClick={() => setIsSheetOpen(true)}
+      >
+        <Menu size={24} className="text-blue-600" />
+        <span>View Activity Log</span>
+      </div>
+    );
 
   const renderSlidingSheet = () => (
     <SlidingSheet
@@ -171,7 +213,7 @@ const IcarusApp: React.FC = () => {
       {matrices.length > 0 && (
         <MatrixTab
           matrices={matrices}
-          activeMatrixId={activeMatrix?.id || ''}
+          activeMatrixId={activeMatrix?.id || ""}
           setActiveMatrixId={setActiveMatrixId}
         />
       )}
@@ -204,7 +246,9 @@ const IcarusApp: React.FC = () => {
       />
 
       <main className="flex-1 overflow-y-auto bg-white p-6">
-        {activeMatrix ? renderMainContent() : (
+        {activeMatrix ? (
+          renderMainContent()
+        ) : (
           <div className="w-full">
             <ProteomicsAnalysisHomeView
               handleSessionCreate={handleSessionCreate}
