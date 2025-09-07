@@ -60,9 +60,14 @@ coverage/
 *.swo
 *~
 
+# Hide script builds
 ./scripts/python/bin/*.build/**
-./scripts/python/bin/*.dist/**
+./scripts/python/bin/*.build/**
 ./scripts/python/bin/*.onefile-build/**
+
+scripts/python/bin/*.build/**
+scripts/python/bin/*.build/**
+scripts/python/bin/*.onefile-build/**
 
 # OS generated files
 .DS_Store
