@@ -1356,7 +1356,7 @@ export const FilterByValue = ({
         <div>
           <SingleSelect
             id="filter-by-value-operator"
-            label={`Select P-value Column`}
+            label={`Select Operator`}
             placeholder="Select data columns to analyze..."
             options={operatorData.map((curr) => ({
               value: curr.value,
