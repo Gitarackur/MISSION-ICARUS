@@ -60,6 +60,10 @@ coverage/
 *.swo
 *~
 
+./scripts/python/bin/*.build/**
+./scripts/python/bin/*.dist/**
+./scripts/python/bin/*.onefile-build/**
+
 # OS generated files
 .DS_Store
 .DS_Store?

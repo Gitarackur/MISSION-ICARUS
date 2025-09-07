@@ -23,3 +23,7 @@ h1 {
   line-height: 1.1;
 }
 
+.dev,
+.dev * {
+  @apply outline outline-red-700/40;
+}

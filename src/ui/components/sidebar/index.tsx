@@ -3,8 +3,6 @@ import { Plus, Trash2 } from "lucide-react";
 import sidebarStyles from "@/ui/components/sidebar/variants/sidebar.variant";
 import { SidebarProps } from "@/ui/components/sidebar/types/sidebar.types";
 
-
-
 const Sidebar: React.FC<SidebarProps> = ({
   sessions,
   activeSession,
@@ -18,6 +16,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     <aside className={s.aside()}>
       <div className={s.header()}>
         <h2 className={s.headerTitle()}>Sessions</h2>
+        <div>
+          {sessions?.length ? (
+            <button onClick={onCreateSession} className={s.createButton()}>
+              <Plus size={20} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className={s.list()}>
@@ -25,11 +30,16 @@ const Sidebar: React.FC<SidebarProps> = ({
           {sessions?.map((session) => {
             const isActive = activeSession?.id === session?.id;
             return (
-              <li key={session.id} className={`${s.listItem()} flex items-center justify-between`}>
+              <li
+                key={session.id}
+                className={`${s.listItem()} flex items-center justify-between`}
+              >
                 <button
                   onClick={() => onSessionClick(session)}
                   className={`${s.sessionButton()} ${
-                    isActive ? s.sessionButtonActive() : s.sessionButtonInactive()
+                    isActive
+                      ? s.sessionButtonActive()
+                      : s.sessionButtonInactive()
                   }`}
                 >
                   {session.name}
@@ -52,15 +62,16 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className={s.createSection()}>
-        <div className={s.createCard()}>
-          <button onClick={onCreateSession} className={s.createButton()}>
-            <Plus size={20} />
-            <span>Create Session</span>
-          </button>
-          <p className={s.createSubtext()}>
-            Click the button above to start a new session.
-          </p>
-        </div>
+        &nbsp;
+        {sessions?.length === 0 ? (
+          <div className={s.emptyStateWrapper()}>
+            <span>No sessions available</span>
+            <p>
+              Upload your first protein or evidence file to{" "}
+              <strong>get started</strong>.
+            </p>
+          </div>
+        ) : null}
       </div>
 
       <div className={s.footer()}>Total Sessions: {sessions?.length}</div>
