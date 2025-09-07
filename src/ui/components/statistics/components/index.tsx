@@ -18,21 +18,15 @@ const descriptionClass = "text-gray-600 mb-6";
 const labelClass = "block text-sm font-medium text-gray-700 mb-2";
 const inputClass =
   "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-500";
-const selectClass =
-  "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
+// const selectClass =
+//   "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
 const buttonClass =
   "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors";
 const dangerButtonClass =
   "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors";
 
-// import MultiSelect from "@/ui/design-system/Select/Multi/select";  
-
-
 
 // --- UI COMPONENTS FOR EACH STATISTICAL ACTION ---
-
-
-
 
 /*---------------------------------------------------
 COUNT COLUMN VALUES
@@ -81,7 +75,7 @@ export const Count = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -97,7 +91,9 @@ export const Count = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Count calculation. Please check your data.");
+      setError(
+        "An error occurred during the Count calculation. Please check your data."
+      );
       console.error("Count calculation failed:", err);
       onError?.();
     }
@@ -114,9 +110,13 @@ export const Count = ({
       <div className="mb-6">
         <MultiSelect
           id="count-column"
-          label={`Select Column${selectedDataSets.length > 1 ? 's' : ''}`}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
           placeholder="Select data columns to analyze..."
-          options={numericColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection1}
           helperText="Choose the numeric columns you want to include in your analysis"
@@ -137,7 +137,6 @@ export const Count = ({
     </div>
   );
 };
-
 
 /*---------------------------------------------------
 COUNT MISSING COLUMN VALUES
@@ -169,16 +168,17 @@ export const CountMissing = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runCountMissingCalc = () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
-      setError("Please select at least one column for the Count Missing calculation.");
+      setError(
+        "Please select at least one column for the Count Missing calculation."
+      );
       onError?.();
       return;
     }
@@ -187,7 +187,7 @@ export const CountMissing = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -203,7 +203,9 @@ export const CountMissing = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Count Missing calculation. Please check your data.");
+      setError(
+        "An error occurred during the Count Missing calculation. Please check your data."
+      );
       console.error("Count Missing calculation failed:", err);
       onError?.();
     }
@@ -216,37 +218,22 @@ export const CountMissing = ({
       <h1 className={headingClass}>Count Missing Values</h1>
       <p className={descriptionClass}>
         Counts the number of missing (null or empty) values in the selected
-        column{selectedDataSets.length > 1 ? 's' : ''}.
+        column{selectedDataSets.length > 1 ? "s" : ""}.
       </p>
       <div className="mb-6">
-        <label htmlFor="missing-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="missing-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -264,12 +251,9 @@ export const CountMissing = ({
   );
 };
 
-
-
 /*---------------------------------------------------
 COUNT VALID COLUMN VALUES
 ----------------------------------------------------*/
-
 
 export const CountValid = ({
   dataColumns,
@@ -297,16 +281,17 @@ export const CountValid = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runCountValidCalc = () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
-      setError("Please select at least one column for the Count Valid calculation.");
+      setError(
+        "Please select at least one column for the Count Valid calculation."
+      );
       onError?.();
       return;
     }
@@ -315,7 +300,7 @@ export const CountValid = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -331,7 +316,9 @@ export const CountValid = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Count Valid calculation. Please check your data.");
+      setError(
+        "An error occurred during the Count Valid calculation. Please check your data."
+      );
       console.error("Count Valid calculation failed:", err);
       onError?.();
     }
@@ -343,37 +330,23 @@ export const CountValid = ({
     <div className={containerClass}>
       <h1 className={headingClass}>Count Valid Values</h1>
       <p className={descriptionClass}>
-        Counts the number of non-missing (valid) values in the selected column{selectedDataSets.length > 1 ? 's' : ''}.
+        Counts the number of non-missing (valid) values in the selected column
+        {selectedDataSets.length > 1 ? "s" : ""}.
       </p>
       <div className="mb-6">
-        <label htmlFor="valid-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="valid-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -390,7 +363,6 @@ export const CountValid = ({
     </div>
   );
 };
-
 
 /*---------------------------------------------------
 MEAN COLUMN VALUES
@@ -422,9 +394,8 @@ export const MeanValues = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runMeanCalc = () => {
@@ -440,7 +411,7 @@ export const MeanValues = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -456,7 +427,9 @@ export const MeanValues = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Mean calculation. Please check your data.");
+      setError(
+        "An error occurred during the Mean calculation. Please check your data."
+      );
       console.error("Mean calculation failed:", err);
       onError?.();
     }
@@ -469,37 +442,22 @@ export const MeanValues = ({
       <h1 className={headingClass}>Calculate Mean</h1>
       <p className={descriptionClass}>
         Computes the arithmetic mean of all numeric values in the selected
-        column{selectedDataSets.length > 1 ? 's' : ''}.
+        column{selectedDataSets.length > 1 ? "s" : ""}.
       </p>
       <div className="mb-6">
-        <label htmlFor="mean-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="mean-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -516,7 +474,6 @@ export const MeanValues = ({
     </div>
   );
 };
-
 
 /*---------------------------------------------------
 MEDIAN COLUMN VALUES
@@ -548,9 +505,8 @@ export const MedianValues = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runMedianCalc = () => {
@@ -566,7 +522,7 @@ export const MedianValues = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -582,7 +538,9 @@ export const MedianValues = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Median calculation. Please check your data.");
+      setError(
+        "An error occurred during the Median calculation. Please check your data."
+      );
       console.error("Median calculation failed:", err);
       onError?.();
     }
@@ -594,38 +552,24 @@ export const MedianValues = ({
     <div className={containerClass}>
       <h1 className={headingClass}>Calculate Median</h1>
       <p className={descriptionClass}>
-        Finds the median value of the selected column{selectedDataSets.length > 1 ? 's' : ''}, which is the middle value of a sorted
-        dataset.
+        Finds the median value of the selected column
+        {selectedDataSets.length > 1 ? "s" : ""}, which is the middle value of a
+        sorted dataset.
       </p>
       <div className="mb-6">
-        <label htmlFor="median-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="median-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -643,11 +587,9 @@ export const MedianValues = ({
   );
 };
 
-
 /*---------------------------------------------------
 VARIANCE COLUMN VALUES
 ----------------------------------------------------*/
-
 
 export const Variance = ({
   dataColumns,
@@ -675,16 +617,17 @@ export const Variance = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runVarianceCalc = () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
-      setError("Please select at least one column for the Variance calculation.");
+      setError(
+        "Please select at least one column for the Variance calculation."
+      );
       onError?.();
       return;
     }
@@ -693,7 +636,7 @@ export const Variance = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -709,7 +652,9 @@ export const Variance = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Variance calculation. Please check your data.");
+      setError(
+        "An error occurred during the Variance calculation. Please check your data."
+      );
       console.error("Variance calculation failed:", err);
       onError?.();
     }
@@ -721,38 +666,24 @@ export const Variance = ({
     <div className={containerClass}>
       <h1 className={headingClass}>Calculate Variance</h1>
       <p className={descriptionClass}>
-        Calculates the variance of the selected column{selectedDataSets.length > 1 ? 's' : ''}, a measure of how spread out a set of values are
-        from their average.
+        Calculates the variance of the selected column
+        {selectedDataSets.length > 1 ? "s" : ""}, a measure of how spread out a
+        set of values are from their average.
       </p>
       <div className="mb-6">
-        <label htmlFor="variance-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="variance-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -769,7 +700,6 @@ export const Variance = ({
     </div>
   );
 };
-
 
 /*---------------------------------------------------
 STDDEV COLUMN VALUES
@@ -801,16 +731,17 @@ export const StdDevValues = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runStdDevCalc = () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
-      setError("Please select at least one column for the Standard Deviation calculation.");
+      setError(
+        "Please select at least one column for the Standard Deviation calculation."
+      );
       onError?.();
       return;
     }
@@ -819,7 +750,7 @@ export const StdDevValues = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -835,7 +766,9 @@ export const StdDevValues = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Standard Deviation calculation. Please check your data.");
+      setError(
+        "An error occurred during the Standard Deviation calculation. Please check your data."
+      );
       console.error("Standard Deviation calculation failed:", err);
       onError?.();
     }
@@ -847,38 +780,24 @@ export const StdDevValues = ({
     <div className={containerClass}>
       <h1 className={headingClass}>Calculate Standard Deviation</h1>
       <p className={descriptionClass}>
-        Computes the standard deviation of the selected column{selectedDataSets.length > 1 ? 's' : ''}, a measure of the amount of variation or
-        dispersion of a set of values.
+        Computes the standard deviation of the selected column
+        {selectedDataSets.length > 1 ? "s" : ""}, a measure of the amount of
+        variation or dispersion of a set of values.
       </p>
       <div className="mb-6">
-        <label htmlFor="stddev-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="stddev-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -895,7 +814,6 @@ export const StdDevValues = ({
     </div>
   );
 };
-
 
 /*---------------------------------------------------
 SUM COLUMN VALUES
@@ -927,9 +845,8 @@ export const Sum = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runSumCalc = () => {
@@ -945,7 +862,7 @@ export const Sum = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -961,7 +878,9 @@ export const Sum = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Sum calculation. Please check your data.");
+      setError(
+        "An error occurred during the Sum calculation. Please check your data."
+      );
       console.error("Sum calculation failed:", err);
       onError?.();
     }
@@ -973,37 +892,23 @@ export const Sum = ({
     <div className={containerClass}>
       <h1 className={headingClass}>Calculate Sum</h1>
       <p className={descriptionClass}>
-        Sums all numeric values in the selected column{selectedDataSets.length > 1 ? 's' : ''}.
+        Sums all numeric values in the selected column
+        {selectedDataSets.length > 1 ? "s" : ""}.
       </p>
       <div className="mb-6">
-        <label htmlFor="sum-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="sum-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -1051,16 +956,17 @@ export const Product = ({
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runProductCalc = () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
-      setError("Please select at least one column for the Product calculation.");
+      setError(
+        "Please select at least one column for the Product calculation."
+      );
       onError?.();
       return;
     }
@@ -1069,7 +975,7 @@ export const Product = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -1085,7 +991,9 @@ export const Product = ({
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Product calculation. Please check your data.");
+      setError(
+        "An error occurred during the Product calculation. Please check your data."
+      );
       console.error("Product calculation failed:", err);
       onError?.();
     }
@@ -1097,37 +1005,23 @@ export const Product = ({
     <div className={containerClass}>
       <h1 className={headingClass}>Calculate Product</h1>
       <p className={descriptionClass}>
-        Calculates the product of all numeric values in the selected column{selectedDataSets.length > 1 ? 's' : ''}.
+        Calculates the product of all numeric values in the selected column
+        {selectedDataSets.length > 1 ? "s" : ""}.
       </p>
       <div className="mb-6">
-        <label htmlFor="product-column" className={labelClass}>
-          Select Column{selectedDataSets.length > 1 ? 's' : ''}
-        </label>
-        <select
-          multiple
+        <MultiSelect
           id="product-column"
-          className={selectClass}
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
           value={selectedDataSets}
           onChange={handleColumnSelection}
-        >
-          {numericColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
-
-        {selectedDataSets.length > 0 && (
-          <div className="mt-2 max-h-64 overflow-y-auto">
-            <p className="text-sm text-gray-600">
-              Selected: {selectedDataSets.join(', ')}
-            </p>
-          </div>
-        )}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
@@ -1144,8 +1038,6 @@ export const Product = ({
     </div>
   );
 };
-
-
 
 /*---------------------------------------------------
 MIN COLUMN VALUES
@@ -1164,23 +1056,25 @@ export const Min = ({
       Identifies the minimum value in the selected column.
     </p>
     <div className="mb-6">
-      <label htmlFor="min-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="min-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
+      <SingleSelect
+        id="min-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        defaultValue={""}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Calculate</button>
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 MAX COLUMN VALUES
@@ -1199,26 +1093,25 @@ export const Max = ({
       Identifies the maximum value in the selected column.
     </p>
     <div className="mb-6">
-      <label htmlFor="max-column" className={labelClass}>
-        Select Column
-      </label>
-      <select id="max-column" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
-
-
-
+      <SingleSelect
+        id="max-column"
+        label={`Select Column`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        defaultValue={""}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Calculate</button>
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 FILTER COLUMN VALUES
@@ -1249,33 +1142,33 @@ export const FilterByValue = ({
     {
       value: "==",
       label: "Equals",
-      disabled: false
+      disabled: false,
     },
     {
       value: "!=",
       label: "Does not equal",
-      disabled: false
+      disabled: false,
     },
     {
       value: ">",
       label: "Greater than",
-      disabled: false
+      disabled: false,
     },
     {
       value: "<",
       label: "Less than",
-      disabled: false
+      disabled: false,
     },
     {
       value: ">=",
       label: "Greater than or equal to",
-      disabled: false
+      disabled: false,
     },
     {
       value: "<=",
       label: "Less than or equal to",
-      disabled: false
-    }
+      disabled: false,
+    },
   ] as const;
 
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
@@ -1283,9 +1176,8 @@ export const FilterByValue = ({
   const [filterValue, setFilterValue] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const handleColumnSelection = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedOptions = Array.from(e.target.selectedOptions, option => option.value);
-    setSelectedDataSets(selectedOptions);
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
   };
 
   const runFilterCalc = () => {
@@ -1307,7 +1199,7 @@ export const FilterByValue = ({
       const filteredData = new Map();
 
       // Handle multiple selections - add all selected columns to filteredData
-      selectedDataSets.forEach(column => {
+      selectedDataSets.forEach((column) => {
         if (allColumnarData.has(column)) {
           filteredData.set(column, allColumnarData.get(column));
         }
@@ -1346,12 +1238,24 @@ export const FilterByValue = ({
             if (isNumericFilter && !isNaN(cellNumeric)) {
               // Numeric comparison
               switch (operator) {
-                case "==": matches = cellNumeric === filterValueNumeric; break;
-                case "!=": matches = cellNumeric !== filterValueNumeric; break;
-                case ">": matches = cellNumeric > filterValueNumeric; break;
-                case "<": matches = cellNumeric < filterValueNumeric; break;
-                case ">=": matches = cellNumeric >= filterValueNumeric; break;
-                case "<=": matches = cellNumeric <= filterValueNumeric; break;
+                case "==":
+                  matches = cellNumeric === filterValueNumeric;
+                  break;
+                case "!=":
+                  matches = cellNumeric !== filterValueNumeric;
+                  break;
+                case ">":
+                  matches = cellNumeric > filterValueNumeric;
+                  break;
+                case "<":
+                  matches = cellNumeric < filterValueNumeric;
+                  break;
+                case ">=":
+                  matches = cellNumeric >= filterValueNumeric;
+                  break;
+                case "<=":
+                  matches = cellNumeric <= filterValueNumeric;
+                  break;
               }
             } else {
               // String comparison
@@ -1359,8 +1263,12 @@ export const FilterByValue = ({
               const filterString = filterValue.trim();
 
               switch (operator) {
-                case "==": matches = cellString === filterString; break;
-                case "!=": matches = cellString !== filterString; break;
+                case "==":
+                  matches = cellString === filterString;
+                  break;
+                case "!=":
+                  matches = cellString !== filterString;
+                  break;
               }
             }
 
@@ -1374,9 +1282,9 @@ export const FilterByValue = ({
         // If row matches criteria, add it to filtered results
         if (shouldIncludeRow) {
           const row: (string | number)[] = [];
-          selectedDataSets.forEach(column => {
+          selectedDataSets.forEach((column) => {
             const columnData = filteredData.get(column);
-            row.push(columnData ? columnData[rowIndex] : '');
+            row.push(columnData ? columnData[rowIndex] : "");
           });
           filteredRows.push(row);
         }
@@ -1388,71 +1296,61 @@ export const FilterByValue = ({
           action: actionId,
           rowCount: dataRows.length,
           metadata: {
-            originalDataType: 'Map<string, TableMatrix>',
-            columnsProcessed: selectedDataSets.length
-          }
+            originalDataType: "Map<string, TableMatrix>",
+            columnsProcessed: selectedDataSets.length,
+          },
         },
         newly_created_columns: selectedDataSets,
         data: filteredRows,
         outputParameters: {
           columns: selectedDataSets,
-          calculationMethod: 'filter_by_value',
-          resultType: 'filtered_data',
+          calculationMethod: "filter_by_value",
+          resultType: "filtered_data",
           metadata: {
             calculationTimestamp: new Date().toISOString(),
             resultCount: filteredRows.length,
             filterOperator: operator,
             filterValue: filterValue.trim(),
-            originalRowCount: totalRows
-          }
-        }
+            originalRowCount: totalRows,
+          },
+        },
       };
 
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the Filter operation. Please check your data and parameters.");
+      setError(
+        "An error occurred during the Filter operation. Please check your data and parameters."
+      );
       console.error("Filter operation failed:", err);
       onError?.();
     }
   };
 
-  const isRunButtonDisabled = selectedDataSets.length === 0 || !filterValue.trim();
+  const isRunButtonDisabled =
+    selectedDataSets.length === 0 || !filterValue.trim();
 
   return (
     <div className={containerClass}>
       <h1 className={headingClass}>Filter By Value</h1>
       <p className={descriptionClass}>
-        Filters rows based on a specific value and a comparison operator for the selected column{selectedDataSets.length > 1 ? 's' : ''}.
+        Filters rows based on a specific value and a comparison operator for the
+        selected column{selectedDataSets.length > 1 ? "s" : ""}.
       </p>
       <div className="space-y-4 mb-6">
         <div>
-          <label htmlFor="filter-by-value-column" className={labelClass}>
-            Select Column{selectedDataSets.length > 1 ? 's' : ''}
-          </label>
-          <select
-            multiple
+          <MultiSelect
             id="filter-by-value-column"
-            className={selectClass}
+            label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
             value={selectedDataSets}
             onChange={handleColumnSelection}
-          >
-            {numericColumns.map((col) => (
-              <option key={col} value={col}>
-                {col}
-              </option>
-            ))}
-          </select>
-          <p className="text-xs text-gray-500 mt-1">
-            Hold Ctrl/Cmd to select multiple columns.
-          </p>
-
-          {selectedDataSets.length > 0 && (
-            <div className="mt-2">
-              <p className="text-sm text-gray-600">
-                Selected: {selectedDataSets.join(', ')}
-              </p>
-            </div>
-          )}
+            helperText="Choose the numeric columns you want to include in your analysis"
+          />
         </div>
 
         <div>
@@ -1460,8 +1358,12 @@ export const FilterByValue = ({
             id="filter-by-value-operator"
             label={`Select P-value Column`}
             placeholder="Select data columns to analyze..."
-            options={operatorData.map(curr => ({ value: curr.value, label: curr.label, disabled: curr.disabled }))}
-            value={''}
+            options={operatorData.map((curr) => ({
+              value: curr.value,
+              label: curr.label,
+              disabled: curr.disabled,
+            }))}
+            value={""}
             onChange={(value) => setOperator(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
           />
@@ -1497,7 +1399,6 @@ export const FilterByValue = ({
   );
 };
 
-
 /*---------------------------------------------------
 COUNT COLUMN VALUES BY MISSING
 ----------------------------------------------------*/
@@ -1519,8 +1420,12 @@ export const FilterByMissing = ({
         id="filter-missing-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1530,7 +1435,6 @@ export const FilterByMissing = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 FILTER COLUMN VALUES BY RANGE
@@ -1554,8 +1458,12 @@ export const FilterByRange = ({
           id="filter-range-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1580,7 +1488,6 @@ export const FilterByRange = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 FILTER COLUMN VALUES BY OUTLIER
 ----------------------------------------------------*/
@@ -1602,8 +1509,12 @@ export const FilterByOutlier = ({
         id="filter-outlier-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1613,7 +1524,6 @@ export const FilterByOutlier = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 ADD COLUMN VALUES
@@ -1653,8 +1563,12 @@ export const RenameColumn = ({
           id="old-column-name"
           label={`Old Column Name`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1671,7 +1585,6 @@ export const RenameColumn = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 DELETE COLUMN VALUES
@@ -1694,8 +1607,12 @@ export const DeleteColumn = ({
         id="delete-column-name"
         label={`Select Column to Delete`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1705,7 +1622,6 @@ export const DeleteColumn = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 FILL COLUMN VALUES
@@ -1729,8 +1645,12 @@ export const FillColumn = ({
           id="fill-column-name"
           label={`Select Column to Fill`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1747,7 +1667,6 @@ export const FillColumn = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 INPUT MEAN COLUMN VALUES
@@ -1770,8 +1689,12 @@ export const ImputeMean = ({
         id="impute-mean-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1781,7 +1704,6 @@ export const ImputeMean = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 INPUT MEDIAN COLUMN VALUES
@@ -1804,8 +1726,12 @@ export const ImputeMedian = ({
         id="impute-median-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1815,7 +1741,6 @@ export const ImputeMedian = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 INPUT KNN COLUMN VALUES
@@ -1839,8 +1764,12 @@ export const ImputeKnn = ({
           id="impute-knn-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1864,7 +1793,6 @@ export const ImputeKnn = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 INPUT ZERO COLUMN VALUES
 ----------------------------------------------------*/
@@ -1886,8 +1814,12 @@ export const ImputeZero = ({
         id="impute-zero-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1897,7 +1829,6 @@ export const ImputeZero = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 COUNT COLUMN VALUES
@@ -1921,8 +1852,12 @@ export const MovingAverage = ({
           id="ma-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1944,7 +1879,6 @@ export const MovingAverage = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 ROLLING STDDEV COLUMN VALUES
@@ -1968,8 +1902,12 @@ export const RollingStdDev = ({
           id="rolling-stddev-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1991,7 +1929,6 @@ export const RollingStdDev = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 TTEST COLUMN VALUES
@@ -2079,7 +2016,11 @@ export const TTest = ({
             id="ttest-column-1"
             label={`Select First Numeric Column`}
             placeholder="Select data columns to analyze..."
-            options={numericColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
+            options={numericColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
             value={firstGroup}
             onChange={(value) => setFirstGroup(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
@@ -2090,7 +2031,11 @@ export const TTest = ({
             id="ttest-column-2"
             label={`Select Second Numeric Column`}
             placeholder="Select data columns to analyze..."
-            options={numericColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
+            options={numericColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
             value={secondGroup}
             onChange={(value) => setSecondGroup(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
@@ -2112,7 +2057,6 @@ export const TTest = ({
     </div>
   );
 };
-
 
 /*---------------------------------------------------
 ANOVA COLUMN VALUES
@@ -2137,8 +2081,12 @@ export const Anova = ({
           id="anova-column"
           label={`Select Numeric Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2149,8 +2097,12 @@ export const Anova = ({
           id="anova-group-column"
           label={`Select Grouping Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2161,7 +2113,6 @@ export const Anova = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 LIMMA COLUMN VALUES
@@ -2181,27 +2132,31 @@ export const Limma = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="limma-column" className={labelClass}>
-          Select Numeric Columns
-        </label>
-        <select multiple id="limma-column" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="limma-column"
+          label={`Select Columns`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <SingleSelect
           id="limma-group-column"
           label={`Select Grouping Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2212,7 +2167,6 @@ export const Limma = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 FOLD CHANGE COLUMN VALUES
@@ -2236,8 +2190,12 @@ export const FoldChange = ({
           id="fc-column"
           label={`Select Numeric Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2271,7 +2229,6 @@ export const FoldChange = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 NORMALIZED REPORTER IONS COLUMN VALUES
 ----------------------------------------------------*/
@@ -2290,19 +2247,19 @@ export const NormalizeReporterIons = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="norm-ri-columns" className={labelClass}>
-          Select Reporter Ion Columns
-        </label>
-        <select multiple id="norm-ri-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="norm-ri-columns"
+          label={`Select Reporter Ion Columns`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div className="flex items-center">
         <input
@@ -2324,7 +2281,6 @@ export const NormalizeReporterIons = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 CORRECT FOR PURITY COLUMN VALUES
 ----------------------------------------------------*/
@@ -2343,19 +2299,19 @@ export const CorrectForPurity = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="correct-purity-columns" className={labelClass}>
-          Select Reporter Ion Columns
-        </label>
-        <select multiple id="correct-purity-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="correct-purity-columns"
+          label={`Select Reporter Ion Columns`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="purity-matrix" className={labelClass}>
@@ -2374,7 +2330,6 @@ export const CorrectForPurity = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 BOX PLOT COLUMN VALUES
@@ -2397,8 +2352,12 @@ export const BoxPlot = ({
         id="boxplot-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2408,7 +2367,6 @@ export const BoxPlot = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 SCATTER PLOT COLUMN VALUES
@@ -2433,8 +2391,12 @@ export const ScatterPlot = ({
           id="scatter-x-column"
           label={`Select X-Axis Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2444,8 +2406,12 @@ export const ScatterPlot = ({
           id="scatter-y-column"
           label={`Select Y-Axis Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2475,19 +2441,19 @@ export const Heatmap = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="heatmap-columns" className={labelClass}>
-          Select Columns
-        </label>
-        <select multiple id="heatmap-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="heatmap-columns"
+          label={`Select Columns`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -2518,23 +2484,30 @@ export const VolcanoPlot = ({
           id="volcano-pvalue"
           label={`Select P-value Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
       </div>
       <div>
-        <label htmlFor="volcano-foldchange" className={labelClass}>
-          Select Fold Change Column
-        </label>
-        <select id="volcano-foldchange" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="volcano-foldchange"
+          label={`Select Fold Change Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -2542,7 +2515,6 @@ export const VolcanoPlot = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 PCA PLOT COLUMN VALUES
@@ -2561,26 +2533,25 @@ export const PcaPlot = ({
       Generates a PCA plot to visualize principal components.
     </p>
     <div className="mb-6">
-      <label htmlFor="pca-plot-columns" className={labelClass}>
-        Select Columns
-      </label>
-      <select multiple id="pca-plot-columns" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
-      <p className="text-xs text-gray-500 mt-1">
-        Hold Ctrl/Cmd to select multiple columns.
-      </p>
+      <MultiSelect
+        id="pca-plot-columns"
+        label={`Select Columns`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        defaultValue={[]}
+        onChange={(values) => console.log(values)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Generate Plot</button>
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 SORT ASC COLUMN VALUES
@@ -2603,8 +2574,12 @@ export const SortAsc = ({
         id="sort-asc-column"
         label={`Select Column to Sort`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2614,7 +2589,6 @@ export const SortAsc = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 SORT DESC COLUMN VALUES
@@ -2637,8 +2611,12 @@ export const SortDesc = ({
         id="sort-desc-column"
         label={`Select Column to Sort`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2648,7 +2626,6 @@ export const SortDesc = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 REORDER COLUMN VALUES
@@ -2690,7 +2667,6 @@ export const ReorderColumns = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 TRANSPOSE COLUMN VALUES
 ----------------------------------------------------*/
@@ -2710,7 +2686,6 @@ export const Transpose = () => (
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 FILTER COLUMN BY NAME VALUES
@@ -2739,7 +2714,6 @@ export const FilterColumnsByName = () => (
   </div>
 );
 
-
 /*---------------------------------------------------
 FILTER COLUMN BY TYPES VALUES
 ----------------------------------------------------*/
@@ -2751,21 +2725,25 @@ export const FilterColumnsByType = () => (
       Filters columns based on their data type (e.g., numeric, categorical).
     </p>
     <div className="mb-6">
-      <label htmlFor="filter-column-type-select" className={labelClass}>
-        Select Data Type
-      </label>
-      <select id="filter-column-type-select" className={selectClass}>
-        <option value="numeric">Numeric</option>
-        <option value="string">String</option>
-        <option value="date">Date</option>
-      </select>
+      <SingleSelect
+        id="filter-column-type-select"
+        label={`Select Column to Sort`}
+        placeholder="Select data columns to analyze..."
+        options={["numeric", "string", "date"].map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
+        onChange={(value) => console.log(value)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Filter</button>
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 ADD ROW VALUES
@@ -2808,7 +2786,6 @@ export const AddRow = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 RENAME ROW VALUES
 ----------------------------------------------------*/
@@ -2829,8 +2806,12 @@ export const RenameRow = ({
           id="old-row-id"
           label={`Select Row ID`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2847,7 +2828,6 @@ export const RenameRow = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 DELETE ROW VALUES
@@ -2868,8 +2848,12 @@ export const DeleteRow = ({
         id="delete-row-id"
         label={`Select Row ID to Delete`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2879,7 +2863,6 @@ export const DeleteRow = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 PCA LEARNING VALUES
@@ -2899,19 +2882,19 @@ export const PcaLearning = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="pca-learning-columns" className={labelClass}>
-          Select Columns for PCA
-        </label>
-        <select multiple id="pca-learning-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="pca-learning-columns"
+          label={`Select Columns for PCA`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="pca-learning-components" className={labelClass}>
@@ -2932,7 +2915,6 @@ export const PcaLearning = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 PLSDA LEARNING VALUES
 ----------------------------------------------------*/
@@ -2952,31 +2934,35 @@ export const PlsdaLearning = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="plsda-learning-data" className={labelClass}>
-          Select Data Columns
-        </label>
-        <select multiple id="plsda-learning-data" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="plsda-learning-data"
+          label={`Select Data Columns`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
+
       <div>
-        <label htmlFor="plsda-learning-group" className={labelClass}>
-          Select Grouping Column
-        </label>
-        <select id="plsda-learning-group" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
+        <SingleSelect
+          id="plsda-learning-group"
+          label={`Select Grouping Column`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -2984,7 +2970,6 @@ export const PlsdaLearning = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 TSNE LEARNING VALUES
@@ -3005,19 +2990,19 @@ export const TsneLearning = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="tsne-learning-data" className={labelClass}>
-          Select Data Columns
-        </label>
-        <select multiple id="tsne-learning-data" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="tsne-learning-data"
+          label={`Select Data Columns`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="tsne-learning-perplexity" className={labelClass}>
@@ -3036,7 +3021,6 @@ export const TsneLearning = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 ADD PTM VALUES
@@ -3060,8 +3044,12 @@ export const AddPtm = ({
           id="add-ptm-column"
           label={`Select Peptide Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -3071,8 +3059,10 @@ export const AddPtm = ({
           id="add-ptm-type"
           label={`Select PTM Type`}
           placeholder="Select PTM type "
-          options={["Phosphorylation", "Acetylation", "Methylation"].map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={["Phosphorylation", "Acetylation", "Methylation"].map(
+            (curr) => ({ value: curr, label: curr, disabled: false })
+          )}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the PTM type you want to include in your analysis"
         />
@@ -3083,7 +3073,6 @@ export const AddPtm = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 REMOVE PTM VALUES
@@ -3107,8 +3096,12 @@ export const RemovePtm = ({
           id="remove-ptm-column"
           label={`Select Peptide Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3118,8 +3111,13 @@ export const RemovePtm = ({
           id="add-ptm-type"
           label={`Select PTM Type`}
           placeholder="Select PTM type "
-          options={["All PTMs", "Phosphorylation", "Acetylation", "Methylation"].map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={[
+            "All PTMs",
+            "Phosphorylation",
+            "Acetylation",
+            "Methylation",
+          ].map((curr) => ({ value: curr, label: curr, disabled: false }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the PTM type you want to delete in your analysis"
         />
@@ -3130,7 +3128,6 @@ export const RemovePtm = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 GO ANALYSIS VALUES
@@ -3172,7 +3169,6 @@ export const GoAnalysis = () => (
   </div>
 );
 
-
 /*---------------------------------------------------
 PATHWAY ANALYSIS VALUES
 ----------------------------------------------------*/
@@ -3196,20 +3192,16 @@ export const PathwayAnalysis = () => (
         ></textarea>
       </div>
       <div>
-        <label htmlFor="pathway-analysis-db" className={labelClass}>
-          Pathway Database
-        </label>
-        <select id="pathway-analysis-db" className={selectClass}>
-          <option>KEGG</option>
-          <option>Reactome</option>
-        </select>
-
         <SingleSelect
           id="pathway-analysis-db"
           label={`Pathway Database`}
           placeholder="Select data columns to analyze..."
-          options={["KEGG", "Reactome"].map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={["KEGG", "Reactome"].map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the Pathway"
         />
@@ -3220,7 +3212,6 @@ export const PathwayAnalysis = () => (
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 HIERACHIAL CLUSTERING VALUES
@@ -3240,29 +3231,36 @@ export const HierarchicalClustering = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="hc-columns" className={labelClass}>
-          Select Columns to Cluster
-        </label>
-        <select multiple id="hc-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="hc-columns"
+          label={`Select Columns to Cluster`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
-        <label htmlFor="hc-method" className={labelClass}>
-          Linkage Method
-        </label>
-        <select id="hc-method" className={selectClass}>
-          <option>Ward's Method</option>
-          <option>Complete Linkage</option>
-          <option>Average Linkage</option>
-        </select>
+        <SingleSelect
+          id="hc-method"
+          label={`Linkage Method`}
+          placeholder="Select data columns to analyze..."
+          options={["Ward's Method", "Complete Linkage", "Average Linkage"].map(
+            (curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            })
+          )}
+          value={""}
+          onChange={(value) => console.log(value)}
+          helperText="Choose the Pathway"
+        />
       </div>
     </div>
     <div className="flex justify-end">
@@ -3270,7 +3268,6 @@ export const HierarchicalClustering = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 KMEANS CLUSTERING VALUES
@@ -3290,20 +3287,21 @@ export const KmeansClustering = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="kmeans-columns" className={labelClass}>
-          Select Columns to Cluster
-        </label>
-        <select multiple id="kmeans-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="kmeans-columns"
+          label={`Select Columns to Cluster`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
+
       <div>
         <label htmlFor="kmeans-k" className={labelClass}>
           Number of Clusters (k)
@@ -3323,7 +3321,6 @@ export const KmeansClustering = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 PCA ANALYSIS VALUES
 ----------------------------------------------------*/
@@ -3342,19 +3339,19 @@ export const PcaAnalysis = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="pca-analysis-columns" className={labelClass}>
-          Select Columns for PCA
-        </label>
-        <select multiple id="pca-analysis-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="pca-analysis-columns"
+          label={`Select Columns for PCA`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="pca-analysis-components" className={labelClass}>
@@ -3374,7 +3371,6 @@ export const PcaAnalysis = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 ZSCORE NORM VALUES
@@ -3398,8 +3394,12 @@ export const ZScoreNorm = ({
         id="z-score-norm-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3409,7 +3409,6 @@ export const ZScoreNorm = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 LOG TRANSFORM VALUES
@@ -3432,8 +3431,12 @@ export const LogTransform = ({
         id="log-transform-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3443,7 +3446,6 @@ export const LogTransform = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 QUANTILE NORMALIZATION VALUES
@@ -3462,26 +3464,25 @@ export const QuantileNormalization = ({
       Normalizes data distributions to be identical across samples.
     </p>
     <div className="mb-6">
-      <label htmlFor="quantile-norm-columns" className={labelClass}>
-        Select Columns
-      </label>
-      <select multiple id="quantile-norm-columns" className={selectClass}>
-        {dataColumns.map((col) => (
-          <option key={col} value={col}>
-            {col}
-          </option>
-        ))}
-      </select>
-      <p className="text-xs text-gray-500 mt-1">
-        Hold Ctrl/Cmd to select multiple columns.
-      </p>
+      <MultiSelect
+        id="quantile-norm-columns"
+        label={`Select Columns`}
+        placeholder="Select data columns to analyze..."
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        defaultValue={[]}
+        onChange={(values) => console.log(values)}
+        helperText="Choose the numeric columns you want to include in your analysis"
+      />
     </div>
     <div className="flex justify-end">
       <button className={buttonClass}>Normalize</button>
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 MEAN CENTERING VALUES
@@ -3504,8 +3505,12 @@ export const MeanCentering = ({
         id="mean-centering-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3515,7 +3520,6 @@ export const MeanCentering = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 QCPLOT VALUES
@@ -3532,8 +3536,12 @@ export const QcPlot = () => (
         id="qc-plot-type"
         label={`Select Plot Type`}
         placeholder="Select data columns to analyze..."
-        options={["Box Plot", "Density Plot"].map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={["Box Plot", "Density Plot"].map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3543,7 +3551,6 @@ export const QcPlot = () => (
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 MISSING VALUES PLOT
@@ -3560,7 +3567,6 @@ export const MissingValuesPlot = () => (
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 FTEST
@@ -3584,8 +3590,12 @@ export const FTest = ({
           id="f-test-column"
           label={`Select Numeric Column`}
           placeholder="Select data columns to analyze..."
-          options={["Box Plot", "Density Plot"].map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={["Box Plot", "Density Plot"].map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3595,8 +3605,12 @@ export const FTest = ({
           id="f-test-group-column"
           label={`Select Grouping Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3607,8 +3621,6 @@ export const FTest = ({
     </div>
   </div>
 );
-
-
 
 /*---------------------------------------------------
 CHISQUARE
@@ -3632,8 +3644,12 @@ export const ChiSquareTest = ({
           id="chi-square-col1"
           label={`Column 1`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3643,8 +3659,12 @@ export const ChiSquareTest = ({
           id="chi-square-col2"
           label={`Column 2`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3655,7 +3675,6 @@ export const ChiSquareTest = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 ZSCORE OUTLIERS
@@ -3679,8 +3698,12 @@ export const ZScoreOutliers = ({
           id="z-score-outlier-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3704,7 +3727,6 @@ export const ZScoreOutliers = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 IQR OUTLIERS
 ----------------------------------------------------*/
@@ -3727,8 +3749,12 @@ export const IqrOutliers = ({
           id="iqr-outlier-column"
           label={`Select Column`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-          value={''}
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3752,7 +3778,6 @@ export const IqrOutliers = ({
   </div>
 );
 
-
 /*---------------------------------------------------
 GRUBBS TEST
 ----------------------------------------------------*/
@@ -3774,8 +3799,12 @@ export const GrubbsTest = ({
         id="grubbs-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map(curr => ({ value: curr, label: curr, disabled: false }))}
-        value={''}
+        options={dataColumns.map((curr) => ({
+          value: curr,
+          label: curr,
+          disabled: false,
+        }))}
+        value={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3785,7 +3814,6 @@ export const GrubbsTest = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 WGCNA ANALYSIS
@@ -3805,19 +3833,19 @@ export const WgcnaAnalysis = ({
     </p>
     <div className="space-y-4 mb-6">
       <div>
-        <label htmlFor="wgcna-columns" className={labelClass}>
-          Select Columns for Analysis
-        </label>
-        <select multiple id="wgcna-columns" className={selectClass}>
-          {dataColumns.map((col) => (
-            <option key={col} value={col}>
-              {col}
-            </option>
-          ))}
-        </select>
-        <p className="text-xs text-gray-500 mt-1">
-          Hold Ctrl/Cmd to select multiple columns.
-        </p>
+        <MultiSelect
+          id="wgcna-columns"
+          label={`Select Columns for Analysis`}
+          placeholder="Select data columns to analyze..."
+          options={dataColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue={[]}
+          onChange={(values) => console.log(values)}
+          helperText="Choose the numeric columns you want to include in your analysis"
+        />
       </div>
       <div>
         <label htmlFor="wgcna-soft-threshold" className={labelClass}>
@@ -3836,7 +3864,6 @@ export const WgcnaAnalysis = ({
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 SAVE DATA
@@ -3862,7 +3889,6 @@ export const SaveData = () => (
     </div>
   </div>
 );
-
 
 /*---------------------------------------------------
 EXPORT CSV
