@@ -5,15 +5,21 @@ import base64
 from io import BytesIO
 
 def main():
+    preview = "--preview" in sys.argv
+    use_json = "--use-json" in sys.argv
+
     input_arg = sys.argv[1]
 
-    try:
-        # Try to load input_arg as a path to a file first
-        with open(input_arg) as f:
-            data = json.load(f)
-    except (FileNotFoundError, OSError):
-        # If not a file, assume it's a JSON string and parse directly
+    print("Input Argument:", input_arg, file=sys.stderr)
+
+    if use_json:
         data = json.loads(input_arg)
+    else:
+        try:
+            with open(input_arg) as f:
+                data = json.load(f)
+        except (FileNotFoundError, OSError):
+            data = json.loads(input_arg)
 
     labels = list(data.keys())
     values = list(data.values())
@@ -23,12 +29,16 @@ def main():
     plt.title('Python Bar Chart')
     plt.tight_layout()
 
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
+    if preview:
+        # Show the chart in a window
+        plt.show()
+    else:
+        buf = BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
 
-    img_base64 = base64.b64encode(buf.read()).decode('utf-8')
-    print(img_base64)
+        img_base64 = base64.b64encode(buf.read()).decode('utf-8')
+        print(img_base64)
 
 if __name__ == "__main__":
     main()

@@ -3,8 +3,9 @@ import { app, BrowserWindow, Menu, globalShortcut, ipcMain } from "electron";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-import EmbeddedPythonManager from "./src/python/python-manager";
+// import EmbeddedPythonManager from "./src/python/python-manager";
 import EmbeddedRManager from "./src/r/r-manager";
+import { PythonManager } from "./src/python/PythonManager";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // const require = createRequire(import.meta.url)
@@ -126,16 +127,29 @@ function createWindow() {
 
 // Embedded Python Manager
 // Embedded R Manager
-const pythonManager = new EmbeddedPythonManager();
+// const pythonManager = new EmbeddedPythonManager();
 const rManager = new EmbeddedRManager();
+const pythonManager = new PythonManager();
+
+interface Data {
+  method: string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  args?: any[];
+}
 
 ipcMain.handle(
-  "run-python",
+  "run:python",
   async (
     _event,
-    { scriptPath, args }: { scriptPath: string; args?: string[] }
+    { method, args = [] }: Data
   ) => {
-    return pythonManager.runPythonScript(scriptPath, args || []);
+
+    if (typeof pythonManager[method as keyof typeof pythonManager] !== 'function') {
+      throw new Error(`Method '${method}' does not exist on PythonManager`);
+    }
+    // eslint-disable-next-line @typescript-eslint/ban-types
+    const methodFunc = pythonManager[method as keyof typeof pythonManager] as Function;
+    return methodFunc.call(pythonManager, ...(args || []));
   }
 );
 

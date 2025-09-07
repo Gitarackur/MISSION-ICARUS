@@ -1,5 +1,5 @@
-import React from 'react';
-import { tv } from 'tailwind-variants';
+import React from "react";
+import { tv } from "tailwind-variants";
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -8,27 +8,36 @@ import {
   XAxis,
   YAxis,
   Tooltip as RechartsTooltip,
-} from 'recharts';
-import ScatterTooltip from '@/ui/components/scatter/tooltip';
-// import VisualizationExternal from './external';
+} from "recharts";
+import ScatterTooltip from "@/ui/components/scatter/tooltip";
+// import VisualizationExternal from "./external";
+import VisualizationTest from "@/tests/visualization-test";
 
 type VisualizationPanelProps = {
-  volcanoData: { x: number; y: number; protein: string; significant: boolean }[];
+  volcanoData: {
+    x: number;
+    y: number;
+    protein: string;
+    significant: boolean;
+  }[];
   intensityDist: { sample: string; meanIntensity: number; count: number }[];
 };
 
 const styles = tv({
   slots: {
-    container: 'space-y-6',
-    card: 'bg-white rounded-lg shadow p-6 min-h-full',
-    heading: 'text-lg font-semibold mb-4',
-    plotContainer: '',
-    placeholderBox: 'bg-gray-100 h-64 rounded-lg flex items-center justify-center',
-    placeholderText: 'text-gray-500',
+    container: "space-y-6",
+    card: "bg-white rounded-lg shadow p-6 min-h-full",
+    heading: "text-lg font-semibold mb-4",
+    plotContainer: "",
+    placeholderBox:
+      "bg-gray-100 h-64 rounded-lg flex items-center justify-center",
+    placeholderText: "text-gray-500",
   },
 });
 
-const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) => {
+const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
+  volcanoData,
+}) => {
   const s = styles();
 
   return (
@@ -58,6 +67,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({ volcanoData }) 
 
             <div>
               {/* <VisualizationExternal /> */}
+              <VisualizationTest />
             </div>
           </div>
         </div>
