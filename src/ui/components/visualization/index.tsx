@@ -26,7 +26,7 @@ type VisualizationPanelProps = {
 const styles = tv({
   slots: {
     container: "space-y-6",
-    card: "bg-white rounded-lg shadow p-6 min-h-full",
+    card: "bg-white rounded-lg shadow p-6",
     heading: "text-lg font-semibold mb-4",
     plotContainer: "",
     placeholderBox:
@@ -64,12 +64,14 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
             <p className={s.placeholderText()}>
               Bar Plots would be rendered here (placeholder)
             </p>
-
-            <div>
-              {/* <VisualizationExternal /> */}
-              <VisualizationTest />
-            </div>
           </div>
+        </div>
+      </div>
+
+      <div className={s.card()}>
+        <h3 className={s.heading()}>Bar Plot</h3>
+        <div className={s.plotContainer()}>
+          <VisualizationTest />
         </div>
       </div>
 
