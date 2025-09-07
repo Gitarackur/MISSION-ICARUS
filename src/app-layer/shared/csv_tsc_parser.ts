@@ -1,12 +1,110 @@
-import { ColumnType, ParsedCSVResult } from "@/domain/shared/index.types";
+import { ColumnType, ParsedCSVResult, ColumnTypeInferenceOptions } from "@/domain/shared/index.types";
 import { toNumberIfPossible } from "./utils";
 import Papa, { ParseResult } from "papaparse";
+
 
 // Parses a CSV, TSV, or other delimited string and returns structured data
 class IcarusParser {
   constructor() {}
 
-  inferColumnTypes<T>(data: T[]): Record<string, ColumnType> {
+
+  // infer column types by fully checking the types of most the values on the column not strictly
+  // if any one value is remotely different from the others, it takes the higher percentage of the types in the column
+  inferColumnTypes<T>(
+    data: T[], 
+    options: ColumnTypeInferenceOptions = {}
+  ): Record<string, ColumnType> {
+    const columnTypes: Record<string, ColumnType> = {};
+    
+    if (data.length === 0) {
+      return columnTypes;
+    }
+
+    const {
+      minValidPercentage = 0.1,
+      allowedMissingValues = ['N/A', 'n/a', 'NA', 'na', 'NULL', 'null', '#N/A', '-', '']
+    } = options;
+
+    // Pre-process missing values into a Set for O(1) lookup
+    const missingValuesSet = new Set(
+      allowedMissingValues.map(val => val.toLowerCase())
+    );
+
+    const headers = Object.keys(data[0] as object);
+
+    // Helper function to check if a value is missing
+    const isMissingValue = (value: unknown): boolean => {
+      if (value === null || value === undefined) return true;
+      
+      const stringValue = String(value).trim();
+      if (stringValue === '') return true;
+      
+      const lowerValue = stringValue.toLowerCase();
+      return lowerValue === 'nan' || missingValuesSet.has(lowerValue);
+    };
+
+    for (const header of headers) {
+      let isNumeric = true;
+      let isBoolean = true;
+      let totalValidValues = 0;
+
+      // Single pass through the data
+      for (const row of data) {
+        const value = (row as Record<string, unknown>)[header];
+
+        // Skip missing values
+        if (isMissingValue(value)) {
+          continue;
+        }
+
+        totalValidValues++;
+        const stringValue = String(value).trim();
+
+        // Early exit optimization: if both tests already failed, break
+        if (!isNumeric && !isBoolean) {
+          break;
+        }
+
+        // Test for boolean first (cheaper operation)
+        if (isBoolean) {
+          const lowerValue = stringValue.toLowerCase();
+          if (lowerValue !== 'true' && lowerValue !== 'false') {
+            isBoolean = false;
+          }
+        }
+
+        // Test for numeric (only if still potentially numeric)
+        if (isNumeric) {
+          const numericValue = parseFloat(stringValue);
+          if (isNaN(numericValue) || !isFinite(numericValue)) {
+            isNumeric = false;
+          }
+        }
+      }
+
+      // Determine type
+      const validDataPercentage = data.length > 0 ? totalValidValues / data.length : 0;
+      
+      if (validDataPercentage >= minValidPercentage) {
+        if (isBoolean) {
+          columnTypes[header] = 'boolean';
+        } else if (isNumeric) {
+          columnTypes[header] = 'number';
+        } else {
+          columnTypes[header] = 'string';
+        }
+      } else {
+        columnTypes[header] = 'string';
+      }
+    }
+
+    return columnTypes;
+  }
+
+
+  // infer column types by fully checking the types of all the values on the column strictly
+  // if any one value is remotely different from the others, it invalidates the type of the column 
+  inferColumnTypes1<T>(data: T[]): Record<string, ColumnType> {
     const columnTypes: Record<string, ColumnType> = {};
     if (data.length === 0) {
       return columnTypes;

@@ -276,3 +276,43 @@ export const saveMatrixInSessionWorkflow = async (
     throw new Error(`unable to save matrix: ${err as unknown}`);
   }
 };
+
+
+
+//-------------------------------------------------------------------------------------------------------------------
+// deletes a matrix from a session
+//
+
+// It returns the updated sessionWithWorkflows (with the deleted matrix)
+//
+//-------------------------------------------------------------------------------------------------------------------
+
+export const deleteMatrixInSessionWorkflow = async (
+  activeSession: IcarusSessionWithWorkflowRecord | IcarusSessionRecord | null,
+  matrixId: string
+) => {
+  try {
+    const id_of_workflow = activeSession?.workflowIds?.[0] as string;
+    const updatedWorkflowRecord =
+      await IcarusDBAdapter.getWorkflowById(id_of_workflow);
+
+    if (!updatedWorkflowRecord) throw new Error("workflow doesn't exist");
+
+    // delete the matrix from the record
+    updatedWorkflowRecord.data.matrices.filter((matrix) => matrix.id === matrixId);
+
+    // update the record in the database
+    await IcarusDBAdapter.updateWorkflow(
+      id_of_workflow,
+      updatedWorkflowRecord as IcarusWorkflowRecord
+    );
+
+    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithWorkflows(
+      activeSession?.id as string
+    );
+
+    return { sessionWithWorkflows };
+  } catch (err) {
+    throw new Error(`unable to delete matrix: ${err as unknown}`);
+  }
+};

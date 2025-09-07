@@ -5,7 +5,7 @@ import NavTabs from '@/ui/components/tabs';
 import DataImport from '@/ui/components/data-output/import';
 import DataPreview from '@/ui/components/data-output/preview';
 import Filters from '@/ui/components/filter';
-import StatisticsPanel from '@/ui/components/statistics/components/panel';
+import ProteinDataPanel from '@/ui/components/statistics/components/panel';
 import VisualizationPanel from '@/ui/components/visualization';
 import AnalysisPanel from '@/ui/components/analysis';
 
@@ -121,7 +121,7 @@ export default function ProteomicsAnalysisHomeView({
           </div>
         )}
 
-        {activeTab === 'statistics' && stats && <StatisticsPanel stats={stats} intensityDist={intensityDist} />}
+        {activeTab === 'protein-data-info-panel' && stats && <ProteinDataPanel stats={stats} intensityDist={intensityDist} />}
         {activeTab === 'visualization' && <VisualizationPanel volcanoData={volcanoData} intensityDist={intensityDist} />}
         {activeTab === 'analysis' && <AnalysisPanel />}
       </div>

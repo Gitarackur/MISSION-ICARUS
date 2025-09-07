@@ -1,9 +1,9 @@
-import { ProteinRow } from "@/domain/proteins/index.types";
-import { StatisticalAction } from "@/domain/statistics/index.types";
-import { TableColumns } from "@/domain/workflow/main.types";
+import { ProteinRow, Stats } from "@/domain/proteins/index.types";
+import { StatisticalAction, StatisticalAnalysisResult } from "@/domain/statistics/index.types";
+import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 
 export type StatisticsMenuItem = {
-  id: string;
+  id: StatisticalAction;
   label: string;
   icon: React.ReactElement;
   hasDropdown?: boolean;
@@ -15,10 +15,17 @@ export type StatisticsMenuDropdownItem = {
 };
 
 export interface StatisticsMenuProps {
-  onMenuAction: (action: StatisticalAction) => void;
+  onMenuAction: (result: StatisticalAnalysisResult) => void;
   dataRows: ProteinRow[];
   dataColumns: TableColumns;
+  allColumnarData: Map<string, TableMatrix>;
 }
+
+
+export type ProteinDataPanelProps = {
+  stats?: Stats;
+  intensityDist?: { sample: string; meanIntensity: number; count: number }[];
+};
 
 
 

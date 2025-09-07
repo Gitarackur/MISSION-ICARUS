@@ -1,6 +1,6 @@
 import { StatisticalAction, StatisticalAnalysisResult } from '@/domain/statistics/index.types';
 import { useCallback } from 'react';
-import { mean, median, normalization, stddev } from '@/app-layer/statistics/utils/statistical-engine';
+import { mean, median, normalization, stddev, tTest } from '@/app-layer/statistics/utils/statistical-engine';
 import { TableMatrix } from '@/domain/workflow/main.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { extractNumericData, transposedStatisticalResults } from '@/app-layer/shared/utils';
@@ -72,6 +72,16 @@ export const useStatisticalAnalysis = () => {
           newColumnNames = numericColumns.map(col => `${col}_normalized`);
           break;
         }
+        case 't-test':
+        case "t-test-test":
+          // eslint-disable-next-line no-case-declarations
+          const test_values = tTest(numericData);
+          results = test_values?.tStatistic ? [[test_values?.tStatistic]]: [[]]
+          // eslint-disable-next-line no-case-declarations
+          let col_value_name = '_t-test'
+          numericColumns.forEach(col => col_value_name = `${col}_${col_value_name}`)
+          newColumnNames = [col_value_name];
+          break;
         default: {
           throw new Error(`Action '${action}' not supported.`);
         }

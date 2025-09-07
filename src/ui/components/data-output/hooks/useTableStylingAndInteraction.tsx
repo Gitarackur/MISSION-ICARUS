@@ -1,35 +1,19 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
+import { useMemo, useCallback, useEffect } from "react";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
-import { TableMatrix } from "@/domain/workflow/main.types";
+import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
 
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
-  columns: string[],
+  columns: TableColumns,
+  selectedDataColumns: TableColumns,
+  setSelectedDataColumns: (cols: TableColumns) => void
 ) => {
   const styles = dataOutputStyles();
 
-  // This set tracks which column headers are actively selected for analysis (e.g., for statistics)
-  const [selectedAnalysisColumnHeaderValues, setSelectedAnalysisColumnHeaderValues] = useState<Set<string>>(new Set());
-
-  // This state tracks which rows are selected (e.g., via checkboxes)
-  const [selectedAnalysisRowCells, setSelectedAnalysisRowsCells] = useState<ProteinRow[]>([]);
-
-  // for ui control of the checked input on the columns (select all rows checkbox)
-  const [isAllSelectedUI, setIsAllSelectedUI] = useState(false);
-
-  // Memoized set for efficient checking of selected rows
-  const selectedRowsSet = useMemo(() => {
-    const set = new WeakSet<ProteinRow>();
-    selectedAnalysisRowCells.forEach(row => set.add(row));
-    return set;
-  }, [selectedAnalysisRowCells]);
-
-  // Identifies which columns contain numeric data
-  const numericColumns = useMemo(() => getNumericColumnsOptimized(columns, originalDataRows), [columns, originalDataRows]);
+  // Identifies the column type of the data
   const mapColumnType = useMemo(() => inferColumnTypes(originalDataRows), [originalDataRows])
 
   const allColumnarData = useMemo(() => {
@@ -48,85 +32,13 @@ export const useTableStylingAndInteraction = (
     return dataMap;
   }, [originalDataRows, columns]);
 
-  const allHighlightedColumnCellKeysMap = useMemo(() => {
-    const keysMap = new Map<string, Set<string>>();
-    if (!originalDataRows.length || !columns.length) return keysMap;
 
-    columns.forEach(colName => {
-      const colKeys = new Set<string>();
-      colKeys.add(`header-${colName}`);
-      originalDataRows.forEach((_, rowIndex) => {
-        colKeys.add(`${rowIndex}-${colName}`);
-      }
-      );
-      keysMap.set(colName, colKeys);
-    });
-    return keysMap;
-  }, [originalDataRows, columns]);
-
-  const selectedAnalysisColumnCells = useMemo(() => {
-    const dataMap = new Map<string, TableMatrix>();
-    selectedAnalysisColumnHeaderValues.forEach(colName => {
-      const values = allColumnarData.get(colName);
-      if (values) {
-        dataMap.set(colName, values);
-      }
-    });
-    return dataMap;
-  }, [selectedAnalysisColumnHeaderValues, allColumnarData]);
-
-  const highlightedAnalysisColumnCellKeys = useMemo(() => {
-    const newHighlightedKeys = new Set<string>();
-    selectedAnalysisColumnHeaderValues.forEach(colName => {
-      const colKeys = allHighlightedColumnCellKeysMap.get(colName);
-      if (colKeys) {
-        colKeys.forEach(key => newHighlightedKeys.add(key));
-      }
-    });
-    return newHighlightedKeys;
-  }, [selectedAnalysisColumnHeaderValues, allHighlightedColumnCellKeysMap]);
-
-  // Function to clear all column and row selections
-  const clearAnalysisSelection = useCallback(() => {
-    setSelectedAnalysisColumnHeaderValues(new Set());
-    setSelectedAnalysisRowsCells([]);
-  }, []);
-
-  // Handles clicking a column header for selection/deselection
-  const handleColumnClick = useCallback((columnName: string) => {
-    if (!numericColumns.has(columnName)) return;
-
-    // clear row selection because only one of either row or column can be selected
-    setSelectedAnalysisRowsCells([]);
-
-    setSelectedAnalysisColumnHeaderValues(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(columnName)) {
-        newSet.delete(columnName);
-      } else {
-        newSet.add(columnName);
-      }
-      return newSet;
-    });
-  }, [numericColumns]);
-
-  // Double-clicking a column header clears all analysis selections
-  const handleColumnDoubleClick = useCallback(() => {
-    clearAnalysisSelection();
-  }, [clearAnalysisSelection]);
 
   // Determines the CSS class for each cell based on its selection state
-  const getCellStyle = useCallback((rowIndex: number, row: ProteinRow | null, columnName: string, isHeader = false) => {
-    const cellKey = isHeader ? `header-${columnName}` : `${rowIndex}-${columnName}`;
-    // const isNumeric = numericColumns.has(columnName);
+  const getCellStyle = useCallback((_rowIndex: number, _row: ProteinRow | null, columnName: string, isHeader = false) => {
     const isNumeric = mapColumnType[columnName] === "number";
     const isString = mapColumnType[columnName] === "string";
     const isBoolean = mapColumnType[columnName] === "boolean";
-    // Check if the current column's header is selected
-    const isSelectedColumnHeader = selectedAnalysisColumnHeaderValues.has(columnName);
-
-    const isCellHighlighted = highlightedAnalysisColumnCellKeys.has(cellKey);
-    const isSelectedRow = row !== null && selectedRowsSet.has(row);
 
     let className = isHeader ? styles.tableHeadCell() : styles.tableBodyCell();
 
@@ -143,92 +55,57 @@ export const useTableStylingAndInteraction = (
         className += ' cursor-pointer hover:bg-red-100 transition-colors duration-200';
       }
 
-      if (isSelectedColumnHeader) {
-        className += ' bg-blue-200';
-      }
-    } else if (isCellHighlighted || isSelectedRow) {
-      className += ' bg-blue-100 border-blue-200';
     } else if (isNumeric) {
-      className += ' bg-green-50'; // Numeric cells have a default background
-    }else if (isString) {
-      className += ' bg-yellow-50'; // Numeric cells have a default background
-    }else if (isBoolean) {
-      className += ' bg-red-50'; // Numeric cells have a default background
+      className += ' bg-green-50';
+    } else if (isString) {
+      className += ' bg-yellow-50';
+    } else if (isBoolean) {
+      className += ' bg-red-50';
     }
 
     return className;
-  }, [mapColumnType, selectedAnalysisColumnHeaderValues, highlightedAnalysisColumnCellKeys, selectedRowsSet, styles]);
+  }, [mapColumnType, styles]);
 
-  // Selects or deselects all rows
-  const selectAllRows = useCallback((checked: boolean) => {
-    setSelectedAnalysisRowsCells(checked ? [...originalDataRows] : []);
-  }, [originalDataRows]);
 
-  // Selects or deselects a single row
-  const selectOneRow = useCallback((row: ProteinRow, checked: boolean) => {
+  // get cell style (based on which cells are numeric values and/or which are highlighted)
+  const getCombinedCellStyle = useCallback(
+    (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
+      const baseStyle = getCellStyle(rowIndex, row, columnId, isHeader);
+      return baseStyle;
+    },
+    [getCellStyle]
+  );
 
-    // clear column selection because only one of either row or column can be selected
-    setSelectedAnalysisColumnHeaderValues(new Set());
-
-    setSelectedAnalysisRowsCells(prevRows => {
-      if (checked) {
-        if (!prevRows.includes(row)) {
-          return [...prevRows, row];
-        }
-      } else {
-        return prevRows.filter(r => r !== row);
-      }
-      return prevRows;
-    });
-  }, []);
-
-  // Effect to clear all selections when the original data rows change
-  useEffect(() => {
-    if (originalDataRows) {
-      clearAnalysisSelection();
+  // toggle the fields to show on the preview ui table
+  const toggleViewOfColumnOnPreviewTable = useCallback((
+    column: string, 
+    checked: boolean, 
+    onToggle?: () => void
+  ) => {
+    // Determine the set of selected columns based on the new state
+    const updatedSelectedSet = new Set(selectedDataColumns);
+    if (checked) {
+      updatedSelectedSet.add(column);
+    } else {
+      updatedSelectedSet.delete(column);
     }
-  }, [originalDataRows, clearAnalysisSelection]);
+    // Filter the original ALL_COLUMNS array to create the new ordered array
+    const newSelectedColumns = columns.filter(c => updatedSelectedSet.has(c));
+    setSelectedDataColumns(newSelectedColumns);
+    onToggle?.();
+  }, [columns, selectedDataColumns, setSelectedDataColumns]);
 
-  // Effect to reset the "select all" UI checkbox when original data rows change
+
+  // effect to fill the selected columns with the default columns listed
   useEffect(() => {
-    setIsAllSelectedUI(false);
-  }, [originalDataRows]);
+    if (selectedDataColumns.length === 0 && columns.length > 0) {
+      setSelectedDataColumns(columns);
+    }
+  }, [columns, selectedDataColumns, setSelectedDataColumns]);
 
   return {
-    selectedAnalysisColumnHeaderValues,
-    numericColumns,
-    highlightedAnalysisColumnCellKeys,
-    selectedAnalysisColumnCells,
-    selectedAnalysisRowCells,
-    handleColumnClick,
-    handleColumnDoubleClick,
-    clearAnalysisSelection,
-    getCellStyle,
-    selectOneRow,
-    selectAllRows,
-    isAllSelectedUI,
-    setIsAllSelectedUI
+    allColumnarData,
+    getCombinedCellStyle,
+    toggleViewOfColumnOnPreviewTable
   };
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

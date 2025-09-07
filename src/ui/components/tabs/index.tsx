@@ -5,49 +5,19 @@ import {
   Filter,
   Calculator,
   TrendingUp,
-  LucideProps,
 } from 'lucide-react';
+import { NavTabsProps, TabsTypes } from './types/index.types';
+import { tabButtonStyles } from './style-variants/main.style.variants';
 
-import { tv } from 'tailwind-variants';
 
-type NavTabsProps = { 
-  active: "filter" | "import" | "statistics" | "visualization" | "analysis"; 
-  setActive: (t: "filter" | "import" | "statistics" | "visualization" | "analysis") => void;
-};
 
-type LucideIconProps = React.ForwardRefExoticComponent<
-  Omit<LucideProps, "ref"> & React.RefAttributes<SVGSVGElement>
->;
 
-interface TabsTypes {
-  id: "filter" | "import" | "statistics" | "visualization" | "analysis";
-  label: string;
-  icon: LucideIconProps;
-}
 
-// Define button variants with tailwind-variants
-const tabButton = tv({
-  base: `
-    flex items-center space-x-2
-    px-4 py-2
-    border-b-4 font-semibold text-sm rounded-t-md
-    flex-grow sm:flex-grow-0 min-w-0
-    transition-colors duration-200 ease-in-out
-    focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2
-  `,
-  variants: {
-    active: {
-      true: 'border-blue-600 text-blue-600 bg-blue-50',
-      false: 'border-transparent text-gray-600 hover:text-blue-600 hover:border-blue-300',
-    },
-  },
-});
-
-const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {
+const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {  
   const tabs: TabsTypes[] = [
     { id: 'import', label: 'Data Import', icon: Upload },
     { id: 'filter', label: 'Filtering', icon: Filter },
-    { id: 'statistics', label: 'Statistics', icon: Calculator },
+    { id: 'protein-data-info-panel', label: 'Protein Data Info Panel', icon: Calculator },
     { id: 'visualization', label: 'Visualization', icon: BarChart3 },
     { id: 'analysis', label: 'Analysis', icon: TrendingUp }
   ];
@@ -71,7 +41,7 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {
                 key={tab.id}
                 type="button"
                 onClick={() => setActive(tab.id)}
-                className={tabButton({ active: isActive })}
+                className={tabButtonStyles({ active: isActive })}
               >
                 <Icon
                   className={`flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}
