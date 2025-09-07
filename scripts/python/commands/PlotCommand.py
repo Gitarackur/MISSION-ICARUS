@@ -1,9 +1,10 @@
-from scripts.python.core.Command import Command
 
 import json
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
+
+from core.Command import Command
 
 
 class PlotCommand(Command):
@@ -14,6 +15,8 @@ class PlotCommand(Command):
         preview = "--preview" in self.args
         use_json = "--use-json" in self.args
         input_arg = self.args[0];
+
+        open("f.txt", "w").write(str(self.args))
 
         if use_json:
             data = json.loads(input_arg)
