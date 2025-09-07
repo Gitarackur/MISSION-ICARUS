@@ -40,8 +40,8 @@ export class PythonManager extends Manager {
   }
 
   public async getPlot<T = Record<string, unknown>>(data: T): Promise<string> {
-    const stringifiedData = JSON.stringify(data);
-    const scriptPath = path.join(SCRIPT_DIR_PATH, 'plot_data.py');
-    return this.runScript(scriptPath, [stringifiedData, '--use-json']);
+    const scriptPath = path.join(SCRIPT_DIR_PATH, 'commander.py');
+    const stringifiedData = typeof data == 'string' ? data : JSON.stringify(data);
+    return this.runScript(scriptPath, ['plot', stringifiedData, '--use-json']);
   }
 }
