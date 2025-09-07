@@ -1363,7 +1363,7 @@ export const FilterByValue = ({
               label: curr.label,
               disabled: curr.disabled,
             }))}
-            value={""}
+            defaultValue={""}
             onChange={(value) => setOperator(value as string)}
             helperText="Choose the numeric columns you want to include in your analysis"
           />
@@ -1425,7 +1425,7 @@ export const FilterByMissing = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1463,7 +1463,7 @@ export const FilterByRange = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1514,7 +1514,7 @@ export const FilterByOutlier = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1568,7 +1568,7 @@ export const RenameColumn = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1612,7 +1612,7 @@ export const DeleteColumn = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1650,7 +1650,7 @@ export const FillColumn = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1694,7 +1694,7 @@ export const ImputeMean = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1731,7 +1731,7 @@ export const ImputeMedian = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1769,7 +1769,7 @@ export const ImputeKnn = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1819,7 +1819,7 @@ export const ImputeZero = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -1857,7 +1857,7 @@ export const MovingAverage = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -1907,7 +1907,7 @@ export const RollingStdDev = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2086,7 +2086,7 @@ export const Anova = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2102,7 +2102,7 @@ export const Anova = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2156,7 +2156,7 @@ export const Limma = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2195,7 +2195,7 @@ export const FoldChange = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2357,7 +2357,7 @@ export const BoxPlot = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2396,7 +2396,7 @@ export const ScatterPlot = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2411,7 +2411,7 @@ export const ScatterPlot = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2489,7 +2489,7 @@ export const VolcanoPlot = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2504,7 +2504,7 @@ export const VolcanoPlot = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2579,7 +2579,7 @@ export const SortAsc = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2616,7 +2616,7 @@ export const SortDesc = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2734,7 +2734,7 @@ export const FilterColumnsByType = () => (
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2811,7 +2811,7 @@ export const RenameRow = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -2853,7 +2853,7 @@ export const DeleteRow = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
@@ -2959,7 +2959,7 @@ export const PlsdaLearning = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -3049,7 +3049,7 @@ export const AddPtm = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
@@ -3062,7 +3062,7 @@ export const AddPtm = ({
           options={["Phosphorylation", "Acetylation", "Methylation"].map(
             (curr) => ({ value: curr, label: curr, disabled: false })
           )}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the PTM type you want to include in your analysis"
         />
@@ -3101,7 +3101,7 @@ export const RemovePtm = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3117,7 +3117,7 @@ export const RemovePtm = ({
             "Acetylation",
             "Methylation",
           ].map((curr) => ({ value: curr, label: curr, disabled: false }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the PTM type you want to delete in your analysis"
         />
@@ -3201,7 +3201,7 @@ export const PathwayAnalysis = () => (
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the Pathway"
         />
@@ -3257,7 +3257,7 @@ export const HierarchicalClustering = ({
               disabled: false,
             })
           )}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the Pathway"
         />
@@ -3399,7 +3399,7 @@ export const ZScoreNorm = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3436,7 +3436,7 @@ export const LogTransform = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3510,7 +3510,7 @@ export const MeanCentering = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3541,7 +3541,7 @@ export const QcPlot = () => (
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
@@ -3595,7 +3595,7 @@ export const FTest = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3610,7 +3610,7 @@ export const FTest = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3649,7 +3649,7 @@ export const ChiSquareTest = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3664,7 +3664,7 @@ export const ChiSquareTest = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3703,7 +3703,7 @@ export const ZScoreOutliers = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3754,7 +3754,7 @@ export const IqrOutliers = ({
             label: curr,
             disabled: false,
           }))}
-          value={""}
+          defaultValue={""}
           onChange={(value) => console.log(value)}
           helperText="Choose the numeric columns you want to delete from your analysis"
         />
@@ -3804,7 +3804,7 @@ export const GrubbsTest = ({
           label: curr,
           disabled: false,
         }))}
-        value={""}
+        defaultValue={""}
         onChange={(value) => console.log(value)}
         helperText="Choose the numeric columns you want to delete from your analysis"
       />
