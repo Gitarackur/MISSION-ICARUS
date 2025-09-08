@@ -108,7 +108,7 @@ const TreeNode = ({
                   icon={<ArrowRight className={styles.iconArrowIn()} />}
                   onOpen={() => {
                     if (node.activity?.name && node.activity.inputMatrixReferences && Array.isArray(node.activity.inputMatrixReferences)) {
-                      onClickOfInputButton?.(node.activity.inputMatrixReferences as string[]);
+                      onClickOfInputButton?.(node.activity.inputMatrixReferences);
                       openShowMatrixModal(node.activity.name, node.activity.inputMatrixReferences);
                     }
                   }}
