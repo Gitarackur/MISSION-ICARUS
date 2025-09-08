@@ -1,8 +1,5 @@
-import {
-  IcarusActivity,
-} from "@/domain/workflow/main.types";
 import { ActivityTreeNode } from "@/domain/tree/tree.types";
-import { IcarusActivityNodeParams } from "@/domain/activity/main.types";
+import { IcarusActivityNodeParams, MapIcarusActivity } from "@/domain/activity/main.types";
 
 export const generateIcarusActivityNode = ({
   sourceMatrixId,
@@ -12,7 +9,7 @@ export const generateIcarusActivityNode = ({
     const key = sourceMatrixId as string;
     (acc[key] ||= []).push(activity);
     return acc;
-  }, {} as Record<string, IcarusActivity[]>);
+  }, {} as MapIcarusActivity);
 
   Object.values(groups).forEach((group) =>
     group.sort((a, b) => {

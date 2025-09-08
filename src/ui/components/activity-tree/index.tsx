@@ -6,7 +6,7 @@ import { DiplayedActivityTree } from './types/activity-node.types.ts';
 
 
 
-const ActivityTree = ({ 
+const ActivityTree = ({
   sessionData,
   onClickOfInputButton,
   onClickOfOutputButton
@@ -14,17 +14,17 @@ const ActivityTree = ({
   const styles = activityStyleVariants();
 
   // sourceMatrixId
-  const sourceMatrixId = useMemo(() => sessionData?.workflows?.[0]?.data?.matrices?.[0]?.id, [sessionData?.workflows])
+  const sourceMatrixId = useMemo(() => sessionData?.matrices?.[0]?.id, [sessionData?.matrices])
 
   const [selectedWorkflow, setSelectedWorkflow] = useState(0);
-  const currentWorkflow = sessionData.workflows?.[selectedWorkflow];
+  const activities = useMemo(() => sessionData.activities, [sessionData.activities])
 
   const activityTree = useMemo(() => {
     return generateIcarusActivityNode({
       sourceMatrixId: sourceMatrixId,
-      activities: currentWorkflow?.data?.activities
+      activities
     });
-  }, [currentWorkflow?.data?.activities, sourceMatrixId]);
+  }, [activities, sourceMatrixId]);
 
   return (
     <div className={styles.layoutRoot()}>
@@ -32,7 +32,7 @@ const ActivityTree = ({
         <div>
           <h2 className={styles.layoutHeaderText()}>Activity Tree</h2>
           <div className={styles.layoutHeaderSub()}>
-            {sessionData.name} • {activityTree.length} groups • {currentWorkflow.data.activities.length} activities
+            {sessionData.name} • {activityTree.length} groups • {activities.length} activities
           </div>
         </div>
         {sessionData.workflows.length > 1 && (
@@ -52,9 +52,9 @@ const ActivityTree = ({
         {activityTree.length ? (
           <div>
             {activityTree.map((node, i) => (
-              <TreeNode 
-                key={node.activity?.id || node.inputMatrixKey || i} 
-                node={node} 
+              <TreeNode
+                key={node.activity?.id || node.inputMatrixKey || i}
+                node={node}
                 onClickOfInputButton={onClickOfInputButton}
                 onClickOfOutputButton={onClickOfOutputButton}
               />

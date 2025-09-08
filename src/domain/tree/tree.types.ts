@@ -1,7 +1,7 @@
-import { IcarusActivity } from "@/domain/workflow/main.types";
+import { IcarusActivityRecord } from "@/app-layer/database/database.types";
 
 export interface ActivityTreeNode {
-  activity?: IcarusActivity;
+  activity?: IcarusActivityRecord;
   inputMatrixKey?: string;
   children: ActivityTreeNode[];
 }

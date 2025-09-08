@@ -21,8 +21,7 @@ import {
 import {
   generateActiveSessionWitNestedWorkflow,
   reconstructOriginalRowsAndColumnsFromSessionWorkflows,
-  saveActivityInSessionWorkflow,
-  saveMatrixInSessionWorkflow,
+  saveNewStatisticalActivityInWorkflow,
 } from "@/app-layer/session/utils/main";
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 import { activityFloatingButton } from "./variants/main.variants";
@@ -44,29 +43,17 @@ const IcarusApp: React.FC = () => {
   const isUploadingRef = useRef(false);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
 
-  // Memoized derived values
-  const matrices = useMemo(
-    () => activeSession?.workflows?.[0]?.data?.matrices || [],
-    [activeSession]
-  );
-  const activeMatrix = useMemo(
-    () => matrices.find((m) => m.id === activeMatrixId),
-    [matrices, activeMatrixId]
-  );
-  const sessionSourceMatrix = useMemo(
-    () => matrices.find((m) => m.createdByFirstActivity),
-    [matrices]
-  );
-
   // Session management
   const handleSessionCreate = async ({ rows, columns }: BareSession) => {
     isUploadingRef.current = true;
     setIsProcessing(true);
     try {
-      const { matrixWorkflowMap, sessionWithWorkflows } =
+      const { matrixId, sessionWithWorkflows } =
         await generateActiveSessionWitNestedWorkflow({ rows, columns });
+
+      //
       setActiveSession(sessionWithWorkflows);
-      setActiveMatrixId(matrixWorkflowMap.id);
+      setActiveMatrixId(matrixId);
     } catch (error) {
       console.error("Error creating session:", error);
     } finally {
@@ -80,11 +67,10 @@ const IcarusApp: React.FC = () => {
     try {
       const { sessionWithWorkflows } =
         await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
-      setActiveSession(sessionWithWorkflows);
+      const lastMatrix = sessionWithWorkflows?.matrices.slice(-1)[0];
 
-      const lastMatrix =
-        sessionWithWorkflows?.workflows?.[0].data.matrices.slice(-1)[0];
       setActiveMatrixId(lastMatrix?.id || null);
+      setActiveSession(sessionWithWorkflows);
     } catch (error) {
       console.error("Error handling session click:", error);
     } finally {
@@ -104,69 +90,59 @@ const IcarusApp: React.FC = () => {
   const saveActivityInWorkflow = async (
     params: Partial<SaveStatisticalActivity>
   ) => {
-    const {
-      sourceMatrixId,
-      inputColumnNames,
-      inputMatrixReferences,
-      inputParameters,
-      outputData,
-      outputColumnNames,
-      outputMetrics,
-      action,
-    } = params;
-
     try {
-      const matrix = {
-        columns: outputColumnNames || [],
-        data: outputData || [],
-      };
-      const { insertedMatrix } = await saveMatrixInSessionWorkflow(
-        activeSession,
-        matrix
-      );
+      if (!activeSession) throw new Error(`active session not present`);
 
-      const activity = {
-        name: `statistical analysis--${action}`,
-        sourceMatrixId:
-          sourceMatrixId ||
-          activeSession?.workflows?.[0]?.data?.matrices?.[0]?.id,
-        inputColumnNames,
-        inputMatrixReferences,
-        inputParameters,
-        outputColumnNames,
-        outputMatrixReference: insertedMatrix.id,
-        outputMetrics,
-        pluginId: "statistical-engine",
-      };
+      const { sessionWithWorkflows, matrixId } =
+        await saveNewStatisticalActivityInWorkflow(activeSession, params);
 
-      const sessionWithWorkflows = await saveActivityInSessionWorkflow(
-        activeSession,
-        activity
-      );
+      if (!sessionWithWorkflows) {
+        throw new Error("Failed to create session with workflows");
+      }
+
+      console.log('sessionWithWorkflows', sessionWithWorkflows)
       setActiveSession(sessionWithWorkflows);
-      setActiveMatrixId(insertedMatrix.id);
+      setActiveMatrixId(matrixId);
     } catch (err) {
       throw new Error(`${err}`);
     }
   };
 
-  // Effects
+  // Memoized derived values
+  const matrices = useMemo(
+    () => activeSession?.matrices || [],
+    [activeSession?.matrices]
+  );
+  const activeMatrix = useMemo(
+    () => {
+      return matrices.find((m) => m.id === activeMatrixId)
+    },
+    [matrices, activeMatrixId]
+  );
+  const sessionSourceMatrix = useMemo(
+    () => matrices.find((m) => m.createdByFirstActivity),
+    [matrices]
+  );
+
   useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
 
   useEffect(() => {
-    if (!activeMatrix) return;
+    if (!activeMatrix || isProcessing) return;
 
-    const result = reconstructFromMatrix({
-      columns: activeMatrix.columns as TableColumns,
-      rowsAs2dMatrix: activeMatrix.data,
-    });
+    try {
+      const result = reconstructFromMatrix({
+        columns: activeMatrix.columns as TableColumns,
+        rowsAs2dMatrix: activeMatrix.data,
+      });
+      if (!result) throw new Error("Unable to load matrix into preview table");
 
-    if (!result) throw new Error("Unable to load matrix into preview table");
-
-    setOriginalDataRows(result.rows as ProteinRow[]);
-    setOriginalDataColumns(result.columns);
-    setSelectedDataColumns(result.columns);
-  }, [activeMatrix]);
+      setOriginalDataRows(result.rows as ProteinRow[]);
+      setOriginalDataColumns(result.columns);
+      setSelectedDataColumns(result.columns);
+    } catch (error) {
+      console.error("Error reconstructing matrix:", error);
+    }
+  }, [activeMatrix, isProcessing]);
 
   // Render helpers
   const renderFloatingButton = () =>
