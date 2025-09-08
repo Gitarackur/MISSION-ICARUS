@@ -72,29 +72,19 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         outputParameters
       } = result
 
-      // get the input matrix reference
-      const inputMatrixReferences: string[] = [];
-      if (sessionSourceMatrix) {
-        inputMatrixReferences.push(sessionSourceMatrix?.id)
-      }
-
       if (result !== undefined) {
         saveActivityInWorkflow?.({
           // input keys, values and references
           inputColumnNames: inputParameters.columns,
           // add sourceMatrixId to the input reference 
-          inputMatrixReferences,
+          inputMatrixReferences: sessionSourceMatrix?.id,
           inputParameters,
-
           // output column names, parameters and references
           outputColumnNames: outputColumns,
-
           outputData,
-
           // save the matrix and then add the output matrix id to the reference 
           // outputMatrixReference: '',
           outputMetrics: outputParameters,
-
           // statistical action
           action: inputParameters.action || outputParameters.calculationMethod
         });
