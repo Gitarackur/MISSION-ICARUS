@@ -101,8 +101,7 @@ const IcarusApp: React.FC = () => {
       if (!sessionWithWorkflows) {
         throw new Error("Failed to create session with workflows");
       }
-
-      console.log('sessionWithWorkflows', sessionWithWorkflows)
+      
       setActiveSession(sessionWithWorkflows);
       setActiveMatrixId(matrixId);
     } catch (err) {
