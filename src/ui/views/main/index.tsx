@@ -67,9 +67,11 @@ const IcarusApp: React.FC = () => {
     try {
       const { sessionWithWorkflows } =
         await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
-      const lastMatrix = sessionWithWorkflows?.matrices.slice(-1)[0];
+      const lastMatrix = sessionWithWorkflows?.matrices
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .slice(-1)[0];
 
-      setActiveMatrixId(lastMatrix?.id || null);
+      setActiveMatrixId(lastMatrix?.id);
       setActiveSession(sessionWithWorkflows);
     } catch (error) {
       console.error("Error handling session click:", error);
@@ -110,7 +112,9 @@ const IcarusApp: React.FC = () => {
 
   // Memoized derived values
   const matrices = useMemo(
-    () => activeSession?.matrices || [],
+    () => (activeSession?.matrices || []).sort((a, b) =>
+      a.createdAt - b.createdAt
+    ),
     [activeSession?.matrices]
   );
   const activeMatrix = useMemo(
@@ -176,7 +180,7 @@ const IcarusApp: React.FC = () => {
             setIsSheetOpen(false);
           }}
           onClickOfInputButton={(inputMatrixReferences) => {
-            setActiveMatrixId(inputMatrixReferences?.[0]);
+            setActiveMatrixId(inputMatrixReferences);
             setIsSheetOpen(false);
           }}
         />

@@ -11,11 +11,11 @@ export interface TreeNodeUI {
   node: ActivityTreeNode;
   level?: number;
   onClickOfOutputButton?: (matrixId: string) => void;
-  onClickOfInputButton?: (inputMatrixReferences: string[]) => void;
+  onClickOfInputButton?: (inputMatrixReferences: string) => void;
 }
 
 export interface DiplayedActivityTree {
   sessionData: IcarusSessionWithWorkflowRecord;
   onClickOfOutputButton?: (matrixId: string) => void;
-  onClickOfInputButton?: (inputMatrixReferences: string[]) => void;
+  onClickOfInputButton?: (inputMatrixReferences: string) => void;
 }
