@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useMemo } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
-import ActivityTree from "@/ui/components/activity-tree";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import MatrixTab from "@/ui/components/header/matrix-tab";
 import { Menu } from "lucide-react";
@@ -25,6 +24,7 @@ import {
 } from "@/app-layer/session/utils/main";
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 import { activityFloatingButton } from "./variants/main.variants";
+import ActivityTree2 from "@/ui/components/activity-tree/index2";
 
 const IcarusApp: React.FC = () => {
   const [activeSession, setActiveSession] =
@@ -68,8 +68,8 @@ const IcarusApp: React.FC = () => {
       const { sessionWithWorkflows } =
         await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
       const lastMatrix = sessionWithWorkflows?.matrices
-      .sort((a, b) => a.createdAt - b.createdAt)
-      .slice(-1)[0];
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .slice(-1)[0];
 
       setActiveMatrixId(lastMatrix?.id);
       setActiveSession(sessionWithWorkflows);
@@ -101,7 +101,7 @@ const IcarusApp: React.FC = () => {
       if (!sessionWithWorkflows) {
         throw new Error("Failed to create session with workflows");
       }
-      
+
       setActiveSession(sessionWithWorkflows);
       setActiveMatrixId(matrixId);
     } catch (err) {
@@ -111,17 +111,13 @@ const IcarusApp: React.FC = () => {
 
   // Memoized derived values
   const matrices = useMemo(
-    () => (activeSession?.matrices || []).sort((a, b) =>
-      a.createdAt - b.createdAt
-    ),
+    () =>
+      (activeSession?.matrices || []).sort((a, b) => a.createdAt - b.createdAt),
     [activeSession?.matrices]
   );
-  const activeMatrix = useMemo(
-    () => {
-      return matrices.find((m) => m.id === activeMatrixId)
-    },
-    [matrices, activeMatrixId]
-  );
+  const activeMatrix = useMemo(() => {
+    return matrices.find((m) => m.id === activeMatrixId);
+  }, [matrices, activeMatrixId]);
   const sessionSourceMatrix = useMemo(
     () => matrices.find((m) => m.createdByFirstActivity),
     [matrices]
@@ -172,7 +168,7 @@ const IcarusApp: React.FC = () => {
       bodyClassName="p-0"
     >
       {activeSession && (
-        <ActivityTree
+        <ActivityTree2
           sessionData={activeSession}
           onClickOfOutputButton={(matrixId) => {
             setActiveMatrixId(matrixId);

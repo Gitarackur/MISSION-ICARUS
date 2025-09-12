@@ -1,5 +1,5 @@
 import { IcarusSessionWithWorkflowRecord } from "@/app-layer/database/database.types";
-import { ActivityTreeNode } from "@/domain/tree/tree.types";
+import { ActivityTreeNode, ActivityTreeNodeForNonD3 } from "@/domain/tree/tree.types";
 import { TableColumns } from "@/domain/workflow/main.types";
 
 export interface ActivityMatrixModal {
@@ -14,8 +14,27 @@ export interface TreeNodeUI {
   onClickOfInputButton?: (inputMatrixReferences: string) => void;
 }
 
-export interface DiplayedActivityTree {
+export interface DisplayedActivityTree {
   sessionData: IcarusSessionWithWorkflowRecord;
   onClickOfOutputButton?: (matrixId: string) => void;
-  onClickOfInputButton?: (inputMatrixReferences: string) => void;
+  onClickOfInputButton?: (inputMatrixRef: string) => void;
+}
+
+
+
+
+
+
+// tree node props for non-d3 tree rendering
+// used in ActivityTree2 component
+// includes click handlers for input/output buttons
+// and flags for first/last sibling nodes
+// to adjust styling accordingly
+export interface TreeNodeProps {
+  node: ActivityTreeNodeForNonD3;
+  onClickOfInputButton?: (node: ActivityTreeNodeForNonD3) => void;
+  onClickOfOutputButton?: (node: ActivityTreeNodeForNonD3) => void;
+  isLast?: boolean;
+  isFirst?: boolean;
+  siblingCount?: number;
 }

@@ -5,3 +5,16 @@ export interface ActivityTreeNode {
   inputMatrixKey?: string;
   children: ActivityTreeNode[];
 }
+
+export interface ActivityTreeNodeForNonD3 {
+  activity: IcarusActivityRecord;
+  children: ActivityTreeNodeForNonD3[];
+  depth: number;
+}
+
+
+export interface ActivityTreeNodeForD3 {
+  activity: IcarusActivityRecord;
+  children: ActivityTreeNodeForD3[];
+  depth: number;
+}
