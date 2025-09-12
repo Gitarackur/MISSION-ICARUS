@@ -394,7 +394,7 @@ const ActivityTree2 = ({
           <div>💡 Use mouse wheel to zoom, drag to pan</div>
           <div>Click on ⬇ Input or ⬆ Output buttons to view matrices</div>
           <div>
-            <span className=" text-red-600">Red border</span> 
+            <span className=" text-red-600">Red border&nbsp;</span> 
             indicates the currently selected matrix in the main view
           </div>
         </div>
