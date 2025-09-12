@@ -79,7 +79,7 @@ export const activityTreeStyle = tv({
     contentArea: "flex-1 overflow-hidden relative",
     svg: "w-full h-full bg-gray-50",
     tooltip:
-      "fixed bottom-4 left-4 bg-white/90 p-3 rounded-lg border border-gray-200 text-sm shadow-sm",
+      "fixed bottom-4 left-[calc(100%_-_86%)] bg-white/90 p-3 rounded-lg border border-gray-200 text-sm shadow-sm",
   },
 });
 
