@@ -10,6 +10,7 @@ import { DisplayedActivityTree } from "./types/activity-node.types";
 
 const ActivityTree2 = ({
   sessionData,
+  activeMatrixId,
   onClickOfInputButton,
   onClickOfOutputButton,
 }: DisplayedActivityTree) => {
@@ -166,8 +167,18 @@ const ActivityTree2 = ({
               return "#f9fafb"; // gray-50
           }
         })
-        .attr("stroke", "#d1d5db")
-        .attr("stroke-width", 1.5);
+        .attr("stroke", (d) => { 
+          if(d.data.activity.outputMatrixReference === activeMatrixId) {
+            return "red";
+          }
+          return "#d1d5db"; // gray-300
+        })
+        .attr("stroke-width", 1.5)
+        .on("click", (event: MouseEvent, d) => {
+          event.stopPropagation();
+          d.data.activity.outputMatrixReference &&
+            onClickOfInputButton?.(d.data.activity.outputMatrixReference);
+        });
 
       // Activity name
       nodes
@@ -279,7 +290,7 @@ const ActivityTree2 = ({
         d3.zoomIdentity.translate(translateX, translateY).scale(scale)
       );
     }
-  }, [sessionData, onClickOfInputButton, onClickOfOutputButton]);
+  }, [sessionData, onClickOfInputButton, onClickOfOutputButton, activeMatrixId]);
 
   const handleZoomIn = () => {
     if (svgRef.current && zoomBehaviorRef.current) {
@@ -382,6 +393,10 @@ const ActivityTree2 = ({
         <div className={tooltip()}>
           <div>💡 Use mouse wheel to zoom, drag to pan</div>
           <div>Click on ⬇ Input or ⬆ Output buttons to view matrices</div>
+          <div>
+            <span className=" text-red-600">Red border</span> 
+            indicates the currently selected matrix in the main view
+          </div>
         </div>
       </div>
     </div>

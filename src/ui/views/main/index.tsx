@@ -170,6 +170,7 @@ const IcarusApp: React.FC = () => {
       {activeSession && (
         <ActivityTree2
           sessionData={activeSession}
+          activeMatrixId={activeMatrixId}
           onClickOfOutputButton={(matrixId) => {
             setActiveMatrixId(matrixId);
             setIsSheetOpen(false);

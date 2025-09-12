@@ -16,6 +16,7 @@ export interface TreeNodeUI {
 
 export interface DisplayedActivityTree {
   sessionData: IcarusSessionWithWorkflowRecord;
+  activeMatrixId?: string | null;
   onClickOfOutputButton?: (matrixId: string) => void;
   onClickOfInputButton?: (inputMatrixRef: string) => void;
 }
