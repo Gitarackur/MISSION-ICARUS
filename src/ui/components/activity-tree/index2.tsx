@@ -207,7 +207,8 @@ const ActivityTree2 = ({
       // Input button
       const inputButton = buttonGroup
         .append("g")
-        .attr("transform", "translate(-45, 0)")
+        // .attr("transform", "translate(-45, 0)")
+        .attr("transform", "translate(-80, 0)")
         .style("cursor", "pointer")
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
@@ -235,7 +236,8 @@ const ActivityTree2 = ({
       // Output button
       const outputButton = buttonGroup
         .append("g")
-        .attr("transform", "translate(45, 0)")
+        // .attr("transform", "translate(45, 0)")
+        .attr("transform", "translate(0, 0)")
         .style("cursor", "pointer")
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
