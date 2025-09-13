@@ -53,9 +53,6 @@ const IcarusApp: React.FC = () => {
 
       setActiveMatrixId(matrixId);
       setActiveSession(sessionWithWorkflows);
-      setOriginalDataRows(rows);
-      setOriginalDataColumns(columns);
-      setSelectedDataColumns(columns);
     } catch (error) {
       console.error("Error creating session:", error);
     } finally {
