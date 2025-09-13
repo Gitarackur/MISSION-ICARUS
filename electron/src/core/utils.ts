@@ -1,5 +1,6 @@
 import os from 'os'
 import path from 'path'
+import { app } from 'electron';
 
 export function isMac(): boolean {
   return os.platform() === 'darwin';
@@ -28,4 +29,10 @@ export function getAppDataDir(appName: string): string {
   } else {
     return process.env.XDG_CONFIG_HOME || path.join(homeDir, '.config', appName);
   }
+}
+
+export function resourcePath(...paths: string[]): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "assets", ...paths)
+    : path.join(app.getAppPath(), "assets", ...paths);
 }

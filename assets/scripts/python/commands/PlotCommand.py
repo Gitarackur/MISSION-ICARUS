@@ -8,9 +8,6 @@ from core.Command import Command
 
 
 class PlotCommand(Command):
-    def __init__(self, name, description):
-        super().__init__(name, description)
-
     def execute(self):
         preview = "--preview" in self.args
         use_json = "--use-json" in self.args

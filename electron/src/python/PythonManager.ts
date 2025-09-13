@@ -2,11 +2,10 @@ import { Manager } from "../core/Manager";
 
 import path from "path";
 import fs from "fs";
-import { app } from "electron";
 import CoreExec from "../core/Exec";
+import { resourcePath } from "../core/utils";
 
 
-const SCRIPT_DIR_PATH = path.join(app.getAppPath(), 'scripts', 'python');
 
 export class PythonManager extends Manager {
   private checkIfPathIsPythonScript(scriptPath: string): void {
@@ -40,7 +39,7 @@ export class PythonManager extends Manager {
   }
 
   public async getPlot<T = Record<string, unknown>>(data: T): Promise<string> {
-    const scriptPath = path.join(SCRIPT_DIR_PATH, 'commander.py');
+    const scriptPath = resourcePath('scripts', 'python', 'commander.py');
     const stringifiedData = typeof data == 'string' ? data : JSON.stringify(data);
     return this.runScript(scriptPath, ['plot', stringifiedData, '--use-json']);
   }
