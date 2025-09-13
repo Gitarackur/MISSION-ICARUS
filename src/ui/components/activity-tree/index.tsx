@@ -2,7 +2,7 @@ import { useState, useMemo } from 'react';
 import { activityStyleVariants } from './variants/activity.style.variant.tsx';
 import TreeNode from './tree-node.tsx';
 import { generateIcarusActivityNode } from '@/app-layer/algorithms/tree/index.ts';
-import { DiplayedActivityTree } from './types/activity-node.types.ts';
+import { DisplayedActivityTree } from './types/activity-node.types.ts';
 
 
 
@@ -10,7 +10,7 @@ const ActivityTree = ({
   sessionData,
   onClickOfInputButton,
   onClickOfOutputButton
-}: DiplayedActivityTree) => {
+}: DisplayedActivityTree) => {
   const styles = activityStyleVariants();
 
   // sourceMatrixId
