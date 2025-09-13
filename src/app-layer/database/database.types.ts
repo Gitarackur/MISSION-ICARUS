@@ -39,7 +39,7 @@ export interface IcarusSessionWithWorkflowRecord {
 // MATRICES RECORD
 export interface IcarusMatrixRecord {
   id: string;
-  createdAt?: number;
+  createdAt: number;
   columns: TableColumns;
   data: TableMatrices;
   createdByFirstActivity?: boolean;
