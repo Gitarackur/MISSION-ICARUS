@@ -61,19 +61,19 @@ coverage/
 *~
 
 # # Hide script builds
-# ./scripts/python/bin/*.build/**
-# ./scripts/python/bin/*.build/**
-# ./scripts/python/bin/*.onefile-build/**
+./scripts/python/bin/*.build/**
+./scripts/python/bin/*.build/**
+./scripts/python/bin/*.onefile-build/**
 
-# scripts/python/bin/*.build/**
-# scripts/python/bin/*.build/**
-# scripts/python/bin/*.onefile-build/**
+scripts/python/bin/*.build/**
+scripts/python/bin/*.build/**
+scripts/python/bin/*.onefile-build/**
 
 
 # #3 Hide Binary cached Nuitka files
-# scripts/python/bin/command.dist/*
-# scripts/python/bin/command.onefile-build/*
-# scripts/python/bin/command.bin
+scripts/python/bin/command.dist/*
+scripts/python/bin/command.onefile-build/*
+scripts/python/bin/command.bin
 
 
 # OS generated files
