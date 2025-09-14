@@ -12,14 +12,11 @@ import { useMemo, useState } from "react";
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
-//  p-6 shadow-sm border border-gray-200
 const headingClass = "text-2xl font-semibold text-gray-800 mb-2";
 const descriptionClass = "text-gray-600 mb-6";
 const labelClass = "block text-sm font-medium text-gray-700 mb-2";
 const inputClass =
   "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-500";
-// const selectClass =
-//   "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors";
 const buttonClass =
   "px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors";
 const dangerButtonClass =
