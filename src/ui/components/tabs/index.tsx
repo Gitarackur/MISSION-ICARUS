@@ -23,13 +23,13 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive }) => {
   ];
 
   return (
-    <div className="bg-white border-b border-gray-100 overflow-x-hidden">
+    <div className="bg-white border-gray-400 overflow-x-hidden">
       <div className="px-3 sm:px-6 pt-3 max-w-full">
         <nav
           className="
-            flex flex-wrap justify-center sm:justify-start
-            gap-x-4 gap-y-2
-            max-w-full
+            inline-flex flex-wrap justify-center sm:justify-start
+            gap-x-1 gap-y-2 bg-gray-200/40 rounded-t pt-1
+            max-w-full border border-gray-100
           "
           aria-label="Main tabs"
         >

@@ -3,15 +3,15 @@ import { tv } from "tailwind-variants";
 
 const slidingSheetStyles = tv({
   slots: {
-    overlay: 'fixed bg-black z-40 transition-opacity duration-300',
-    panel: 'fixed bg-white shadow-lg transform transition-transform ease-in-out duration-300 z-50 flex flex-col',
+    overlay: 'fixed bg-black z-70 transition-opacity duration-300',
+    panel: 'fixed bg-white shadow-lg transform transition-transform ease-in-out duration-300 z-70 flex flex-col',
     header: 'flex items-center justify-between p-4 border-b border-gray-200',
-    body: 'flex-1 overflow-y-auto p-4',
+    body: 'flex-1 overflow-y-auto ',
   },
   variants: {
     position: {
       right: {
-        panel: 'top-0 right-0 h-full w-80 rounded-l-lg',
+        panel: 'top-0 right-0 h-full w-80 ',
       },
       bottom: {
         panel: 'bottom-0 left-0 w-full h-80 rounded-t-lg',

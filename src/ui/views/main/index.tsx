@@ -159,10 +159,10 @@ const IcarusApp: React.FC = () => {
       isOpen={isSheetOpen && !!activeSession}
       onClose={() => setIsSheetOpen(false)}
       position="right"
-      title="Activity Session"
+      title="Activity Tree"
       sidebarWidth="100rem"
       overlayClassName="!bg-opacity-80"
-      panelClassName="bg-blue-50 w-150"
+      panelClassName="bg-blue-50 border border-gray-200 w-150"
       headerClassName="border-blue-300"
       bodyClassName="p-0"
     >
@@ -220,7 +220,7 @@ const IcarusApp: React.FC = () => {
         onDeleteSession={handleDeleteSession}
       />
 
-      <main className="flex-1 overflow-y-auto bg-white p-6">
+      <main className="flex-1 overflow-y-auto bg-white ">
         {activeMatrix ? (
           renderMainContent()
         ) : (

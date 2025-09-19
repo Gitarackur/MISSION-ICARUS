@@ -27,3 +27,39 @@ h1 {
 .dev * {
   @apply outline outline-red-700/40;
 }
+
+/* Custom scrollbar styles */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #9ca3af;
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6b7280;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #9ca3af transparent;
+}
+
+/* IE/Edge scrollbar */
+body {
+  -ms-overflow-style: -ms-autohiding-scrollbar;
+  scrollbar-base-color: #9ca3af;
+  scrollbar-track-color: transparent;
+}

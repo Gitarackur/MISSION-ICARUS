@@ -3,21 +3,22 @@ import { tv } from "tailwind-variants";
 // tab header variants
 export const headerVariants = tv({
   slots: {
-    wrapper: 'bg-white shadow-sm',
-    container: 'px-6 py-4',
-    flexMain: 'flex flex-col gap-5 lg:gap-0 lg:flex-row lg:items-center lg:justify-between',
-    logoWrapper: 'flex items-center space-x-3',
-    iconBg: 'p-2 bg-white rounded-lg',
-    icon: 'w-auto h-30 text-white',
-    titleWrapper: '',
-    title: 'text-xl font-bold text-gray-900',
-    subtitle: 'text-sm text-gray-600',
-    buttonGroup: 'flex space-x-2',
+    wrapper: "bg-white ",
+    container: "px-6 py-4",
+    flexMain:
+      "flex flex-col gap-5 lg:gap-0 lg:flex-row lg:items-center lg:justify-between",
+    logoWrapper: "flex items-center space-x-3",
+    iconBg: "p-2 bg-white rounded-lg",
+    icon: "w-auto h-20 text-white",
+    titleWrapper: "",
+    title: "!text-3xl font-bold text-gray-900",
+    subtitle: "text-sm text-gray-600",
+    buttonGroup: "flex ",
     buttonExport:
-      'flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700',
+      "flex items-center space-x-2 px-4 py-2 text-sm bg-green-600 text-white rounded-l-lg hover:bg-green-700",
     buttonSettings:
-      'flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700',
-    buttonIcon: 'w-4 h-4',
+      "flex items-center space-x-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-r-lg hover:bg-blue-700",
+    buttonIcon: "w-4 h-4",
   },
 });
 
@@ -26,7 +27,7 @@ export const headerVariants = tv({
 // tab navigation variants
 export const tabNavigationVariants = tv({
   slots: {
-    tabList: "sticky left-0 right-0 -top-5 flex w-full overflow-x-auto border-b border-gray-200 bg-white pt-0 mb-4 z-40",
+    tabList: "sticky left-0 right-0 border-b border-gray-200 top-0 flex w-full overflow-x-auto overflow-y-clip bg-white pt-0 z-60",
     tabButton: [
       "relative",
       "px-6",
@@ -49,12 +50,9 @@ export const tabNavigationVariants = tv({
         tabButton: [
           "bg-white",
           "text-blue-600",
-          "border-x",
-          "border-t",
+          "border",
           "border-gray-300",
-          "border-b-white",
           "z-20",
-          "rounded-t-lg",
           "-mb-[1px]",
           "shadow-md",
         ],
