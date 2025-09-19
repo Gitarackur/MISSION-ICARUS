@@ -477,3 +477,28 @@ export const extractNumericData = (
 // Transpose results to match expected format (rows x columns)
 export const transposedStatisticalResults = (results: number[][]) =>
   results[0].map((_, rowIndex) => results.map((col) => col[rowIndex]));
+
+
+export const isMissing = (v: unknown): boolean =>
+  v === null ||
+  v === undefined ||
+  (typeof v === "string" && v.trim() === "") ||
+  v === "NA" ||
+  v === "NaN";
+
+export const toNumber = (v: unknown): number | null => {
+  if (isMissing(v)) return null;
+  const n =
+    typeof v === "number"
+      ? v
+      : typeof v === "string"
+      ? Number(v.replace(/,/g, ""))
+      : NaN;
+  return Number.isFinite(n) ? n : null;
+};
+
+export const mean = (values: (number | null)[]): number | null => {
+  const nums = values.filter((x): x is number => x !== null);
+  if (nums.length === 0) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+};

@@ -318,7 +318,18 @@ const useStatisticsMenu = ({
         content = <FillColumn dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "impute-mean":
-        content = <ImputeMean dataColumns={dataColumns} actionId={actionId} />;
+        content = (<ImputeMean dataColumns={dataColumns} 
+        actionId={actionId} 
+        dataRows={dataRows}
+        allColumnarData={allColumnarData}
+        onSuccess={(result) => {
+          closeModal();
+          onSuccess?.(result);
+        }}
+        onError={() => {
+          closeModal();
+          onError?.();
+        }} />);
         break;
       case "impute-median":
         content = (

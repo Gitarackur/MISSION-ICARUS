@@ -101,3 +101,13 @@ export function tTest(data: number[][]) {
     stdDev2: Math.sqrt(variance2),
   };
 }
+
+//Imputation of Mean
+export const imputeMeanColumn = (col: number[]): number[] => {
+  // compute mean from observed (finite) values only
+  const obs = col.filter((x) => Number.isFinite(x));
+  if (obs.length === 0) return col.slice(); // nothing to impute (all NaN) → return as-is
+  const m = obs.reduce((a, b) => a + b, 0) / obs.length;
+  // replace missing (NaN / ±Infinity) with mean
+  return col.map((x) => (Number.isFinite(x) ? x : m));
+};

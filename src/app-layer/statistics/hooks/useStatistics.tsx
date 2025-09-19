@@ -1,6 +1,6 @@
 import { StatisticalAction, StatisticalAnalysisResult } from '@/domain/statistics/index.types';
 import { useCallback } from 'react';
-import { mean, median, normalization, stddev, tTest } from '@/app-layer/statistics/utils/statistical-engine';
+import { imputeMeanColumn, mean, median, normalization, stddev, tTest } from '@/app-layer/statistics/utils/statistical-engine';
 import { TableMatrix } from '@/domain/workflow/main.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { extractNumericData, transposedStatisticalResults } from '@/app-layer/shared/utils';
@@ -43,6 +43,8 @@ export const useStatisticalAnalysis = () => {
       let newColumnNames: string[] = [];
       const calculationMethod = action;
 
+     
+
       switch (action) {
         case 'mean': {
           results = numericData.map(columnData => [mean(columnData)]);
@@ -82,6 +84,19 @@ export const useStatisticalAnalysis = () => {
           numericColumns.forEach(col => col_value_name = `${col}_${col_value_name}`)
           newColumnNames = [col_value_name];
           break;
+        
+        case 'impute-mean':
+          // Impute each selected numeric column independently with its own mean
+          const imputed = numericData.map((col) => imputeMeanColumn(col));
+
+          // Return a full matrix (like 'normalization' does): one array per column
+          results = imputed;
+
+          // Name each produced column (so the UI can display them distinctly)
+          newColumnNames = numericColumns.map((col) => `${col}_imputed_mean`);
+          break;
+
+
         default: {
           throw new Error(`Action '${action}' not supported.`);
         }
