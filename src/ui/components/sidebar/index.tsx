@@ -34,27 +34,28 @@ const Sidebar: React.FC<SidebarProps> = ({
                 key={session.id}
                 className={`${s.listItem()} flex items-center justify-between`}
               >
-                <button
+                <a
                   onClick={() => onSessionClick(session)}
-                  className={`${s.sessionButton()} ${
+                  className={`${s.sessionButton()}  ${
                     isActive
                       ? s.sessionButtonActive()
                       : s.sessionButtonInactive()
                   }`}
                 >
                   {session.name}
-                </button>
-
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDeleteSession(session.id);
-                  }}
-                  className={s.deleteButton()}
-                  title="Delete session"
-                >
-                  <Trash2 size={16} />
-                </button>
+                  <div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession(session.id);
+                      }}
+                      className={s.deleteButton()}
+                      title="Delete session"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </a>
               </li>
             );
           })}

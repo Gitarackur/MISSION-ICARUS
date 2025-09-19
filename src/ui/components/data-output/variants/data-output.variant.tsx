@@ -56,7 +56,7 @@ export const dataOutputStyles = tv({
 export const importDataStyles = tv({
   slots: {
     container: 'space-y-6',
-    card: 'bg-white rounded-lg shadow p-6',
+    card: 'bg-white rounded-lg border border-gray-100 shadow p-6',
     heading2: 'text-lg font-semibold mb-4',
     heading3: 'text-md font-medium mb-3',
     grid: 'grid grid-cols-1 md:grid-cols-2 gap-6',
