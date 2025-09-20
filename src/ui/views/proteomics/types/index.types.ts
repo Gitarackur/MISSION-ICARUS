@@ -10,6 +10,8 @@ import { tabsIdTypes } from "@/ui/components/tabs/types/index.types";
 export type ProteomicsAnalysisHomeViewProps = {
   handleSessionCreate: ({ rows, columns }: BareSession) => void;
 
+  openActivitySheet: () => void;
+
   originalDataRows: ProteinRow[];
   originalDataColumns: TableColumns;
 

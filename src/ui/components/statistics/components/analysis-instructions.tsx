@@ -17,9 +17,9 @@ const StatisticalAnalysisInstructions = () => {
           <li>• Data Preview page is Paginated.</li>
           <li>• Click on a Menu option to perform Analysis on Columns across <b>ALL</b> pages</li>
           <li className="font-bold flex items-center gap-2">
-            <span className={columnStyles("string")}></span> • String Columns 
-            <span className={columnStyles("number")}></span> • Numerical Columns 
-            <span className={columnStyles("boolean")}></span>• Boolean Columns 
+            <span className={columnStyles("string")}></span> String Columns 
+            <span className={columnStyles("number")}></span> Numerical Columns 
+            <span className={columnStyles("boolean")}></span> Boolean Columns 
           </li>
         </ul>
       </div>

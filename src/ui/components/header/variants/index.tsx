@@ -51,6 +51,7 @@ export const tabNavigationVariants = tv({
           "bg-white",
           "text-blue-600",
           "border",
+          "border-l-0",
           "border-gray-300",
           "z-20",
           "-mb-[1px]",

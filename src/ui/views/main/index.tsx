@@ -4,7 +4,7 @@ import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import MatrixTab from "@/ui/components/header/matrix-tab";
-import { Menu } from "lucide-react";
+// import { Menu } from "lucide-react";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
 import {
@@ -23,10 +23,11 @@ import {
   saveNewStatisticalActivityInWorkflow,
 } from "@/app-layer/session/utils/main";
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
-import { activityFloatingButton } from "./variants/main.variants";
+// import { activityFloatingButton } from "./variants/main.variants";
 import ActivityTree2 from "@/ui/components/activity-tree/index2";
 
 const IcarusApp: React.FC = () => {
+  const [showSession, setShowSession] = useState(false);
   const [activeSession, setActiveSession] =
     useState<IcarusSessionWithWorkflowRecord | null>(null);
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
@@ -125,6 +126,14 @@ const IcarusApp: React.FC = () => {
   useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
 
   useEffect(() => {
+    window.addEventListener("toggle:sidebar", () => setShowSession((v) => !v));
+    return () =>
+      window.removeEventListener("toggle:sidebar", () =>
+        setShowSession((v) => !v)
+      );
+  }, [])
+
+  useEffect(() => {
     if (!activeMatrix || isProcessing) return;
 
     try {
@@ -143,16 +152,16 @@ const IcarusApp: React.FC = () => {
   }, [activeMatrix, isProcessing]);
 
   // Render helpers
-  const renderFloatingButton = () =>
-    activeSession && (
-      <div
-        className={activityFloatingButton({ intent: "primary" })}
-        onClick={() => setIsSheetOpen(true)}
-      >
-        <Menu size={24} className="text-blue-600" />
-        <span>View Activity Log</span>
-      </div>
-    );
+  // const renderFloatingButton = () =>
+  //   activeSession && (
+  //     <div
+  //       className={activityFloatingButton({ intent: "primary" })}
+  //       onClick={() => setIsSheetOpen(true)}
+  //     >
+  //       <Menu size={24} className="text-blue-600" />
+  //       <span>View Activity Log</span>
+  //     </div>
+  //   );
 
   const renderSlidingSheet = () => (
     <SlidingSheet
@@ -185,14 +194,6 @@ const IcarusApp: React.FC = () => {
 
   const renderMainContent = () => (
     <>
-      {matrices.length > 0 && (
-        <MatrixTab
-          matrices={matrices}
-          activeMatrixId={activeMatrix?.id || ""}
-          setActiveMatrixId={setActiveMatrixId}
-        />
-      )}
-
       <ProteomicsAnalysisHomeView
         handleSessionCreate={handleSessionCreate}
         originalDataRows={originalDataRows}
@@ -203,24 +204,31 @@ const IcarusApp: React.FC = () => {
         setIsProcessing={setIsProcessing}
         saveActivityInWorkflow={saveActivityInWorkflow}
         sessionSourceMatrix={activeMatrix || sessionSourceMatrix}
+        openActivitySheet={() => setIsSheetOpen(true)}
       />
-
-      {renderFloatingButton()}
       {renderSlidingSheet()}
     </>
   );
 
   return (
     <div className="flex h-screen bg-white text-gray-800">
-      <Sidebar
-        sessions={sessions || []}
-        activeSession={activeSession}
-        onSessionClick={handleSessionClick}
-        onCreateSession={() => setActiveSession(null)}
-        onDeleteSession={handleDeleteSession}
-      />
+      {showSession && (
+        <Sidebar
+          sessions={sessions || []}
+          activeSession={activeSession}
+          onSessionClick={handleSessionClick}
+          onCreateSession={() => setActiveSession(null)}
+          onDeleteSession={handleDeleteSession}
+        />
+      )}
 
       <main className="flex-1 overflow-y-auto bg-white ">
+        <MatrixTab
+          matrices={matrices}
+          activeMatrixId={activeMatrix?.id || ""}
+          setActiveMatrixId={setActiveMatrixId}
+          toggleSidebar={() => setShowSession((v) => !v)}
+        />
         {activeMatrix ? (
           renderMainContent()
         ) : (
@@ -235,6 +243,7 @@ const IcarusApp: React.FC = () => {
               setIsProcessing={setIsProcessing}
               saveActivityInWorkflow={saveActivityInWorkflow}
               sessionSourceMatrix={sessionSourceMatrix}
+              openActivitySheet={() => setIsSheetOpen(true)}
             />
           </div>
         )}
