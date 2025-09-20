@@ -193,7 +193,7 @@ async function main() {
   // const { setupDatabaseHandlers } = await import("./src/database/ipc-handlers");
 
   try {
-    await app.whenReady();
+    // await app.whenReady();
 
     // const result = await initializeDatabase();
     // if (!result) {

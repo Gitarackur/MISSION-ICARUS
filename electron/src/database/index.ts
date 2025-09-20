@@ -3,23 +3,27 @@ import Database from "better-sqlite3";
 import { app } from "electron";
 import path from "path";
 import { setupMigrations } from "./migrations";
-import { MigrationRunner } from "./migrations/migration-runner";
 import { IcarusDBAdapter } from "./adapter";
+import fs from "fs";
 
 export const initializeDatabase = async () => {
-  let db: Database.Database;
-  let migrationRunner: MigrationRunner;
-  let icarusDBAdapter: IcarusDBAdapter;
-  const userData = app.getPath("userData");
-  const dbPath = path.join(userData, "icarus.db");
   try {
-    db = new Database(dbPath);
+    const userData = app.getPath("userData");
+    const dbPath = path.join(userData, "icarus.db");
+    
+    // Create directory if it doesn't exist
+    const dir = path.dirname(dbPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    const db = new Database(dbPath);
     db.pragma("journal_mode = WAL");
 
-    migrationRunner = setupMigrations(db);
+    const migrationRunner = setupMigrations(db);
     await migrationRunner.runMigrations();
 
-    icarusDBAdapter = new IcarusDBAdapter(db);
+    const icarusDBAdapter = new IcarusDBAdapter(db);
 
     console.log("Database initialized at:", dbPath);
 
