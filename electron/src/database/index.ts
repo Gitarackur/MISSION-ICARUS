@@ -23,14 +23,14 @@ export const initializeDatabase = async () => {
 
     console.log("Database initialized at:", dbPath);
 
-    return { db, icarusDBAdapter, migrationRunner};
+    return { db, icarusDBAdapter, migrationRunner };
   } catch (error) {
     console.error("Failed to initialize database:", error);
     throw error; 
   }
 };
 
-export const getdB = () => {
+export const getDB = () => {
   const userData = app.getPath("userData");
   const dbPath = path.join(userData, "icarus.db");
   return new Database(dbPath);

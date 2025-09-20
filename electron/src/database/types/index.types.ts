@@ -4,6 +4,7 @@ import {
   IcarusMatrixRecord,
   IcarusActivityRecord,
   IcarusVisualizationRecord,
+  IcarusSessionWithWorkflowRecord,
 } from "@/app-layer/database/database.types";
 
 export type IcarusDBAdapterType = {
@@ -11,7 +12,7 @@ export type IcarusDBAdapterType = {
   getSession(id: string): IcarusSessionRecord | null;
   getAllSessions(): IcarusSessionRecord[];
   deleteSession(id: string): void;
-  getSessionWithWorkflows(id: string): unknown;
+  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflowRecord | null;
   saveWorkflow(workflow: IcarusWorkflowRecord): void;
   getWorkflow(id: string): IcarusWorkflowRecord | null;
   saveMatrix(matrix: IcarusMatrixRecord): void;
