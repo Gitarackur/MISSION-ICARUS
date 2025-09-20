@@ -1,4 +1,4 @@
-import { getNumericColumnsOptimized, mean, toNumber } from "@/app-layer/shared/utils";
+import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { useStatisticalAnalysis } from "@/app-layer/statistics/hooks/useStatistics";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import {
