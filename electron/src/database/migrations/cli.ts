@@ -1,10 +1,11 @@
 // 4. CLI COMMANDS FOR DEVELOPMENT (src/database/cli.ts)
-import { migrationRunner } from "..";
+import { MigrationRunner } from "./migration-runner";
+import Database from 'better-sqlite3';
 
 const command = process.argv[2];
 const arg = process.argv[3];
 
-async function runCLI() {
+async function runCLI(migrationRunner: MigrationRunner) {
   try {
     switch (command) {
       case 'migrate':
@@ -35,7 +36,8 @@ async function runCLI() {
     process.exit(1);
   }
 }
-
 if (require.main === module) {
-  runCLI();
+  const db = new Database('database.sqlite');
+  const migrationRunner = new MigrationRunner(db);
+  runCLI(migrationRunner);
 }

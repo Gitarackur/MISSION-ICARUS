@@ -1,21 +1,37 @@
 // src/database/index.ts
-import Database from 'better-sqlite3';
-import { app } from 'electron';
-import path from 'path';
-import { setupMigrations } from './migrations';
+import Database from "better-sqlite3";
+import { app } from "electron";
+import path from "path";
+import { setupMigrations } from "./migrations";
+import { MigrationRunner } from "./migrations/migration-runner";
+import { IcarusDBAdapter } from "./adapter";
 
-// Path: ~/Library/Application Support/<AppName>/icarus.db
-const dbPath = path.join(app.getPath('userData'), 'icarus.db');
-const db = new Database(dbPath);
+export const initializeDatabase = async () => {
+  let db: Database.Database;
+  let migrationRunner: MigrationRunner;
+  let icarusDBAdapter: IcarusDBAdapter;
+  const userData = app.getPath("userData");
+  const dbPath = path.join(userData, "icarus.db");
+  try {
+    db = new Database(dbPath);
+    db.pragma("journal_mode = WAL");
 
-db.pragma('journal_mode = WAL');
+    migrationRunner = setupMigrations(db);
+    await migrationRunner.runMigrations();
 
-// Run migrations - this will create all tables and indexes
-const migrationRunner = setupMigrations(db);
-migrationRunner.runMigrations().catch((error) => {
-  console.error('Migration failed:', error);
-  process.exit(1);
-});
+    icarusDBAdapter = new IcarusDBAdapter(db);
 
-export default db;
-export { migrationRunner };
+    console.log("Database initialized at:", dbPath);
+
+    return { db, icarusDBAdapter, migrationRunner};
+  } catch (error) {
+    console.error("Failed to initialize database:", error);
+    throw error; 
+  }
+};
+
+export const getdB = () => {
+  const userData = app.getPath("userData");
+  const dbPath = path.join(userData, "icarus.db");
+  return new Database(dbPath);
+}

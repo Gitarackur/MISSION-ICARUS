@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, globalShortcut, ipcMain } from "electron";
+
 // import { createRequire } from 'node:module'
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -7,19 +8,9 @@ import path from "node:path";
 import EmbeddedRManager from "./src/r/r-manager";
 import { PythonManager } from "./src/python/PythonManager";
 
-import {
-  IcarusSessionRecord,
-  IcarusWorkflowRecord,
-  IcarusActivityRecord,
-  IcarusMatrixRecord,
-  IcarusVisualizationRecord,
-} from "@/app-layer/database/database.types";
-import { IcarusDB } from "./src/database/adapter";
-
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 process.env.APP_ROOT = path.join(__dirname, "..");
 
 export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -152,9 +143,9 @@ ipcMain.handle("run:python", async (_event, { method, args = [] }: Data) => {
   ) {
     throw new Error(`Method '${method}' does not exist on PythonManager`);
   }
-  const methodFunc = pythonManager[
-    method as keyof typeof pythonManager
-  ] as (...args: unknown[]) => Promise<unknown>;
+  const methodFunc = pythonManager[method as keyof typeof pythonManager] as (
+    ...args: unknown[]
+  ) => Promise<unknown>;
   return methodFunc.call(pythonManager, ...(args || []));
 });
 
@@ -197,182 +188,24 @@ app.on("activate", () => {
   }
 });
 
-// DATABASE IPC HANDLERS
-// Session handlers
-ipcMain.handle("db:saveSession", async (_, session: IcarusSessionRecord) => {
+async function main() {
+  // const { initializeDatabase } = await import("./src/database");
+  // const { setupDatabaseHandlers } = await import("./src/database/ipc-handlers");
+
   try {
-    IcarusDB.saveSession(session);
-    return { success: true };
+    await app.whenReady();
+
+    // const result = await initializeDatabase();
+    // if (!result) {
+    //   throw new Error("Database initialization returned undefined");
+    // }
+    // const { icarusDBAdapter } = result;
+    // setupDatabaseHandlers(icarusDBAdapter);
+    createWindow();
   } catch (error) {
-    console.error("Error saving session:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
+    console.error("Failed to Open Application:", error);
+    app.quit(); // gracefully exit if DB fails
   }
-});
+}
 
-ipcMain.handle("db:getSession", async (_, id: string) => {
-  try {
-    const session = IcarusDB.getSession(id);
-    return { success: true, data: session };
-  } catch (error) {
-    console.error("Error getting session:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-ipcMain.handle("db:getAllSessions", async () => {
-  try {
-    const sessions = IcarusDB.getAllSessions();
-    return { success: true, data: sessions };
-  } catch (error) {
-    console.error("Error getting sessions:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-ipcMain.handle("db:deleteSession", async (_, id: string) => {
-  try {
-    IcarusDB.deleteSession(id);
-    return { success: true };
-  } catch (error) {
-    console.error("Error deleting session:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-ipcMain.handle("db:getSessionWithWorkflows", async (_, id: string) => {
-  try {
-    const session = IcarusDB.getSessionWithWorkflows(id);
-    return { success: true, data: session };
-  } catch (error) {
-    console.error("Error getting session with workflows:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-// Workflow handlers
-ipcMain.handle("db:saveWorkflow", async (_, workflow: IcarusWorkflowRecord) => {
-  try {
-    IcarusDB.saveWorkflow(workflow);
-    return { success: true };
-  } catch (error) {
-    console.error("Error saving workflow:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-ipcMain.handle("db:getWorkflow", async (_, id: string) => {
-  try {
-    const workflow = IcarusDB.getWorkflow(id);
-    return { success: true, data: workflow };
-  } catch (error) {
-    console.error("Error getting workflow:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-// Matrix handlers
-ipcMain.handle("db:saveMatrix", async (_, matrix: IcarusMatrixRecord) => {
-  try {
-    IcarusDB.saveMatrix(matrix);
-    return { success: true };
-  } catch (error) {
-    console.error("Error saving matrix:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-ipcMain.handle("db:getMatrix", async (_, id: string) => {
-  try {
-    const matrix = IcarusDB.getMatrix(id);
-    return { success: true, data: matrix };
-  } catch (error) {
-    console.error("Error getting matrix:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-// Activity handlers
-ipcMain.handle("db:saveActivity", async (_, activity: IcarusActivityRecord) => {
-  try {
-    IcarusDB.saveActivity(activity);
-    return { success: true };
-  } catch (error) {
-    console.error("Error saving activity:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-ipcMain.handle("db:getActivity", async (_, id: string) => {
-  try {
-    const activity = IcarusDB.getActivity(id);
-    return { success: true, data: activity };
-  } catch (error) {
-    console.error("Error getting activity:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-// Visualization handlers
-ipcMain.handle(
-  "db:saveVisualization",
-  async (_, visualization: IcarusVisualizationRecord) => {
-    try {
-      IcarusDB.saveVisualization(visualization);
-      return { success: true };
-    } catch (error) {
-      console.error("Error saving visualization:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-);
-
-ipcMain.handle("db:getVisualization", async (_, id: string) => {
-  try {
-    const visualization = IcarusDB.getVisualization(id);
-    return { success: true, data: visualization };
-  } catch (error) {
-    console.error("Error getting visualization:", error);
-    return {
-      success: false,
-      error: error instanceof Error ? error.message : "Unknown error",
-    };
-  }
-});
-
-app.whenReady().then(createWindow);
+app.whenReady().then(main);
