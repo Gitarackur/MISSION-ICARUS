@@ -182,7 +182,7 @@ const ActivityTree2 = ({
         });
 
       // Activity name
-      const activityNameText = nodes
+      nodes
         .append("text")
         .attr("dy", "-1.8em")
         .attr("text-anchor", "middle")
@@ -192,19 +192,18 @@ const ActivityTree2 = ({
         .text((d) => d.data.activity.name)
         .call(wrapText, 80);
 
-
       // Count tspans (number of wrapped lines)
-      const lineCount = activityNameText.selectAll("tspan").size();
+      // const lineCount = activityNameText.selectAll("tspan").size();
 
       // Activity ID
-      nodes
-        .append("text")
-        .attr("dy", "-0.8em")
-        .attr("dy", `${-1.8 + lineCount * 0.4 + 1}em`)
-        .attr("text-anchor", "middle")
-        .attr("font-size", "10px")
-        .attr("fill", "#6b7280")
-        .text((d) => `ID: ${d.data.activity.id.slice(-8)}`);
+      // nodes
+      //   .append("text")
+      //   .attr("dy", "-0.8em")
+      //   .attr("dy", `${-1.8 + lineCount * 0.4 + 1}em`)
+      //   .attr("text-anchor", "middle")
+      //   .attr("font-size", "10px")
+      //   .attr("fill", "#6b7280")
+      //   .text((d) => `ID: ${d.data.activity.id.slice(-8)}`);
 
       // Button container
       const buttonGroup = nodes

@@ -31,7 +31,7 @@ import CreateSession from "@/ui/components/session/create-session";
 
 
 const IcarusApp: React.FC = () => {
-  const [showSession, setShowSession] = useState(false);
+  const [showSession, setShowSession] = useState(true);
   const [activeSession, setActiveSession] =
     useState<IcarusSessionWithWorkflowRecord | null>(null);
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
