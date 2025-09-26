@@ -10,9 +10,9 @@ const sidebarStyles = tv({
 
     aside:
       "bg-gray-900 text-white border-r border-gray-800 flex flex-row items-center w-full sticky",
-    list: "overflow-y-auto max-w-[80%]",
+    list: "overflow-y-auto max-w-[70%]",
     ul: "inline-flex space-y-1 space-x-4 p-2",
-    listItem: "",
+    listItem: "min-w-60 flex items-center justify-between",
 
     header: "p-4 gap-4 border-b border-gray-800 flex items-center justify-between",
     headerTitle: "text-lg font-semibold tracking-wide",

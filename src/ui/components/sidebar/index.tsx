@@ -37,10 +37,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {sessions?.map((session) => {
             const isActive = activeSession?.id === session?.id;
             return (
-              <li
-                key={session.id}
-                className={`${s.listItem()} flex items-center justify-between`}
-              >
+              <li key={session.id} className={s.listItem()}>
                 <a
                   onClick={() => onSessionClick(session)}
                   className={`${s.sessionButton()}  ${isActive
