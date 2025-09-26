@@ -6,7 +6,7 @@ import { tv } from "tailwind-variants";
 export const tabButtonStyles = tv({
   base: `
     flex items-center space-x-2
-    px-4 py-1.5
+    px-4 py-1.5 pt-2.5
     border-b-4 font-semibold text-sm 
     flex-grow sm:flex-grow-0 min-w-0
     transition-colors duration-200 ease-in-out

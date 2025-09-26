@@ -5,6 +5,7 @@ export type tabsIdTypes = "filter" | "import" | "protein-data-info-panel" | "vis
 export type NavTabsProps = { 
   active: tabsIdTypes; 
   setActive: (t: tabsIdTypes) => void;
+  openActivitySheet?: () => void;
 };
 
 export type LucideIconProps = React.ForwardRefExoticComponent<

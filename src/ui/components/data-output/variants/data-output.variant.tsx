@@ -60,6 +60,7 @@ export const importDataStyles = tv({
     heading2: 'text-lg font-semibold mb-4',
     heading3: 'text-md font-medium mb-3',
     grid: 'grid grid-cols-1 md:grid-cols-2 gap-6',
+    dataImportGrid: "flex flex-col items-center justify-center",
     label: 'block text-sm font-medium text-gray-700 mb-2',
     uploadBox: 'border-2 border-dashed border-gray-300 rounded-lg p-6 text-center',
     uploadIcon: 'w-12 h-12 text-gray-400 mx-auto mb-4',

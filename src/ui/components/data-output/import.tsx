@@ -8,11 +8,6 @@ const DataImport: React.FC<DataImportProps> = ({
   fileInputRef,
   onFileChange,
   isProcessing,
-  
-  // data rows and column values and setters
-  originalDataRowsCount,
-  originalColumnsCount,
-  selectedColumnsCount
 }) => {
   const s = importDataStyles();
 
@@ -20,13 +15,13 @@ const DataImport: React.FC<DataImportProps> = ({
     <div className={s.container()}>
       <div className={s.card()}>
         <h2 className={s.heading2()}>Data Import</h2>
-        <div className={s.grid()}>
+        <div className={s.dataImportGrid()}>
           <div>
-            <label className={s.label()}>Upload MaxQuant Output</label>
+            <label className={s.label()}>Upload Analysis Output</label>
             <div className={s.uploadBox()}>
               <Upload className={s.uploadIcon()} />
               <p className={s.uploadText()}>
-                Drop your proteinGroups.txt or evidence.txt file here
+                Drop your data analysis txt or csv file here
               </p>
               <input
                 ref={fileInputRef}
@@ -43,24 +38,6 @@ const DataImport: React.FC<DataImportProps> = ({
               >
                 {isProcessing ? 'Processing...' : 'Select File'}
               </button>
-            </div>
-          </div>
-
-          <div>
-            <h3 className={s.heading3()}>Data Summary</h3>
-            <div className={s.summaryContainer()}>
-              <div className={s.summaryRow()}>
-                <span className={s.summaryLabel()}>Total Data Amount:</span>
-                <span className={s.summaryValue()}>{originalDataRowsCount}</span>
-              </div>
-              <div className={s.summaryRow()}>
-                <span className={s.summaryLabel()}>Columns:</span>
-                <span className={s.summaryValue()}>{originalColumnsCount}</span>
-              </div>
-              <div className={s.summaryRow()}>
-                <span className={s.summaryLabel()}>Selected Columns:</span>
-                <span className={s.summaryValue()}>{selectedColumnsCount}</span>
-              </div>
             </div>
           </div>
         </div>

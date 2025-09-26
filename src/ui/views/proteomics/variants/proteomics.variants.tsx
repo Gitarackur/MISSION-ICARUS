@@ -4,7 +4,7 @@ import { tv } from "tailwind-variants";
 export const proteomicsPagestyles = tv({
   slots: {
     container: 'min-h-screen bg-gray-50',
-    stickyHeader: 'top-9 z-20 bg-gray-50 border-y border-gray-200 sticky',
+    stickyHeader: 'top-12 z-20 bg-gray-50 border-y border-gray-200 sticky',
     contentPadding: 'p-6',
     sectionSpacing: 'space-y-6',
     filterBox: 'bg-white rounded-lg shadow p-6',
