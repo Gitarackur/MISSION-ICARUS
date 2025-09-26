@@ -212,17 +212,7 @@ const IcarusApp: React.FC = () => {
   );
 
   return (
-    <div className="flex h-screen bg-white text-gray-800">
-      {showSession && (
-        <Sidebar
-          sessions={sessions || []}
-          activeSession={activeSession}
-          onSessionClick={handleSessionClick}
-          onCreateSession={() => setActiveSession(null)}
-          onDeleteSession={handleDeleteSession}
-        />
-      )}
-
+    <div className="flex flex-col h-screen bg-white text-gray-800">
       <main className="flex-1 overflow-y-auto bg-white">
         <MatrixTab
           matrices={matrices}
@@ -243,6 +233,16 @@ const IcarusApp: React.FC = () => {
           </div>
         )}
       </main>
+
+      {showSession && (
+        <Sidebar
+          sessions={sessions || []}
+          activeSession={activeSession}
+          onSessionClick={handleSessionClick}
+          onCreateSession={() => setActiveSession(null)}
+          onDeleteSession={handleDeleteSession}
+        />
+      )}
     </div>
   );
 };

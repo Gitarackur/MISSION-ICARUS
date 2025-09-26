@@ -19,7 +19,7 @@ export const dataOutputStyles = tv({
     columnsItem: 'flex items-center space-x-2 cursor-pointer select-none',
     tableWrapper: 'overflow-x-auto w-full rounded border border-gray-200',
     table: 'min-w-full divide-y divide-gray-200',
-    tableHead: 'bg-gray-50 sticky top-0 z-10',
+    tableHead: 'bg-gray-50',
     tableHeadCell:
       'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap',
     tableBody: 'bg-white divide-y divide-gray-100',

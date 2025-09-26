@@ -2,6 +2,8 @@ import React from "react";
 import { Plus, Trash2 } from "lucide-react";
 import sidebarStyles from "@/ui/components/sidebar/variants/sidebar.variant";
 import { SidebarProps } from "@/ui/components/sidebar/types/sidebar.types";
+import clsx from "clsx";
+import useStickyBottomScroll from "@/ui/hooks/useStickyBottomScroll";
 
 const Sidebar: React.FC<SidebarProps> = ({
   sessions,
@@ -11,9 +13,14 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeleteSession,
 }) => {
   const s = sidebarStyles();
+  const { isSticky } = useStickyBottomScroll()
+
+  const asideClasses = clsx(s.aside(), {
+    '': isSticky
+  })
 
   return (
-    <aside className={s.aside()}>
+    <aside className={asideClasses}>
       <div className={s.header()}>
         <h2 className={s.headerTitle()}>Sessions</h2>
         <div>
@@ -36,11 +43,10 @@ const Sidebar: React.FC<SidebarProps> = ({
               >
                 <a
                   onClick={() => onSessionClick(session)}
-                  className={`${s.sessionButton()}  ${
-                    isActive
+                  className={`${s.sessionButton()}  ${isActive
                       ? s.sessionButtonActive()
                       : s.sessionButtonInactive()
-                  }`}
+                    }`}
                 >
                   {session.name}
                   <div>

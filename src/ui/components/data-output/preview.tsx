@@ -10,9 +10,6 @@ import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 import { StatisticalAnalysisResult } from '@/domain/statistics/index.types';
-// import PreviewTableDataInfo from './table-data-info';
-
-
 
 
 const ROWS_PER_PAGE = 20;
@@ -114,14 +111,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           allColumnarData={allColumnarData}
           dataColumns={originalDataColumns}
         />
-      </>
-
-      <>
-        {/* <PreviewTableDataInfo 
-          originalDataRowsCount={originalDataRows?.length} 
-          originalColumnsCount={originalDataColumns?.length} 
-          selectedColumnsCount={selectedDataColumns?.length} 
-        /> */}
       </>
 
       <div className="my-10">
