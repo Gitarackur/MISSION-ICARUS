@@ -74,7 +74,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className={s.emptyStateWrapper()}>
             <span>No sessions available</span>
             <p>
-              Upload your first protein or evidence file to{" "}
+              Upload your data analysis file to{" "}
               <strong>get started</strong>.
             </p>
           </div>

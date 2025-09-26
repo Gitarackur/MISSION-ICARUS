@@ -49,12 +49,12 @@ const IcarusApp: React.FC = () => {
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
 
   // Session management
-  const handleSessionCreate = async ({ rows, columns }: BareSession) => {
+  const handleSessionCreate = async ({ rows, columns, name }: BareSession) => {
     isUploadingRef.current = true;
     setIsProcessing(true);
     try {
       const { matrixId, sessionWithWorkflows } =
-        await generateActiveSessionWitNestedWorkflow({ rows, columns });
+        await generateActiveSessionWitNestedWorkflow({ rows, columns, name });
 
       setActiveMatrixId(matrixId);
       setActiveSession(sessionWithWorkflows);
@@ -234,7 +234,7 @@ const IcarusApp: React.FC = () => {
         )}
       </main>
 
-      {showSession && (
+      {showSession && (sessions && sessions?.length > 0) && (
         <Sidebar
           sessions={sessions || []}
           activeSession={activeSession}
