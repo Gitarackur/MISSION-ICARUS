@@ -4,12 +4,9 @@ import {
   TableColumns,
 } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { BareSession } from "@/domain/session";
 import { tabsIdTypes } from "@/ui/components/tabs/types/index.types";
 
 export type ProteomicsAnalysisHomeViewProps = {
-  handleSessionCreate: ({ rows, columns }: BareSession) => void;
-
   openActivitySheet: () => void;
 
   originalDataRows: ProteinRow[];
@@ -17,9 +14,6 @@ export type ProteomicsAnalysisHomeViewProps = {
 
   selectedDataColumns: TableColumns;
   setSelectedDataColumns: (columns: string[]) => void;
-
-  isProcessing: boolean;
-  setIsProcessing: (isProcessing: boolean) => void;
 
   saveActivityInWorkflow?: ({
     inputColumnNames,

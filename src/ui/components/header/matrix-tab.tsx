@@ -2,20 +2,30 @@ import { IcarusMatrix } from '@/domain/workflow/main.types'
 import { tabNavigationVariants } from './variants'
 import { Download, Settings } from 'lucide-react';
 import { headerVariants } from "./variants";
+import { useCallback } from 'react';
+import { handleFileExport } from '@/app-layer/shared/utils';
+import { ProteinRow } from '@/domain/proteins/index.types';
 
 const MatrixTab = ({
   matrices,
   activeMatrixId,
   setActiveMatrixId,
   toggleSidebar,
+  dataRows
 }: {
   matrices: IcarusMatrix[];
   activeMatrixId: string;
   toggleSidebar: () => void;
   setActiveMatrixId: (id: string) => void;
+  dataRows?: ProteinRow[]
 }) => {
   const { tabList, tabButton } = tabNavigationVariants();
   const s = headerVariants();
+
+  const handleExport = useCallback(
+    () => handleFileExport(dataRows, 'proteomics-data'),
+    [dataRows]
+  );
 
   return (
     <>
@@ -44,16 +54,25 @@ const MatrixTab = ({
           &nbsp;
         </div>
 
-        <div className="flex flex-row gap-3 px-5">
-          <button type="button" className="flex  items-center gap-2">
-            <Download className={s.buttonIcon()} />
-            <span className="text-sm">Export</span>
-          </button>
-          <button type="button" className="flex items-center gap-2">
-            <Settings className={s.buttonIcon()} />
-            <span className="text-sm">Settings</span>
-          </button>
-        </div>
+        {
+          activeMatrixId && (
+            <div className="flex flex-row gap-3 px-5">
+              <button 
+                type="button" 
+                className="flex items-center gap-2"
+                onClick={handleExport} 
+              >
+                <Download className={s.buttonIcon()} />
+                <span className="text-sm">Export</span>
+              </button>
+              
+              <button type="button" className="flex items-center gap-2">
+                <Settings className={s.buttonIcon()} />
+                <span className="text-sm">Settings</span>
+              </button>
+            </div>
+          )
+        }
       </div>
     </>
   );

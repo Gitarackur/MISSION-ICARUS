@@ -4,7 +4,6 @@ import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import MatrixTab from "@/ui/components/header/matrix-tab";
-// import { Menu } from "lucide-react";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
 import {
@@ -23,8 +22,13 @@ import {
   saveNewStatisticalActivityInWorkflow,
 } from "@/app-layer/session/utils/main";
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
-// import { activityFloatingButton } from "./variants/main.variants";
 import ActivityTree2 from "@/ui/components/activity-tree/index2";
+import CreateSession from "@/ui/components/session/create-session";
+// import { Menu } from "lucide-react";
+// import { activityFloatingButton } from "./variants/main.variants";
+
+
+
 
 const IcarusApp: React.FC = () => {
   const [showSession, setShowSession] = useState(false);
@@ -195,13 +199,10 @@ const IcarusApp: React.FC = () => {
   const renderMainContent = () => (
     <>
       <ProteomicsAnalysisHomeView
-        handleSessionCreate={handleSessionCreate}
         originalDataRows={originalDataRows}
         originalDataColumns={originalDataColumns}
         selectedDataColumns={selectedDataColumns}
         setSelectedDataColumns={setSelectedDataColumns}
-        isProcessing={isProcessing}
-        setIsProcessing={setIsProcessing}
         saveActivityInWorkflow={saveActivityInWorkflow}
         sessionSourceMatrix={activeMatrix || sessionSourceMatrix}
         openActivitySheet={() => setIsSheetOpen(true)}
@@ -226,6 +227,7 @@ const IcarusApp: React.FC = () => {
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}
+          dataRows={originalDataRows}
           setActiveMatrixId={setActiveMatrixId}
           toggleSidebar={() => setShowSession((v) => !v)}
         />
@@ -233,18 +235,11 @@ const IcarusApp: React.FC = () => {
           renderMainContent()
         ) : (
           <div className="w-full">
-            <ProteomicsAnalysisHomeView
-              handleSessionCreate={handleSessionCreate}
-              originalDataRows={[]}
-              originalDataColumns={[]}
-              selectedDataColumns={[]}
-              setSelectedDataColumns={setSelectedDataColumns}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-              saveActivityInWorkflow={saveActivityInWorkflow}
-              sessionSourceMatrix={sessionSourceMatrix}
-              openActivitySheet={() => setIsSheetOpen(true)}
-            />
+            <CreateSession
+                isProcessing={isProcessing} 
+                setIsProcessing={setIsProcessing}        
+                handleSessionCreate={handleSessionCreate}   
+              />
           </div>
         )}
       </main>

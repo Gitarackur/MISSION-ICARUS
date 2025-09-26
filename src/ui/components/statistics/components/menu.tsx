@@ -407,9 +407,9 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
     <>
       <div ref={menuRef} className={mainContainer()}>
         <div className={mainContent()}>
-          <div className={`${rightToolbarArea()} flex-wrap overflow-x-auto `}>
+          <div className={rightToolbarArea()}>
             {menuData.toolbarRows.map((row, rowIndex) => (
-              <div key={rowIndex} className={`${toolbarRow()} w-full flex-row `}>
+              <div key={rowIndex} className={toolbarRow()}>
                 {row.map((item) => (
                   <div key={item.id} className="relative">
                     <button
