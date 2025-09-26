@@ -10,7 +10,10 @@
     "build": "tsc && vite build && electron-builder",
     "build:windows": "pipenv run prepare-all && tsc && vite build && electron-builder --win",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "migrate": "ts-node src/database/cli.ts migrate",
+    "rollback": "ts-node src/database/cli.ts rollback [version]",
+    "migration:status": "ts-node src/database/cli.ts status"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",

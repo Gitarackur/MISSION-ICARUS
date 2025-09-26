@@ -99,9 +99,9 @@ const useStatisticsMenu = ({
     switch (actionId) {
       case "count-missing":
         content = (
-          <CountMissing 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <CountMissing
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -135,9 +135,9 @@ const useStatisticsMenu = ({
         break;
       case "count-valid":
         content = (
-          <CountValid 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <CountValid
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -173,9 +173,9 @@ const useStatisticsMenu = ({
       case "median":
       case "median-values":
         content = (
-          <MedianValues 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <MedianValues
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -191,9 +191,9 @@ const useStatisticsMenu = ({
         break;
       case "variance":
         content = (
-          <Variance 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <Variance
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -210,9 +210,9 @@ const useStatisticsMenu = ({
       case "stdDev":
       case "stddev-values":
         content = (
-          <StdDevValues 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <StdDevValues
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -228,9 +228,9 @@ const useStatisticsMenu = ({
         break;
       case "sum":
         content = (
-          <Sum 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <Sum
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -246,9 +246,9 @@ const useStatisticsMenu = ({
         break;
       case "product":
         content = (
-          <Product 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <Product
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -270,9 +270,9 @@ const useStatisticsMenu = ({
         break;
       case "filter-by-value":
         content = (
-          <FilterByValue 
-            dataColumns={dataColumns} 
-            actionId={actionId} 
+          <FilterByValue
+            dataColumns={dataColumns}
+            actionId={actionId}
             dataRows={dataRows}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
@@ -318,7 +318,22 @@ const useStatisticsMenu = ({
         content = <FillColumn dataColumns={dataColumns} actionId={actionId} />;
         break;
       case "impute-mean":
-        content = <ImputeMean dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <ImputeMean
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "impute-median":
         content = (

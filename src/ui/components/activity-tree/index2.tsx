@@ -8,6 +8,7 @@ import {
 } from "./variants/activity.style.variant";
 import { DisplayedActivityTree } from "./types/activity-node.types";
 import { Minus, Plus, RefreshCcw } from "lucide-react";
+import { wrapText } from "./utils/main";
 
 const ActivityTree2 = ({
   sessionData,
@@ -69,7 +70,7 @@ const ActivityTree2 = ({
     svg.call(zoom);
 
     const nodeWidth = 180;
-    const nodeHeight = 100;
+    const nodeHeight = 150;
     const siblingSeparation = 40;
     const generationSeparation = 120;
 
@@ -181,19 +182,25 @@ const ActivityTree2 = ({
         });
 
       // Activity name
-      nodes
+      const activityNameText = nodes
         .append("text")
         .attr("dy", "-1.8em")
         .attr("text-anchor", "middle")
         .attr("font-size", "12px")
         .attr("font-weight", "600")
         .attr("fill", "#374151")
-        .text((d) => d.data.activity.name);
+        .text((d) => d.data.activity.name)
+        .call(wrapText, 80);
+
+
+      // Count tspans (number of wrapped lines)
+      const lineCount = activityNameText.selectAll("tspan").size();
 
       // Activity ID
       nodes
         .append("text")
         .attr("dy", "-0.8em")
+        .attr("dy", `${-1.8 + lineCount * 0.4 + 1}em`)
         .attr("text-anchor", "middle")
         .attr("font-size", "10px")
         .attr("fill", "#6b7280")

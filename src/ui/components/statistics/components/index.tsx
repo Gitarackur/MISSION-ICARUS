@@ -1671,36 +1671,99 @@ INPUT MEAN COLUMN VALUES
 
 export const ImputeMean = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  
+// (B) Keep UX consistent with your Count components
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleColumnSelection1 = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runImputation = () => {
+    setError(null);
+
+    if (selectedDataSets.length === 0) {
+      setError("Please select at least one column for the Count calculation.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+
+      // Handle multiple selections - add all selected columns to filteredData
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column));
+        }
+      });
+
+      // Verify that we have data for the selected columns
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError(
+        "An error occurred during the Count calculation. Please check your data."
+      );
+      console.error("Count calculation failed:", err);
+      onError?.();
+    }
+  };
+  return(
+    <div className={containerClass}>
     <h1 className={headingClass}>Mean Imputation</h1>
     <p className={descriptionClass}>
       Fills missing values with the mean of the column.
     </p>
     <div className="mb-6">
-      <SingleSelect
+      <MultiSelect
         id="impute-mean-column"
         label={`Select Column`}
         placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
+        options={numericColumns.map((curr) => ({
           value: curr,
           label: curr,
           disabled: false,
         }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
+        value={selectedDataSets}
+        onChange={handleColumnSelection1}
         helperText="Choose the numeric columns you want to include in your analysis"
       />
     </div>
+    {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
     <div className="flex justify-end">
-      <button className={buttonClass}>Run Imputation</button>
+      <button className={buttonClass} onClick={runImputation}>Run Imputation</button>
     </div>
   </div>
 );
+}
 
 /*---------------------------------------------------
 INPUT MEDIAN COLUMN VALUES

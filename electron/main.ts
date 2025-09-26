@@ -1,4 +1,5 @@
 import { app, BrowserWindow, Menu, globalShortcut, ipcMain } from "electron";
+
 // import { createRequire } from 'node:module'
 import { fileURLToPath } from "node:url";
 import path from "node:path";
@@ -10,7 +11,6 @@ import { PythonManager } from "./src/python/PythonManager";
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
 process.env.APP_ROOT = path.join(__dirname, "..");
 
 export const VITE_DEV_SERVER_URL = process.env["VITE_DEV_SERVER_URL"];
@@ -137,21 +137,17 @@ interface Data {
   args?: any[];
 }
 
-ipcMain.handle(
-  "run:python",
-  async (
-    _event,
-    { method, args = [] }: Data
-  ) => {
-
-    if (typeof pythonManager[method as keyof typeof pythonManager] !== 'function') {
-      throw new Error(`Method '${method}' does not exist on PythonManager`);
-    }
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    const methodFunc = pythonManager[method as keyof typeof pythonManager] as Function;
-    return methodFunc.call(pythonManager, ...(args || []));
+ipcMain.handle("run:python", async (_event, { method, args = [] }: Data) => {
+  if (
+    typeof pythonManager[method as keyof typeof pythonManager] !== "function"
+  ) {
+    throw new Error(`Method '${method}' does not exist on PythonManager`);
   }
-);
+  const methodFunc = pythonManager[method as keyof typeof pythonManager] as (
+    ...args: unknown[]
+  ) => Promise<unknown>;
+  return methodFunc.call(pythonManager, ...(args || []));
+});
 
 ipcMain.handle(
   "run-r",
@@ -192,4 +188,24 @@ app.on("activate", () => {
   }
 });
 
-app.whenReady().then(createWindow);
+async function main() {
+  // const { initializeDatabase } = await import("./src/database");
+  // const { setupDatabaseHandlers } = await import("./src/database/ipc-handlers");
+
+  try {
+    // await app.whenReady();
+
+    // const result = await initializeDatabase();
+    // if (!result) {
+    //   throw new Error("Database initialization returned undefined");
+    // }
+    // const { icarusDBAdapter } = result;
+    // setupDatabaseHandlers(icarusDBAdapter);
+    createWindow();
+  } catch (error) {
+    console.error("Failed to Open Application:", error);
+    app.quit(); // gracefully exit if DB fails
+  }
+}
+
+app.whenReady().then(main);
