@@ -27,7 +27,7 @@ export const headerVariants = tv({
 // tab navigation variants
 export const tabNavigationVariants = tv({
   slots: {
-    tabList: "sticky left-0 right-0 border-b border-gray-200 top-0 flex w-full overflow-x-auto overflow-y-clip bg-white pt-0 z-60",
+    tabList: "z-30 sticky left-0 right-0 border-b border-gray-200 top-0 flex w-full overflow-x-auto overflow-y-clip bg-white pt-0",
     tabButton: [
       "relative",
       "px-6",
