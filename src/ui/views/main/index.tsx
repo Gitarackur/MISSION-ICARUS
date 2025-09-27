@@ -24,8 +24,6 @@ import {
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 import ActivityTree2 from "@/ui/components/activity-tree/index2";
 import CreateSession from "@/ui/components/session/create-session";
-// import { Menu } from "lucide-react";
-// import { activityFloatingButton } from "./variants/main.variants";
 
 
 
@@ -154,18 +152,6 @@ const IcarusApp: React.FC = () => {
       console.error("Error reconstructing matrix:", error);
     }
   }, [activeMatrix, isProcessing]);
-
-  // Render helpers
-  // const renderFloatingButton = () =>
-  //   activeSession && (
-  //     <div
-  //       className={activityFloatingButton({ intent: "primary" })}
-  //       onClick={() => setIsSheetOpen(true)}
-  //     >
-  //       <Menu size={24} className="text-blue-600" />
-  //       <span>View Activity Log</span>
-  //     </div>
-  //   );
 
   const renderSlidingSheet = () => (
     <SlidingSheet

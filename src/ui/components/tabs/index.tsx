@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { NavTabsProps, TabsTypes } from './types/index.types';
 import { tabButtonStyles } from './style-variants/main.style.variants';
+import { activityFloatingButton } from '@/ui/views/main/variants/main.variants';
 
 
 
@@ -52,11 +53,12 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive, openActivitySheet 
           })}
         </nav>
 
-        <div>
-          <button className='text-sm bg-blue-500 text-white rounded px-4 py-1 flex items-center' onClick={openActivitySheet}>
-            <Menu size={14} className="inline mr-2" />
-            View Activity log
-          </button>
+        <div
+          className={activityFloatingButton({ intent: "primary" })}
+          onClick={openActivitySheet}
+        >
+          <Menu size={24} className="text-white inline mr-2" />
+          <span>View Activity Log</span>
         </div>
       </div>
     </div>
