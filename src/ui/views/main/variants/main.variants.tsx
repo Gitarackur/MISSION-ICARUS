@@ -5,7 +5,7 @@ export const activityFloatingButton = tv({
   // base: `fixed z-50 p-2 rounded-lg shadow-xl cursor-pointer transition-colors duration-200 flex items-center space-x-2 top-1/2 -translate-y-1/2
   // text-blue-800 font-semibold text-sm right-10`,
 
-  base: "text-sm bg-blue-500 text-white rounded px-4 py-1 flex items-center",
+  base: "text-sm bg-blue-500 text-white rounded px-4 py-1 flex items-center cursor-pointer",
   
   variants: {
     intent: {
