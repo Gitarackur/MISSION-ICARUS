@@ -27,7 +27,7 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
 
     setTimeout(() => {
       setModalState((prev) => ({ ...prev, content: null, title: "" }));
-      if (onClosed) onClosed();
+      if (onClosed && typeof onClosed === "function") onClosed();
     }, 300);
   }, []);
 
