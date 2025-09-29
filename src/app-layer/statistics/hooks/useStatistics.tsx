@@ -1,6 +1,6 @@
 import { StatisticalAction, StatisticalAnalysisResult } from '@/domain/statistics/index.types';
 import { useCallback } from 'react';
-import { imputeMeanColumn, mean, median, normalization, stddev, tTest } from '@/app-layer/statistics/utils/statistical-engine';
+import { imputeMeanColumn, imputeMedianColumn, knnImputeTarget, mean, median, normalization, stddev, tTest } from '@/app-layer/statistics/utils/statistical-engine';
 import { TableMatrix } from '@/domain/workflow/main.types';
 import { ProteinRow } from '@/domain/proteins/index.types';
 import { extractNumericData, transposedStatisticalResults } from '@/app-layer/shared/utils';
@@ -96,39 +96,87 @@ export const useStatisticalAnalysis = () => {
           newColumnNames = numericColumns.map((col) => `${col}_imputed_mean`);
           break;
 
+        case 'impute-median':
+          const imputedMedian = numericData.map((col) => imputeMedianColumn(col));
+          results = imputedMedian;
+          newColumnNames = numericColumns.map((c) => `${c}_imputed_median`);
+          break;
 
+
+        
+      case 'impute-knn': 
+        // If there are fewer than 2 selected columns we can't do KNN
+        if (numericData.length < 2) {
+          throw new Error("KNN imputation requires at least 2 selected columns (target + >=1 feature).");
+        }
+
+        // Choose k (hard-coded default here). If you want to make k configurable,
+        // pass it via action params or put it into filteredData map with a sentinel key.
+        const k = 5;
+        const weighted = true;
+
+        // For each selected column index, treat it as the target and use all other columns as features
+        const imputedAll = numericData.map((_, targetIdx) => {
+          // build target and features arrays
+          const targetCol = numericData[targetIdx];
+          // features are all columns except the current target
+          const featureCols = numericData.filter((_, j) => j !== targetIdx);
+          // if no features (shouldn't happen because numericData.length >= 2), fallback to target as-is
+          if (featureCols.length === 0) return targetCol.slice();
+
+          // call helper
+          return knnImputeTarget(targetCol, featureCols, k, weighted);
+        });
+
+        // results is column-major: one array per imputed column
+        results = imputedAll;
+
+        // name each produced column after the original column + suffix
+        newColumnNames = numericColumns.map((col) => `${col}_imputed_knn`);
+        break;
+
+
+
+              
+        case 'impute-zero':
+          const imputedZero = numericData.map((col) => imputeMeanColumn(col));
+          results = imputedZero;
+          newColumnNames = numericColumns.map((c) => `${c}_imputed_zero`);
+          break;
+          
+                
         default: {
           throw new Error(`Action '${action}' not supported.`);
+          }
         }
-      }
 
-      return {
-        inputParameters: {
+        return {
+          inputParameters: {
           columns: numericColumns,
           action,
           rowCount: numericData[0]?.length || 0,
           metadata: {
             originalDataType: Array.isArray(data) ? 'Row[]' : 'Map<string, TableMatrix>',
             columnsProcessed: numericColumns.length
-          }
-        },
-        newly_created_columns: newColumnNames,
-        data: transposedStatisticalResults(results),
-        outputParameters: {
+              }
+            },
+          newly_created_columns: newColumnNames,
+          data: transposedStatisticalResults(results),
+          outputParameters: {
           columns: newColumnNames,
           calculationMethod,
           resultType: 'statistical_summary',
           metadata: {
-            calculationTimestamp: new Date().toISOString(),
-            resultCount: transposedStatisticalResults(results).length
-          }
-        }
-      };
-    },
-    []
-  );
+          calculationTimestamp: new Date().toISOString(),
+          resultCount: transposedStatisticalResults(results).length
+                }
+              }
+            };
+          },
+          []
+        );
 
-  return {
-    performAnalysis,
-  };
-};
+        return {
+          performAnalysis,
+        };
+      };

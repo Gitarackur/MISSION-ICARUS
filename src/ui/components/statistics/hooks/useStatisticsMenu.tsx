@@ -332,15 +332,49 @@ const useStatisticsMenu = ({
         }} />);
         break;
       case "impute-median":
-        content = (
-          <ImputeMedian dataColumns={dataColumns} actionId={actionId} />
+        content = (<ImputeMedian dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
         );
         break;
       case "impute-knn":
-        content = <ImputeKnn dataColumns={dataColumns} actionId={actionId} />;
+        content = (<ImputeKnn dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
+        );
         break;
       case "impute-zero":
-        content = <ImputeZero dataColumns={dataColumns} actionId={actionId} />;
+        content = (<ImputeZero dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
+        );
         break;
       case "moving-average":
         content = (

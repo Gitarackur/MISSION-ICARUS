@@ -111,3 +111,114 @@ export const imputeMeanColumn = (col: number[]): number[] => {
   // replace missing (NaN / ±Infinity) with mean
   return col.map((x) => (Number.isFinite(x) ? x : m));
 };
+
+
+/* ============================
+ * Imputation helpers (export)
+ * ============================ */
+
+/** Median of a numeric column, ignoring NaN. Returns NaN if no finite values. */
+export function columnMedian(col: number[]): number {
+  const vals = col.filter(Number.isFinite).slice().sort((a, b) => a - b);
+  if (vals.length === 0) return NaN;
+  const mid = Math.floor(vals.length / 2);
+  return vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+}
+
+/** Impute a column by its median (fill only non-finite values). */
+export function imputeMedianColumn(col: number[]): number[] {
+  const med = columnMedian(col);
+  if (!Number.isFinite(med)) return col.slice(); // nothing to impute
+  return col.map((x) => (Number.isFinite(x) ? x : med));
+}
+
+
+/* ---------- KNN imputation ---------- */
+
+/** Euclidean distance treating any non-finite value as a blocker (∞ distance). */
+export function euclideanDist(a: number[], b: number[]): number {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) {
+    const x = a[i], y = b[i];
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return Number.POSITIVE_INFINITY;
+    const d = x - y;
+    s += d * d;
+  }
+  return Math.sqrt(s);
+}
+
+/**
+ * KNN impute a target column using feature columns.
+ * @param targetCol column vector (length = nRows)
+ * @param featureCols array of feature columns (length = nFeatures), each length = nRows
+ * @param k number of neighbors (default 5)
+ * @param weighted inverse-distance weighting if true; otherwise simple mean
+ * @returns a new target column with missing entries imputed
+ */
+export function knnImputeTarget(
+  targetCol: number[],
+  featureCols: number[][],
+  k = 5,
+  weighted = true
+): number[] {
+  const nRows = targetCol.length;
+  const nFeat = featureCols.length;
+  if (nFeat === 0) return targetCol.slice();
+
+  // indices of observed/missing target values
+  const observedIdx: number[] = [];
+  const missingIdx: number[] = [];
+  for (let i = 0; i < nRows; i++) {
+    (Number.isFinite(targetCol[i]) ? observedIdx : missingIdx).push(i);
+  }
+  if (missingIdx.length === 0 || observedIdx.length === 0) return targetCol.slice();
+
+  // build observed feature rows + observed targets
+  const Xobs: number[][] = observedIdx.map((ri) =>
+    Array.from({ length: nFeat }, (_, f) => featureCols[f][ri])
+  );
+  const yobs: number[] = observedIdx.map((ri) => targetCol[ri] as number);
+
+  const yMean = yobs.reduce((a, b) => a + b, 0) / yobs.length;
+  const EPS = 1e-8;
+  const out = targetCol.slice();
+
+  for (const ri of missingIdx) {
+    const xq = Array.from({ length: nFeat }, (_, f) => featureCols[f][ri]);
+
+    // distances to observed rows
+    const pairs = Xobs
+      .map((xo, idx) => ({ d: euclideanDist(xq, xo), y: yobs[idx] }))
+      .filter((p) => Number.isFinite(p.d))
+      .sort((a, b) => a.d - b.d);
+
+    if (pairs.length === 0) {
+      out[ri] = yMean; // fallback if no finite neighbors
+      continue;
+    }
+
+    const kEff = Math.max(1, Math.min(k, pairs.length));
+    const neighbors = pairs.slice(0, kEff);
+
+    if (!weighted) {
+      out[ri] =
+        neighbors.reduce((s, p) => s + p.y, 0) / neighbors.length;
+    } else {
+      let num = 0,
+        den = 0;
+      for (const { d, y } of neighbors) {
+        const w = 1 / (d + EPS);
+        num += w * y;
+        den += w;
+      }
+      out[ri] = num / den;
+    }
+  }
+
+  return out;
+}
+
+/** Impute a column with zeros (fill only non-finite values). */
+export function imputeZeroColumn(col: number[]): number[] {
+  return col.map((x) => (Number.isFinite(x) ? x : 0));
+}

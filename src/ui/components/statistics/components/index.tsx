@@ -1766,129 +1766,344 @@ export const ImputeMean = ({
 }
 
 /*---------------------------------------------------
-INPUT MEDIAN COLUMN VALUES
+IMPUTE MEDIAN COLUMN VALUES
 ----------------------------------------------------*/
 
 export const ImputeMedian = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Median Imputation</h1>
-    <p className={descriptionClass}>
-      Fills missing values with the median of the column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="impute-median-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Imputation</button>
-    </div>
-  </div>
-);
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  // Keep UX consistent with ImputeMean / Count components
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
 
-/*---------------------------------------------------
-INPUT KNN COLUMN VALUES
-----------------------------------------------------*/
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-export const ImputeKnn = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>KNN Imputation</h1>
-    <p className={descriptionClass}>
-      Fills missing values using the K-Nearest Neighbors algorithm.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="impute-knn-column"
-          label={`Select Column`}
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runImputation = () => {
+    setError(null);
+
+    if (selectedDataSets.length === 0) {
+      setError("Please select at least one column for the Median imputation.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      // Add all selected columns to filteredData
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      // Verify we have data for the selected columns
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Trigger engine (ensure actionId maps to your engine's 'impute-median' case)
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError(
+        "An error occurred during the Median imputation. Please check your data."
+      );
+      console.error("Median imputation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Median Imputation</h1>
+      <p className={descriptionClass}>
+        Fills missing values with the median of the selected column(s).
+      </p>
+
+      <div className="mb-6">
+        <MultiSelect
+          id="impute-median-column"
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
           placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
+          options={numericColumns.map((curr) => ({
             value: curr,
             label: curr,
             disabled: false,
           }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
+          value={selectedDataSets}
+          onChange={handleColumnSelection}
           helperText="Choose the numeric columns you want to include in your analysis"
         />
       </div>
 
-      <div>
-        <label htmlFor="impute-knn-k" className={labelClass}>
-          Number of Neighbors (k)
-        </label>
-        <input
-          type="number"
-          id="impute-knn-k"
-          defaultValue="5"
-          className={inputClass}
-        />
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button className={buttonClass} onClick={runImputation}>
+          Run Imputation
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Imputation</button>
-    </div>
-  </div>
-);
+  );
+};
+
 
 /*---------------------------------------------------
-INPUT ZERO COLUMN VALUES
+IMPUTE KNN COLUMN VALUES (same structure as mean)
+----------------------------------------------------*/
+
+export const ImputeKnn = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  // Keep UX consistent with your Count / ImputeMean components
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+
+  // Select multiple: first = target, rest = features
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [k, setK] = useState<number>(5);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runImputation = () => {
+    setError(null);
+
+    if (selectedDataSets.length < 2) {
+      setError("Select at least two columns (first = target, others = features).");
+      onError?.();
+      return;
+    }
+    if (!Number.isInteger(k) || k <= 0) {
+      setError("k must be a positive integer.");
+      onError?.();
+      return;
+    }
+
+    try {
+      // Preserve order: selectedDataSets[0] is target, rest are features
+      const filteredData = new Map<string, TableMatrix>();
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size < 2) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Optionally: include k as a sentinel column/name (if your engine reads params from Map keys)
+      // Otherwise, your engine can keep a default k=5 or read k from elsewhere.
+      // Example (only if your engine supports it):
+      // filteredData.set(`__knn_k__=${k}`, [] as unknown as TableMatrix);
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the KNN imputation. Please check your data.");
+      console.error("KNN imputation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>KNN Imputation</h1>
+      <p className={descriptionClass}>
+        Select a target column first, then one or more feature columns. Missing target values are imputed
+        using K-Nearest Neighbors on the features.
+      </p>
+
+      <div className="mb-6 space-y-4">
+        <MultiSelect
+          id="impute-knn-columns"
+          label={`Select Columns (first = target, others = features)`}
+          placeholder="Pick at least two numeric columns..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={selectedDataSets}
+          onChange={handleColumnSelection}
+          helperText="Order matters: the first selected column is the target"
+        />
+
+        <div className="flex items-center gap-3">
+          <label htmlFor="impute-knn-k" className={labelClass}>k (neighbors)</label>
+          <input
+            type="number"
+            id="impute-knn-k"
+            min={1}
+            step={1}
+            value={k}
+            onChange={(e) => setK(parseInt(e.target.value || "5", 10))}
+            className={inputClass}
+          />
+        </div>
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button className={buttonClass} onClick={runImputation}>
+          Run Imputation
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+/*---------------------------------------------------
+IMPUTE ZERO COLUMN VALUES 
 ----------------------------------------------------*/
 
 export const ImputeZero = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Zero Imputation</h1>
-    <p className={descriptionClass}>
-      Fills missing values with the value zero.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="impute-zero-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  // Keep UX consistent with your Count / ImputeMean components
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runImputation = () => {
+    setError(null);
+
+    if (selectedDataSets.length === 0) {
+      setError("Please select at least one column for Zero imputation.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      // Add all selected columns to filteredData
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      // Verify data presence
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Trigger the engine (ensure actionId maps to your 'impute-zero' case)
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during Zero imputation. Please check your data.");
+      console.error("Zero imputation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Zero Imputation</h1>
+      <p className={descriptionClass}>
+        Fills missing values with <code>0</code> for the selected column(s).
+      </p>
+
+      <div className="mb-6">
+        <MultiSelect
+          id="impute-zero-column"
+          label={`Select Column${selectedDataSets.length > 1 ? "s" : ""}`}
+          placeholder="Select numeric columns to impute with 0..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={selectedDataSets}
+          onChange={handleColumnSelection}
+          helperText="Choose one or more numeric columns for zero imputation"
+        />
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button className={buttonClass} onClick={runImputation}>
+          Run Imputation
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Imputation</button>
-    </div>
-  </div>
-);
+  );
+};
+
 
 /*---------------------------------------------------
 COUNT COLUMN VALUES
