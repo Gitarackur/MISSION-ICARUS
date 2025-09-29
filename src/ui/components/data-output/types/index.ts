@@ -39,9 +39,6 @@ export type DataImportProps = {
   fileInputRef: React.RefObject<HTMLInputElement>;
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isProcessing: boolean;
-  originalDataRowsCount: number;
-  originalColumnsCount: number;
-  selectedColumnsCount: number;
 };
 
 export type DataPreviewEmptyState = {

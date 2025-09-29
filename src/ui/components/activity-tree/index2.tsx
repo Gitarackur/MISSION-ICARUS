@@ -7,6 +7,8 @@ import {
   buttonStyle,
 } from "./variants/activity.style.variant";
 import { DisplayedActivityTree } from "./types/activity-node.types";
+import { Minus, Plus, RefreshCcw } from "lucide-react";
+import { wrapText } from "./utils/main";
 
 const ActivityTree2 = ({
   sessionData,
@@ -16,7 +18,7 @@ const ActivityTree2 = ({
 }: DisplayedActivityTree) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const [zoomLevel, setZoomLevel] = useState(0.8);
   const [isPanning, setIsPanning] = useState(false);
   const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
 
@@ -24,7 +26,6 @@ const ActivityTree2 = ({
   const {
     base,
     header,
-    title,
     zoomInfo,
     controlsContainer,
     contentArea,
@@ -69,7 +70,7 @@ const ActivityTree2 = ({
     svg.call(zoom);
 
     const nodeWidth = 180;
-    const nodeHeight = 100;
+    const nodeHeight = 150;
     const siblingSeparation = 40;
     const generationSeparation = 120;
 
@@ -167,8 +168,8 @@ const ActivityTree2 = ({
               return "#f9fafb"; // gray-50
           }
         })
-        .attr("stroke", (d) => { 
-          if(d.data.activity.outputMatrixReference === activeMatrixId) {
+        .attr("stroke", (d) => {
+          if (d.data.activity.outputMatrixReference === activeMatrixId) {
             return "red";
           }
           return "#d1d5db"; // gray-300
@@ -188,16 +189,21 @@ const ActivityTree2 = ({
         .attr("font-size", "12px")
         .attr("font-weight", "600")
         .attr("fill", "#374151")
-        .text((d) => d.data.activity.name);
+        .text((d) => d.data.activity.name)
+        .call(wrapText, 80);
+
+      // Count tspans (number of wrapped lines)
+      // const lineCount = activityNameText.selectAll("tspan").size();
 
       // Activity ID
-      nodes
-        .append("text")
-        .attr("dy", "-0.8em")
-        .attr("text-anchor", "middle")
-        .attr("font-size", "10px")
-        .attr("fill", "#6b7280")
-        .text((d) => `ID: ${d.data.activity.id.slice(-8)}`);
+      // nodes
+      //   .append("text")
+      //   .attr("dy", "-0.8em")
+      //   .attr("dy", `${-1.8 + lineCount * 0.4 + 1}em`)
+      //   .attr("text-anchor", "middle")
+      //   .attr("font-size", "10px")
+      //   .attr("fill", "#6b7280")
+      //   .text((d) => `ID: ${d.data.activity.id.slice(-8)}`);
 
       // Button container
       const buttonGroup = nodes
@@ -208,7 +214,7 @@ const ActivityTree2 = ({
       const inputButton = buttonGroup
         .append("g")
         // .attr("transform", "translate(-45, 0)")
-        .attr("transform", "translate(-80, 0)")
+        .attr("transform", "translate(-81, -3)")
         .style("cursor", "pointer")
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
@@ -218,7 +224,7 @@ const ActivityTree2 = ({
 
       inputButton
         .append("rect")
-        .attr("width", 80)
+        .attr("width", 77)
         .attr("height", 24)
         .attr("rx", 4)
         .attr("fill", "#dbeafe")
@@ -237,7 +243,7 @@ const ActivityTree2 = ({
       const outputButton = buttonGroup
         .append("g")
         // .attr("transform", "translate(45, 0)")
-        .attr("transform", "translate(0, 0)")
+        .attr("transform", "translate(5, -3)")
         .style("cursor", "pointer")
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
@@ -247,7 +253,7 @@ const ActivityTree2 = ({
 
       outputButton
         .append("rect")
-        .attr("width", 80)
+        .attr("width", 75)
         .attr("height", 24)
         .attr("rx", 4)
         .attr("fill", "#dcfce7")
@@ -337,11 +343,11 @@ const ActivityTree2 = ({
         const node = allNodes.node() as SVGGElement;
         const bbox = node.getBBox();
 
-        const scale =
-          Math.min(
-            containerWidth / (bbox.width + 100),
-            containerHeight / (bbox.height + 100)
-          ) * 0.9;
+        const scale = 1
+          // Math.min(
+          //   containerWidth / (bbox.width + 100),
+          //   containerHeight / (bbox.height + 100)
+          // ) * 0.9;
 
         const translateX =
           (containerWidth - bbox.width * scale) / 2 - bbox.x * scale;
@@ -359,28 +365,29 @@ const ActivityTree2 = ({
   return (
     <div className={base()}>
       <div className={header()}>
-        <h2 className={title()}>Activity Tree</h2>
         <div className={controlsContainer()}>
           <span className={zoomInfo()}>
             Zoom: {Math.round(zoomLevel * 100)}%
           </span>
+          <div className="w-3"></div>
           <button
             onClick={handleZoomOut}
-            className={buttonStyle({ intent: "control" })}
+            className={buttonStyle({ intent: "ghost" })}
           >
-            -
+            <Minus size={14} />
+          </button>
+
+          <button
+            onClick={handleZoomIn}
+            className={buttonStyle({ intent: "ghost" })}
+          >
+            <Plus size={14} />
           </button>
           <button
             onClick={handleResetZoom}
             className={buttonStyle({ intent: "control" })}
           >
-            Reset
-          </button>
-          <button
-            onClick={handleZoomIn}
-            className={buttonStyle({ intent: "control" })}
-          >
-            +
+            <RefreshCcw size={14} />
           </button>
         </div>
       </div>
@@ -396,7 +403,7 @@ const ActivityTree2 = ({
           <div>💡 Use mouse wheel to zoom, drag to pan</div>
           <div>Click on ⬇ Input or ⬆ Output buttons to view matrices</div>
           <div>
-            <span className=" text-red-600">Red border&nbsp;</span> 
+            <span className=" text-red-600">Red border&nbsp;</span>
             indicates the currently selected matrix in the main view
           </div>
         </div>

@@ -4,7 +4,7 @@ import { ModalContext } from "./context";
 
 export interface ModalContextType {
   openModal: (content: ReactNode, title?: string) => void;
-  closeModal: () => void;
+  closeModal: (onClosed?: () => void) => void;
 }
 
 export interface ModalProviderProps {
@@ -15,16 +15,20 @@ export const ModalProvider = ({ children }: ModalProviderProps) => {
   const [modalState, setModalState] = useState<ModalState>({
     isOpen: false,
     content: null,
-    title: '' 
+    title: ''
   });
 
   const openModal = useCallback((content: ReactNode, title: string = '') => {
     setModalState({ isOpen: true, content, title });
   }, []);
 
-  const closeModal = useCallback(() => {
-    setModalState(prev => ({ ...prev, isOpen: false }));
-    setTimeout(() => setModalState(prev => ({ ...prev, content: null, title: '' })), 300);
+  const closeModal = useCallback((onClosed?: () => void) => {
+    setModalState((prev) => ({ ...prev, isOpen: false }));
+
+    setTimeout(() => {
+      setModalState((prev) => ({ ...prev, content: null, title: "" }));
+      if (onClosed && typeof onClosed === "function") onClosed();
+    }, 300);
   }, []);
 
   const memoizedContextValue = useMemo<ModalContextType>(() => ({

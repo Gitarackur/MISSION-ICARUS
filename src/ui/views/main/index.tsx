@@ -4,7 +4,6 @@ import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import MatrixTab from "@/ui/components/header/matrix-tab";
-import { Menu } from "lucide-react";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
 import {
@@ -23,10 +22,14 @@ import {
   saveNewStatisticalActivityInWorkflow,
 } from "@/app-layer/session/utils/main";
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
-import { activityFloatingButton } from "./variants/main.variants";
 import ActivityTree2 from "@/ui/components/activity-tree/index2";
+import CreateSession from "@/ui/components/session/create-session";
+
+
+
 
 const IcarusApp: React.FC = () => {
+  const [showSession, setShowSession] = useState(true);
   const [activeSession, setActiveSession] =
     useState<IcarusSessionWithWorkflowRecord | null>(null);
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
@@ -44,12 +47,12 @@ const IcarusApp: React.FC = () => {
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
 
   // Session management
-  const handleSessionCreate = async ({ rows, columns }: BareSession) => {
+  const handleSessionCreate = async ({ rows, columns, name }: BareSession) => {
     isUploadingRef.current = true;
     setIsProcessing(true);
     try {
       const { matrixId, sessionWithWorkflows } =
-        await generateActiveSessionWitNestedWorkflow({ rows, columns });
+        await generateActiveSessionWitNestedWorkflow({ rows, columns, name });
 
       setActiveMatrixId(matrixId);
       setActiveSession(sessionWithWorkflows);
@@ -125,6 +128,14 @@ const IcarusApp: React.FC = () => {
   useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
 
   useEffect(() => {
+    window.addEventListener("toggle:sidebar", () => setShowSession((v) => !v));
+    return () =>
+      window.removeEventListener("toggle:sidebar", () =>
+        setShowSession((v) => !v)
+      );
+  }, [])
+
+  useEffect(() => {
     if (!activeMatrix || isProcessing) return;
 
     try {
@@ -142,27 +153,15 @@ const IcarusApp: React.FC = () => {
     }
   }, [activeMatrix, isProcessing]);
 
-  // Render helpers
-  const renderFloatingButton = () =>
-    activeSession && (
-      <div
-        className={activityFloatingButton({ intent: "primary" })}
-        onClick={() => setIsSheetOpen(true)}
-      >
-        <Menu size={24} className="text-blue-600" />
-        <span>View Activity Log</span>
-      </div>
-    );
-
   const renderSlidingSheet = () => (
     <SlidingSheet
       isOpen={isSheetOpen && !!activeSession}
       onClose={() => setIsSheetOpen(false)}
       position="right"
-      title="Activity Session"
+      title="Activity Tree"
       sidebarWidth="100rem"
       overlayClassName="!bg-opacity-80"
-      panelClassName="bg-blue-50 w-150"
+      panelClassName="bg-blue-50 border border-gray-200 w-150"
       headerClassName="border-blue-300"
       bodyClassName="p-0"
     >
@@ -185,60 +184,51 @@ const IcarusApp: React.FC = () => {
 
   const renderMainContent = () => (
     <>
-      {matrices.length > 0 && (
-        <MatrixTab
-          matrices={matrices}
-          activeMatrixId={activeMatrix?.id || ""}
-          setActiveMatrixId={setActiveMatrixId}
-        />
-      )}
-
       <ProteomicsAnalysisHomeView
-        handleSessionCreate={handleSessionCreate}
         originalDataRows={originalDataRows}
         originalDataColumns={originalDataColumns}
         selectedDataColumns={selectedDataColumns}
         setSelectedDataColumns={setSelectedDataColumns}
-        isProcessing={isProcessing}
-        setIsProcessing={setIsProcessing}
         saveActivityInWorkflow={saveActivityInWorkflow}
         sessionSourceMatrix={activeMatrix || sessionSourceMatrix}
+        openActivitySheet={() => setIsSheetOpen(true)}
       />
-
-      {renderFloatingButton()}
       {renderSlidingSheet()}
     </>
   );
 
   return (
-    <div className="flex h-screen bg-white text-gray-800">
-      <Sidebar
-        sessions={sessions || []}
-        activeSession={activeSession}
-        onSessionClick={handleSessionClick}
-        onCreateSession={() => setActiveSession(null)}
-        onDeleteSession={handleDeleteSession}
-      />
-
-      <main className="flex-1 overflow-y-auto bg-white p-6">
+    <div className="flex flex-col h-screen bg-white text-gray-800">
+      <main className="flex-1 overflow-y-auto bg-white">
+        <MatrixTab
+          matrices={matrices}
+          activeMatrixId={activeMatrix?.id || ""}
+          dataRows={originalDataRows}
+          setActiveMatrixId={setActiveMatrixId}
+          toggleSidebar={() => setShowSession((v) => !v)}
+        />
         {activeMatrix ? (
           renderMainContent()
         ) : (
           <div className="w-full">
-            <ProteomicsAnalysisHomeView
-              handleSessionCreate={handleSessionCreate}
-              originalDataRows={[]}
-              originalDataColumns={[]}
-              selectedDataColumns={[]}
-              setSelectedDataColumns={setSelectedDataColumns}
-              isProcessing={isProcessing}
-              setIsProcessing={setIsProcessing}
-              saveActivityInWorkflow={saveActivityInWorkflow}
-              sessionSourceMatrix={sessionSourceMatrix}
-            />
+            <CreateSession
+                isProcessing={isProcessing} 
+                setIsProcessing={setIsProcessing}        
+                handleSessionCreate={handleSessionCreate}   
+              />
           </div>
         )}
       </main>
+
+      {showSession && (sessions && sessions?.length > 0) && (
+        <Sidebar
+          sessions={sessions || []}
+          activeSession={activeSession}
+          onSessionClick={handleSessionClick}
+          onCreateSession={() => setActiveSession(null)}
+          onDeleteSession={handleDeleteSession}
+        />
+      )}
     </div>
   );
 };

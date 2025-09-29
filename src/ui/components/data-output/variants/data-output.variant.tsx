@@ -19,7 +19,7 @@ export const dataOutputStyles = tv({
     columnsItem: 'flex items-center space-x-2 cursor-pointer select-none',
     tableWrapper: 'overflow-x-auto w-full rounded border border-gray-200',
     table: 'min-w-full divide-y divide-gray-200',
-    tableHead: 'bg-gray-50 sticky top-0 z-10',
+    tableHead: 'bg-gray-50',
     tableHeadCell:
       'px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap',
     tableBody: 'bg-white divide-y divide-gray-100',
@@ -56,10 +56,11 @@ export const dataOutputStyles = tv({
 export const importDataStyles = tv({
   slots: {
     container: 'space-y-6',
-    card: 'bg-white rounded-lg shadow p-6',
+    card: 'bg-white rounded-lg border border-gray-100 shadow p-6',
     heading2: 'text-lg font-semibold mb-4',
     heading3: 'text-md font-medium mb-3',
     grid: 'grid grid-cols-1 md:grid-cols-2 gap-6',
+    dataImportGrid: "flex flex-col items-center justify-center",
     label: 'block text-sm font-medium text-gray-700 mb-2',
     uploadBox: 'border-2 border-dashed border-gray-300 rounded-lg p-6 text-center',
     uploadIcon: 'w-12 h-12 text-gray-400 mx-auto mb-4',

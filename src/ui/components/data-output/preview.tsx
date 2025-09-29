@@ -12,8 +12,6 @@ import PreviewPagination from './preview-pagination';
 import { StatisticalAnalysisResult } from '@/domain/statistics/index.types';
 
 
-
-
 const ROWS_PER_PAGE = 20;
 
 

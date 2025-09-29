@@ -58,6 +58,7 @@ export const buttonStyle = tv({
   base: "px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors",
   variants: {
     intent: {
+      ghost: "",
       input:
         "bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300",
       output:
@@ -72,10 +73,10 @@ export const activityTreeStyle = tv({
   slots: {
     base: "relative flex flex-col h-screen w-full overflow-hidden bg-gray-50",
     header:
-      "fixed top-[calc(100vh_-_93.7%)] left-0 right-0 p-3 bg-white border-b border-gray-200 flex justify-between items-center z-10",
+      "fixed top-[calc(100vh_-_92.3%)] px-6 left-0 right-0 flex justify-end items-center z-10",
     title: "m-0 text-lg font-semibold text-gray-800",
-    zoomInfo: "text-sm text-gray-500",
-    controlsContainer: "flex gap-2 items-center",
+    zoomInfo: "text-xs text-gray-500 uppercase",
+    controlsContainer: "flex items-center",
     contentArea: "flex-1 overflow-hidden relative",
     svg: "w-full h-full bg-gray-50",
     tooltip:
