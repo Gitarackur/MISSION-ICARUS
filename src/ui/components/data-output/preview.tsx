@@ -176,10 +176,10 @@ const DataPreview: React.FC<DataPreviewProps> = ({
         </table>
       </div>
 
-      <div className='flex items-center justify-between'>
+      <div className='flex py-4 md:py-0 flex-col md:flex-row items-center justify-between'>
         <div>
           Showing {paginatedData.length} of {filteredDataRows.length} proteins
-          <span className="ml-4 text-blue-600 font-medium">
+          <span className="block md:inline ml-4 text-blue-600 font-medium">
             Analyzing All Columns
           </span>
         </div>
