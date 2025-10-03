@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 import { IcarusSessionRecord, IcarusWorkflowRecord, IcarusMatrixRecord, IcarusActivityRecord, IcarusVisualizationRecord } from '@/app-layer/database/database.types';
-import { IcarusDBAdapterType } from './types/index.types';
+import { IcarusDBAdapterType } from '../types/index.types';
 
 // DATABASE IPC HANDLERS
 export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
