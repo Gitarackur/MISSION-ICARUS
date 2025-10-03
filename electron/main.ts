@@ -1,12 +1,11 @@
-import { app, BrowserWindow, Menu, globalShortcut, ipcMain } from "electron";
+import { app, BrowserWindow, Menu, globalShortcut } from "electron";
 
 // import { createRequire } from 'node:module'
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
-// import EmbeddedPythonManager from "./src/python/python-manager";
-import EmbeddedRManager from "./src/r/r-manager";
-import { PythonManager } from "./src/python/PythonManager";
+import { setupPythonHandlers } from "./src/python/ipc-handlers";
+import { setupRHandlers } from "./src/r/ipc-handlers";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 // const require = createRequire(import.meta.url)
@@ -125,55 +124,9 @@ function createWindow() {
   }
 }
 
-// Embedded Python Manager
-// Embedded R Manager
-// const pythonManager = new EmbeddedPythonManager();
-const rManager = new EmbeddedRManager();
-const pythonManager = new PythonManager();
-
-interface Data {
-  method: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  args?: any[];
-}
-
-ipcMain.handle("run:python", async (_event, { method, args = [] }: Data) => {
-  if (
-    typeof pythonManager[method as keyof typeof pythonManager] !== "function"
-  ) {
-    throw new Error(`Method '${method}' does not exist on PythonManager`);
-  }
-  const methodFunc = pythonManager[method as keyof typeof pythonManager] as (
-    ...args: unknown[]
-  ) => Promise<unknown>;
-  return methodFunc.call(pythonManager, ...(args || []));
-});
-
-ipcMain.handle(
-  "run-r",
-  async (
-    _event,
-    { scriptPath, args }: { scriptPath?: string; args?: string[] }
-  ) => {
-    if (!scriptPath) {
-      throw new Error("No R script path provided.");
-    }
-
-    if (!rManager.isRAvailable()) {
-      throw new Error("R is not available on this system.");
-    }
-
-    rManager.ensurePackagesInstalled(["ggplot2", "dplyr", "jsonlite"]);
-
-    try {
-      const output = await rManager.runRScript(scriptPath, args || []);
-      return output;
-    } catch (err) {
-      console.error("R error:", err);
-      throw err;
-    }
-  }
-);
+// IPC CALLS FOR THE PYTHON AND R HANDLERS
+setupPythonHandlers();
+setupRHandlers();
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
