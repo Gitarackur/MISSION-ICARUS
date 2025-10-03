@@ -1,5 +1,4 @@
 import React from "react";
-import { tv } from "tailwind-variants";
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -13,43 +12,27 @@ import ScatterTooltip from "@/ui/components/scatter/tooltip";
 // import VisualizationExternal from "./external";
 import VisualizationTest from "@/tests/visualization-test";
 import VisualizationTab from "@/ui/components/header/visualization-tab";
+import { VisualizationPanelProps } from "./types/index.types";
+import { visualizationStyles } from "./variants/visualization.variants";
 
-type VisualizationPanelProps = {
-  volcanoData: {
-    x: number;
-    y: number;
-    protein: string;
-    significant: boolean;
-  }[];
-  intensityDist: { sample: string; meanIntensity: number; count: number }[];
-};
 
-const styles = tv({
-  slots: {
-    container: "space-y-6",
-    card: "bg-white rounded-lg shadow p-6",
-    heading: "text-lg font-semibold mb-4",
-    plotContainer: "",
-    placeholderBox:
-      "bg-gray-100 h-64 rounded-lg flex items-center justify-center",
-    placeholderText: "text-gray-500",
-  },
-});
+
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
   volcanoData,
 }) => {
-  const s = styles();
+  const s = visualizationStyles();
 
   return (
     <div>
-      <VisualizationTab 
-        visualizations={[]} activeVisualizationId={""} 
-          setActiveVisualizationId={function (): void {
+      <VisualizationTab
+        visualizations={[]}
+        activeVisualizationId={""}
+        setActiveVisualizationId={function (): void {
           throw new Error("Function not implemented.");
         }}
       />
-      
+
       <div className={s.container()}>
         <div className={s.card()}>
           <h3 className={s.heading()}>Volcano Plot</h3>
