@@ -4,9 +4,11 @@ import { IcarusDBAdapterType } from '../types/index.types';
 
 // DATABASE IPC HANDLERS
 export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
+  const icarusDB = IcarusDB;
+
   ipcMain.handle("db:saveSession", async (_, session: IcarusSessionRecord) => {
     try {
-      IcarusDB.saveSession(session);
+      icarusDB.saveSession(session);
       return { success: true };
     } catch (error) {
       console.error("Error saving session:", error);
@@ -19,7 +21,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getSession", async (_, id: string) => {
     try {
-      const session = IcarusDB.getSession(id);
+      const session = icarusDB.getSession(id);
       return { success: true, data: session };
     } catch (error) {
       console.error("Error getting session:", error);
@@ -32,7 +34,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getAllSessions", async () => {
     try {
-      const sessions = IcarusDB.getAllSessions();
+      const sessions = icarusDB.getAllSessions();
       return { success: true, data: sessions };
     } catch (error) {
       console.error("Error getting sessions:", error);
@@ -45,7 +47,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:deleteSession", async (_, id: string) => {
     try {
-      IcarusDB.deleteSession(id);
+      icarusDB.deleteSession(id);
       return { success: true };
     } catch (error) {
       console.error("Error deleting session:", error);
@@ -58,7 +60,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getSessionWithWorkflows", async (_, id: string) => {
     try {
-      const session = IcarusDB.getSessionWithWorkflows(id);
+      const session = icarusDB.getSessionWithWorkflows(id);
       return { success: true, data: session };
     } catch (error) {
       console.error("Error getting session with workflows:", error);
@@ -74,7 +76,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
     "db:saveWorkflow",
     async (_, workflow: IcarusWorkflowRecord) => {
       try {
-        IcarusDB.saveWorkflow(workflow);
+        icarusDB.saveWorkflow(workflow);
         return { success: true };
       } catch (error) {
         console.error("Error saving workflow:", error);
@@ -88,7 +90,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getWorkflow", async (_, id: string) => {
     try {
-      const workflow = IcarusDB.getWorkflow(id);
+      const workflow = icarusDB.getWorkflow(id);
       return { success: true, data: workflow };
     } catch (error) {
       console.error("Error getting workflow:", error);
@@ -102,7 +104,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
   // Matrix handlers
   ipcMain.handle("db:saveMatrix", async (_, matrix: IcarusMatrixRecord) => {
     try {
-      IcarusDB.saveMatrix(matrix);
+      icarusDB.saveMatrix(matrix);
       return { success: true };
     } catch (error) {
       console.error("Error saving matrix:", error);
@@ -115,7 +117,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getMatrix", async (_, id: string) => {
     try {
-      const matrix = IcarusDB.getMatrix(id);
+      const matrix = icarusDB.getMatrix(id);
       return { success: true, data: matrix };
     } catch (error) {
       console.error("Error getting matrix:", error);
@@ -131,7 +133,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
     "db:saveActivity",
     async (_, activity: IcarusActivityRecord) => {
       try {
-        IcarusDB.saveActivity(activity);
+        icarusDB.saveActivity(activity);
         return { success: true };
       } catch (error) {
         console.error("Error saving activity:", error);
@@ -145,7 +147,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getActivity", async (_, id: string) => {
     try {
-      const activity = IcarusDB.getActivity(id);
+      const activity = icarusDB.getActivity(id);
       return { success: true, data: activity };
     } catch (error) {
       console.error("Error getting activity:", error);
@@ -161,7 +163,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
     "db:saveVisualization",
     async (_, visualization: IcarusVisualizationRecord) => {
       try {
-        IcarusDB.saveVisualization(visualization);
+        icarusDB.saveVisualization(visualization);
         return { success: true };
       } catch (error) {
         console.error("Error saving visualization:", error);
@@ -175,7 +177,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
 
   ipcMain.handle("db:getVisualization", async (_, id: string) => {
     try {
-      const visualization = IcarusDB.getVisualization(id);
+      const visualization = icarusDB.getVisualization(id);
       return { success: true, data: visualization };
     } catch (error) {
       console.error("Error getting visualization:", error);

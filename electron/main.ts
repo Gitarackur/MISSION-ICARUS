@@ -1,14 +1,11 @@
 import { app, BrowserWindow, Menu, globalShortcut } from "electron";
 
-// import { createRequire } from 'node:module'
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 import { setupPythonHandlers } from "./src/python/ipc-handlers";
 import { setupRHandlers } from "./src/r/ipc-handlers";
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-// const require = createRequire(import.meta.url)
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
 
@@ -22,6 +19,21 @@ process.env.VITE_PUBLIC = VITE_DEV_SERVER_URL
 
 let win: BrowserWindow | null;
 
+// Add global error handlers
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Rejection at:", promise);
+  console.error("Reason:", reason);
+  console.error(
+    "Stack:",
+    reason instanceof Error ? reason.stack : "No stack trace"
+  );
+});
+
+process.on("uncaughtException", (error) => {
+  console.error("Uncaught Exception:", error);
+  console.error("Stack:", error.stack);
+});
+
 function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "assets", "icarus.png"),
@@ -33,11 +45,6 @@ function createWindow() {
       nodeIntegration: false,
     },
   });
-
-  // Open the DevTools only in a non-production environment.
-  // if (process.env.NODE_ENV !== 'production') {
-  //   win.webContents.openDevTools();
-  // }
 
   win.webContents.on("did-finish-load", () => {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
@@ -64,10 +71,8 @@ function createWindow() {
 
     globalShortcut.register("CommandOrControl+Shift+I", () => {
       console.log("Ctrl+Shift+I pressed, DevTools access blocked.");
-      // Do nothing.
     });
 
-    // Optional: Register for common macOS shortcuts if you want to be extra thorough
     globalShortcut.register("Command+Alt+I", () => {
       console.log("Cmd+Opt+I pressed, DevTools access blocked.");
     });
@@ -85,7 +90,6 @@ function createWindow() {
       event.preventDefault();
     });
   } else {
-    // --- DEVELOPMENT MODE ---
     console.log("Running in development mode. DevTools access is enabled.");
 
     globalShortcut.register("F12", () => {
@@ -114,7 +118,6 @@ function createWindow() {
           { type: "separator" },
           { label: "Copy", role: "copy" },
           { label: "Paste", role: "paste" },
-          // Add other useful dev-mode context menu items here if needed
         ] as (Electron.MenuItemConstructorOptions | Electron.MenuItem)[];
 
         const devContextMenu = Menu.buildFromTemplate(devContextMenuTemplate);
@@ -124,9 +127,22 @@ function createWindow() {
   }
 }
 
-// IPC CALLS FOR THE PYTHON AND R HANDLERS
-setupPythonHandlers();
-setupRHandlers();
+// Wrap IPC handlers in try-catch
+try {
+  console.log("Setting up Python handlers...");
+  setupPythonHandlers();
+  console.log("Python handlers set up successfully");
+} catch (error) {
+  console.error("Error setting up Python handlers:", error);
+}
+
+try {
+  console.log("Setting up R handlers...");
+  setupRHandlers();
+  console.log("R handlers set up successfully");
+} catch (error) {
+  console.error("Error setting up R handlers:", error);
+}
 
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
@@ -142,23 +158,52 @@ app.on("activate", () => {
 });
 
 async function main() {
-  // const { initializeDatabase } = await import("./src/database");
-  // const { setupDatabaseHandlers } = await import("./src/database/ipc-handlers");
-
   try {
-    // await app.whenReady();
+    console.log("Starting main function...");
 
-    // const result = await initializeDatabase();
-    // if (!result) {
-    //   throw new Error("Database initialization returned undefined");
-    // }
-    // const { icarusDBAdapter } = result;
-    // setupDatabaseHandlers(icarusDBAdapter);
+    console.log("Importing database module...");
+    const { initializeDatabase } = await import("./src/database");
+
+    console.log("Importing database handlers...");
+    const { setupDatabaseHandlers } = await import(
+      "./src/database/ipc-handlers"
+    );
+
+    console.log("Waiting for app ready...");
+    await app.whenReady();
+
+    console.log("Initializing database...");
+    const result = await initializeDatabase();
+
+    if (!result) {
+      throw new Error("Database initialization returned undefined");
+    }
+
+    console.log("Database initialized successfully");
+    const { icarusDBAdapter } = result;
+
+    console.log("Setting up database handlers...");
+    setupDatabaseHandlers(icarusDBAdapter);
+
+    console.log("Creating window...");
     createWindow();
+
+    console.log("Application started successfully");
   } catch (error) {
     console.error("Failed to Open Application:", error);
-    app.quit(); // gracefully exit if DB fails
+    console.error("Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : "No stack trace",
+      name: error instanceof Error ? error.name : typeof error,
+    });
+    app.quit();
   }
 }
 
-app.whenReady().then(main);
+app
+  .whenReady()
+  .then(main)
+  .catch((error) => {
+    console.error("Error in app.whenReady():", error);
+    app.quit();
+  });
