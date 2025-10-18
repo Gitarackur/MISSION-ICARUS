@@ -3,7 +3,7 @@ import {
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
 import { useModal } from "@/ui/design-system/Modal/context";
-import { SortAsc, SortDesc } from "lucide-react";
+// import { SortAsc, SortDesc } from "lucide-react";
 import {
   CountMissing,
   CountValid,

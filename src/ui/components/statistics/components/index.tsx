@@ -3035,7 +3035,8 @@ export const CorrectForPurity: React.FC<{
   }, [allColumnarData]);
   
   const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
-  const [reagentType, setReagentType] = useState<'tmt10' | 'tmt11' | 'tmt16' | 'itraq4' | 'itraq8' | 'custom'>('tmt10');
+  type ReagentType = 'tmt10' | 'tmt11' | 'tmt16' | 'itraq4' | 'itraq8' | 'custom';
+  const [reagentType, setReagentType] = useState<ReagentType>('tmt10');
   const [applyCorrection, setApplyCorrection] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -3112,7 +3113,7 @@ export const CorrectForPurity: React.FC<{
           <SingleSelect
             id="reagent-type"
             value={reagentType}
-            onChange={(value) => setReagentType(value as any)}
+            onChange={(value) => setReagentType(value as ReagentType)}
             options={[
               { value: 'tmt10', label: 'TMT 10-plex' },
               { value: 'tmt11', label: 'TMT 11-plex' },
@@ -4052,17 +4053,17 @@ export const FilterColumnsByType: React.FC<{
       
       switch (filterType) {
         case 'numeric':
-          return column.every((val: any) => typeof val === 'number' && !isNaN(val));
+          return column.every((val: string | number) => typeof val === 'number' && !isNaN(val as number));
         case 'integer':
-          return column.every((val: any) => Number.isInteger(val));
+          return column.every((val: string | number) => typeof val === 'number' && Number.isInteger(val as number));
         case 'float':
-          return column.some((val: any) => !Number.isInteger(val) && !isNaN(val));
+          return column.some((val: string | number) => typeof val === 'number' && !Number.isInteger(val as number) && !isNaN(val as number));
         case 'positive':
-          return column.every((val: any) => val > 0);
+          return column.every((val: string | number) => typeof val === 'number' && (val as number) > 0);
         case 'negative':
-          return column.every((val: any) => val < 0);
+          return column.every((val: string | number) => typeof val === 'number' && (val as number) < 0);
         case 'nonzero':
-          return column.every((val: any) => val !== 0);
+          return column.every((val: string | number) => typeof val === 'number' && (val as number) !== 0);
         default:
           return false;
       }
@@ -4331,7 +4332,7 @@ export const RenameRow: React.FC<{
     if (rowIndex >= 0 && rowIndex < dataRows.length) {
       // Get the current row identifier (assuming there's an 'id' or 'name' property)
       const row = dataRows[rowIndex];
-      const identifier = (row as any).id || (row as any).name || `Row ${rowIndex + 1}`;
+      const identifier = ((row).id || (row).name || `Row ${rowIndex + 1}`)as string;
       setCurrentName(identifier);
     }
   }, [rowIndex, dataRows]);
@@ -4453,7 +4454,7 @@ export const DeleteRow: React.FC<{
   }, [allColumnarData]);
   
   const [rowIndicesToDelete, setRowIndicesToDelete] = useState<string>('');
-  const [deleteMode, setDeleteMode] = useState<string>('indices');
+  // const [deleteMode, setDeleteMode] = useState<string>('indices');
   const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -4626,7 +4627,14 @@ export const PcaLearning: React.FC<{
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ 
+  // dataColumns, 
+  actionId, 
+  // dataRows, 
+  allColumnarData, 
+  onSuccess, 
+  onError 
+}) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
   const availableColumns = useMemo(() => {
@@ -4750,7 +4758,14 @@ export const PlsdaLearning: React.FC<{
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ 
+  // dataColumns, 
+  actionId, 
+  // dataRows, 
+  allColumnarData, 
+  onSuccess, 
+  onError 
+}) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
   const availableColumns = useMemo(() => {
@@ -4890,7 +4905,14 @@ export const TsneLearning: React.FC<{
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ 
+  // dataColumns, 
+  actionId, 
+  // dataRows, 
+  allColumnarData, 
+  onSuccess, 
+  onError 
+}) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
   const availableColumns = useMemo(() => {
