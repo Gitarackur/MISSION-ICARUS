@@ -73,6 +73,8 @@ import {
   ExportCsv,
   NoUiFound,
   Count,
+  SortDescending,
+  SortAscending,
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -336,66 +338,187 @@ const useStatisticsMenu = ({
         );
         break;
       case "impute-median":
-        content = (
-          <ImputeMedian dataColumns={dataColumns} actionId={actionId} />
+        content = (<ImputeMedian dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
         );
         break;
       case "impute-knn":
-        content = <ImputeKnn dataColumns={dataColumns} actionId={actionId} />;
+        content = (<ImputeKnn dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
+        );
         break;
       case "impute-zero":
-        content = <ImputeZero dataColumns={dataColumns} actionId={actionId} />;
+        content = (<ImputeZero dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
+        );
         break;
       case "moving-average":
-        content = (
-          <MovingAverage dataColumns={dataColumns} actionId={actionId} />
+        content = (<MovingAverage dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
         );
         break;
       case "rolling-stddev":
-        content = (
-          <RollingStdDev dataColumns={dataColumns} actionId={actionId} />
+        content = (<RollingStdDev dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            closeModal();
+            onError?.();
+          }}  />
         );
         break;
-      case "t-test":
-      case "t-test-test": // Both t-test actions can use the same UI
-        content = (
-          <TTest
-            dataColumns={dataColumns}
-            dataRows={dataRows}
-            allColumnarData={allColumnarData}
-            onSuccess={(result) => {
-              closeModal();
-              onSuccess?.(result);
-            }}
-            onError={() => {
-              closeModal();
-              onError?.();
-            }}
-            actionId={actionId}
-          />
-        );
-        break;
-      case "anova":
-        content = <Anova dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "limma":
-        content = <Limma dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "fold-change":
-        content = <FoldChange dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "normalize-reporter-ions":
-        content = (
-          <NormalizeReporterIons
-            dataColumns={dataColumns}
-            actionId={actionId}
-          />
-        );
-        break;
-      case "correct-for-purity":
-        content = (
-          <CorrectForPurity dataColumns={dataColumns} actionId={actionId} />
-        );
+        case 't-test':
+          case 't-test-test':
+            content = <TTest 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />;
+            break;
+          
+          case 'anova':
+            content = <Anova 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />;
+            break;
+          
+          case 'limma':
+            content = <Limma 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />;
+            break;
+          
+          case 'fold-change':
+            content = <FoldChange 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />;
+            break;
+          
+            case 'normalize-reporter-ions':
+              content = (
+                <NormalizeReporterIons 
+                  dataColumns={dataColumns} 
+                  actionId={actionId}
+                  dataRows={dataRows}
+                  allColumnarData={allColumnarData}
+                  onSuccess={(result) => {
+                    closeModal();
+                    onSuccess?.(result);
+                  }}
+                  onError={() => {
+                    closeModal();
+                    onError?.();
+                  }}
+                />
+              );
+              break;
+            
+            case 'correct-for-purity':
+              content = (
+                <CorrectForPurity 
+                  dataColumns={dataColumns} 
+                  actionId={actionId}
+                  dataRows={dataRows}
+                  allColumnarData={allColumnarData}
+                  onSuccess={(result) => {
+                    closeModal();
+                    onSuccess?.(result);
+                  }}
+                  onError={() => {
+                    closeModal();
+                    onError?.();
+                  }}
+                />
+              );
+              break;
+            
         break;
       case "box-plot":
         content = <BoxPlot dataColumns={dataColumns} actionId={actionId} />;
@@ -412,47 +535,237 @@ const useStatisticsMenu = ({
       case "pca-plot":
         content = <PcaPlot dataColumns={dataColumns} actionId={actionId} />;
         break;
-      case "sort-asc":
-        content = <SortAsc />;
-        break;
-      case "sort-desc":
-        content = <SortDesc />;
-        break;
-      case "reorder-columns":
-        content = (
-          <ReorderColumns dataColumns={dataColumns} actionId={actionId} />
-        );
-        break;
-      case "transpose":
-        content = <Transpose />;
-        break;
-      case "filter-columns-by-name":
-        content = <FilterColumnsByName />;
-        break;
-      case "filter-columns-by-type":
-        content = <FilterColumnsByType />;
-        break;
-      case "add-row":
-        content = <AddRow dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "rename-row":
-        content = <RenameRow dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "delete-row":
-        content = <DeleteRow dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "pca-learning":
-        content = <PcaLearning dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "plsda-learning":
-        content = (
-          <PlsdaLearning dataColumns={dataColumns} actionId={actionId} />
-        );
-        break;
-      case "tsne-learning":
-        content = (
-          <TsneLearning dataColumns={dataColumns} actionId={actionId} />
-        );
+        case 'sort-asc':
+          content = (
+            <SortAscending 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result: StatisticalAnalysisResult) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+        case 'sort-desc':
+          content = (
+            <SortDescending 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result: StatisticalAnalysisResult) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+        case 'reorder-columns':
+          content = (
+            <ReorderColumns 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+        case 'transpose':
+          content = (
+            <Transpose 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+
+        
+
+          case 'filter-columns-by-name':
+            content = (
+              <FilterColumnsByName 
+                dataColumns={dataColumns} 
+                actionId={actionId}
+                dataRows={dataRows}
+                allColumnarData={allColumnarData}
+                onSuccess={(result) => {
+                  closeModal();
+                  onSuccess?.(result);
+                }}
+                onError={() => {
+                  closeModal();
+                  onError?.();
+                }}
+              />
+            );
+            break;
+          
+          case 'filter-columns-by-type':
+            content = (
+              <FilterColumnsByType 
+                dataColumns={dataColumns} 
+                actionId={actionId}
+                dataRows={dataRows}
+                allColumnarData={allColumnarData}
+                onSuccess={(result) => {
+                  closeModal();
+                  onSuccess?.(result);
+                }}
+                onError={() => {
+                  closeModal();
+                  onError?.();
+                }}
+              />
+            );
+            break;
+          
+      case 'add-row':
+  content = (
+    <AddRow 
+      dataColumns={dataColumns} 
+      actionId={actionId}
+      dataRows={dataRows}
+      allColumnarData={allColumnarData}
+      onSuccess={(result) => {
+        closeModal();
+        onSuccess?.(result);
+      }}
+      onError={() => {
+        closeModal();
+        onError?.();
+      }}
+    />
+  );
+  break;
+
+case 'rename-row':
+  content = (
+    <RenameRow 
+      dataColumns={dataColumns} 
+      actionId={actionId}
+      dataRows={dataRows}
+      allColumnarData={allColumnarData}
+      onSuccess={(result) => {
+        closeModal();
+        onSuccess?.(result);
+      }}
+      onError={() => {
+        closeModal();
+        onError?.();
+      }}
+    />
+  );
+  break;
+
+case 'delete-row':
+  content = (
+    <DeleteRow 
+      dataColumns={dataColumns} 
+      actionId={actionId}
+      dataRows={dataRows}
+      allColumnarData={allColumnarData}
+      onSuccess={(result) => {
+        closeModal();
+        onSuccess?.(result);
+      }}
+      onError={() => {
+        closeModal();
+        onError?.();
+      }}
+    />
+  );
+  break;
+
+  case 'pca-learning':
+    content = (
+      <PcaLearning 
+        dataColumns={dataColumns} 
+        actionId={actionId}
+        dataRows={dataRows}
+        allColumnarData={allColumnarData}
+        onSuccess={(result) => {
+          closeModal();
+          onSuccess?.(result);
+        }}
+        onError={() => {
+          closeModal();
+          onError?.();
+        }}
+      />
+    );
+    break;
+  
+  case 'plsda-learning':
+    content = (
+      <PlsdaLearning 
+        dataColumns={dataColumns} 
+        actionId={actionId}
+        dataRows={dataRows}
+        allColumnarData={allColumnarData}
+        onSuccess={(result) => {
+          closeModal();
+          onSuccess?.(result);
+        }}
+        onError={() => {
+          closeModal();
+          onError?.();
+        }}
+      />
+    );
+    break;
+  
+  case 'tsne-learning':
+    content = (
+      <TsneLearning 
+        dataColumns={dataColumns} 
+        actionId={actionId}
+        dataRows={dataRows}
+        allColumnarData={allColumnarData}
+        onSuccess={(result) => {
+          closeModal();
+          onSuccess?.(result);
+        }}
+        onError={() => {
+          closeModal();
+          onError?.();
+        }}
+      />
+    );
+    break;
+  
         break;
       case "add-ptm":
         content = <AddPtm dataColumns={dataColumns} actionId={actionId} />;
