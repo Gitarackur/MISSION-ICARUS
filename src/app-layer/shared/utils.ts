@@ -502,3 +502,22 @@ export const mean = (values: (number | null)[]): number | null => {
   if (nums.length === 0) return null;
   return nums.reduce((a, b) => a + b, 0) / nums.length;
 };
+
+
+/** Convert values to finite numbers; return NaN for null/undefined/""/"NA"/"NaN"/non-numeric. */
+export function toFinite(v: unknown): number {
+  if (
+    v === null ||
+    v === undefined ||
+    (typeof v === "string" && v.trim() === "") ||
+    v === "NA" ||
+    v === "NaN"
+  ) return NaN;
+
+  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
+  if (typeof v === "string") {
+    const n = Number(v.replace(/,/g, ""));
+    return Number.isFinite(n) ? n : NaN;
+  }
+  return NaN;
+}

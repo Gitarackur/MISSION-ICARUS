@@ -8,7 +8,7 @@ import {
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import MultiSelect from "@/ui/design-system/Select/Multi/select";
 import SingleSelect from "@/ui/design-system/Select/select";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
@@ -2105,226 +2105,370 @@ export const ImputeZero = ({
 };
 
 
-/*---------------------------------------------------
-COUNT COLUMN VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// MOVING AVERAGE - TIME SERIES
+// --------------------------------------------------- 
 
-export const MovingAverage = ({
-  dataColumns,
-  // actionId,
-}: {
+export const MovingAverage: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Moving Average</h1>
-    <p className={descriptionClass}>
-      Calculates the moving average for a time series data column.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="ma-column"
-          label={`Select Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div>
-        <label htmlFor="ma-window" className={labelClass}>
-          Window Size
-        </label>
-        <input
-          type="number"
-          id="ma-window"
-          defaultValue="5"
-          className={inputClass}
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Calculate</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-ROLLING STDDEV COLUMN VALUES
-----------------------------------------------------*/
-
-export const RollingStdDev = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Rolling Standard Deviation</h1>
-    <p className={descriptionClass}>
-      Calculates the rolling standard deviation for a time series data column.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="rolling-stddev-column"
-          label={`Select Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div>
-        <label htmlFor="rolling-stddev-window" className={labelClass}>
-          Window Size
-        </label>
-        <input
-          type="number"
-          id="rolling-stddev-window"
-          defaultValue="5"
-          className={inputClass}
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Calculate</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-TTEST COLUMN VALUES
-----------------------------------------------------*/
-
-export const TTest = ({
-  actionId,
-  dataColumns,
-  dataRows,
-  allColumnarData,
-  onSuccess,
-  onError,
-}: {
-  actionId: StatisticalAction;
-  dataColumns: TableColumns;
   dataRows: ProteinRow[];
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}) => {
-  // hook that attaches to statistical engine
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  // Hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
-
-  const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
-  );
+  
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
   const numericColumns = [...numericColumnsSet];
-
-  const [firstGroup, setFirstGroup] = useState(numericColumns[0] || "");
-  const [secondGroup, setSecondGroup] = useState(numericColumns[1] || "");
+  
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [windowSize, setWindowSize] = useState<number>(5);
   const [error, setError] = useState<string | null>(null);
 
-  const runTTEST = () => {
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runMovingAverageCalc = () => {
     setError(null);
-
-    if (!firstGroup || !secondGroup) {
-      setError("Please select two groups to perform the T-Test.");
+    if (selectedDataSets.length === 0) {
+      setError("Please select at least one column for the Moving Average calculation.");
       onError?.();
       return;
     }
-
-    if (firstGroup === secondGroup) {
-      setError("Please select two different groups for the T-Test.");
+    if (windowSize <= 0) {
+      setError("Window size must be greater than 0.");
       onError?.();
       return;
     }
-
+    
     try {
-      const filteredData = new Map();
-      if (allColumnarData.has(firstGroup)) {
-        filteredData.set(firstGroup, allColumnarData.get(firstGroup));
-      }
-      if (allColumnarData.has(secondGroup)) {
-        filteredData.set(secondGroup, allColumnarData.get(secondGroup));
-      }
-
-      if (filteredData.size < 2) {
-        setError("The selected groups were not found in the data.");
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Handle multiple selections - add all selected columns to filteredData
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Verify that we have data for the selected columns
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
         onError?.();
         return;
       }
 
+      // Add window size as metadata (you might need to modify your engine to handle this)
+      filteredData.set(`__window_size__`, [windowSize] as unknown as TableMatrix);
+      
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError("An error occurred during the T-Test. Please check your data.");
-      console.error("T-Test failed:", err);
+      setError("An error occurred during the Moving Average calculation. Please check your data.");
+      console.error("Moving Average calculation failed:", err);
       onError?.();
     }
   };
 
-  const isRunButtonDisabled =
-    !firstGroup || !secondGroup || firstGroup === secondGroup;
+  const isRunButtonDisabled = selectedDataSets.length === 0 || windowSize <= 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Moving Average</h1>
+      <p className={descriptionClass}>
+        Calculates the moving average for a time series data column using a specified window size.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="moving-average-column"
+            label={`Select Column${selectedDataSets.length > 1 ? 's' : ''}`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedDataSets}
+            onChange={handleColumnSelection}
+            helperText="Choose the numeric columns for moving average calculation"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="ma-window" className={labelClass}>
+            Window Size
+          </label>
+          <input
+            type="number"
+            id="ma-window"
+            min="1"
+            step="1"
+            value={windowSize}
+            onChange={(e) => setWindowSize(parseInt(e.target.value, 10) || 5)}
+            className={inputClass}
+          />
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runMovingAverageCalc}
+        >
+          Calculate Moving Average
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------- 
+// ROLLING STANDARD DEVIATION - TIME SERIES
+// --------------------------------------------------- 
+
+export const RollingStdDev: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  // Hook that attaches to statistical engine
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumns = [...numericColumnsSet];
+  
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [windowSize, setWindowSize] = useState<number>(5);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runRollingStdDevCalc = () => {
+    setError(null);
+    if (selectedDataSets.length === 0) {
+      setError("Please select at least one column for the Rolling Standard Deviation calculation.");
+      onError?.();
+      return;
+    }
+    if (windowSize <= 0) {
+      setError("Window size must be greater than 0.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Handle multiple selections - add all selected columns to filteredData
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Verify that we have data for the selected columns
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Add window size as metadata
+      filteredData.set(`__window_size__`, [windowSize] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Rolling Standard Deviation calculation. Please check your data.");
+      console.error("Rolling Standard Deviation calculation failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = selectedDataSets.length === 0 || windowSize <= 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Rolling Standard Deviation</h1>
+      <p className={descriptionClass}>
+        Calculates the rolling standard deviation for a time series data column using a specified window size.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="rolling-stddev-column"
+            label={`Select Column${selectedDataSets.length > 1 ? 's' : ''}`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedDataSets}
+            onChange={handleColumnSelection}
+            helperText="Choose the numeric columns for rolling standard deviation calculation"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="rolling-stddev-window" className={labelClass}>
+            Window Size
+          </label>
+          <input
+            type="number"
+            id="rolling-stddev-window"
+            min="1"
+            step="1"
+            value={windowSize}
+            onChange={(e) => setWindowSize(parseInt(e.target.value, 10) || 5)}
+            className={inputClass}
+          />
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runRollingStdDevCalc}
+        >
+          Calculate Rolling Std Dev
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+// --------------------------------------------------- 
+// T-TEST - DIFFERENTIAL ANALYSIS
+// --------------------------------------------------- 
+
+export const TTest: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumns = [...numericColumnsSet];
+  
+  const [group1Columns, setGroup1Columns] = useState<string[]>([]);
+  const [group2Columns, setGroup2Columns] = useState<string[]>([]);
+  const [testType, setTestType] = useState<'two-sample' | 'paired'>('two-sample');
+  const [error, setError] = useState<string | null>(null);
+
+  const runTTest = () => {
+    setError(null);
+    
+    if (group1Columns.length === 0 || group2Columns.length === 0) {
+      setError("Please select columns for both groups.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add group 1 data
+      group1Columns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`group1_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add group 2 data
+      group2Columns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`group2_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Add test type as metadata
+      filteredData.set(`__test_type__`, [testType] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the T-Test calculation. Please check your data.");
+      console.error("T-Test calculation failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = group1Columns.length === 0 || group2Columns.length === 0;
 
   return (
     <div className={containerClass}>
       <h1 className={headingClass}>T-Test</h1>
       <p className={descriptionClass}>
-        Performs a T-Test to compare the means of two groups.
+        Performs a statistical t-test to compare the means of two groups and determine if they are statistically different.
       </p>
+      
       <div className="space-y-4 mb-6">
         <div>
+          <label className={labelClass}>Test Type</label>
           <SingleSelect
-            id="ttest-column-1"
-            label={`Select First Numeric Column`}
-            placeholder="Select data columns to analyze..."
-            options={numericColumns.map((curr) => ({
-              value: curr,
-              label: curr,
-              disabled: false,
-            }))}
-            value={firstGroup}
-            onChange={(value) => setFirstGroup(value as string)}
-            helperText="Choose the numeric columns you want to include in your analysis"
+            id="ttest-type"
+            value={testType}
+            onChange={(value) => setTestType(value as 'two-sample' | 'paired')}
+            options={[
+              { value: 'two-sample', label: 'Two-sample t-test' },
+              { value: 'paired', label: 'Paired t-test' }
+            ]}
           />
         </div>
+        
         <div>
-          <SingleSelect
-            id="ttest-column-2"
-            label={`Select Second Numeric Column`}
-            placeholder="Select data columns to analyze..."
-            options={numericColumns.map((curr) => ({
-              value: curr,
-              label: curr,
-              disabled: false,
-            }))}
-            value={secondGroup}
-            onChange={(value) => setSecondGroup(value as string)}
-            helperText="Choose the numeric columns you want to include in your analysis"
+          <MultiSelect
+            id="ttest-group1"
+            label="Group 1 Columns"
+            placeholder="Select columns for group 1..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={group1Columns}
+            onChange={setGroup1Columns}
+            helperText="Choose the numeric columns for the first group"
+          />
+        </div>
+        
+        <div>
+          <MultiSelect
+            id="ttest-group2"
+            label="Group 2 Columns"
+            placeholder="Select columns for group 2..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={group2Columns}
+            onChange={setGroup2Columns}
+            helperText="Choose the numeric columns for the second group"
           />
         </div>
       </div>
-
+      
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
-
+      
       <div className="flex justify-end">
         <button
           className={buttonClass}
           disabled={isRunButtonDisabled}
-          onClick={runTTEST}
+          onClick={runTTest}
         >
           Run T-Test
         </button>
@@ -2333,278 +2477,682 @@ export const TTest = ({
   );
 };
 
-/*---------------------------------------------------
-ANOVA COLUMN VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// ANOVA - DIFFERENTIAL ANALYSIS
+// --------------------------------------------------- 
 
-export const Anova = ({
-  dataColumns,
-  // actionId,
-}: {
+export const Anova: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>ANOVA</h1>
-    <p className={descriptionClass}>
-      Performs an Analysis of Variance (ANOVA) to compare means across multiple
-      groups.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="anova-column"
-          label={`Select Numeric Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumns = [...numericColumnsSet];
+  
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
+  const [significanceLevel, setSignificanceLevel] = useState<number>(0.05);
+  const [error, setError] = useState<string | null>(null);
 
-      <div>
-        <SingleSelect
-          id="anova-group-column"
-          label={`Select Grouping Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run ANOVA</button>
-    </div>
-  </div>
-);
+  const runANOVA = () => {
+    setError(null);
+    
+    if (selectedGroups.length < 2) {
+      setError("Please select at least 2 groups for ANOVA analysis.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      selectedGroups.forEach((column, index) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`group_${index + 1}_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected groups.");
+        onError?.();
+        return;
+      }
 
-/*---------------------------------------------------
-LIMMA COLUMN VALUES
-----------------------------------------------------*/
+      // Add significance level as metadata
+      filteredData.set(`__alpha__`, [significanceLevel] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the ANOVA calculation. Please check your data.");
+      console.error("ANOVA calculation failed:", err);
+      onError?.();
+    }
+  };
 
-export const Limma = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>LIMMA</h1>
-    <p className={descriptionClass}>
-      Performs differential expression analysis using the LIMMA package.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="limma-column"
-          label={`Select Columns`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div>
-        <SingleSelect
-          id="limma-group-column"
-          label={`Select Grouping Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run LIMMA</button>
-    </div>
-  </div>
-);
+  const isRunButtonDisabled = selectedGroups.length < 2;
 
-/*---------------------------------------------------
-FOLD CHANGE COLUMN VALUES
-----------------------------------------------------*/
-
-export const FoldChange = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Fold Change</h1>
-    <p className={descriptionClass}>
-      Calculates the fold change between two groups or conditions.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="fc-column"
-          label={`Select Numeric Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>ANOVA</h1>
+      <p className={descriptionClass}>
+        Analysis of Variance (ANOVA) tests whether there are statistically significant differences between the means of three or more groups.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="anova-groups"
+            label="Select Groups"
+            placeholder="Select columns representing different groups..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedGroups}
+            onChange={setSelectedGroups}
+            helperText="Choose at least 2 numeric columns representing different groups"
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="anova-alpha" className={labelClass}>
+            Significance Level (α)
+          </label>
+          <input
+            type="number"
+            id="anova-alpha"
+            min="0.001"
+            max="0.1"
+            step="0.001"
+            value={significanceLevel}
+            onChange={(e) => setSignificanceLevel(parseFloat(e.target.value) || 0.05)}
+            className={inputClass}
+          />
+        </div>
       </div>
-      <div>
-        <label htmlFor="fc-group-1" className={labelClass}>
-          Group 1
-        </label>
-        <input
-          type="text"
-          id="fc-group-1"
-          className={inputClass}
-          placeholder="e.g., 'Treated'"
-        />
-      </div>
-      <div>
-        <label htmlFor="fc-group-2" className={labelClass}>
-          Group 2
-        </label>
-        <input
-          type="text"
-          id="fc-group-2"
-          className={inputClass}
-          placeholder="e.g., 'Control'"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Calculate Fold Change</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-NORMALIZED REPORTER IONS COLUMN VALUES
-----------------------------------------------------*/
-
-export const NormalizeReporterIons = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Normalize Reporter Ions</h1>
-    <p className={descriptionClass}>
-      Normalizes isobaric reporter ion intensities.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="norm-ri-columns"
-          label={`Select Reporter Ion Columns`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div className="flex items-center">
-        <input
-          id="log-transform-checkbox"
-          type="checkbox"
-          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-        />
-        <label
-          htmlFor="log-transform-checkbox"
-          className="ml-2 block text-sm text-gray-900"
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runANOVA}
         >
-          Apply Log Transformation
-        </label>
+          Run ANOVA
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Normalize</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-CORRECT FOR PURITY COLUMN VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// LIMMA - DIFFERENTIAL ANALYSIS
+// --------------------------------------------------- 
 
-export const CorrectForPurity = ({
-  dataColumns,
-  // actionId,
-}: {
+export const Limma: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Correct for Purity</h1>
-    <p className={descriptionClass}>
-      Corrects reporter ion intensities for isotopic impurities.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="correct-purity-columns"
-          label={`Select Reporter Ion Columns`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumns = [...numericColumnsSet];
+  
+  const [treatmentColumns, setTreatmentColumns] = useState<string[]>([]);
+  const [controlColumns, setControlColumns] = useState<string[]>([]);
+  const [adjustmentMethod, setAdjustmentMethod] = useState<'BH' | 'bonferroni'>('BH');
+  const [error, setError] = useState<string | null>(null);
+
+  const runLIMMA = () => {
+    setError(null);
+    
+    if (treatmentColumns.length === 0 || controlColumns.length === 0) {
+      setError("Please select columns for both treatment and control groups.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add treatment group data
+      treatmentColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`treatment_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add control group data
+      controlColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`control_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Add adjustment method as metadata
+      filteredData.set(`__adjustment_method__`, [adjustmentMethod] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the LIMMA analysis. Please check your data.");
+      console.error("LIMMA analysis failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = treatmentColumns.length === 0 || controlColumns.length === 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>LIMMA</h1>
+      <p className={descriptionClass}>
+        Linear Models for Microarray Data (LIMMA) - Advanced differential expression analysis using moderated t-statistics.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="limma-treatment"
+            label="Treatment Group Columns"
+            placeholder="Select treatment group columns..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={treatmentColumns}
+            onChange={setTreatmentColumns}
+            helperText="Choose the numeric columns for the treatment group"
+          />
+        </div>
+        
+        <div>
+          <MultiSelect
+            id="limma-control"
+            label="Control Group Columns"
+            placeholder="Select control group columns..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={controlColumns}
+            onChange={setControlColumns}
+            helperText="Choose the numeric columns for the control group"
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>P-value Adjustment Method</label>
+          <SingleSelect
+            id="limma-adjustment"
+            value={adjustmentMethod}
+            onChange={(value) => setAdjustmentMethod(value as 'BH' | 'bonferroni')}
+            options={[
+              { value: 'BH', label: 'Benjamini-Hochberg (FDR)' },
+              { value: 'bonferroni', label: 'Bonferroni' }
+            ]}
+          />
+        </div>
       </div>
-      <div>
-        <label htmlFor="purity-matrix" className={labelClass}>
-          Purity Correction Matrix
-        </label>
-        <textarea
-          id="purity-matrix"
-          rows={4}
-          className={inputClass}
-          placeholder="Enter comma-separated values for the correction matrix."
-        ></textarea>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runLIMMA}
+        >
+          Run LIMMA Analysis
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Correct Purity</button>
+  );
+};
+
+// --------------------------------------------------- 
+// FOLD CHANGE - DIFFERENTIAL ANALYSIS
+// --------------------------------------------------- 
+
+export const FoldChange: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumns = [...numericColumnsSet];
+  
+  const [treatmentColumns, setTreatmentColumns] = useState<string[]>([]);
+  const [controlColumns, setControlColumns] = useState<string[]>([]);
+  const [logScale, setLogScale] = useState<boolean>(true);
+  const [foldChangeThreshold, setFoldChangeThreshold] = useState<number>(2);
+  const [error, setError] = useState<string | null>(null);
+
+  const runFoldChange = () => {
+    setError(null);
+    
+    if (treatmentColumns.length === 0 || controlColumns.length === 0) {
+      setError("Please select columns for both treatment and control groups.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add treatment group data
+      treatmentColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`treatment_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add control group data
+      controlColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(`control_${column}`, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      // Add parameters as metadata
+      filteredData.set(`__log_scale__`, [logScale] as unknown as TableMatrix);
+      filteredData.set(`__threshold__`, [foldChangeThreshold] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Fold Change calculation. Please check your data.");
+      console.error("Fold Change calculation failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = treatmentColumns.length === 0 || controlColumns.length === 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Fold Change</h1>
+      <p className={descriptionClass}>
+        Calculates fold change between treatment and control groups to identify up-regulated and down-regulated features.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="foldchange-treatment"
+            label="Treatment Group Columns"
+            placeholder="Select treatment group columns..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={treatmentColumns}
+            onChange={setTreatmentColumns}
+            helperText="Choose the numeric columns for the treatment group"
+          />
+        </div>
+        
+        <div>
+          <MultiSelect
+            id="foldchange-control"
+            label="Control Group Columns"
+            placeholder="Select control group columns..."
+            options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={controlColumns}
+            onChange={setControlColumns}
+            helperText="Choose the numeric columns for the control group"
+          />
+        </div>
+        
+        <div className="flex items-center space-x-4">
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="foldchange-log"
+              checked={logScale}
+              onChange={(e) => setLogScale(e.target.checked)}
+              className="mr-2"
+            />
+            <label htmlFor="foldchange-log" className={labelClass + " mb-0"}>
+              Log2 Scale
+            </label>
+          </div>
+        </div>
+        
+        <div>
+          <label htmlFor="foldchange-threshold" className={labelClass}>
+            Fold Change Threshold
+          </label>
+          <input
+            type="number"
+            id="foldchange-threshold"
+            min="1"
+            step="0.5"
+            value={foldChangeThreshold}
+            onChange={(e) => setFoldChangeThreshold(parseFloat(e.target.value) || 2)}
+            className={inputClass}
+          />
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runFoldChange}
+        >
+          Calculate Fold Change
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+
+// --------------------------------------------------- 
+// NORMALIZE REPORTER IONS - ISOBARIC LABELING
+// --------------------------------------------------- 
+
+export const NormalizeReporterIons: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  // FIX: Get all available columns from allColumnarData instead of using getNumericColumnsOptimized
+  const availableColumns = useMemo(() => {
+    // Get all column names from the Map
+    const columnNames = Array.from(allColumnarData.keys());
+    
+    // Filter out metadata columns (those starting with __)
+    const dataColumns = columnNames.filter(col => !col.startsWith('__'));
+    
+    // Optionally: Filter for numeric columns by checking if values are numbers
+    const numericColumns = dataColumns.filter(colName => {
+      const colData = allColumnarData.get(colName);
+      if (!colData || colData.length === 0) return false;
+      
+      // Check if at least some values are numbers
+      const numericCount = colData.slice(0, 10).filter(val => 
+        typeof val === 'number' && !isNaN(val)
+      ).length;
+      
+      return numericCount > 0;
+    });
+    
+    return numericColumns;
+  }, [allColumnarData]);
+  
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [normalizationMethod, setNormalizationMethod] = useState<'median' | 'mean' | 'total'>('median');
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChannelSelection = (values: string[]) => {
+    setSelectedChannels(values);
+  };
+
+  const runNormalization = () => {
+    setError(null);
+    
+    if (selectedChannels.length === 0) {
+      setError("Please select at least one reporter ion channel to normalize.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      selectedChannels.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected channels.");
+        onError?.();
+        return;
+      }
+
+      filteredData.set(`__normalization_method__`, [normalizationMethod] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during reporter ion normalization. Please check your data.");
+      console.error("Reporter ion normalization failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = selectedChannels.length === 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Normalize Reporter Ions</h1>
+      <p className={descriptionClass}>
+        Normalizes TMT/iTRAQ reporter ion intensities to correct for mixing errors and systematic biases 
+        across channels using median, mean, or total intensity normalization.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="normalize-channels"
+            label="Select Reporter Ion Channels"
+            placeholder="Select reporter ion channels..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedChannels}
+            onChange={handleChannelSelection}
+            helperText={`Choose the reporter ion intensity columns to normalize (${availableColumns.length} columns available)`}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Normalization Method</label>
+          <SingleSelect
+            id="normalization-method"
+            value={normalizationMethod}
+            onChange={(value) => setNormalizationMethod(value as 'median' | 'mean' | 'total')}
+            options={[
+              { value: 'median', label: 'Median Normalization (Recommended)' },
+              { value: 'mean', label: 'Mean Normalization' },
+              { value: 'total', label: 'Total Intensity Normalization' }
+            ]}
+          />
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runNormalization}
+        >
+          Normalize Reporter Ions
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+// --------------------------------------------------- 
+// CORRECT FOR PURITY - ISOBARIC LABELING
+// --------------------------------------------------- 
+
+export const CorrectForPurity: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  // FIX: Get all available columns from allColumnarData
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    const dataColumns = columnNames.filter(col => !col.startsWith('__'));
+    
+    const numericColumns = dataColumns.filter(colName => {
+      const colData = allColumnarData.get(colName);
+      if (!colData || colData.length === 0) return false;
+      
+      const numericCount = colData.slice(0, 10).filter(val => 
+        typeof val === 'number' && !isNaN(val)
+      ).length;
+      
+      return numericCount > 0;
+    });
+    
+    return numericColumns;
+  }, [allColumnarData]);
+  
+  const [selectedChannels, setSelectedChannels] = useState<string[]>([]);
+  const [reagentType, setReagentType] = useState<'tmt10' | 'tmt11' | 'tmt16' | 'itraq4' | 'itraq8' | 'custom'>('tmt10');
+  const [applyCorrection, setApplyCorrection] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChannelSelection = (values: string[]) => {
+    setSelectedChannels(values);
+  };
+
+  const runPurityCorrection = () => {
+    setError(null);
+    
+    if (selectedChannels.length === 0) {
+      setError("Please select at least one reporter ion channel to correct.");
+      onError?.();
+      return;
+    }
+    
+    if (!applyCorrection) {
+      setError("Purity correction is disabled. Please enable it to proceed.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      selectedChannels.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected channels.");
+        onError?.();
+        return;
+      }
+
+      filteredData.set(`__reagent_type__`, [reagentType] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during purity correction. Please check your data.");
+      console.error("Purity correction failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = selectedChannels.length === 0 || !applyCorrection;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Correct for Purity</h1>
+      <p className={descriptionClass}>
+        Corrects TMT/iTRAQ reporter ion intensities for isotopic impurities based on the 
+        manufacturer's purity correction matrix.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="purity-channels"
+            label="Select Reporter Ion Channels"
+            placeholder="Select reporter ion channels..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedChannels}
+            onChange={handleChannelSelection}
+            helperText={`Choose the reporter ion intensity columns to correct (${availableColumns.length} columns available)`}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Reagent Type</label>
+          <SingleSelect
+            id="reagent-type"
+            value={reagentType}
+            onChange={(value) => setReagentType(value as any)}
+            options={[
+              { value: 'tmt10', label: 'TMT 10-plex' },
+              { value: 'tmt11', label: 'TMT 11-plex' },
+              { value: 'tmt16', label: 'TMT 16-plex (TMTpro)' },
+              { value: 'itraq4', label: 'iTRAQ 4-plex' },
+              { value: 'itraq8', label: 'iTRAQ 8-plex' },
+              { value: 'custom', label: 'Custom Purity Matrix' }
+            ]}
+          />
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="apply-purity-correction"
+            checked={applyCorrection}
+            onChange={(e) => setApplyCorrection(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="apply-purity-correction" className="text-sm font-medium text-gray-700">
+            Apply isotopic purity correction
+          </label>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runPurityCorrection}
+        >
+          Apply Purity Correction
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 /*---------------------------------------------------
 BOX PLOT COLUMN VALUES
@@ -2828,474 +3376,1677 @@ export const PcaPlot = ({
   </div>
 );
 
-/*---------------------------------------------------
-SORT ASC COLUMN VALUES
-----------------------------------------------------*/
 
-export const SortAsc = ({
-  dataColumns,
-  // actionId,
-}: {
+// --------------------------------------------------- 
+// SORT ASCENDING
+// --------------------------------------------------- 
+
+export const SortAscending: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Sort Ascending</h1>
-    <p className={descriptionClass}>
-      Sorts the data in a selected column in ascending order.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="sort-asc-column"
-        label={`Select Column to Sort`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Sort</button>
-    </div>
-  </div>
-);
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [primarySortColumn, setPrimarySortColumn] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
 
-/*---------------------------------------------------
-SORT DESC COLUMN VALUES
-----------------------------------------------------*/
+  const runSortAsc = () => {
+    setError(null);
+    
+    if (selectedColumns.length === 0) {
+      setError("Please select at least one column to sort by.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add all selected columns to the data
+      selectedColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+      
+      // Use the first selected column as primary sort, or specified primary column
+      const sortColumn = primarySortColumn || selectedColumns[0];
+      filteredData.set(`__sort_column__`, [sortColumn] as unknown as TableMatrix);
+      filteredData.set(`__sort_direction__`, ['asc'] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during sorting. Please check your data.");
+      console.error("Sort ascending failed:", err);
+      onError?.();
+    }
+  };
 
-export const SortDesc = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Sort Descending</h1>
-    <p className={descriptionClass}>
-      Sorts the data in a selected column in descending order.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="sort-desc-column"
-        label={`Select Column to Sort`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Sort</button>
-    </div>
-  </div>
-);
+  const isRunButtonDisabled = selectedColumns.length === 0;
 
-/*---------------------------------------------------
-REORDER COLUMN VALUES
-----------------------------------------------------*/
-
-export const ReorderColumns = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Reorder Columns</h1>
-    <p className={descriptionClass}>
-      Allows for manual reordering of columns in the dataset.
-    </p>
-    <div className="mb-6">
-      <label htmlFor="reorder-column-list" className={labelClass}>
-        Drag & Drop Columns to Reorder
-      </label>
-      <div
-        id="reorder-column-list"
-        className="mt-1 p-4 bg-gray-50 border border-gray-300 rounded-md max-h-64 overflow-y-auto"
-      >
-        {dataColumns.map((col) => (
-          <div
-            key={col}
-            className="bg-white p-3 mb-2 rounded-md shadow-sm border border-gray-200 cursor-move hover:bg-gray-50 transition-colors"
-          >
-            {col}
-          </div>
-        ))}
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Apply Reorder</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-TRANSPOSE COLUMN VALUES
-----------------------------------------------------*/
-
-export const Transpose = () => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Transpose Data</h1>
-    <p className={descriptionClass}>
-      Transposes the dataset, swapping rows and columns.
-    </p>
-    <p className="text-sm text-gray-500 mb-6">
-      This operation will fundamentally change the structure of your data.
-      Please proceed with caution.
-    </p>
-    <div className="flex justify-end">
-      <button className={dangerButtonClass}>Run Transpose</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-FILTER COLUMN BY NAME VALUES
-----------------------------------------------------*/
-
-export const FilterColumnsByName = () => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Filter Columns by Name</h1>
-    <p className={descriptionClass}>
-      Filters columns based on their names using a search query.
-    </p>
-    <div className="mb-6">
-      <label htmlFor="filter-column-name-input" className={labelClass}>
-        Filter by Name
-      </label>
-      <input
-        type="text"
-        id="filter-column-name-input"
-        placeholder="e.g., 'Intensity' or 'Sample*'"
-        className={inputClass}
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Filter</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-FILTER COLUMN BY TYPES VALUES
-----------------------------------------------------*/
-
-export const FilterColumnsByType = () => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Filter Columns by Type</h1>
-    <p className={descriptionClass}>
-      Filters columns based on their data type (e.g., numeric, categorical).
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="filter-column-type-select"
-        label={`Select Column to Sort`}
-        placeholder="Select data columns to analyze..."
-        options={["numeric", "string", "date"].map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Filter</button>
-    </div>
-  </div>
-);
-
-/*---------------------------------------------------
-ADD ROW VALUES
-----------------------------------------------------*/
-
-export const AddRow = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Add New Row</h1>
-    <p className={descriptionClass}>Adds a new, empty row to the dataset.</p>
-    <p className="text-sm text-gray-500 mb-6">
-      A new row will be added at the bottom of the dataset. You can fill in the
-      values manually afterwards.
-    </p>
-    <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
-      {dataColumns.map((col, idx) => {
-        return (
-          <div key={idx}>
-            <label htmlFor="add-row" className={labelClass}>
-              {col}
-            </label>
-            <input
-              // type="number"
-              id="add-row"
-              className={inputClass}
-              placeholder={col}
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Sort Ascending</h1>
+      <p className={descriptionClass}>
+        Sort all rows in ascending order based on the values in selected columns.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="sort-asc-columns"
+            label="Select Columns to Sort"
+            placeholder="Select one or more columns..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Select columns to include in sorting (${availableColumns.length} columns available)`}
+          />
+        </div>
+        
+        {selectedColumns.length > 1 && (
+          <div>
+            <label className={labelClass}>Primary Sort Column (Optional)</label>
+            <SingleSelect
+              id="primary-sort-column"
+              value={primarySortColumn}
+              onChange={(value) => setPrimarySortColumn(value || '')}
+              options={[
+                { value: '', label: 'Use first selected column' },
+                ...selectedColumns.map((col) => ({ value: col, label: col }))
+              ]}
             />
+            <p className="text-xs text-gray-500 mt-1">
+              Choose which column to use as the primary sorting criterion. Defaults to the first selected column.
+            </p>
           </div>
-        );
-      })}
+        )}
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runSortAsc}
+        >
+          Sort Ascending
+        </button>
+      </div>
     </div>
-    <div className="flex flex-col mt-4">
-      <button className={buttonClass}>Add Row</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-RENAME ROW VALUES
-----------------------------------------------------*/
 
-export const RenameRow = ({
-  dataColumns,
-  // actionId,
-}: {
+
+// --------------------------------------------------- 
+// SORT DESCENDING
+// --------------------------------------------------- 
+
+export const SortDescending: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Rename Row</h1>
-    <p className={descriptionClass}>Renames a selected row based on its ID.</p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="old-row-id"
-          label={`Select Row ID`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [primarySortColumn, setPrimarySortColumn] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  const runSortDesc = () => {
+    setError(null);
+    
+    if (selectedColumns.length === 0) {
+      setError("Please select at least one column to sort by.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add all selected columns to the data
+      selectedColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+      
+      // Use the first selected column as primary sort, or specified primary column
+      const sortColumn = primarySortColumn || selectedColumns[0];
+      filteredData.set(`__sort_column__`, [sortColumn] as unknown as TableMatrix);
+      filteredData.set(`__sort_direction__`, ['desc'] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during sorting. Please check your data.");
+      console.error("Sort descending failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = selectedColumns.length === 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Sort Descending</h1>
+      <p className={descriptionClass}>
+        Sort all rows in descending order based on the values in selected columns.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="sort-desc-columns"
+            label="Select Columns to Sort"
+            placeholder="Select one or more columns..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Select columns to include in sorting (${availableColumns.length} columns available)`}
+          />
+        </div>
+        
+        {selectedColumns.length > 1 && (
+          <div>
+            <label className={labelClass}>Primary Sort Column (Optional)</label>
+            <SingleSelect
+              id="primary-sort-column-desc"
+              value={primarySortColumn}
+              onChange={(value) => setPrimarySortColumn(value || '')}
+              options={[
+                { value: '', label: 'Use first selected column' },
+                ...selectedColumns.map((col) => ({ value: col, label: col }))
+              ]}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Choose which column to use as the primary sorting criterion. Defaults to the first selected column.
+            </p>
+          </div>
+        )}
       </div>
-      <div>
-        <label htmlFor="new-row-name" className={labelClass}>
-          New Row Name
-        </label>
-        <input type="text" id="new-row-name" className={inputClass} />
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runSortDesc}
+        >
+          Sort Descending
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Rename</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-DELETE ROW VALUES
-----------------------------------------------------*/
 
-export const DeleteRow = ({
-  dataColumns,
-  // actionId,
-}: {
+// --------------------------------------------------- 
+// REORDER COLUMNS
+// --------------------------------------------------- 
+
+export const ReorderColumns: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Delete Row</h1>
-    <p className={descriptionClass}>Deletes a selected row from the dataset.</p>
-    <div className="mb-6">
-      <SingleSelect
-        id="delete-row-id"
-        label={`Select Row ID to Delete`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={dangerButtonClass}>Delete Row</button>
-    </div>
-  </div>
-);
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [reorderMode, setReorderMode] = useState<string>('reverse');
+  const [error, setError] = useState<string | null>(null);
 
-/*---------------------------------------------------
-PCA LEARNING VALUES
-----------------------------------------------------*/
+  const runReorder = () => {
+    setError(null);
+    
+    const columnsToReorder = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToReorder.length === 0) {
+      setError("No columns available to reorder.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToReorder.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set(`__reorder_mode__`, [reorderMode] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during column reordering. Please check your data.");
+      console.error("Reorder columns failed:", err);
+      onError?.();
+    }
+  };
 
-export const PcaLearning = ({
-  dataColumns,
-  // actionId,
-}: {
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Reorder Columns</h1>
+      <p className={descriptionClass}>
+        Rearrange the order of columns in your dataset using various methods.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="reorder-columns-select"
+            label="Select Columns (Optional)"
+            placeholder="Select columns to reorder (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText="Leave empty to reorder all columns"
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Reorder Method</label>
+          <SingleSelect
+            id="reorder-mode"
+            value={reorderMode}
+            onChange={(value) => setReorderMode(value || 'reverse')}
+            options={[
+              { value: 'reverse', label: 'Reverse Order' },
+              { value: 'alphabetical', label: 'Alphabetical Order' },
+              { value: 'custom', label: 'Custom Order (by selection)' }
+            ]}
+          />
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runReorder}
+        >
+          Reorder Columns
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+// --------------------------------------------------- 
+// TRANSPOSE
+// --------------------------------------------------- 
+
+export const Transpose: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>PCA</h1>
-    <p className={descriptionClass}>
-      Performs Principal Component Analysis (PCA) for dimensionality reduction.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="pca-learning-columns"
-          label={`Select Columns for PCA`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [confirmTranspose, setConfirmTranspose] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const runTranspose = () => {
+    setError(null);
+    
+    if (!confirmTranspose) {
+      setError("Please confirm that you want to transpose the data.");
+      onError?.();
+      return;
+    }
+    
+    const columnsToTranspose = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToTranspose.length === 0) {
+      setError("No columns available to transpose.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToTranspose.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during transposition. Please check your data.");
+      console.error("Transpose failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = !confirmTranspose;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Transpose</h1>
+      <p className={descriptionClass}>
+        Transpose the data matrix, converting rows to columns and columns to rows.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="transpose-columns-select"
+            label="Select Columns (Optional)"
+            placeholder="Select columns to transpose (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Leave empty to transpose all columns (${availableColumns.length} available)`}
+          />
+        </div>
+        
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+          <p className="text-xs text-yellow-800">
+            <strong>Warning:</strong> Transposing will swap rows and columns. This operation 
+            fundamentally changes the structure of your data.
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="confirm-transpose"
+            checked={confirmTranspose}
+            onChange={(e) => setConfirmTranspose(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="confirm-transpose" className="text-sm font-medium text-gray-700">
+            I understand and want to transpose the data
+          </label>
+        </div>
       </div>
-      <div>
-        <label htmlFor="pca-learning-components" className={labelClass}>
-          Number of Components
-        </label>
-        <input
-          type="number"
-          id="pca-learning-components"
-          defaultValue="2"
-          min="1"
-          className={inputClass}
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runTranspose}
+        >
+          Transpose Data
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run PCA</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-PLSDA LEARNING VALUES
-----------------------------------------------------*/
 
-export const PlsdaLearning = ({
-  dataColumns,
-  // actionId,
-}: {
+// ===================================================================
+// FILTER COLUMNS OPERATIONS
+// ===================================================================
+
+// --------------------------------------------------- 
+// FILTER COLUMNS BY NAME
+// --------------------------------------------------- 
+
+export const FilterColumnsByName: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>PLS-DA</h1>
-    <p className={descriptionClass}>
-      Performs Partial Least Squares Discriminant Analysis (PLS-DA) for
-      classification.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="plsda-learning-data"
-          label={`Select Data Columns`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [searchPattern, setSearchPattern] = useState<string>('');
+  const [matchType, setMatchType] = useState<string>('contains');
+  const [caseSensitive, setCaseSensitive] = useState<boolean>(false);
+  const [previewColumns, setPreviewColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-      <div>
-        <SingleSelect
-          id="plsda-learning-group"
-          label={`Select Grouping Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  // Update preview when search parameters change
+  useEffect(() => {
+    if (!searchPattern) {
+      setPreviewColumns([]);
+      return;
+    }
+    
+    const pattern = caseSensitive ? searchPattern : searchPattern.toLowerCase();
+    const matched = availableColumns.filter(colName => {
+      const compareString = caseSensitive ? colName : colName.toLowerCase();
+      
+      switch (matchType) {
+        case 'contains':
+          return compareString.includes(pattern);
+        case 'starts':
+          return compareString.startsWith(pattern);
+        case 'ends':
+          return compareString.endsWith(pattern);
+        case 'exact':
+          return compareString === pattern;
+        default:
+          return false;
+      }
+    });
+    
+    setPreviewColumns(matched);
+  }, [searchPattern, matchType, caseSensitive, availableColumns]);
+
+  const runFilterByName = () => {
+    setError(null);
+    
+    if (!searchPattern) {
+      setError("Please enter a search pattern.");
+      onError?.();
+      return;
+    }
+    
+    if (previewColumns.length === 0) {
+      setError("No columns match the search pattern.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add only matched columns
+      previewColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add filter parameters as metadata
+      filteredData.set(`__filter_pattern__`, [searchPattern] as unknown as TableMatrix);
+      filteredData.set(`__match_type__`, [matchType] as unknown as TableMatrix);
+      filteredData.set(`__case_sensitive__`, [caseSensitive] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during filtering. Please check your data.");
+      console.error("Filter by name failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = !searchPattern || previewColumns.length === 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Filter Columns by Name</h1>
+      <p className={descriptionClass}>
+        Filter and select columns based on their names using pattern matching.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <label htmlFor="search-pattern" className={labelClass}>
+            Search Pattern
+          </label>
+          <input
+            type="text"
+            id="search-pattern"
+            value={searchPattern}
+            onChange={(e) => setSearchPattern(e.target.value)}
+            placeholder="Enter search text..."
+            className={inputClass}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Match Type</label>
+          <SingleSelect
+            id="match-type"
+            value={matchType}
+            onChange={(value) => setMatchType(value || 'contains')}
+            options={[
+              { value: 'contains', label: 'Contains' },
+              { value: 'starts', label: 'Starts with' },
+              { value: 'ends', label: 'Ends with' },
+              { value: 'exact', label: 'Exact match' }
+            ]}
+          />
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="case-sensitive"
+            checked={caseSensitive}
+            onChange={(e) => setCaseSensitive(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="case-sensitive" className="text-sm font-medium text-gray-700">
+            Case sensitive
+          </label>
+        </div>
+        
+        {searchPattern && (
+          <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+            <p className="text-sm font-medium text-blue-900 mb-2">
+              Preview: {previewColumns.length} column{previewColumns.length !== 1 ? 's' : ''} matched
+            </p>
+            {previewColumns.length > 0 && (
+              <div className="text-xs text-blue-800 max-h-32 overflow-y-auto">
+                {previewColumns.slice(0, 10).map((col, idx) => (
+                  <div key={idx}>• {col}</div>
+                ))}
+                {previewColumns.length > 10 && (
+                  <div className="text-blue-600 font-medium mt-1">
+                    ... and {previewColumns.length - 10} more
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runFilterByName}
+        >
+          Apply Filter
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run PLS-DA</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-TSNE LEARNING VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// FILTER COLUMNS BY TYPE
+// --------------------------------------------------- 
 
-export const TsneLearning = ({
-  dataColumns,
-  // actionId,
-}: {
+export const FilterColumnsByType: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>t-SNE</h1>
-    <p className={descriptionClass}>
-      Performs t-Distributed Stochastic Neighbor Embedding (t-SNE) for
-      visualization of high-dimensional data.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="tsne-learning-data"
-          label={`Select Data Columns`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [filterType, setFilterType] = useState<string>('numeric');
+  const [previewColumns, setPreviewColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  // Update preview when filter type changes
+  useEffect(() => {
+    const matched = availableColumns.filter(colName => {
+      const column = allColumnarData.get(colName);
+      if (!column) return false;
+      
+      switch (filterType) {
+        case 'numeric':
+          return column.every((val: any) => typeof val === 'number' && !isNaN(val));
+        case 'integer':
+          return column.every((val: any) => Number.isInteger(val));
+        case 'float':
+          return column.some((val: any) => !Number.isInteger(val) && !isNaN(val));
+        case 'positive':
+          return column.every((val: any) => val > 0);
+        case 'negative':
+          return column.every((val: any) => val < 0);
+        case 'nonzero':
+          return column.every((val: any) => val !== 0);
+        default:
+          return false;
+      }
+    });
+    
+    setPreviewColumns(matched);
+  }, [filterType, availableColumns, allColumnarData]);
+
+  const runFilterByType = () => {
+    setError(null);
+    
+    if (previewColumns.length === 0) {
+      setError(`No columns match the selected type: ${filterType}`);
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add only matched columns
+      previewColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add filter parameters as metadata
+      filteredData.set(`__filter_type__`, [filterType] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during filtering. Please check your data.");
+      console.error("Filter by type failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = previewColumns.length === 0;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Filter Columns by Type</h1>
+      <p className={descriptionClass}>
+        Filter and select columns based on their data type characteristics.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <label className={labelClass}>Data Type Filter</label>
+          <SingleSelect
+            id="filter-type"
+            value={filterType}
+            onChange={(value) => setFilterType(value || 'numeric')}
+            options={[
+              { value: 'numeric', label: 'All Numeric (no NaN values)' },
+              { value: 'integer', label: 'Integers Only' },
+              { value: 'float', label: 'Contains Decimal Values' },
+              { value: 'positive', label: 'All Positive Values' },
+              { value: 'negative', label: 'All Negative Values' },
+              { value: 'nonzero', label: 'No Zero Values' }
+            ]}
+          />
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900 mb-2">
+            Preview: {previewColumns.length} column{previewColumns.length !== 1 ? 's' : ''} matched
+          </p>
+          {previewColumns.length > 0 && (
+            <div className="text-xs text-blue-800 max-h-32 overflow-y-auto">
+              {previewColumns.slice(0, 10).map((col, idx) => (
+                <div key={idx}>• {col}</div>
+              ))}
+              {previewColumns.length > 10 && (
+                <div className="text-blue-600 font-medium mt-1">
+                  ... and {previewColumns.length - 10} more
+                </div>
+              )}
+            </div>
+          )}
+          {previewColumns.length === 0 && (
+            <p className="text-xs text-blue-700">No columns match this filter type.</p>
+          )}
+        </div>
       </div>
-      <div>
-        <label htmlFor="tsne-learning-perplexity" className={labelClass}>
-          Perplexity
-        </label>
-        <input
-          type="number"
-          id="tsne-learning-perplexity"
-          defaultValue="30"
-          className={inputClass}
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runFilterByType}
+        >
+          Apply Filter
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run t-SNE</button>
+  );
+};
+
+
+// ===================================================================
+// ROW ANNOTATION OPERATIONS
+// ===================================================================
+
+// --------------------------------------------------- 
+// ADD ROW
+// --------------------------------------------------- 
+
+export const AddRow: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [numRowsToAdd, setNumRowsToAdd] = useState<number>(1);
+  const [position, setPosition] = useState<string>('end');
+  const [defaultValue, setDefaultValue] = useState<number>(0);
+  const [error, setError] = useState<string | null>(null);
+
+  const runAddRow = () => {
+    setError(null);
+    
+    if (numRowsToAdd <= 0) {
+      setError("Number of rows must be greater than 0.");
+      onError?.();
+      return;
+    }
+    
+    if (numRowsToAdd > 1000) {
+      setError("Cannot add more than 1000 rows at once.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add all columns
+      availableColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add operation parameters as metadata
+      filteredData.set(`__num_rows__`, [numRowsToAdd] as unknown as TableMatrix);
+      filteredData.set(`__position__`, [position] as unknown as TableMatrix);
+      filteredData.set(`__default_value__`, [defaultValue] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while adding rows. Please check your data.");
+      console.error("Add row failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Add Rows</h1>
+      <p className={descriptionClass}>
+        Add new empty rows to your dataset at a specified position with default values.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <label htmlFor="num-rows" className={labelClass}>
+            Number of Rows to Add
+          </label>
+          <input
+            type="number"
+            id="num-rows"
+            min="1"
+            max="1000"
+            value={numRowsToAdd}
+            onChange={(e) => setNumRowsToAdd(parseInt(e.target.value) || 1)}
+            className={inputClass}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Insert Position</label>
+          <SingleSelect
+            id="position"
+            value={position}
+            onChange={(value) => setPosition(value || 'end')}
+            options={[
+              { value: 'start', label: 'At the beginning' },
+              { value: 'end', label: 'At the end' }
+            ]}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="default-value" className={labelClass}>
+            Default Value for New Rows
+          </label>
+          <input
+            type="number"
+            id="default-value"
+            value={defaultValue}
+            onChange={(e) => setDefaultValue(parseFloat(e.target.value) || 0)}
+            className={inputClass}
+            step="any"
+          />
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-xs text-blue-800">
+            <strong>Note:</strong> New rows will be added to all columns with the specified default value. 
+            You can edit the values after adding the rows.
+          </p>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runAddRow}
+        >
+          Add {numRowsToAdd} Row{numRowsToAdd !== 1 ? 's' : ''}
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+// --------------------------------------------------- 
+// RENAME ROW
+// --------------------------------------------------- 
+
+export const RenameRow: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, dataRows, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const totalRows = dataRows.length;
+  
+  const [rowIndex, setRowIndex] = useState<number>(0);
+  const [newName, setNewName] = useState<string>('');
+  const [currentName, setCurrentName] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (rowIndex >= 0 && rowIndex < dataRows.length) {
+      // Get the current row identifier (assuming there's an 'id' or 'name' property)
+      const row = dataRows[rowIndex];
+      const identifier = (row as any).id || (row as any).name || `Row ${rowIndex + 1}`;
+      setCurrentName(identifier);
+    }
+  }, [rowIndex, dataRows]);
+
+  const runRenameRow = () => {
+    setError(null);
+    
+    if (!newName.trim()) {
+      setError("Please enter a new name for the row.");
+      onError?.();
+      return;
+    }
+    
+    if (rowIndex < 0 || rowIndex >= totalRows) {
+      setError("Invalid row index.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add metadata for rename operation
+      filteredData.set(`__row_index__`, [rowIndex] as unknown as TableMatrix);
+      filteredData.set(`__new_name__`, [newName] as unknown as TableMatrix);
+      filteredData.set(`__old_name__`, [currentName] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while renaming the row. Please check your data.");
+      console.error("Rename row failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Rename Row</h1>
+      <p className={descriptionClass}>
+        Rename a specific row by updating its identifier or label.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <label htmlFor="row-index" className={labelClass}>
+            Row Index (0-based)
+          </label>
+          <input
+            type="number"
+            id="row-index"
+            min="0"
+            max={totalRows - 1}
+            value={rowIndex}
+            onChange={(e) => setRowIndex(parseInt(e.target.value) || 0)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Total rows: {totalRows}. Valid range: 0 to {totalRows - 1}
+          </p>
+        </div>
+        
+        {currentName && (
+          <div className="bg-gray-50 border border-gray-200 rounded-md p-3">
+            <p className="text-sm text-gray-700">
+              <strong>Current name:</strong> {currentName}
+            </p>
+          </div>
+        )}
+        
+        <div>
+          <label htmlFor="new-name" className={labelClass}>
+            New Row Name
+          </label>
+          <input
+            type="text"
+            id="new-name"
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Enter new row name..."
+            className={inputClass}
+          />
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!newName.trim()}
+          onClick={runRenameRow}
+        >
+          Rename Row
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------- 
+// DELETE ROW
+// --------------------------------------------------- 
+
+export const DeleteRow: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const totalRows = dataRows.length;
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [rowIndicesToDelete, setRowIndicesToDelete] = useState<string>('');
+  const [deleteMode, setDeleteMode] = useState<string>('indices');
+  const [confirmDelete, setConfirmDelete] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const parseRowIndices = (input: string): number[] => {
+    const indices: number[] = [];
+    const parts = input.split(',');
+    
+    parts.forEach(part => {
+      part = part.trim();
+      if (part.includes('-')) {
+        const [start, end] = part.split('-').map(s => parseInt(s.trim()));
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = start; i <= end; i++) {
+            if (i >= 0 && i < totalRows) {
+              indices.push(i);
+            }
+          }
+        }
+      } else {
+        const idx = parseInt(part);
+        if (!isNaN(idx) && idx >= 0 && idx < totalRows) {
+          indices.push(idx);
+        }
+      }
+    });
+    
+    return [...new Set(indices)].sort((a, b) => a - b);
+  };
+
+  const runDeleteRow = () => {
+    setError(null);
+    
+    if (!confirmDelete) {
+      setError("Please confirm that you want to delete the rows.");
+      onError?.();
+      return;
+    }
+    
+    if (!rowIndicesToDelete.trim()) {
+      setError("Please specify which rows to delete.");
+      onError?.();
+      return;
+    }
+    
+    const indices = parseRowIndices(rowIndicesToDelete);
+    
+    if (indices.length === 0) {
+      setError("No valid row indices specified.");
+      onError?.();
+      return;
+    }
+    
+    if (indices.length >= totalRows) {
+      setError("Cannot delete all rows. At least one row must remain.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add all columns
+      availableColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add deletion parameters as metadata
+      filteredData.set(`__row_indices__`, indices as unknown as TableMatrix);
+      filteredData.set(`__delete_count__`, [indices.length] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while deleting rows. Please check your data.");
+      console.error("Delete row failed:", err);
+      onError?.();
+    }
+  };
+
+  const previewIndices = rowIndicesToDelete ? parseRowIndices(rowIndicesToDelete) : [];
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Delete Rows</h1>
+      <p className={descriptionClass}>
+        Remove specific rows from your dataset by index.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <label htmlFor="row-indices" className={labelClass}>
+            Row Indices to Delete
+          </label>
+          <input
+            type="text"
+            id="row-indices"
+            value={rowIndicesToDelete}
+            onChange={(e) => setRowIndicesToDelete(e.target.value)}
+            placeholder="e.g., 0,5,10-15,20"
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Enter row indices (0-based) separated by commas. Use ranges like "10-15" for consecutive rows. 
+            Total rows: {totalRows}
+          </p>
+        </div>
+        
+        {previewIndices.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <p className="text-sm font-medium text-yellow-900 mb-1">
+              Preview: {previewIndices.length} row{previewIndices.length !== 1 ? 's' : ''} will be deleted
+            </p>
+            <p className="text-xs text-yellow-800">
+              Indices: {previewIndices.slice(0, 20).join(', ')}
+              {previewIndices.length > 20 && ` ... and ${previewIndices.length - 20} more`}
+            </p>
+          </div>
+        )}
+        
+        <div className="bg-red-50 border border-red-200 rounded-md p-3">
+          <p className="text-xs text-red-800">
+            <strong>Warning:</strong> This action cannot be undone. Deleted rows will be permanently removed from your dataset.
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="confirm-delete"
+            checked={confirmDelete}
+            onChange={(e) => setConfirmDelete(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="confirm-delete" className="text-sm font-medium text-gray-700">
+            I understand and want to delete these rows
+          </label>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!confirmDelete || previewIndices.length === 0}
+          onClick={runDeleteRow}
+        >
+          Delete {previewIndices.length} Row{previewIndices.length !== 1 ? 's' : ''}
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+// ===================================================================
+// MACHINE LEARNING / DIMENSIONALITY REDUCTION OPERATIONS
+// ===================================================================
+
+// --------------------------------------------------- 
+// PCA - Principal Component Analysis
+// --------------------------------------------------- 
+
+export const PcaLearning: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [numComponents, setNumComponents] = useState<number>(2);
+  const [error, setError] = useState<string | null>(null);
+
+  const runPCA = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 2) {
+      setError("PCA requires at least 2 features (columns).");
+      onError?.();
+      return;
+    }
+    
+    if (numComponents > columnsToUse.length) {
+      setError(`Number of components cannot exceed number of features (${columnsToUse.length}).`);
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set(`__num_components__`, [numComponents] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`PCA failed: ${errorMessage}`);
+      console.error("PCA failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>PCA - Principal Component Analysis</h1>
+      <p className={descriptionClass}>
+        Reduce dimensionality and identify the principal components that explain the most variance in your data.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="pca-columns"
+            label="Select Features (Optional)"
+            placeholder="Select columns for PCA (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available. Leave empty to use all features.`}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="num-components-pca" className={labelClass}>
+            Number of Principal Components
+          </label>
+          <input
+            type="number"
+            id="num-components-pca"
+            min="1"
+            max={Math.min(50, availableColumns.length)}
+            value={numComponents}
+            onChange={(e) => setNumComponents(parseInt(e.target.value) || 2)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Typically 2-3 components for visualization, more for analysis
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What PCA does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Identifies directions of maximum variance</li>
+            <li>• Reduces dimensionality while preserving information</li>
+            <li>• Useful for visualization and removing noise</li>
+            <li>• Outputs uncorrelated principal components</li>
+          </ul>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runPCA}
+        >
+          Run PCA
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------- 
+// PLS-DA - Partial Least Squares Discriminant Analysis
+// --------------------------------------------------- 
+
+export const PlsdaLearning: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [numComponents, setNumComponents] = useState<number>(2);
+  const [labelColumn, setLabelColumn] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  const runPLSDA = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 2) {
+      setError("PLS-DA requires at least 2 features (columns).");
+      onError?.();
+      return;
+    }
+    
+    if (!labelColumn) {
+      setError("Please select a column containing class labels.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Get labels from selected column
+      const labels = allColumnarData.get(labelColumn) || [];
+      
+      filteredData.set(`__num_components__`, [numComponents] as unknown as TableMatrix);
+      filteredData.set(`__labels__`, labels);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`PLS-DA failed: ${errorMessage}`);
+      console.error("PLS-DA failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>PLS-DA - Partial Least Squares Discriminant Analysis</h1>
+      <p className={descriptionClass}>
+        Supervised dimensionality reduction that maximizes separation between predefined classes.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="plsda-columns"
+            label="Select Features (Optional)"
+            placeholder="Select columns for PLS-DA (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available`}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Class Label Column</label>
+          <SingleSelect
+            id="label-column"
+            value={labelColumn}
+            onChange={(value) => setLabelColumn(value || '')}
+            options={availableColumns.map((col) => ({ value: col, label: col }))}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Column containing group/class labels (e.g., Control vs Treatment)
+          </p>
+        </div>
+        
+        <div>
+          <label htmlFor="num-components-plsda" className={labelClass}>
+            Number of Latent Variables
+          </label>
+          <input
+            type="number"
+            id="num-components-plsda"
+            min="1"
+            max={Math.min(20, availableColumns.length)}
+            value={numComponents}
+            onChange={(e) => setNumComponents(parseInt(e.target.value) || 2)}
+            className={inputClass}
+          />
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What PLS-DA does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Supervised method using class information</li>
+            <li>• Maximizes separation between groups</li>
+            <li>• Useful for classification and biomarker discovery</li>
+            <li>• Outputs latent variables (LVs) that discriminate classes</li>
+          </ul>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!labelColumn}
+          onClick={runPLSDA}
+        >
+          Run PLS-DA
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------- 
+// t-SNE - t-Distributed Stochastic Neighbor Embedding
+// --------------------------------------------------- 
+
+export const TsneLearning: React.FC<{
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [numDimensions, setNumDimensions] = useState<number>(2);
+  const [perplexity, setPerplexity] = useState<number>(30);
+  const [iterations, setIterations] = useState<number>(1000);
+  const [error, setError] = useState<string | null>(null);
+
+  const runTSNE = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 2) {
+      setError("t-SNE requires at least 2 features (columns).");
+      onError?.();
+      return;
+    }
+    
+    if (perplexity < 5 || perplexity > 50) {
+      setError("Perplexity should be between 5 and 50.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set(`__num_dimensions__`, [numDimensions] as unknown as TableMatrix);
+      filteredData.set(`__perplexity__`, [perplexity] as unknown as TableMatrix);
+      filteredData.set(`__iterations__`, [iterations] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`t-SNE failed: ${errorMessage}`);
+      console.error("t-SNE failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>t-SNE - t-Distributed Stochastic Neighbor Embedding</h1>
+      <p className={descriptionClass}>
+        Non-linear dimensionality reduction excellent for visualizing high-dimensional data and revealing clusters.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="tsne-columns"
+            label="Select Features (Optional)"
+            placeholder="Select columns for t-SNE (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available`}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="num-dimensions-tsne" className={labelClass}>
+            Number of Dimensions
+          </label>
+          <SingleSelect
+            id="num-dimensions-tsne"
+            value={String(numDimensions)}
+            onChange={(value) => setNumDimensions(parseInt(value || '2'))}
+            options={[
+              { value: '2', label: '2D (Recommended for visualization)' },
+              { value: '3', label: '3D' }
+            ]}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="perplexity-tsne" className={labelClass}>
+            Perplexity
+          </label>
+          <input
+            type="number"
+            id="perplexity-tsne"
+            min="5"
+            max="50"
+            value={perplexity}
+            onChange={(e) => setPerplexity(parseInt(e.target.value) || 30)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Typical range: 5-50. Higher values consider more neighbors (30 is standard)
+          </p>
+        </div>
+        
+        <div>
+          <label htmlFor="iterations-tsne" className={labelClass}>
+            Number of Iterations
+          </label>
+          <input
+            type="number"
+            id="iterations-tsne"
+            min="250"
+            max="5000"
+            step="250"
+            value={iterations}
+            onChange={(e) => setIterations(parseInt(e.target.value) || 1000)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            More iterations = better convergence but slower (1000 is typical)
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What t-SNE does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Non-linear dimensionality reduction</li>
+            <li>• Preserves local structure and reveals clusters</li>
+            <li>• Excellent for visualization of complex data</li>
+            <li>• Note: Distances between clusters may not be meaningful</li>
+          </ul>
+        </div>
+        
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+          <p className="text-xs text-yellow-800">
+            <strong>⚠️ Note:</strong> t-SNE can be computationally intensive for large datasets and may take several seconds to complete.
+          </p>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runTSNE}
+        >
+          Run t-SNE
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 /*---------------------------------------------------
 ADD PTM VALUES
