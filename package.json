@@ -14,7 +14,9 @@
     "preview": "vite preview",
     "migrate": "ts-node src/database/cli.ts migrate",
     "rollback": "ts-node src/database/cli.ts rollback [version]",
-    "migration:status": "ts-node src/database/cli.ts status"
+    "migration:status": "ts-node src/database/cli.ts status",
+    "postinstall": "electron-rebuild -f -w better-sqlite3",
+    "rebuild": "electron-rebuild"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
