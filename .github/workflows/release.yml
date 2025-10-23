@@ -62,9 +62,30 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  create-release:
+    name: Create GitHub Release
+    needs: version-bump
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+    steps:
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version-bump.outputs.new_tag }}
+          name: Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
+          prerelease: false
+          draft: false
+          body: |
+            Automated release for Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   build:
     name: Build Electron App
-    needs: version-bump
+    needs: [version-bump, create-release]
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -74,6 +95,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: ${{ needs.version-bump.outputs.new_tag }}
           fetch-depth: 0
 
       - name: Setup Node.js
@@ -94,63 +116,33 @@ jobs:
 
       - name: Install Python dependencies (Windows only)
         if: matrix.os == 'windows-latest'
-        run: |
-          pipenv install --dev
-          pipenv run pip list
+        run: pipenv install --dev
 
       - name: Fix lock file
         run: npm install --package-lock-only --ignore-scripts
 
-      # Install dependencies WITHOUT running postinstall
       - name: Install dependencies (skip postinstall)
         run: npm ci --ignore-scripts
 
-      # Now manually rebuild native modules (electron-rebuild is now available)
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
-      - name: Build app
+      - name: Build and publish app
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npm run build
+            npx electron-builder --mac --publish always
           else
-            npm run build:windows
+            npx electron-builder --win --publish always
           fi
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload artifacts
+      - name: Upload artifacts (fallback)
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: mission-icarus-${{ matrix.os }}
           path: |
-            dist/
-            dist-electron/
-            release/
-            *.dmg
-            *.exe
-            *.zip
+            release/**/*
           if-no-files-found: ignore
-
-  release:
-    name: Create GitHub Release
-    needs: [version-bump, build]
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: ./artifacts
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version-bump.outputs.new_tag }}
-          name: Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
-          prerelease: false
-          draft: false
-          files: artifacts/**/*
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
