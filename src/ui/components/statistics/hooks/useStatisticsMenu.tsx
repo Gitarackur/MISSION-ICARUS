@@ -55,12 +55,7 @@ import {
   GoAnalysis,
   PathwayAnalysis,
   HierarchicalClustering,
-  KmeansClustering,
-  PcaAnalysis,
-  ZScoreNorm,
-  LogTransform,
   QuantileNormalization,
-  MeanCentering,
   QcPlot,
   MissingValuesPlot,
   FTest,
@@ -75,6 +70,11 @@ import {
   Count,
   SortDescending,
   SortAscending,
+  PCAClustering,
+  KMeansClustering,
+  ZScoreNormalization,
+  TransformNormalization,
+  MeanCenteringNormalizationLog
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -767,57 +767,183 @@ case 'delete-row':
     break;
   
         break;
-      case "add-ptm":
-        content = <AddPtm dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "remove-ptm":
-        content = <RemovePtm dataColumns={dataColumns} actionId={actionId} />;
-        break;
+        case 'add-ptm':
+          content = (
+            <AddPtm 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+        case 'remove-ptm':
+          content = (
+            <RemovePtm 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
       case "go-analysis":
         content = <GoAnalysis />;
         break;
       case "pathway-analysis":
         content = <PathwayAnalysis />;
         break;
-      case "hierarchical-clustering":
-      case "hierarchical-clustering-run":
-        content = (
-          <HierarchicalClustering
-            dataColumns={dataColumns}
-            actionId={actionId}
-          />
-        );
-        break;
-      case "k-means-clustering":
-      case "k-means-clustering-run":
-        content = (
-          <KmeansClustering dataColumns={dataColumns} actionId={actionId} />
-        );
-        break;
-      case "pca-analysis":
-        content = <PcaAnalysis dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "z-score-norm":
-        content = <ZScoreNorm dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "log-transform":
-        content = (
-          <LogTransform dataColumns={dataColumns} actionId={actionId} />
-        );
-        break;
-      case "quantile-normalization":
-        content = (
-          <QuantileNormalization
-            dataColumns={dataColumns}
-            actionId={actionId}
-          />
-        );
-        break;
-      case "mean-centering":
-        content = (
-          <MeanCentering dataColumns={dataColumns} actionId={actionId} />
-        );
-        break;
+        case 'k-means-clustering':
+          content = (
+            <KMeansClustering 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+        case 'hierarchical-clustering':
+          content = (
+            <HierarchicalClustering 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+        case 'pca-analysis':
+          content = (
+            <PCAClustering 
+              dataColumns={dataColumns} 
+              actionId={actionId}
+              dataRows={dataRows}
+              allColumnarData={allColumnarData}
+              onSuccess={(result) => {
+                closeModal();
+                onSuccess?.(result);
+              }}
+              onError={() => {
+                closeModal();
+                onError?.();
+              }}
+            />
+          );
+          break;
+        
+          case 'z-score-norm':
+            content = (
+              <ZScoreNormalization 
+                dataColumns={dataColumns}
+                actionId={actionId}
+                dataRows={dataRows}
+                allColumnarData={allColumnarData}
+                onSuccess={(result) => {
+                  closeModal();
+                  onSuccess?.(result);
+                }}
+                onError={() => {
+                  closeModal();
+                  onError?.();
+                }}
+              />
+            );
+            break;
+          
+          case 'log-transform':
+            content = (
+              <TransformNormalization 
+                dataColumns={dataColumns}
+                actionId={actionId}
+                dataRows={dataRows}
+                allColumnarData={allColumnarData}
+                onSuccess={(result: StatisticalAnalysisResult) => {
+                  closeModal();
+                  onSuccess?.(result);
+                }}
+                onError={() => {
+                  closeModal();
+                  onError?.();
+                }}
+              />
+            );
+            break;
+          
+          case 'quantile-normalization':
+            content = (
+              <QuantileNormalization 
+                dataColumns={dataColumns}
+                actionId={actionId}
+                dataRows={dataRows}
+                allColumnarData={allColumnarData}
+                onSuccess={(result) => {
+                  closeModal();
+                  onSuccess?.(result);
+                }}
+                onError={() => {
+                  closeModal();
+                  onError?.();
+                }}
+              />
+            );
+            break;
+          
+          case 'mean-centering':
+            content = (
+              <MeanCenteringNormalizationLog 
+                dataColumns={dataColumns}
+                actionId={actionId}
+                dataRows={dataRows}
+                allColumnarData={allColumnarData}
+                onSuccess={(result: StatisticalAnalysisResult) => {
+                  closeModal();
+                  onSuccess?.(result);
+                }}
+                onError={() => {
+                  closeModal();
+                  onError?.();
+                }}
+              />
+            );
+            break;
+          
       case "qc-plot":
         content = <QcPlot />;
         break;

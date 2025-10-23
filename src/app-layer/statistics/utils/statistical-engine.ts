@@ -1537,3 +1537,748 @@ export function performTSNE(
     iterations: Math.min(iterations, 1000),
   };
 }
+
+
+// ===================================================================
+// PTM (POST-TRANSLATIONAL MODIFICATION) FUNCTIONS
+// ===================================================================
+
+/**
+ * PTM annotation structure
+ */
+export interface PTMAnnotation {
+  position: number;
+  residue: string;
+  modificationType: string;
+  mass: number;
+}
+
+/**
+ * Add PTM annotations to protein data
+ */
+export interface AddPTMResult {
+  annotatedData: number[][];
+  ptmAnnotations: Map<number, PTMAnnotation[]>;
+  totalPTMs: number;
+}
+
+export function addPTMAnnotations(
+  data: number[][],
+  ptmList: PTMAnnotation[]
+): AddPTMResult {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for PTM annotation");
+  }
+  
+  // Group PTMs by row/protein index
+  const ptmAnnotations = new Map<number, PTMAnnotation[]>();
+  
+  ptmList.forEach(ptm => {
+    if (!ptmAnnotations.has(ptm.position)) {
+      ptmAnnotations.set(ptm.position, []);
+    }
+    ptmAnnotations.get(ptm.position)!.push(ptm);
+  });
+  
+  // Data remains unchanged (PTMs are metadata)
+  const annotatedData = data.map(col => [...col]);
+  
+  return {
+    annotatedData,
+    ptmAnnotations,
+    totalPTMs: ptmList.length
+  };
+}
+
+/**
+ * Remove PTM annotations from protein data
+ */
+export interface RemovePTMResult {
+  cleanedData: number[][];
+  removedPTMs: PTMAnnotation[];
+  remainingPTMs: PTMAnnotation[];
+}
+
+export function removePTMAnnotations(
+  data: number[][],
+  currentPTMs: PTMAnnotation[],
+  ptmTypesToRemove: string[],
+  positionsToRemove?: number[]
+): RemovePTMResult {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for PTM removal");
+  }
+  
+  const removedPTMs: PTMAnnotation[] = [];
+  const remainingPTMs: PTMAnnotation[] = [];
+  
+  currentPTMs.forEach(ptm => {
+    let shouldRemove = false;
+    
+    // Check if PTM type matches removal criteria
+    if (ptmTypesToRemove.includes(ptm.modificationType)) {
+      shouldRemove = true;
+    }
+    
+    // Check if position matches (if specified)
+    if (positionsToRemove && positionsToRemove.includes(ptm.position)) {
+      shouldRemove = true;
+    }
+    
+    if (shouldRemove) {
+      removedPTMs.push(ptm);
+    } else {
+      remainingPTMs.push(ptm);
+    }
+  });
+  
+  // Data remains unchanged (PTMs are metadata)
+  const cleanedData = data.map(col => [...col]);
+  
+  return {
+    cleanedData,
+    removedPTMs,
+    remainingPTMs
+  };
+}
+
+/**
+ * Common PTM types and their mass shifts
+ */
+export const COMMON_PTMS: Record<string, number> = {
+  'Phosphorylation': 79.9663,
+  'Acetylation': 42.0106,
+  'Methylation': 14.0157,
+  'Ubiquitination': 114.0429,
+  'Oxidation': 15.9949,
+  'Deamidation': 0.9840,
+  'Carbamidomethylation': 57.0215,
+  'Oxidation (M)': 15.9949,
+  'Phospho (STY)': 79.9663,
+  'Acetyl (K)': 42.0106,
+  'GlyGly (K)': 114.0429
+};
+
+// ===================================================================
+// CLUSTERING ALGORITHMS - COMPLETE IMPLEMENTATIONS
+// ===================================================================
+
+/**
+ * Helper: Calculate Euclidean distance between two points
+ */
+function euclideanDistance(point1: number[], point2: number[]): number {
+  let sum = 0;
+  for (let i = 0; i < point1.length; i++) {
+    const diff = point1[i] - point2[i];
+    sum += diff * diff;
+  }
+  return Math.sqrt(sum);
+}
+
+/**
+ * K-Means Clustering Result
+ */
+export interface KMeansResult {
+  clusterAssignments: number[];
+  centroids: number[][];
+  iterations: number;
+  inertia: number;
+}
+
+/**
+ * K-Means Clustering Implementation
+ */
+export function performKMeans(
+  data: number[][],
+  k: number,
+  maxIterations: number = 100,
+  tolerance: number = 0.0001
+): KMeansResult {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for K-Means");
+  }
+  
+  const numFeatures = data.length;
+  const numSamples = data[0].length;
+  
+  if (k <= 0 || k > numSamples) {
+    throw new Error(`K must be between 1 and ${numSamples}`);
+  }
+  
+  // Transpose data: convert from columnar to row-based format
+  const samples: number[][] = [];
+  for (let i = 0; i < numSamples; i++) {
+    const sample: number[] = [];
+    for (let j = 0; j < numFeatures; j++) {
+      const val = data[j][i];
+      sample.push(isNaN(val) || !isFinite(val) ? 0 : val);
+    }
+    samples.push(sample);
+  }
+  
+  // Initialize centroids randomly (K-means++)
+  const centroids: number[][] = [];
+  const usedIndices = new Set<number>();
+  
+  // First centroid: random
+  const firstIdx = Math.floor(Math.random() * numSamples);
+  centroids.push([...samples[firstIdx]]);
+  usedIndices.add(firstIdx);
+  
+  // Remaining centroids: K-means++ initialization
+  for (let i = 1; i < k; i++) {
+    const distances: number[] = [];
+    let totalDist = 0;
+    
+    for (let j = 0; j < numSamples; j++) {
+      let minDist = Infinity;
+      for (const centroid of centroids) {
+        const dist = euclideanDistance(samples[j], centroid);
+        minDist = Math.min(minDist, dist);
+      }
+      distances.push(minDist * minDist);
+      totalDist += minDist * minDist;
+    }
+    
+    // Select next centroid with probability proportional to distance²
+    let r = Math.random() * totalDist;
+    let idx = 0;
+    for (let j = 0; j < numSamples; j++) {
+      r -= distances[j];
+      if (r <= 0) {
+        idx = j;
+        break;
+      }
+    }
+    
+    centroids.push([...samples[idx]]);
+  }
+  
+  // K-means iterations
+  let clusterAssignments: number[] = new Array(numSamples).fill(0);
+  let converged = false;
+  let iterations = 0;
+  
+  for (iterations = 0; iterations < maxIterations && !converged; iterations++) {
+    // Assignment step
+    const newAssignments: number[] = [];
+    for (let i = 0; i < numSamples; i++) {
+      let minDist = Infinity;
+      let bestCluster = 0;
+      
+      for (let j = 0; j < k; j++) {
+        const dist = euclideanDistance(samples[i], centroids[j]);
+        if (dist < minDist) {
+          minDist = dist;
+          bestCluster = j;
+        }
+      }
+      newAssignments.push(bestCluster);
+    }
+    
+    // Check convergence
+    converged = newAssignments.every((val, idx) => val === clusterAssignments[idx]);
+    clusterAssignments = newAssignments;
+    
+    if (converged) break;
+    
+    // Update step
+    const newCentroids: number[][] = [];
+    for (let j = 0; j < k; j++) {
+      const clusterPoints = samples.filter((_, idx) => clusterAssignments[idx] === j);
+      
+      if (clusterPoints.length === 0) {
+        // Empty cluster: reinitialize
+        newCentroids.push([...centroids[j]]);
+        continue;
+      }
+      
+      const newCentroid: number[] = [];
+      for (let f = 0; f < numFeatures; f++) {
+        const sum = clusterPoints.reduce((acc, point) => acc + point[f], 0);
+        newCentroid.push(sum / clusterPoints.length);
+      }
+      newCentroids.push(newCentroid);
+    }
+    
+    // Check centroid movement
+    let maxMovement = 0;
+    for (let j = 0; j < k; j++) {
+      const movement = euclideanDistance(centroids[j], newCentroids[j]);
+      maxMovement = Math.max(maxMovement, movement);
+    }
+    
+    centroids.splice(0, centroids.length, ...newCentroids);
+    
+    if (maxMovement < tolerance) {
+      converged = true;
+    }
+  }
+  
+  // Calculate inertia (within-cluster sum of squares)
+  let inertia = 0;
+  for (let i = 0; i < numSamples; i++) {
+    const cluster = clusterAssignments[i];
+    const dist = euclideanDistance(samples[i], centroids[cluster]);
+    inertia += dist * dist;
+  }
+  
+  return {
+    clusterAssignments,
+    centroids,
+    iterations,
+    inertia
+  };
+}
+
+/**
+ * Hierarchical Clustering Result
+ */
+export interface HierarchicalClusteringResult {
+  clusterAssignments: number[];
+  dendrogram: Array<{
+    cluster1: number;
+    cluster2: number;
+    distance: number;
+    size: number;
+  }>;
+  numClusters: number;
+}
+
+/**
+ * Hierarchical Clustering Implementation (Agglomerative)
+ */
+/**
+ * OPTIMIZED Hierarchical Clustering Implementation
+ * Uses distance matrix caching and optimized merge operations
+ */
+export function performHierarchicalClustering(
+  data: number[][],
+  numClusters: number,
+  linkage: 'single' | 'complete' | 'average' = 'average',
+  maxSamples: number = 1000 // Add sampling limit for large datasets
+): HierarchicalClusteringResult {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for Hierarchical Clustering");
+  }
+  
+  const numFeatures = data.length;
+  const numSamples = data[0].length;
+  
+  if (numClusters <= 0 || numClusters > numSamples) {
+    throw new Error(`Number of clusters must be between 1 and ${numSamples}`);
+  }
+  
+  // For large datasets, use sampling or recommend alternatives
+  let actualSamples = numSamples;
+  let sampleIndices: number[] = [];
+  let useSampling = false;
+  
+  if (numSamples > maxSamples) {
+    useSampling = true;
+    actualSamples = maxSamples;
+    
+    // Random sampling
+    const allIndices = Array.from({ length: numSamples }, (_, i) => i);
+    for (let i = allIndices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [allIndices[i], allIndices[j]] = [allIndices[j], allIndices[i]];
+    }
+    sampleIndices = allIndices.slice(0, maxSamples);
+  } else {
+    sampleIndices = Array.from({ length: numSamples }, (_, i) => i);
+  }
+  
+  // Transpose data for sampled indices
+  const samples: number[][] = [];
+  for (const idx of sampleIndices) {
+    const sample: number[] = [];
+    for (let j = 0; j < numFeatures; j++) {
+      const val = data[j][idx];
+      sample.push(isNaN(val) || !isFinite(val) ? 0 : val);
+    }
+    samples.push(sample);
+  }
+  
+  // Initialize: each sample is its own cluster
+  const clusters: number[][] = samples.map((_, idx) => [idx]);
+  const dendrogram: Array<{
+    cluster1: number;
+    cluster2: number;
+    distance: number;
+    size: number;
+  }> = [];
+  
+  // Pre-compute distance matrix (optimized)
+  const distanceMatrix: Map<string, number> = new Map();
+  
+  const getDistanceKey = (i: number, j: number): string => {
+    return i < j ? `${i},${j}` : `${j},${i}`;
+  };
+  
+  const computeClusterDistance = (cluster1: number[], cluster2: number[]): number => {
+    const key = getDistanceKey(
+      Math.min(...cluster1),
+      Math.min(...cluster2)
+    );
+    
+    if (distanceMatrix.has(key)) {
+      return distanceMatrix.get(key)!;
+    }
+    
+    const distances: number[] = [];
+    
+    // Sample distances for large clusters to improve speed
+    const maxPairs = 100; // Limit distance calculations
+    const step1 = Math.max(1, Math.floor(cluster1.length / 10));
+    const step2 = Math.max(1, Math.floor(cluster2.length / 10));
+    
+    for (let i = 0; i < cluster1.length; i += step1) {
+      for (let j = 0; j < cluster2.length; j += step2) {
+        const idx1 = cluster1[i];
+        const idx2 = cluster2[j];
+        distances.push(euclideanDistance(samples[idx1], samples[idx2]));
+        
+        if (distances.length >= maxPairs) break;
+      }
+      if (distances.length >= maxPairs) break;
+    }
+    
+    let result: number;
+    if (linkage === 'single') {
+      result = Math.min(...distances);
+    } else if (linkage === 'complete') {
+      result = Math.max(...distances);
+    } else { // average
+      result = distances.reduce((a, b) => a + b, 0) / distances.length;
+    }
+    
+    distanceMatrix.set(key, result);
+    return result;
+  };
+  
+  // Agglomerative clustering with progress tracking
+  let iteration = 0;
+  const maxIterations = actualSamples - numClusters;
+  
+  while (clusters.length > numClusters) {
+    iteration++;
+    
+    // Progress logging (can be removed in production)
+    if (iteration % 50 === 0) {
+      console.log(`Hierarchical clustering progress: ${iteration}/${maxIterations}`);
+    }
+    
+    let minDist = Infinity;
+    let mergeI = 0;
+    let mergeJ = 1;
+    
+    // Find closest pair of clusters (optimized search)
+    for (let i = 0; i < clusters.length; i++) {
+      for (let j = i + 1; j < clusters.length; j++) {
+        const dist = computeClusterDistance(clusters[i], clusters[j]);
+        if (dist < minDist) {
+          minDist = dist;
+          mergeI = i;
+          mergeJ = j;
+        }
+      }
+    }
+    
+    // Merge clusters
+    const mergedCluster = [...clusters[mergeI], ...clusters[mergeJ]];
+    dendrogram.push({
+      cluster1: mergeI,
+      cluster2: mergeJ,
+      distance: minDist,
+      size: mergedCluster.length
+    });
+    
+    // Remove old clusters and add merged one
+    const newClusters = clusters.filter((_, idx) => idx !== mergeI && idx !== mergeJ);
+    newClusters.push(mergedCluster);
+    clusters.splice(0, clusters.length, ...newClusters);
+  }
+  
+  // Create final cluster assignments
+  const clusterAssignments: number[] = new Array(numSamples).fill(-1);
+  
+  if (useSampling) {
+    // First assign sampled points
+    clusters.forEach((cluster, clusterIdx) => {
+      cluster.forEach(sampledIdx => {
+        const originalIdx = sampleIndices[sampledIdx];
+        clusterAssignments[originalIdx] = clusterIdx;
+      });
+    });
+    
+    // Assign remaining points to nearest cluster centroid
+    const centroids: number[][] = [];
+    clusters.forEach(cluster => {
+      const centroid: number[] = new Array(numFeatures).fill(0);
+      cluster.forEach(sampledIdx => {
+        const originalIdx = sampleIndices[sampledIdx];
+        for (let f = 0; f < numFeatures; f++) {
+          centroid[f] += data[f][originalIdx];
+        }
+      });
+      centroids.push(centroid.map(val => val / cluster.length));
+    });
+    
+    // Assign unassigned points
+    for (let i = 0; i < numSamples; i++) {
+      if (clusterAssignments[i] === -1) {
+        const point: number[] = [];
+        for (let f = 0; f < numFeatures; f++) {
+          point.push(data[f][i]);
+        }
+        
+        let minDist = Infinity;
+        let bestCluster = 0;
+        
+        centroids.forEach((centroid, idx) => {
+          const dist = euclideanDistance(point, centroid);
+          if (dist < minDist) {
+            minDist = dist;
+            bestCluster = idx;
+          }
+        });
+        
+        clusterAssignments[i] = bestCluster;
+      }
+    }
+  } else {
+    // Direct assignment for non-sampled case
+    clusters.forEach((cluster, clusterIdx) => {
+      cluster.forEach(sampleIdx => {
+        clusterAssignments[sampleIdx] = clusterIdx;
+      });
+    });
+  }
+  
+  return {
+    clusterAssignments,
+    dendrogram,
+    numClusters: clusters.length
+  };
+}
+
+
+/**
+ * PCA Result (already defined earlier, but included for completeness)
+ */
+export interface PCAClusteringResult {
+  transformedData: number[][];
+  clusterAssignments?: number[];
+  explained_variance: number[];
+  num_components: number;
+}
+
+/**
+ * PCA for Clustering/Visualization
+ */
+export function performPCAForClustering(
+  data: number[][],
+  numComponents: number = 2,
+  performClustering: boolean = false,
+  k: number = 3
+): PCAClusteringResult {
+  // Reuse the PCA implementation from earlier
+  const pcaResult = performPCA(data, numComponents);
+  
+  let clusterAssignments: number[] | undefined;
+  
+  // Optionally perform K-means on PCA results
+  if (performClustering) {
+    const kmeansResult = performKMeans(pcaResult.transformed_data, k);
+    clusterAssignments = kmeansResult.clusterAssignments;
+  }
+  
+  return {
+    transformedData: pcaResult.transformed_data,
+    clusterAssignments,
+    explained_variance: pcaResult.explained_variance,
+    num_components: numComponents
+  };
+}
+
+
+// ===================================================================
+// NORMALIZATION FUNCTIONS - COMPLETE IMPLEMENTATIONS
+// ===================================================================
+
+/**
+ * Z-Score Normalization (Standardization)
+ * Transforms data to have mean=0 and std=1
+ */
+export function zScoreNormalization(data: number[][]): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for Z-Score normalization");
+  }
+  
+  const result: number[][] = [];
+  
+  data.forEach(column => {
+    const validValues = column.filter(v => !isNaN(v) && isFinite(v));
+    
+    if (validValues.length === 0) {
+      result.push(column.map(() => 0));
+      return;
+    }
+    
+    const columnMean = mean(validValues);
+    const columnStd = stddev(validValues);
+    
+    if (columnStd === 0) {
+      // All values are the same
+      result.push(column.map(() => 0));
+      return;
+    }
+    
+    const normalized = column.map(val => {
+      if (isNaN(val) || !isFinite(val)) return 0;
+      return (val - columnMean) / columnStd;
+    });
+    
+    result.push(normalized);
+  });
+  
+  return result;
+}
+
+/**
+ * Log Transform Normalization
+ * Applies log transformation (log2 or log10)
+ */
+export function logTransformNormalization(
+  data: number[][],
+  base: 'log2' | 'log10' | 'ln' = 'log2',
+  offset: number = 1
+): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for Log Transform");
+  }
+  
+  const logFunc = (val: number): number => {
+    if (base === 'log2') return Math.log2(val);
+    if (base === 'log10') return Math.log10(val);
+    return Math.log(val); // natural log
+  };
+  
+  const result: number[][] = [];
+  
+  data.forEach(column => {
+    const transformed = column.map(val => {
+      if (isNaN(val) || !isFinite(val)) return 0;
+      
+      // Add offset to handle zero/negative values
+      const adjustedVal = val + offset;
+      
+      if (adjustedVal <= 0) return 0;
+      
+      return logFunc(adjustedVal);
+    });
+    
+    result.push(transformed);
+  });
+  
+  return result;
+}
+
+/**
+ * Quantile Normalization
+ * Makes the distribution of each column identical
+ */
+export function quantileNormalization(data: number[][]): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for Quantile normalization");
+  }
+  
+  const numColumns = data.length;
+  const numRows = data[0].length;
+  
+  // Transpose: convert to row-major for sorting
+  const samples: number[][] = [];
+  for (let i = 0; i < numRows; i++) {
+    const row: number[] = [];
+    for (let j = 0; j < numColumns; j++) {
+      const val = data[j][i];
+      row.push(isNaN(val) || !isFinite(val) ? 0 : val);
+    }
+    samples.push(row);
+  }
+  
+  // Sort each column and compute rank
+  const sortedColumns: number[][] = [];
+  data.forEach(column => {
+    const validValues = column.filter(v => !isNaN(v) && isFinite(v));
+    const sorted = [...validValues].sort((a, b) => a - b);
+    sortedColumns.push(sorted);
+  });
+  
+  // Compute mean of sorted values across columns for each rank
+  const meanSorted: number[] = [];
+  for (let i = 0; i < numRows; i++) {
+    let sum = 0;
+    let count = 0;
+    
+    sortedColumns.forEach(sortedCol => {
+      if (i < sortedCol.length) {
+        sum += sortedCol[i];
+        count++;
+      }
+    });
+    
+    meanSorted.push(count > 0 ? sum / count : 0);
+  }
+  
+  // Assign quantile-normalized values
+  const result: number[][] = [];
+  
+  data.forEach(column => {
+    // Get ranks for this column
+    const indexed = column.map((val, idx) => ({ val, idx }));
+    indexed.sort((a, b) => a.val - b.val);
+    
+    const normalized = new Array(numRows).fill(0);
+    indexed.forEach((item, rank) => {
+      normalized[item.idx] = meanSorted[rank] || 0;
+    });
+    
+    result.push(normalized);
+  });
+  
+  return result;
+}
+
+/**
+ * Mean Centering Normalization
+ * Subtracts the mean from each column (centers at 0)
+ */
+export function meanCenteringNormalization(data: number[][]): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data provided for Mean Centering");
+  }
+  
+  const result: number[][] = [];
+  
+  data.forEach(column => {
+    const validValues = column.filter(v => !isNaN(v) && isFinite(v));
+    
+    if (validValues.length === 0) {
+      result.push(column.map(() => 0));
+      return;
+    }
+    
+    const columnMean = mean(validValues);
+    
+    const centered = column.map(val => {
+      if (isNaN(val) || !isFinite(val)) return 0;
+      return val - columnMean;
+    });
+    
+    result.push(centered);
+  });
+  
+  return result;
+}

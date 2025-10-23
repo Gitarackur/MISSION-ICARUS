@@ -1,5 +1,6 @@
 import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { useStatisticalAnalysis } from "@/app-layer/statistics/hooks/useStatistics";
+import { COMMON_PTMS } from "@/app-layer/statistics/utils/statistical-engine";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import {
   StatisticalAction,
@@ -5070,112 +5071,450 @@ export const TsneLearning: React.FC<{
 };
 
 
-/*---------------------------------------------------
-ADD PTM VALUES
-----------------------------------------------------*/
+// ===================================================================
+// PTM MODIFICATION OPERATIONS
+// ===================================================================
 
-export const AddPtm = ({
-  dataColumns,
-  // actionId,
-}: {
+// --------------------------------------------------- 
+// ADD PTM
+// --------------------------------------------------- 
+
+export const AddPtm: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Add PTM</h1>
-    <p className={descriptionClass}>
-      Adds a post-translational modification (PTM) to a peptide sequence.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="add-ptm-column"
-          label={`Select Peptide Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const totalRows = dataRows.length;
+  
+  const [ptmType, setPtmType] = useState<string>('Phosphorylation');
+  const [residueType, setResidueType] = useState<string>('S');
+  
+  // eslint-disable-next-line no-empty-pattern
+  const [] = useState<string>('');
+  const [selectedRows, setSelectedRows] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+
+  const ptmOptions = [
+    { value: 'Phosphorylation', label: 'Phosphorylation (+79.97 Da)', residues: ['S', 'T', 'Y'] },
+    { value: 'Acetylation', label: 'Acetylation (+42.01 Da)', residues: ['K'] },
+    { value: 'Methylation', label: 'Methylation (+14.02 Da)', residues: ['K', 'R'] },
+    { value: 'Ubiquitination', label: 'Ubiquitination (+114.04 Da)', residues: ['K'] },
+    { value: 'Oxidation', label: 'Oxidation (+15.99 Da)', residues: ['M', 'W'] },
+    { value: 'Deamidation', label: 'Deamidation (+0.98 Da)', residues: ['N', 'Q'] },
+    { value: 'Carbamidomethylation', label: 'Carbamidomethylation (+57.02 Da)', residues: ['C'] }
+  ];
+
+  const currentPTMOption = ptmOptions.find(opt => opt.value === ptmType);
+
+  const parseRowIndices = (input: string): number[] => {
+    if (!input.trim()) return [];
+    
+    const indices: number[] = [];
+    const parts = input.split(',');
+    
+    parts.forEach(part => {
+      part = part.trim();
+      if (part.includes('-')) {
+        const [start, end] = part.split('-').map(s => parseInt(s.trim()));
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = start; i <= Math.min(end, totalRows - 1); i++) {
+            if (i >= 0) indices.push(i);
+          }
+        }
+      } else {
+        const idx = parseInt(part);
+        if (!isNaN(idx) && idx >= 0 && idx < totalRows) {
+          indices.push(idx);
+        }
+      }
+    });
+    
+    return [...new Set(indices)].sort((a, b) => a - b);
+  };
+
+  const runAddPTM = () => {
+    setError(null);
+    
+    const positions = parseRowIndices(selectedRows);
+    
+    if (positions.length === 0) {
+      setError("Please select at least one protein/row to annotate with PTM.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add all columns
+      const availableColumns = Array.from(allColumnarData.keys()).filter(col => !col.startsWith('__'));
+      availableColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add PTM parameters
+      filteredData.set(`__ptm_type__`, [ptmType] as unknown as TableMatrix);
+      filteredData.set(`__ptm_positions__`, positions as unknown as TableMatrix);
+      filteredData.set(`__ptm_residue__`, [residueType] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Failed to add PTM: ${errorMessage}`);
+      console.error("Add PTM failed:", err);
+      onError?.();
+    }
+  };
+
+  const parsedPositions = parseRowIndices(selectedRows);
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Add PTM - Post-Translational Modification</h1>
+      <p className={descriptionClass}>
+        Annotate proteins with post-translational modifications (phosphorylation, acetylation, etc.).
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm text-blue-800">
+            <strong>Dataset:</strong> {totalRows} proteins available for PTM annotation
+          </p>
+        </div>
+        
+        <div>
+          <label className={labelClass}>PTM Type</label>
+          <SingleSelect
+            id="ptm-type"
+            value={ptmType}
+            onChange={(value) => {
+              setPtmType(value || 'Phosphorylation');
+              const option = ptmOptions.find(opt => opt.value === value);
+              if (option && option.residues.length > 0) {
+                setResidueType(option.residues[0]);
+              }
+            }}
+            options={ptmOptions.map(opt => ({ value: opt.value, label: opt.label }))}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Target Residue</label>
+          <SingleSelect
+            id="residue-type"
+            value={residueType}
+            onChange={(value) => setResidueType(value || 'S')}
+            options={(currentPTMOption?.residues || ['S']).map(res => ({ 
+              value: res, 
+              label: res 
+            }))}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Common target residues for {ptmType}
+          </p>
+        </div>
+        
+        <div>
+          <label htmlFor="selected-rows-ptm" className={labelClass}>
+            Select Proteins/Rows
+          </label>
+          <input
+            type="text"
+            id="selected-rows-ptm"
+            value={selectedRows}
+            onChange={(e) => setSelectedRows(e.target.value)}
+            placeholder="e.g., 0,5,10-15,20"
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Enter row indices (0-based) separated by commas. Use ranges like "10-15".
+            Valid range: 0 to {totalRows - 1}
+          </p>
+        </div>
+        
+        {parsedPositions.length > 0 && (
+          <div className="bg-green-50 border border-green-200 rounded-md p-3">
+            <p className="text-sm font-medium text-green-900">
+              Preview: Adding {ptmType} to {parsedPositions.length} protein{parsedPositions.length !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-green-800 mt-1">
+              Rows: {parsedPositions.slice(0, 20).join(', ')}
+              {parsedPositions.length > 20 && ` ... and ${parsedPositions.length - 20} more`}
+            </p>
+            <p className="text-xs text-green-800">
+              Mass shift: +{COMMON_PTMS[ptmType]?.toFixed(2) || '0.00'} Da at residue {residueType}
+            </p>
+          </div>
+        )}
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-xs text-blue-800">
+            <strong>Note:</strong> PTM annotations are stored as metadata and can be used for filtering, 
+            analysis, and visualization. The underlying data values remain unchanged.
+          </p>
+        </div>
       </div>
-      <div>
-        <SingleSelect
-          id="add-ptm-type"
-          label={`Select PTM Type`}
-          placeholder="Select PTM type "
-          options={["Phosphorylation", "Acetylation", "Methylation"].map(
-            (curr) => ({ value: curr, label: curr, disabled: false })
-          )}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the PTM type you want to include in your analysis"
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={parsedPositions.length === 0}
+          onClick={runAddPTM}
+        >
+          Add PTM to {parsedPositions.length} Protein{parsedPositions.length !== 1 ? 's' : ''}
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Add PTM</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-REMOVE PTM VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// REMOVE PTM
+// --------------------------------------------------- 
 
-export const RemovePtm = ({
-  dataColumns,
-  // actionId,
-}: {
+export const RemovePtm: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Remove PTM</h1>
-    <p className={descriptionClass}>
-      Remows a post-translational modification (PTM) from a peptide sequence.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="remove-ptm-column"
-          label={`Select Peptide Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const totalRows = dataRows.length;
+  
+  const [removalMode, setRemovalMode] = useState<string>('by-type');
+  const [selectedPTMTypes, setSelectedPTMTypes] = useState<string[]>([]);
+  const [positionInput, setPositionInput] = useState<string>('');
+  const [confirmRemoval, setConfirmRemoval] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ptmTypeOptions = [
+    'Phosphorylation',
+    'Acetylation',
+    'Methylation',
+    'Ubiquitination',
+    'Oxidation',
+    'Deamidation',
+    'Carbamidomethylation'
+  ];
+
+  const parseRowIndices = (input: string): number[] => {
+    if (!input.trim()) return [];
+    
+    const indices: number[] = [];
+    const parts = input.split(',');
+    
+    parts.forEach(part => {
+      part = part.trim();
+      if (part.includes('-')) {
+        const [start, end] = part.split('-').map(s => parseInt(s.trim()));
+        if (!isNaN(start) && !isNaN(end)) {
+          for (let i = start; i <= Math.min(end, totalRows - 1); i++) {
+            if (i >= 0) indices.push(i);
+          }
+        }
+      } else {
+        const idx = parseInt(part);
+        if (!isNaN(idx) && idx >= 0 && idx < totalRows) {
+          indices.push(idx);
+        }
+      }
+    });
+    
+    return [...new Set(indices)].sort((a, b) => a - b);
+  };
+
+  const runRemovePTM = () => {
+    setError(null);
+    
+    if (!confirmRemoval) {
+      setError("Please confirm PTM removal by checking the checkbox.");
+      onError?.();
+      return;
+    }
+    
+    if (removalMode === 'by-type' && selectedPTMTypes.length === 0) {
+      setError("Please select at least one PTM type to remove.");
+      onError?.();
+      return;
+    }
+    
+    if (removalMode === 'by-position' && !positionInput.trim()) {
+      setError("Please specify positions for PTM removal.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      // Add all columns
+      const availableColumns = Array.from(allColumnarData.keys()).filter(col => !col.startsWith('__'));
+      availableColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      // Add removal parameters
+      if (removalMode === 'by-type') {
+        filteredData.set(`__remove_ptm_types__`, selectedPTMTypes as unknown as TableMatrix);
+      } else if (removalMode === 'by-position') {
+        const positions = parseRowIndices(positionInput);
+        filteredData.set(`__remove_positions__`, positions as unknown as TableMatrix);
+      } else if (removalMode === 'all') {
+        filteredData.set(`__remove_ptm_types__`, ptmTypeOptions as unknown as TableMatrix);
+      }
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Failed to remove PTM: ${errorMessage}`);
+      console.error("Remove PTM failed:", err);
+      onError?.();
+    }
+  };
+
+  const parsedPositions = removalMode === 'by-position' ? parseRowIndices(positionInput) : [];
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Remove PTM - Post-Translational Modification</h1>
+      <p className={descriptionClass}>
+        Remove PTM annotations from proteins by type, position, or remove all modifications.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm text-blue-800">
+            <strong>Dataset:</strong> {totalRows} proteins
+          </p>
+        </div>
+        
+        <div>
+          <label className={labelClass}>Removal Mode</label>
+          <SingleSelect
+            id="removal-mode"
+            value={removalMode}
+            onChange={(value) => setRemovalMode(value || 'by-type')}
+            options={[
+              { value: 'by-type', label: 'Remove by PTM Type' },
+              { value: 'by-position', label: 'Remove by Position' },
+              { value: 'all', label: 'Remove All PTMs' }
+            ]}
+          />
+        </div>
+        
+        {removalMode === 'by-type' && (
+          <div>
+            <MultiSelect
+              id="ptm-types-remove"
+              label="Select PTM Types to Remove"
+              placeholder="Select PTM types..."
+              options={ptmTypeOptions.map((type) => ({ 
+                value: type, 
+                label: `${type} (+${COMMON_PTMS[type]?.toFixed(2) || '0.00'} Da)`,
+                disabled: false 
+              }))}
+              value={selectedPTMTypes}
+              onChange={setSelectedPTMTypes}
+              helperText="Select one or more PTM types to remove from all proteins"
+            />
+          </div>
+        )}
+        
+        {removalMode === 'by-position' && (
+          <div>
+            <label htmlFor="position-input-remove" className={labelClass}>
+              Protein/Row Positions
+            </label>
+            <input
+              type="text"
+              id="position-input-remove"
+              value={positionInput}
+              onChange={(e) => setPositionInput(e.target.value)}
+              placeholder="e.g., 0,5,10-15,20"
+              className={inputClass}
+            />
+            <p className="text-xs text-gray-500 mt-1">
+              Remove all PTMs from these specific rows. Valid range: 0 to {totalRows - 1}
+            </p>
+          </div>
+        )}
+        
+        {removalMode === 'by-type' && selectedPTMTypes.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <p className="text-sm font-medium text-yellow-900">
+              Preview: Removing {selectedPTMTypes.length} PTM type{selectedPTMTypes.length !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-yellow-800 mt-1">
+              Types: {selectedPTMTypes.join(', ')}
+            </p>
+          </div>
+        )}
+        
+        {removalMode === 'by-position' && parsedPositions.length > 0 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <p className="text-sm font-medium text-yellow-900">
+              Preview: Removing PTMs from {parsedPositions.length} protein{parsedPositions.length !== 1 ? 's' : ''}
+            </p>
+            <p className="text-xs text-yellow-800 mt-1">
+              Rows: {parsedPositions.slice(0, 20).join(', ')}
+              {parsedPositions.length > 20 && ` ... and ${parsedPositions.length - 20} more`}
+            </p>
+          </div>
+        )}
+        
+        {removalMode === 'all' && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3">
+            <p className="text-sm font-bold text-red-900">
+              ⚠️ Warning: This will remove ALL PTM annotations from all proteins!
+            </p>
+          </div>
+        )}
+        
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="confirm-remove-ptm"
+            checked={confirmRemoval}
+            onChange={(e) => setConfirmRemoval(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="confirm-remove-ptm" className="text-sm font-medium text-gray-700">
+            I confirm I want to remove these PTM annotations
+          </label>
+        </div>
       </div>
-      <div>
-        <SingleSelect
-          id="add-ptm-type"
-          label={`Select PTM Type`}
-          placeholder="Select PTM type "
-          options={[
-            "All PTMs",
-            "Phosphorylation",
-            "Acetylation",
-            "Methylation",
-          ].map((curr) => ({ value: curr, label: curr, disabled: false }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the PTM type you want to delete in your analysis"
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!confirmRemoval || (removalMode === 'by-type' && selectedPTMTypes.length === 0)}
+          onClick={runRemovePTM}
+        >
+          Remove PTM Annotations
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Remove PTM</button>
-    </div>
-  </div>
-);
+  );
+};
+
 
 /*---------------------------------------------------
 GO ANALYSIS VALUES
@@ -5261,313 +5600,934 @@ export const PathwayAnalysis = () => (
   </div>
 );
 
-/*---------------------------------------------------
-HIERACHIAL CLUSTERING VALUES
-----------------------------------------------------*/
+// ===================================================================
+// CLUSTERING / PCA OPERATIONS
+// ===================================================================
 
-export const HierarchicalClustering = ({
-  dataColumns,
-  // actionId,
-}: {
+// Common types
+interface ClusteringComponentProps {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Hierarchical Clustering</h1>
-    <p className={descriptionClass}>
-      Performs hierarchical clustering on the dataset.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="hc-columns"
-          label={`Select Columns to Cluster`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}
+
+// --------------------------------------------------- 
+// K-MEANS CLUSTERING
+// --------------------------------------------------- 
+
+export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [k, setK] = useState<number>(3);
+  const [maxIterations, setMaxIterations] = useState<number>(100);
+  const [error, setError] = useState<string | null>(null);
+
+  const runKMeans = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 1) {
+      setError("Please select at least one feature column.");
+      onError?.();
+      return;
+    }
+    
+    if (k < 2 || k > dataRows.length) {
+      setError(`K must be between 2 and ${dataRows.length}.`);
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set('__k__', [k] as unknown as TableMatrix);
+      filteredData.set('__max_iterations__', [maxIterations] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`K-Means failed: ${errorMessage}`);
+      console.error("K-Means failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>K-Means Clustering</h1>
+      <p className={descriptionClass}>
+        Partition data into K clusters by minimizing within-cluster variance.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="kmeans-columns"
+            label="Select Features (Optional)"
+            placeholder="Select columns for clustering (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available`}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="k-value" className={labelClass}>
+            Number of Clusters (K)
+          </label>
+          <input
+            type="number"
+            id="k-value"
+            min="2"
+            max={Math.min(50, dataRows.length)}
+            value={k}
+            onChange={(e) => setK(parseInt(e.target.value) || 3)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Typical range: 2-10 clusters
+          </p>
+        </div>
+        
+        <div>
+          <label htmlFor="max-iterations" className={labelClass}>
+            Maximum Iterations
+          </label>
+          <input
+            type="number"
+            id="max-iterations"
+            min="10"
+            max="1000"
+            step="10"
+            value={maxIterations}
+            onChange={(e) => setMaxIterations(parseInt(e.target.value) || 100)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Higher values allow better convergence (100 is typical)
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What K-Means does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Partitions data into K distinct, non-overlapping clusters</li>
+            <li>• Minimizes within-cluster sum of squares (inertia)</li>
+            <li>• Fast and scalable for large datasets</li>
+            <li>• Works best with spherical, evenly-sized clusters</li>
+          </ul>
+        </div>
       </div>
-      <div>
-        <SingleSelect
-          id="hc-method"
-          label={`Linkage Method`}
-          placeholder="Select data columns to analyze..."
-          options={["Ward's Method", "Complete Linkage", "Average Linkage"].map(
-            (curr) => ({
-              value: curr,
-              label: curr,
-              disabled: false,
-            })
-          )}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the Pathway"
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runKMeans}
+        >
+          Run K-Means Clustering
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Clustering</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-KMEANS CLUSTERING VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// HIERARCHICAL CLUSTERING
+// --------------------------------------------------- 
 
-export const KmeansClustering = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>K-Means Clustering</h1>
-    <p className={descriptionClass}>
-      Performs K-Means clustering on the dataset.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="kmeans-columns"
-          label={`Select Columns to Cluster`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [numClusters, setNumClusters] = useState<number>(3);
+  const [linkage, setLinkage] = useState<string>('average');
+  const [error, setError] = useState<string | null>(null);
+
+  const runHierarchical = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 1) {
+      setError("Please select at least one feature column.");
+      onError?.();
+      return;
+    }
+    
+    if (numClusters < 2 || numClusters > dataRows.length) {
+      setError(`Number of clusters must be between 2 and ${dataRows.length}.`);
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set('__num_clusters__', [numClusters] as unknown as TableMatrix);
+      filteredData.set('__linkage__', [linkage] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Hierarchical Clustering failed: ${errorMessage}`);
+      console.error("Hierarchical Clustering failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Hierarchical Clustering</h1>
+      <p className={descriptionClass}>
+        Build a hierarchy of clusters using agglomerative (bottom-up) approach.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="hierarchical-columns"
+            label="Select Features (Optional)"
+            placeholder="Select columns for clustering (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available`}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="num-clusters-hier" className={labelClass}>
+            Number of Clusters
+          </label>
+          <input
+            type="number"
+            id="num-clusters-hier"
+            min="2"
+            max={Math.min(50, dataRows.length)}
+            value={numClusters}
+            onChange={(e) => setNumClusters(parseInt(e.target.value) || 3)}
+            className={inputClass}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Linkage Method</label>
+          <SingleSelect
+            id="linkage-method"
+            value={linkage}
+            onChange={(value) => setLinkage(value || 'average')}
+            options={[
+              { value: 'single', label: 'Single (Minimum distance)' },
+              { value: 'complete', label: 'Complete (Maximum distance)' },
+              { value: 'average', label: 'Average (UPGMA)' }
+            ]}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Determines how cluster distance is calculated
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Hierarchical Clustering does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Builds a tree-like structure (dendrogram) of clusters</li>
+            <li>• No need to specify K in advance (cut tree at desired height)</li>
+            <li>• Reveals hierarchical relationships in data</li>
+            <li>• Computationally intensive for large datasets</li>
+          </ul>
+        </div>
+        
+        {dataRows.length > 1000 && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+            <p className="text-xs text-yellow-800">
+              <strong>⚠️ Warning:</strong> Your dataset has {dataRows.length} samples. 
+              Hierarchical clustering may take significant time for large datasets.
+            </p>
+          </div>
+        )}
       </div>
-
-      <div>
-        <label htmlFor="kmeans-k" className={labelClass}>
-          Number of Clusters (k)
-        </label>
-        <input
-          type="number"
-          id="kmeans-k"
-          defaultValue="3"
-          min="2"
-          className={inputClass}
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runHierarchical}
+        >
+          Run Hierarchical Clustering
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Clustering</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-PCA ANALYSIS VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// PCA CLUSTERING
+// --------------------------------------------------- 
 
-export const PcaAnalysis = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>PCA Analysis</h1>
-    <p className={descriptionClass}>
-      Performs a Principal Component Analysis (PCA).
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="pca-analysis-columns"
-          label={`Select Columns for PCA`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+export const PCAClustering: React.FC<ClusteringComponentProps> = ({
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [numComponents, setNumComponents] = useState<number>(2);
+  const [performClustering, setPerformClustering] = useState<boolean>(false);
+  const [k, setK] = useState<number>(3);
+  const [error, setError] = useState<string | null>(null);
+
+  const runPCAClustering = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 2) {
+      setError("PCA requires at least 2 features.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set('__num_components__', [numComponents] as unknown as TableMatrix);
+      filteredData.set('__perform_clustering__', [performClustering] as unknown as TableMatrix);
+      filteredData.set('__k__', [k] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`PCA Clustering failed: ${errorMessage}`);
+      console.error("PCA Clustering failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>PCA with Optional Clustering</h1>
+      <p className={descriptionClass}>
+        Reduce dimensionality with PCA, optionally followed by K-Means clustering.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="pca-clustering-columns"
+            label="Select Features (Optional)"
+            placeholder="Select columns for PCA (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available`}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="num-components-pca-cluster" className={labelClass}>
+            Number of Principal Components
+          </label>
+          <input
+            type="number"
+            id="num-components-pca-cluster"
+            min="2"
+            max={Math.min(20, availableColumns.length)}
+            value={numComponents}
+            onChange={(e) => setNumComponents(parseInt(e.target.value) || 2)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            2-3 components for visualization, more for analysis
+          </p>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="perform-clustering-checkbox"
+            checked={performClustering}
+            onChange={(e) => setPerformClustering(e.target.checked)}
+            className="w-4 h-4"
+          />
+          <label htmlFor="perform-clustering-checkbox" className="text-sm font-medium text-gray-700">
+            Perform K-Means clustering on PCA results
+          </label>
+        </div>
+        
+        {performClustering && (
+          <div className="ml-7">
+            <label htmlFor="k-value-pca" className={labelClass}>
+              Number of Clusters (K)
+            </label>
+            <input
+              type="number"
+              id="k-value-pca"
+              min="2"
+              max={Math.min(20, dataRows.length)}
+              value={k}
+              onChange={(e) => setK(parseInt(e.target.value) || 3)}
+              className={inputClass}
+            />
+          </div>
+        )}
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What PCA + Clustering does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• First: Reduces dimensionality to principal components</li>
+            <li>• Removes noise and collinearity</li>
+            <li>• Then (optional): Clusters samples in reduced space</li>
+            <li>• Often improves clustering quality by removing irrelevant features</li>
+          </ul>
+        </div>
       </div>
-      <div>
-        <label htmlFor="pca-analysis-components" className={labelClass}>
-          Number of Components
-        </label>
-        <input
-          type="number"
-          id="pca-analysis-components"
-          defaultValue="2"
-          min="1"
-          className={inputClass}
-        />
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runPCAClustering}
+        >
+          Run PCA {performClustering && '+ K-Means'}
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run PCA</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-ZSCORE NORM VALUES
-----------------------------------------------------*/
+// ===================================================================
+// NORMALIZATION OPERATIONS
+// ===================================================================
 
-export const ZScoreNorm = ({
-  dataColumns,
-  // actionId,
-}: {
+interface NormalizationComponentProps {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Z-Score Normalization</h1>
-    <p className={descriptionClass}>
-      Normalizes data by subtracting the mean and dividing by the standard
-      deviation.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="z-score-norm-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to delete from your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Normalize</button>
-    </div>
-  </div>
-);
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}
 
-/*---------------------------------------------------
-LOG TRANSFORM VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// Z-SCORE NORMALIZATION
+// --------------------------------------------------- 
 
-export const LogTransform = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Log Transformation</h1>
-    <p className={descriptionClass}>
-      Applies a logarithmic transformation to the data.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="log-transform-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to delete from your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Transform</button>
-    </div>
-  </div>
-);
+export const ZScoreNormalization: React.FC<NormalizationComponentProps> = ({
+  actionId,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
-/*---------------------------------------------------
-QUANTILE NORMALIZATION VALUES
-----------------------------------------------------*/
+  const runZScore = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 1) {
+      setError("Please select at least one column to normalize.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Z-Score normalization failed: ${errorMessage}`);
+      console.error("Z-Score failed:", err);
+      onError?.();
+    }
+  };
 
-export const QuantileNormalization = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Quantile Normalization</h1>
-    <p className={descriptionClass}>
-      Normalizes data distributions to be identical across samples.
-    </p>
-    <div className="mb-6">
-      <MultiSelect
-        id="quantile-norm-columns"
-        label={`Select Columns`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={[]}
-        onChange={(values) => console.log(values)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Z-Score Normalization</h1>
+      <p className={descriptionClass}>
+        Standardize data to have mean = 0 and standard deviation = 1.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="zscore-columns"
+            label="Select Columns (Optional)"
+            placeholder="Select columns to normalize (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} columns available`}
+          />
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Z-Score does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Transforms data to have mean = 0 and standard deviation = 1</li>
+            <li>• Formula: z = (x - μ) / σ</li>
+            <li>• Makes data comparable across different scales</li>
+            <li>• Useful before machine learning algorithms</li>
+          </ul>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runZScore}
+        >
+          Apply Z-Score Normalization
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Normalize</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-MEAN CENTERING VALUES
-----------------------------------------------------*/
+// --------------------------------------------------- 
+// LOG TRANSFORM
+// --------------------------------------------------- 
 
-export const MeanCentering = ({
-  dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Mean Centering</h1>
-    <p className={descriptionClass}>
-      Subtracts the mean from each value in a column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="mean-centering-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to delete from your analysis"
-      />
+export const LogTransform: React.FC<NormalizationComponentProps> = ({
+  actionId,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [logBase, setLogBase] = useState<string>('log2');
+  const [pseudocount, setPseudocount] = useState<number>(1);
+  const [error, setError] = useState<string | null>(null);
+
+  const runLogTransform = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 1) {
+      setError("Please select at least one column to transform.");
+      onError?.();
+      return;
+    }
+    
+    if (pseudocount < 0) {
+      setError("Pseudocount must be non-negative.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      filteredData.set('__log_base__', [logBase] as unknown as TableMatrix);
+      filteredData.set('__pseudocount__', [pseudocount] as unknown as TableMatrix);
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Log Transform failed: ${errorMessage}`);
+      console.error("Log Transform failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Log Transform</h1>
+      <p className={descriptionClass}>
+        Apply logarithmic transformation to reduce skewness and stabilize variance.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="log-columns"
+            label="Select Columns (Optional)"
+            placeholder="Select columns to transform (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} columns available`}
+          />
+        </div>
+        
+        <div>
+          <label className={labelClass}>Logarithm Base</label>
+          <SingleSelect
+            id="log-base"
+            value={logBase}
+            onChange={(value) => setLogBase(value || 'log2')}
+            options={[
+              { value: 'log2', label: 'Log2 (Common in genomics)' },
+              { value: 'log10', label: 'Log10 (Base 10)' },
+              { value: 'ln', label: 'Natural Log (ln)' }
+            ]}
+          />
+        </div>
+        
+        <div>
+          <label htmlFor="pseudocount" className={labelClass}>
+            Pseudocount
+          </label>
+          <input
+            type="number"
+            id="pseudocount"
+            min="0"
+            step="0.1"
+            value={pseudocount}
+            onChange={(e) => setPseudocount(parseFloat(e.target.value) || 1)}
+            className={inputClass}
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Added to avoid log(0). Typical values: 0.1, 0.5, or 1
+          </p>
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Log Transform does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Reduces right-skewness in data distributions</li>
+            <li>• Stabilizes variance across different magnitude ranges</li>
+            <li>• Makes multiplicative relationships additive</li>
+            <li>• Common in proteomics and genomics for intensity data</li>
+          </ul>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runLogTransform}
+        >
+          Apply Log Transform
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Center</button>
+  );
+};
+
+// --------------------------------------------------- 
+// QUANTILE NORMALIZATION
+// --------------------------------------------------- 
+
+export const QuantileNormalization: React.FC<NormalizationComponentProps> = ({
+  actionId,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runQuantile = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 2) {
+      setError("Quantile normalization requires at least 2 columns.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Quantile normalization failed: ${errorMessage}`);
+      console.error("Quantile normalization failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Quantile Normalization</h1>
+      <p className={descriptionClass}>
+        Make the distribution of values identical across all selected columns.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="quantile-columns"
+            label="Select Columns (Optional)"
+            placeholder="Select columns to normalize (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} columns available. Min 2 required.`}
+          />
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Quantile Normalization does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Forces all columns to have identical distributions</li>
+            <li>• Ranks values within each column, then averages across ranks</li>
+            <li>• Removes systematic differences between samples/columns</li>
+            <li>• Widely used in microarray and proteomics data normalization</li>
+          </ul>
+        </div>
+        
+        <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+          <p className="text-xs text-yellow-800">
+            <strong>Note:</strong> Quantile normalization assumes that the biological distribution 
+            should be similar across samples. Use with caution if samples are expected to be very different.
+          </p>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runQuantile}
+        >
+          Apply Quantile Normalization
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
+// --------------------------------------------------- 
+// MEAN CENTERING
+// --------------------------------------------------- 
+
+export const MeanCentering: React.FC<NormalizationComponentProps> = ({
+  actionId,
+  allColumnarData,
+  onSuccess,
+  onError
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+  
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runMeanCentering = () => {
+    setError(null);
+    
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+    
+    if (columnsToUse.length < 1) {
+      setError("Please select at least one column to center.");
+      onError?.();
+      return;
+    }
+    
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+      
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`Mean Centering failed: ${errorMessage}`);
+      console.error("Mean Centering failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Mean Centering</h1>
+      <p className={descriptionClass}>
+        Center data around zero by subtracting the mean from each value.
+      </p>
+      
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="center-columns"
+            label="Select Columns (Optional)"
+            placeholder="Select columns to center (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} columns available`}
+          />
+        </div>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Mean Centering does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Subtracts the mean from each value: x' = x - μ</li>
+            <li>• Results in data centered around zero (mean = 0)</li>
+            <li>• Does NOT change the scale or standard deviation</li>
+            <li>• Useful for PCA and other multivariate analyses</li>
+          </ul>
+        </div>
+      </div>
+      
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+      
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runMeanCentering}
+        >
+          Apply Mean Centering
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 /*---------------------------------------------------
 QCPLOT VALUES
@@ -5965,6 +6925,49 @@ export const ExportCsv = () => (
   </div>
 );
 
+
+/*---------------------------------------------------
+MeanCenteringNormalizationLog
+----------------------------------------------------*/
+
+export const MeanCenteringNormalizationLog = ({
+  actionId,
+}: {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => (
+  <div className={containerClass}>
+    <h1 className={headingClass}>No UI defined for "{actionId}"</h1>
+    <p className="text-gray-600">
+      This action is not yet implemented with a specific UI view.
+    </p>
+  </div>
+);
+
+/*---------------------------------------------------
+TransformNormalization
+----------------------------------------------------*/
+export const TransformNormalization = ({
+  actionId,
+}: {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => (
+  <div className={containerClass}>
+    <h1 className={headingClass}>No UI defined for "{actionId}"</h1>
+    <p className="text-gray-600">
+      This action is not yet implemented with a specific UI view.
+    </p>
+  </div>
+);
 /*---------------------------------------------------
 NO UI FOUND
 ----------------------------------------------------*/

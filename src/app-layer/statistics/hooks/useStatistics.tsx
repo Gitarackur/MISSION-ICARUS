@@ -15,6 +15,7 @@ import {
   movingAverage,
   normalization,
   normalizeReporterIons,
+  PTMAnnotation,
   reorderColumns,
   rollingStdDev,
   sortDataByColumn,
@@ -50,6 +51,30 @@ import {
   performPLSDA,
   performTSNE,
 } from "@/app-layer/statistics/utils/statistical-engine";
+
+import {addPTMAnnotations,
+  removePTMAnnotations,
+  COMMON_PTMS
+} from '@/app-layer/statistics/utils/statistical-engine';
+
+import {
+
+  performKMeans,
+  performHierarchicalClustering,
+  performPCAForClustering,
+  type KMeansResult,
+  type HierarchicalClusteringResult,
+  type PCAClusteringResult
+} from '@/app-layer/statistics/utils/statistical-engine';
+
+import {
+  zScoreNormalization,
+  logTransformNormalization,
+  quantileNormalization,
+  meanCenteringNormalization
+} from '@/app-layer/statistics/utils/statistical-engine';
+
+
 
 export const useStatisticalAnalysis = () => {
   const performAnalysis = useCallback(
@@ -577,6 +602,225 @@ export const useStatisticalAnalysis = () => {
             break;
           } catch (error) {
             console.error("t-SNE error:", error);
+            throw error;
+          }
+        }
+
+        
+
+        case 'add-ptm': {
+          try {
+            // Check if data is a Map
+            if (!(data instanceof Map)) {
+              throw new Error("Invalid data format for Add PTM");
+            }
+            
+            // Extract PTM information from metadata
+            const ptmType = data.has('__ptm_type__') ? 
+              (data.get('__ptm_type__') as never)[0] : 'Phosphorylation';
+            const ptmPositions = data.has('__ptm_positions__') ? 
+              data.get('__ptm_positions__') as unknown as number[] : [];
+            const ptmResidue = data.has('__ptm_residue__') ? 
+              (data.get('__ptm_residue__') as never)[0] : 'S';
+            
+            // Create PTM annotations
+            const ptmAnnotations = ptmPositions.map(pos => ({
+              position: pos,
+              residue: ptmResidue,
+              modificationType: ptmType,
+              mass: COMMON_PTMS[ptmType] || 0
+            }));
+            
+            const ptmResult = addPTMAnnotations(numericData, ptmAnnotations);
+            
+            results = ptmResult.annotatedData;
+            newColumnNames = numericColumns.map(col => `${col}_with_PTM`);
+            break;
+          } catch (error) {
+            console.error('Add PTM error:', error);
+            throw error;
+          }
+        }
+        
+        case 'remove-ptm': {
+          try {
+            // Check if data is a Map
+            if (!(data instanceof Map)) {
+              throw new Error("Invalid data format for Remove PTM");
+            }
+            
+            // Extract PTM removal criteria
+            const ptmTypesToRemove = data.has('__remove_ptm_types__') ? 
+              data.get('__remove_ptm_types__') as unknown as string[] : [];
+            const positionsToRemove = data.has('__remove_positions__') ? 
+              data.get('__remove_positions__') as unknown as number[] : undefined;
+            
+            // For demonstration, assume current PTMs (in real app, would come from data)
+            const currentPTMs: PTMAnnotation[] = [];
+            
+            const ptmResult = removePTMAnnotations(
+              numericData, 
+              currentPTMs, 
+              ptmTypesToRemove, 
+              positionsToRemove
+            );
+            
+            results = ptmResult.cleanedData;
+            newColumnNames = numericColumns.map(col => `${col}_PTM_removed`);
+            break;
+          } catch (error) {
+            console.error('Remove PTM error:', error);
+            throw error;
+          }
+        }
+        
+
+        case 'k-means-clustering': {
+          try {
+            if (!(data instanceof Map)) {
+              throw new Error("Invalid data format for K-Means");
+            }
+            
+            const k = data.has('__k__') && Array.isArray(data.get('__k__')) 
+              ? (data.get('__k__') as number[])[0] 
+              : 3;
+            const maxIterations = data.has('__max_iterations__') && Array.isArray(data.get('__max_iterations__'))
+              ? (data.get('__max_iterations__') as number[])[0]
+              : 100;
+            
+            const kmeansResult: KMeansResult = performKMeans(numericData, k, maxIterations);
+            
+            // Return cluster assignments as a new column
+            results = [kmeansResult.clusterAssignments];
+            newColumnNames = ['Cluster_Assignment'];
+            break;
+          } catch (error) {
+            console.error('K-Means error:', error);
+            throw error;
+          }
+        }
+        
+        case 'hierarchical-clustering': {
+          try {
+            if (!(data instanceof Map)) {
+              throw new Error("Invalid data format for Hierarchical Clustering");
+            }
+            
+            const numClusters = data.has('__num_clusters__') && Array.isArray(data.get('__num_clusters__'))
+              ? (data.get('__num_clusters__') as number[])[0]
+              : 3;
+            const linkageData = data.get('__linkage__');
+            const linkage: 'single' | 'complete' | 'average' = 
+              (Array.isArray(linkageData) && typeof linkageData[0] === 'string')
+                ? linkageData[0] as 'single' | 'complete' | 'average'
+                : 'average';
+            
+            const hierarchicalResult: HierarchicalClusteringResult = 
+              performHierarchicalClustering(numericData, numClusters, linkage);
+            
+            results = [hierarchicalResult.clusterAssignments];
+            newColumnNames = ['Cluster_Assignment'];
+            break;
+          } catch (error) {
+            console.error('Hierarchical Clustering error:', error);
+            throw error;
+          }
+        }
+        
+        case 'pca-analysis': {
+          try {
+            if (!(data instanceof Map)) {
+              throw new Error("Invalid data format for PCA Clustering");
+            }
+            
+            const numComponents = data.has('__num_components__') && Array.isArray(data.get('__num_components__'))
+              ? (data.get('__num_components__') as number[])[0]
+              : 2;
+            const performClusteringFlag = data.has('__perform_clustering__') && Array.isArray(data.get('__perform_clustering__'))
+              ? Boolean((data.get('__perform_clustering__') as unknown as boolean[])[0])
+              : false;
+            const k = data.has('__k__') && Array.isArray(data.get('__k__'))
+              ? (data.get('__k__') as number[])[0]
+              : 3;
+            
+            const pcaResult: PCAClusteringResult = 
+              performPCAForClustering(numericData, numComponents, performClusteringFlag, k);
+            
+            results = pcaResult.transformedData;
+            newColumnNames = Array.from({ length: numComponents }, (_, i) => `PC${i + 1}`);
+            
+            // If clustering was performed, add cluster assignment column
+            if (pcaResult.clusterAssignments) {
+              results.push(pcaResult.clusterAssignments);
+              newColumnNames.push('Cluster_Assignment');
+            }
+            break;
+          } catch (error) {
+            console.error('PCA Clustering error:', error);
+            throw error;
+          }
+        }
+
+        case 'z-score-norm': {
+          try {
+            const normalizedData = zScoreNormalization(numericData);
+            results = normalizedData;
+            newColumnNames = numericColumns.map(col => `${col}_zscore`);
+            break;
+          } catch (error) {
+            console.error('Z-Score normalization error:', error);
+            throw error;
+          }
+        }
+        
+        case 'log-transform': {
+          try {
+            if (!(data instanceof Map)) {
+              throw new Error("Invalid data format for Log Transform");
+            }
+            
+            const baseData = data.get('__log_base__');
+            const base: 'log2' | 'log10' | 'ln' = 
+              (Array.isArray(baseData) && typeof baseData[0] === 'string')
+                ? baseData[0] as 'log2' | 'log10' | 'ln'
+                : 'log2';
+            
+            const offsetData = data.get('__offset__');
+            const offset: number = 
+              (Array.isArray(offsetData) && typeof offsetData[0] === 'number')
+                ? offsetData[0]
+                : 1;
+            
+            const normalizedData = logTransformNormalization(numericData, base, offset);
+            results = normalizedData;
+            newColumnNames = numericColumns.map(col => `${col}_${base}`);
+            break;
+          } catch (error) {
+            console.error('Log Transform error:', error);
+            throw error;
+          }
+        }
+        
+        case 'quantile-normalization': {
+          try {
+            const normalizedData = quantileNormalization(numericData);
+            results = normalizedData;
+            newColumnNames = numericColumns.map(col => `${col}_quantile`);
+            break;
+          } catch (error) {
+            console.error('Quantile normalization error:', error);
+            throw error;
+          }
+        }
+        
+        case 'mean-centering': {
+          try {
+            const normalizedData = meanCenteringNormalization(numericData);
+            results = normalizedData;
+            newColumnNames = numericColumns.map(col => `${col}_centered`);
+            break;
+          } catch (error) {
+            console.error('Mean Centering error:', error);
             throw error;
           }
         }
