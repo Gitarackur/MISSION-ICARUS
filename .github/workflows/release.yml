@@ -127,6 +127,12 @@ jobs:
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
+      - name: Compile TypeScript and build with Vite
+        run: |
+          npx tsc
+          npx vite build
+        shell: bash
+
       - name: Build and publish app
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
