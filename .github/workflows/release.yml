@@ -5,7 +5,7 @@ on:
     branches:
       - main
     tags:
-      - "v*" # still handles manual version tags if you ever push them manually
+      - "v*"
 
 permissions:
   contents: write
