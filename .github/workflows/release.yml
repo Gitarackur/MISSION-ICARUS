@@ -32,22 +32,29 @@ jobs:
       - name: Fix lock file
         run: npm install --package-lock-only --ignore-scripts
 
-      - name: Commit lock file if changed
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add package-lock.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update package-lock.json"
-
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
       - name: Bump patch version
         id: version
         run: |
-          current_version=$(node -p "require('./package.json').version")
-          new_version=$(npm version patch -m "🔖 bump: release v%s")
-          echo "new_tag=${new_version}" >> $GITHUB_OUTPUT
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Commit lock file changes first
+          git add package-lock.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update package-lock.json"
+          
+          # Now bump version (npm version needs clean working dir)
+          npm version patch --no-git-tag-version
+          new_version=$(node -p "require('./package.json').version")
+          
+          # Commit the version bump and create tag
+          git add package.json package-lock.json
+          git commit -m "🔖 bump: release v${new_version}"
+          git tag "v${new_version}"
+          
+          echo "new_tag=v${new_version}" >> $GITHUB_OUTPUT
 
       - name: Push new tag
         run: |
