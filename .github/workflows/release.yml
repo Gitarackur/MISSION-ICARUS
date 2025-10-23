@@ -65,8 +65,12 @@ jobs:
           node-version: 20
           cache: "npm"
 
-      - name: Install dependencies
-        run: npm ci
+      # ✅ FIX: skip postinstall, rebuild manually
+      - name: Install dependencies (skip postinstall)
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild native modules
+        run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Setup Python (Windows only)
         if: matrix.os == 'windows-latest'
