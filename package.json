@@ -11,7 +11,7 @@
     "build": "tsc && vite build && electron-builder",
     "pipenv-install": "pipenv run prepare-all",
     "build:windows": "tsc && vite build && electron-builder --win",
-    "build:windows1": "pipenv run prepare-all && tsc && vite build && electron-builder --win",
+    "build:windows1": "tsc && vite build && electron-builder --win",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "migrate": "ts-node src/database/cli.ts migrate",
