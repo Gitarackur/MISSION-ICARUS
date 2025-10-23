@@ -135,7 +135,7 @@ jobs:
 
   release:
     name: Create GitHub Release
-    needs: [build]
+    needs: [version-bump, build]
     runs-on: ubuntu-latest
 
     steps:
@@ -144,23 +144,12 @@ jobs:
         with:
           path: ./artifacts
 
-      - name: Determine release type
-        id: release_type
-        run: |
-          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            echo "type=stable" >> $GITHUB_OUTPUT
-            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-          else
-            echo "type=nightly" >> $GITHUB_OUTPUT
-            echo "version=nightly-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
-          fi
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release_type.outputs.version }}
-          name: Mission Icarus ${{ steps.release_type.outputs.version }}
-          prerelease: ${{ steps.release_type.outputs.type == 'nightly' }}
+          tag_name: ${{ needs.version-bump.outputs.new_tag }}
+          name: Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
+          prerelease: false
           draft: false
           files: artifacts/**/*
         env:
