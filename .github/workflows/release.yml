@@ -92,6 +92,12 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: pip install pipenv
 
+      - name: Install Python dependencies (Windows only)
+        if: matrix.os == 'windows-latest'
+        run: |
+          pipenv install --dev
+          pipenv run pip list
+
       - name: Fix lock file
         run: npm install --package-lock-only --ignore-scripts
 
