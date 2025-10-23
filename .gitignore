@@ -12,6 +12,9 @@ build/
 out/
 release/
 
+# Yarn
+yarn.lock
+
 # Vite cache
 .vite/
 vite.config.js.timestamp-*

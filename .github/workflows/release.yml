@@ -41,9 +41,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # Commit lock file changes first
-          git add package-lock.json
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update package-lock.json"
+          # Commit any lock file changes first (package-lock.json and yarn.lock)
+          git add package-lock.json yarn.lock 2>/dev/null || true
+          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update lock files"
           
           # Now bump version (npm version needs clean working dir)
           npm version patch --no-git-tag-version
