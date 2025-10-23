@@ -3,8 +3,8 @@
 ## 🧪 Analysis platform
 
 <div align="center">
-  > ⚠️ **WIP – Work In Progress**  
-  > This project is currently under active development. Features, UI, and functionality are subject to change!
+  ⚠️ **WIP – Work In Progress**  
+  This project is currently under active development. Features, UI, and functionality are subject to change!
 </div>
 
 ---
