@@ -2,7 +2,7 @@
   "name": "mission-icarus",
   "author": "Gitarackur--Peter",
   "private": true,
-  "version": "0.0.6",
+  "version": "0.0.7",
   "type": "module",
   "scripts": {
     "prepare:python:scripts": "",
