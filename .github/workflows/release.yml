@@ -1,0 +1,133 @@
+name: Build & Release Mission Icarus
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*" # still handles manual version tags if you ever push them manually
+
+permissions:
+  contents: write
+
+jobs:
+  version-bump:
+    name: Auto Version Bump
+    if: startsWith(github.ref, 'refs/heads/main')
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.version.outputs.new_tag }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Bump patch version
+        id: version
+        run: |
+          current_version=$(node -p "require('./package.json').version")
+          new_version=$(npm version patch -m "🔖 bump: release v%s")
+          echo "new_tag=${new_version}" >> $GITHUB_OUTPUT
+
+      - name: Push new tag
+        run: |
+          git push origin main --follow-tags
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build:
+    name: Build Electron App
+    needs: version-bump
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Python (Windows only)
+        if: matrix.os == 'windows-latest'
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install pipenv (Windows only)
+        if: matrix.os == 'windows-latest'
+        run: pip install pipenv
+
+      - name: Build app
+        run: |
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            npm run build
+          else
+            npm run build:windows
+          fi
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mission-icarus-${{ matrix.os }}
+          path: |
+            dist/
+            dist-electron/
+            release/
+            *.dmg
+            *.exe
+            *.zip
+          if-no-files-found: ignore
+
+  release:
+    name: Create GitHub Release
+    needs: [build]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+
+      - name: Determine release type
+        id: release_type
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            echo "type=stable" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+          else
+            echo "type=nightly" >> $GITHUB_OUTPUT
+            echo "version=nightly-$(date +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.release_type.outputs.version }}
+          name: Mission Icarus ${{ steps.release_type.outputs.version }}
+          prerelease: ${{ steps.release_type.outputs.type == 'nightly' }}
+          draft: false
+          files: artifacts/**/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
