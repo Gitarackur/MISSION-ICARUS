@@ -95,11 +95,11 @@ jobs:
           echo "Building version: $VERSION_NO_V"
 
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npm run build -- --publish never
+            npm run build
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-            npm run build:windows -- --publish never
+            npm run build:windows
           else
-            npm run build:linux -- --publish never
+            npm run build:linux
           fi
         shell: bash
 
