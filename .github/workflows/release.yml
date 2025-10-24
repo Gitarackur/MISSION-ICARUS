@@ -153,12 +153,24 @@ jobs:
           echo "Contents of release directory:"
           ls -R release/
         shell: bash
-
-      - name: Upload artifacts (fallback)
-        if: failure()
-        uses: actions/upload-artifact@v4
+      
+      - name: Upload installers to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: mission-icarus-${{ matrix.os }}
-          path: |
-            release/**/*
-          if-no-files-found: ignore
+          tag_name: ${{ needs.version-bump.outputs.new_tag }}
+          files: |
+            releases/*.exe
+            releases/*.dmg
+            releases/*.zip
+            releases/*.AppImage
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # - name: Upload artifacts (fallback)
+      #   if: failure()
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: mission-icarus-${{ matrix.os }}
+      #     path: |
+      #       release/**/*
+      #     if-no-files-found: ignore
