@@ -1,9 +1,7 @@
-name: Build & Release Mission Icarus
+name: Build & Publish Electron Release
 
 on:
   push:
-    branches:
-      - main
     tags:
       - "v*"
 
@@ -11,169 +9,66 @@ permissions:
   contents: write
 
 jobs:
-  version-bump:
-    name: Auto Version Bump
-    if: startsWith(github.ref, 'refs/heads/main')
-    runs-on: ubuntu-latest
-    outputs:
-      new_tag: ${{ steps.version.outputs.new_tag }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Fix lock file
-        run: npm install --package-lock-only --ignore-scripts
-
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Bump patch version
-        id: version
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          git add package-lock.json yarn.lock 2>/dev/null || true
-          git diff --quiet && git diff --staged --quiet || git commit -m "chore: update lock files"
-
-          npm version patch --no-git-tag-version
-          new_version=$(node -p "require('./package.json').version")
-
-          git add package.json package-lock.json
-          git commit -m "🔖 bump: release v${new_version}"
-          git tag "v${new_version}"
-
-          echo "new_tag=v${new_version}" >> $GITHUB_OUTPUT
-
-      - name: Push new tag
-        run: git push origin main --follow-tags
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  create-release:
-    name: Create GitHub Release
-    needs: version-bump
-    runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Delete existing release if it exists
-        continue-on-error: true
-        run: |
-          gh release delete ${{ needs.version-bump.outputs.new_tag }} --yes --cleanup-tag || echo "No existing release to delete"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Release
-        id: create_release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.version-bump.outputs.new_tag }}
-          name: Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
-          prerelease: false
-          draft: false
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  build:
-    name: Build Electron App
-    needs: [version-bump, create-release]
+  build-and-release:
+    name: Build and Upload Release
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.version-bump.outputs.new_tag }}
-          fetch-depth: 0
 
-      - name: Setup Node.js
+      - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
-
-      - name: Setup Python (Windows only)
-        if: matrix.os == 'windows-latest'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install pipenv (Windows only)
-        if: matrix.os == 'windows-latest'
-        run: pip install pipenv
-
-      - name: Install Python dependencies (Windows only)
-        if: matrix.os == 'windows-latest'
-        run: pipenv install --dev
-
-      - name: Fix lock file
-        run: npm install --package-lock-only --ignore-scripts
 
       - name: Install dependencies
-        run: npm ci --ignore-scripts
+        run: npm ci
 
-      - name: Rebuild native modules
-        run: npx electron-rebuild -f -w better-sqlite3
-
-      - name: Build app (no auto-publish)
-        run: |
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            npm run build -- --publish never
-          else
-            npm run build:windows -- --publish never
-          fi
-        shell: bash
+      - name: Build Electron app
+        run: npm run build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Debug - show built files
+      - name: Debug – list built files
         run: |
-          echo "Workspace: $(pwd)"
-          echo "Files under releases/:"
-          find releases -type f -maxdepth 5 -print || echo "No releases folder found"
-        shell: bash
-
-      - name: Upload installers to GitHub Release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          TAG="${{ needs.version-bump.outputs.new_tag }}"
-          echo "Uploading installers for tag: $TAG"
-
-          # Authenticate gh
-          printf "%s" "$GITHUB_TOKEN" > /tmp/gh_token
-          gh auth login --with-token < /tmp/gh_token
-
-          # Find expected build outputs
-          mapfile -t files < <(find releases -type f \( -iname "*.dmg" -o -iname "*.exe" -o -iname "*.yml" -o -iname "*.zip" -o -iname "*.AppImage" \) -print)
-
-          if [ ${#files[@]} -eq 0 ]; then
-            echo "❌ No installer files found in releases/. Listing releases/:"
-            ls -R releases || true
+          echo "Current directory: $(pwd)"
+          if [ -d "releases" ]; then
+            echo "Contents of releases/:"
+            find releases -type f
+          else
+            echo "❌ No releases folder found. Check electron-builder config."
             exit 1
           fi
 
-          for f in "${files[@]}"; do
-            echo "Uploading: $f"
-            gh release upload "$TAG" "$f" --clobber
-          done
+      - name: Upload built files to GitHub Release
+        if: success()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
 
-          echo "✅ Upload complete."
+          TAG_NAME=${GITHUB_REF#refs/tags/}
+          echo "Uploading assets for tag: $TAG_NAME"
+
+          FILES=$(find releases -type f \( -name "*.exe" -o -name "*.dmg" -o -name "*.zip" -o -name "*.yml" -o -name "*.AppImage" \))
+          if [ -z "$FILES" ]; then
+            echo "❌ No installer files found in releases/"
+            exit 1
+          fi
+
+          # Create the release if it doesn’t exist
+          if ! gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            echo "Creating release for $TAG_NAME..."
+            gh release create "$TAG_NAME" --title "$TAG_NAME" --notes "Automated release for $TAG_NAME"
+          fi
+
+          # Upload files
+          for FILE in $FILES; do
+            echo "Uploading: $FILE"
+            gh release upload "$TAG_NAME" "$FILE" --clobber
+          done
