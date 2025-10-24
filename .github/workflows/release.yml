@@ -61,6 +61,8 @@ jobs:
     name: Create GitHub Release
     needs: version-bump
     runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ needs.version-bump.outputs.new_tag }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -74,6 +76,7 @@ jobs:
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
+        id: release
         with:
           tag_name: ${{ needs.version-bump.outputs.new_tag }}
           name: Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
@@ -83,15 +86,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
-    name: Build Electron App
+  build-and-upload:
+    name: Build & Upload Installers
     needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
-    outputs:
-      new_tag: ${{ needs.create-release.outputs.tag_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -103,7 +104,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
 
       - name: Setup Python (Windows only)
         if: matrix.os == 'windows-latest'
@@ -136,43 +136,17 @@ jobs:
 
       - name: Debug - list release files
         run: |
-          echo "Contents of releases/:"
-          ls -R releases || echo "No releases folder found"
+          echo "Contents of release/:"
+          ls -R release || echo "No release folder found"
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: installers-${{ matrix.os }}
-          path: releases/
-
-  upload-to-release:
-    name: Upload installers to GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: installers-macos-latest
-          path: releases/macos
-
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: installers-windows-latest
-          path: releases/windows
-
-      - name: List downloaded artifacts
-        run: ls -R releases
-
-      - name: Upload to GitHub Release
+      - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.build.outputs.new_tag }}
+          tag_name: ${{ needs.create-release.outputs.new_tag }}
           files: |
-            releases/macos/*.dmg
-            releases/windows/*.exe
-            releases/windows/*.yml
-            releases/windows/*.zip
+            release/*.dmg
+            release/*.exe
+            release/*.yml
+            release/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
