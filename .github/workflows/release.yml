@@ -92,7 +92,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
+        os: [macos-latest, windows-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -131,8 +131,6 @@ jobs:
             npm run build -- --publish never
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run build:windows -- --publish never
-          else
-            npm run build:linux -- --publish never
           fi
         shell: bash
 
