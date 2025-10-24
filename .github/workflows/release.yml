@@ -90,18 +90,13 @@ jobs:
         run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Build Electron app
-        # env:
-        #   CSC_IDENTITY_AUTO_DISCOVERY: false
-        #   CSC_IDENTITY: ""
-        #   CSC_LINK: ""
-        #   CSC_KEY_PASSWORD: ""
-        #   ELECTRON_SKIP_NOTARIZATION: true
         shell: bash
         run: |
           VERSION=${{ needs.create-release.outputs.new_tag }}
           VERSION_NO_V="${VERSION#v}"
           echo "Building version: $VERSION_NO_V"
 
+          # macOS
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
             brew install create-dmg || true
             npm run build -- --publish never
@@ -109,13 +104,22 @@ jobs:
             find "release/$VERSION_NO_V" -name "*.app" -exec xattr -r -d com.apple.quarantine {} \; || true
             find "release/$VERSION_NO_V" -name "*.dmg" -exec xattr -r -d com.apple.quarantine {} \; || true
 
+            # Also produce zip of .app
+            ditto -c -k --keepParent "release/$VERSION_NO_V/Icarus.app" "release/$VERSION_NO_V/Icarus-Mac-${VERSION_NO_V}.zip"
+
+          # Windows
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run build:windows -- --publish never
+            # Zip the setup.exe
+            powershell -Command "Compress-Archive -Path release\\$VERSION_NO_V\\Icarus-Windows-*-Setup.exe -DestinationPath release\\$VERSION_NO_V\\Icarus-Windows-${VERSION_NO_V}.zip"
 
+          # Linux
           else
             sudo apt-get update
-            sudo apt-get install -y fuse libarchive-tools
+            sudo apt-get install -y fuse libarchive-tools zip
             npm run build:linux -- --publish never
+            # Zip the AppImage
+            zip -j "release/$VERSION_NO_V/Icarus-Linux-${VERSION_NO_V}.zip" release/$VERSION_NO_V/*.AppImage
           fi
 
       - name: Find built installers dynamically
@@ -127,12 +131,16 @@ jobs:
           RELEASE_DIR="release/$VERSION_NO_V"
 
           echo "Looking for installers in $RELEASE_DIR"
-
           mkdir -p "$RELEASE_DIR"
+
+          # Match official Electron Builder installers + zip
           find "$RELEASE_DIR" -type f \( \
             -name "Icarus-Mac-*-Installer.dmg" -o \
+            -name "Icarus-Mac-*.zip" -o \
             -name "Icarus-Windows-*-Setup.exe" -o \
-            -name "Icarus-Linux-*.AppImage" \
+            -name "Icarus-Windows-*.zip" -o \
+            -name "Icarus-Linux-*.AppImage" -o \
+            -name "Icarus-Linux-*.zip" \
           \) > files.txt || true
 
           echo "Found installer files:"
