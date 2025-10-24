@@ -136,14 +136,22 @@ jobs:
 
       - name: Debug - list release files
         run: |
-          echo "Contents of release/${{ needs.create-release.outputs.new_tag }}/:"
-          find release/${{ needs.create-release.outputs.new_tag }}/ -type f || echo "No release folder found"
+          # Strip leading 'v' from tag
+          VERSION_NO_V="${{ needs.create-release.outputs.new_tag }}"
+          VERSION_NO_V="${VERSION_NO_V#v}"
+          echo "Release folder: release/$VERSION_NO_V"
+
+          if [ "${{ matrix.os }}" = "windows-latest" ]; then
+            powershell.exe -Command "Get-ChildItem -Recurse release\\$VERSION_NO_V"
+          else
+            ls -R release/$VERSION_NO_V || echo "No release folder found"
+          fi
 
       - name: Upload installers to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ needs.create-release.outputs.new_tag }}
-          # Upload all files dynamically
-          files: release/${{ needs.create-release.outputs.new_tag }}/**
+        run: |
+          VERSION_NO_V="${{ needs.create-release.outputs.new_tag }}"
+          VERSION_NO_V="${VERSION_NO_V#v}"
+          echo "Uploading files from release/$VERSION_NO_V"
+          gh release upload "${{ needs.create-release.outputs.new_tag }}" release/$VERSION_NO_V/* --clobber
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
