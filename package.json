@@ -10,7 +10,7 @@
     "start": "electron --trace-warnings .",
     "build": "tsc && vite build && electron-builder",
     "pipenv-install": "pipenv run prepare-all",
-    "build:linux": "tsc && vite build && electron-builder --lin",
+    "build:linux": "tsc && vite build && electron-builder --linux",
     "build:windows": "tsc && vite build && electron-builder --win",
     "build:windows1": "tsc && vite build && electron-builder --win",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
