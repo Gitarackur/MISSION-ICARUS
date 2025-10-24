@@ -90,12 +90,12 @@ jobs:
         run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Build Electron app
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          CSC_IDENTITY: ""
-          CSC_LINK: ""
-          CSC_KEY_PASSWORD: ""
-          ELECTRON_SKIP_NOTARIZATION: true
+        # env:
+        #   CSC_IDENTITY_AUTO_DISCOVERY: false
+        #   CSC_IDENTITY: ""
+        #   CSC_LINK: ""
+        #   CSC_KEY_PASSWORD: ""
+        #   ELECTRON_SKIP_NOTARIZATION: true
         shell: bash
         run: |
           VERSION=${{ needs.create-release.outputs.new_tag }}
