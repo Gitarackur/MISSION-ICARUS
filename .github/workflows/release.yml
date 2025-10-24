@@ -132,6 +132,7 @@ jobs:
           else
             npm run build:windows -- --publish never
           fi
+        shell: bash
 
       - name: Debug - list release files
         run: |
