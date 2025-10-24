@@ -1,4 +1,8 @@
 
+<img width="2048" height="2048" alt="icarus" src="https://github.com/user-attachments/assets/4c0a49e9-83f1-4488-a0c4-6a70101fdb9b" />
+
+
+
 ## 🚧 **Icarus** 
 ## 🧪 Analysis platform
 
@@ -20,7 +24,7 @@ It supports the imports of various txt, csv formats *like **MaxQuant outputs** (
 ## ✨ Features
 
 ### 📁 Data Import
-- Upload **MaxQuant output files** (eg: `proteinGroups.txt`, `evidence.txt`, etc.).
+- Upload **MaxQuant output files** (eg, `proteinGroups.txt`, `evidence.txt`, etc.).
 - Parse and preview statistical data in a clean, interactive table.
 
 ### 🔍 Data Filtering
@@ -91,3 +95,4 @@ npm install
 
 # Start development mode
 npm run dev
+
