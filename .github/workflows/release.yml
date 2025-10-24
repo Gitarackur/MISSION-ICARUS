@@ -88,20 +88,37 @@ jobs:
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
-      - name: Build Electron app
-        run: |
-          VERSION=${{ needs.create-release.outputs.new_tag }}
-          VERSION_NO_V="${VERSION#v}"
-          echo "Building version: $VERSION_NO_V"
+      # - name: Build Electron app
+      #   run: |
+      #     VERSION=${{ needs.create-release.outputs.new_tag }}
+      #     VERSION_NO_V="${VERSION#v}"
+      #     echo "Building version: $VERSION_NO_V"
 
+      #     if [ "${{ matrix.os }}" = "macos-latest" ]; then
+      #       npm run build -- --publish never
+      #     elif [ "${{ matrix.os }}" = "windows-latest" ]; then
+      #       npm run build:windows -- --publish never
+      #     else
+      #       npm run build:linux -- --publish never
+      #     fi
+      #   shell: bash
+
+      - name: Build Electron app
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: false
+          ELECTRON_SKIP_NOTARIZATION: true
+        run: |
+          npm ci
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            brew install create-dmg || true
             npm run build -- --publish never
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run build:windows -- --publish never
           else
+            sudo apt-get update
+            sudo apt-get install -y fuse libarchive-tools
             npm run build:linux -- --publish never
           fi
-        shell: bash
 
       - name: Find built installers dynamically
         id: find_files
