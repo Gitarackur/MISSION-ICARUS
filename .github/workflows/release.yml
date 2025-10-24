@@ -2,10 +2,8 @@ name: Build & Release Mission Icarus
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - "v*"
+    branches: [main]
+    tags: ["v*"]
 
 permissions:
   contents: write
@@ -18,36 +16,32 @@ jobs:
     outputs:
       new_tag: ${{ steps.version.outputs.new_tag }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
+      - run: npm install --package-lock-only --ignore-scripts
+      - run: npm ci --ignore-scripts
 
-      - name: Bump patch version
-        id: version
+      - id: version
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           npm version patch --no-git-tag-version
-          NEW_VERSION=$(node -p "require('./package.json').version")
+          new_version=$(node -p "require('./package.json').version")
 
           git add package.json package-lock.json
-          git commit -m "🔖 bump: release v${NEW_VERSION}"
-          git tag "v${NEW_VERSION}"
+          git commit -m "🔖 bump: release v${new_version}" || true
+          git tag "v${new_version}"
 
-          echo "new_tag=v${NEW_VERSION}" >> $GITHUB_OUTPUT
+          echo "new_tag=v${new_version}" >> $GITHUB_OUTPUT
 
-      - name: Push new tag
-        run: git push origin main --follow-tags
+      - run: git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -58,19 +52,10 @@ jobs:
     outputs:
       new_tag: ${{ needs.version-bump.outputs.new_tag }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Delete existing release if it exists
-        continue-on-error: true
-        run: |
-          gh release delete ${{ needs.version-bump.outputs.new_tag }} --yes --cleanup-tag || echo "No existing release to delete"
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create GitHub Release
+      - name: Create or update GitHub Release
         uses: softprops/action-gh-release@v2
-        id: release
         with:
           tag_name: ${{ needs.version-bump.outputs.new_tag }}
           name: Mission Icarus ${{ needs.version-bump.outputs.new_tag }}
@@ -88,75 +73,57 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version-bump.outputs.new_tag }}
+          ref: ${{ needs.create-release.outputs.new_tag }}
           fetch-depth: 0
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      - name: Setup Python (Windows only)
-        if: matrix.os == 'windows-latest'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install pipenv (Windows only)
-        if: matrix.os == 'windows-latest'
-        run: pip install pipenv
-
-      - name: Install Python dependencies (Windows only)
-        if: matrix.os == 'windows-latest'
-        run: pipenv install --dev
-
-      - name: Install Node dependencies
+      - name: Install dependencies
         run: npm ci --ignore-scripts
 
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
-      - name: Build app
-        shell: bash
+      - name: Build Electron app
         run: |
+          VERSION=${{ needs.create-release.outputs.new_tag }}
+          VERSION_NO_V="${VERSION#v}"
+          echo "Building version: $VERSION_NO_V"
+
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
             npm run build -- --publish never
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run build:windows -- --publish never
-          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+          else
             npm run build:linux -- --publish never
           fi
+        shell: bash
 
-      - name: Set release folder path
-        id: folder
+      - name: Find built installers dynamically
+        id: find_files
         shell: bash
         run: |
-          VERSION="${{ needs.create-release.outputs.new_tag }}"
+          VERSION=${{ needs.create-release.outputs.new_tag }}
           VERSION_NO_V="${VERSION#v}"
-          echo "folder_name=release/$VERSION_NO_V" >> $GITHUB_OUTPUT
+          RELEASE_DIR="release/$VERSION_NO_V"
 
-      - name: Debug - list all files in release folder
-        shell: bash
-        run: |
-          echo "Listing all files in ${{ steps.folder.outputs.folder_name }}:"
-          if [ -d "${{ steps.folder.outputs.folder_name }}" ]; then
-            find "${{ steps.folder.outputs.folder_name }}" -type f
-          else
-            echo "Release folder not found!"
-          fi
+          echo "Looking for installers in $RELEASE_DIR"
+          find "$RELEASE_DIR" -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" \) > files.txt
+          echo "Found files:"
+          cat files.txt
+
+          # Convert file list to comma-separated for upload
+          FILES=$(paste -sd "," files.txt)
+          echo "files=$FILES" >> $GITHUB_OUTPUT
 
       - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.create-release.outputs.new_tag }}
-          files: |
-            ${{ steps.folder.outputs.folder_name }}/**/*.dmg
-            ${{ steps.folder.outputs.folder_name }}/**/*.exe
-            ${{ steps.folder.outputs.folder_name }}/**/*.yml
-            ${{ steps.folder.outputs.folder_name }}/**/*.zip
-            ${{ steps.folder.outputs.folder_name }}/**/*.AppImage
+          files: ${{ steps.find_files.outputs.files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
