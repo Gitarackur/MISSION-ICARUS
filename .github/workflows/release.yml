@@ -70,6 +70,16 @@ jobs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Delete existing release if it exists
+        continue-on-error: true
+        run: |
+          gh release delete ${{ needs.version-bump.outputs.new_tag }} --yes --cleanup-tag
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
