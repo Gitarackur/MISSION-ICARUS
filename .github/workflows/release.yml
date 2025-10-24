@@ -80,13 +80,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  build:
-    name: Build Electron App
+  build-and-upload:
+    name: Build & Upload Installers
     needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -120,13 +120,15 @@ jobs:
         run: npx electron-rebuild -f -w better-sqlite3
 
       - name: Build app
+        shell: bash
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
             npm run build -- --publish never
           elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run build:windows -- --publish never
+          elif [ "${{ matrix.os }}" = "ubuntu-latest" ]; then
+            npm run build:linux -- --publish never
           fi
-        shell: bash
 
       - name: Set release folder path
         id: folder
@@ -136,37 +138,25 @@ jobs:
           VERSION_NO_V="${VERSION#v}"
           echo "folder_name=release/$VERSION_NO_V" >> $GITHUB_OUTPUT
 
-      - name: Debug - list release files
+      - name: Debug - list all files in release folder
         shell: bash
         run: |
-          echo "Contents of ${{ steps.folder.outputs.folder_name }}:"
-          ls -R "${{ steps.folder.outputs.folder_name }}" || echo "No release folder found"
+          echo "Listing all files in ${{ steps.folder.outputs.folder_name }}:"
+          if [ -d "${{ steps.folder.outputs.folder_name }}" ]; then
+            find "${{ steps.folder.outputs.folder_name }}" -type f
+          else
+            echo "Release folder not found!"
+          fi
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+      - name: Upload installers to GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: installers-${{ matrix.os }}
-          path: ${{ steps.folder.outputs.folder_name }}
-
-  upload-to-release:
-    name: Upload installers to GitHub Release
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download macOS artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: installers-macos-latest
-          path: release/macos
-
-      - name: Download Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: installers-windows-latest
-          path: release/windows
-
-      - name: Upload all to GitHub Release
-        run: |
-          gh release upload "${{ needs.create-release.outputs.new_tag }}" release/macos/* release/windows/* --clobber
+          tag_name: ${{ needs.create-release.outputs.new_tag }}
+          files: |
+            ${{ steps.folder.outputs.folder_name }}/**/*.dmg
+            ${{ steps.folder.outputs.folder_name }}/**/*.exe
+            ${{ steps.folder.outputs.folder_name }}/**/*.yml
+            ${{ steps.folder.outputs.folder_name }}/**/*.zip
+            ${{ steps.folder.outputs.folder_name }}/**/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
