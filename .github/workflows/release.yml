@@ -76,7 +76,7 @@ jobs:
       - name: Delete existing release if it exists
         continue-on-error: true
         run: |
-          gh release delete ${{ needs.version-bump.outputs.new_tag }} --yes --cleanup-tag
+          gh release delete ${{ needs.version-bump.outputs.new_tag }} --yes --cleanup-tag || echo "No existing release to delete"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
