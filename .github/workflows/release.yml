@@ -92,7 +92,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [macos-latest, windows-latest]
+        os: [macos-latest, windows-latest, ubuntu-latest]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -129,24 +129,26 @@ jobs:
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
             npm run build -- --publish never
-          else
+          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
             npm run build:windows -- --publish never
+          else
+            npm run build:linux -- --publish never
           fi
         shell: bash
 
-      - name: Debug - list release files
+      - name: Debug - list releases folder
         run: |
-          echo "Contents of release/:"
-          ls -R release || echo "No release folder found"
+          echo "Contents of releases/${{ needs.create-release.outputs.new_tag }}/:"
+          ls -R releases/${{ needs.create-release.outputs.new_tag }} || echo "No releases folder found"
 
       - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.create-release.outputs.new_tag }}
           files: |
-            release/*.dmg
-            release/*.exe
-            release/*.yml
-            release/*.zip
+            releases/${{ needs.create-release.outputs.new_tag }}/*-Mac-*-Installer.dmg
+            releases/${{ needs.create-release.outputs.new_tag }}/*-Windows-*-Setup.exe
+            releases/${{ needs.create-release.outputs.new_tag }}/*.yml
+            releases/${{ needs.create-release.outputs.new_tag }}/*-Linux-*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
