@@ -136,19 +136,19 @@ jobs:
           fi
         shell: bash
 
-      - name: Debug - list releases folder
+      - name: Debug - list release files
         run: |
-          echo "Contents of releases/${{ needs.create-release.outputs.new_tag }}/:"
-          ls -R releases/${{ needs.create-release.outputs.new_tag }} || echo "No releases folder found"
+          echo "Contents of release/${{ needs.create-release.outputs.new_tag }}/:"
+          ls -R release/${{ needs.create-release.outputs.new_tag }} || echo "No release folder found"
 
       - name: Upload installers to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.create-release.outputs.new_tag }}
           files: |
-            releases/${{ needs.create-release.outputs.new_tag }}/*-Mac-*-Installer.dmg
-            releases/${{ needs.create-release.outputs.new_tag }}/*-Windows-*-Setup.exe
-            releases/${{ needs.create-release.outputs.new_tag }}/*.yml
-            releases/${{ needs.create-release.outputs.new_tag }}/*-Linux-*.AppImage
+            release/${{ needs.create-release.outputs.new_tag }}/*-Mac-*-Installer.dmg
+            release/${{ needs.create-release.outputs.new_tag }}/*-Windows-*-Setup.exe
+            release/${{ needs.create-release.outputs.new_tag }}/*.yml
+            release/${{ needs.create-release.outputs.new_tag }}/*-Linux-*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
