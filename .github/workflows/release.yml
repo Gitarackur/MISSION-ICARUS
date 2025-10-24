@@ -106,17 +106,38 @@ jobs:
       - name: Find built installers dynamically
         id: find_files
         shell: bash
+        # run: |
+        #   VERSION=${{ needs.create-release.outputs.new_tag }}
+        #   VERSION_NO_V="${VERSION#v}"
+        #   RELEASE_DIR="release/$VERSION_NO_V"
+
+        #   echo "Looking for installers in $RELEASE_DIR"
+        #   find "$RELEASE_DIR" -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" \) > files.txt
+        #   echo "Found files:"
+        #   cat files.txt
+
+        #   # Convert file list to comma-separated for upload
+        #   FILES=$(paste -sd "," files.txt)
+        #   echo "files=$FILES" >> $GITHUB_OUTPUT
+        
         run: |
           VERSION=${{ needs.create-release.outputs.new_tag }}
           VERSION_NO_V="${VERSION#v}"
           RELEASE_DIR="release/$VERSION_NO_V"
 
           echo "Looking for installers in $RELEASE_DIR"
-          find "$RELEASE_DIR" -type f \( -name "*.dmg" -o -name "*.exe" -o -name "*.AppImage" \) > files.txt
-          echo "Found files:"
+
+          # Only match final Electron Builder installer names
+          find "$RELEASE_DIR" -type f \( \
+            -name "Icarus-Mac-*-Installer.dmg" -o \
+            -name "Icarus-Windows-*-Setup.exe" -o \
+            -name "Icarus-Linux-*.AppImage" \
+          \) > files.txt
+
+          echo "Found installer files:"
           cat files.txt
 
-          # Convert file list to comma-separated for upload
+          # Convert file list to comma-separated for GitHub Release upload
           FILES=$(paste -sd "," files.txt)
           echo "files=$FILES" >> $GITHUB_OUTPUT
 
