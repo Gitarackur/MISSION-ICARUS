@@ -40,11 +40,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Commit any lock file changes first
           git add package-lock.json yarn.lock 2>/dev/null || true
           git diff --quiet && git diff --staged --quiet || git commit -m "chore: update lock files"
 
-          # Bump version
           npm version patch --no-git-tag-version
           new_version=$(node -p "require('./package.json').version")
 
@@ -55,8 +53,7 @@ jobs:
           echo "new_tag=v${new_version}" >> $GITHUB_OUTPUT
 
       - name: Push new tag
-        run: |
-          git push origin main --follow-tags
+        run: git push origin main --follow-tags
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -64,8 +61,6 @@ jobs:
     name: Create GitHub Release
     needs: version-bump
     runs-on: ubuntu-latest
-    outputs:
-      upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -78,7 +73,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
-        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version-bump.outputs.new_tag }}
@@ -91,11 +85,13 @@ jobs:
 
   build:
     name: Build Electron App
-    needs: [version-bump, create-release]
+    needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [macos-latest, windows-latest]
+    outputs:
+      new_tag: ${{ needs.create-release.outputs.tag_name }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -123,40 +119,59 @@ jobs:
         if: matrix.os == 'windows-latest'
         run: pipenv install --dev
 
-      - name: Fix lock file
-        run: npm install --package-lock-only --ignore-scripts
-
-      - name: Install dependencies (skip postinstall)
+      - name: Install dependencies
         run: npm ci --ignore-scripts
 
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
-      - name: Build and publish app
+      - name: Build app
         run: |
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
             npm run build -- --publish never
           else
             npm run build:windows -- --publish never
           fi
-        shell: bash
 
-      - name: List release files
-        if: always()
+      - name: Debug - list release files
         run: |
-          echo "Contents of releases/ folder:"
+          echo "Contents of releases/:"
           ls -R releases || echo "No releases folder found"
 
-      - name: Upload installers to GitHub Release
-        if: success()
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: installers-${{ matrix.os }}
+          path: releases/
+
+  upload-to-release:
+    name: Upload installers to GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: installers-macos-latest
+          path: releases/macos
+
+      - name: Download Windows artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: installers-windows-latest
+          path: releases/windows
+
+      - name: List downloaded artifacts
+        run: ls -R releases
+
+      - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.version-bump.outputs.new_tag }}
+          tag_name: ${{ needs.build.outputs.new_tag }}
           files: |
-            releases/**/*.dmg
-            releases/**/*.exe
-            releases/**/*.yml
-            releases/**/*.zip
-            releases/**/*.AppImage
+            releases/macos/*.dmg
+            releases/windows/*.exe
+            releases/windows/*.yml
+            releases/windows/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
