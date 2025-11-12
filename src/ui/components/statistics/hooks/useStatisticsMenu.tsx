@@ -60,9 +60,6 @@ import {
   MissingValuesPlot,
   FTest,
   ChiSquareTest,
-  ZScoreOutliers,
-  IqrOutliers,
-  GrubbsTest,
   WgcnaAnalysis,
   SaveData,
   ExportCsv,
@@ -74,7 +71,10 @@ import {
   KMeansClustering,
   ZScoreNormalization,
   TransformNormalization,
-  MeanCenteringNormalizationLog
+  MeanCenteringNormalizationLog,
+  GrubbsOutlier,
+  IQROutlier,
+  ZScoreOutlier
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -950,25 +950,103 @@ case 'delete-row':
       case "missing-values-plot":
         content = <MissingValuesPlot />;
         break;
-      case "f-test-test":
-        content = <FTest dataColumns={dataColumns} actionId={actionId} />;
-        break;
-      case "chi-square-test":
-        content = (
-          <ChiSquareTest dataColumns={dataColumns} actionId={actionId} />
-        );
-        break;
+      // F-TEST CASE - ADD THIS OR REPLACE IF EXISTS
+
+  case 'f-test-test':
+    content = <FTest 
+      dataColumns={dataColumns}
+      actionId={actionId}
+      dataRows={dataRows}
+      allColumnarData={allColumnarData}
+      onSuccess={(result) => {
+        closeModal();
+        onSuccess?.(result);
+      }}
+      onError={() => {
+        closeModal();
+        onError?.();
+      }}
+    />;
+    break;
+  
+  // CHI-SQUARE TEST CASE - ADD THIS OR REPLACE IF EXISTS
+  
+  case 'chi-square-test':
+    content = <ChiSquareTest 
+      dataColumns={dataColumns}
+      actionId={actionId}
+      dataRows={dataRows}
+      allColumnarData={allColumnarData}
+      onSuccess={(result) => {
+        closeModal();
+        onSuccess?.(result);
+      }}
+      onError={() => {
+        closeModal();
+        onError?.();
+      }}
+    />;
+    break;
+    
       case "z-score-outliers":
         content = (
-          <ZScoreOutliers dataColumns={dataColumns} actionId={actionId} />
+          <ZScoreOutlier 
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
+      
+      
       case "iqr-outliers":
-        content = <IqrOutliers dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <IQROutlier 
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
+      
+      
       case "grubbs-test":
-        content = <GrubbsTest dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <GrubbsOutlier 
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
+      
       case "wgcna-analysis":
         content = (
           <WgcnaAnalysis dataColumns={dataColumns} actionId={actionId} />

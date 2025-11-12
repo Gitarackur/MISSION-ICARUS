@@ -2282,3 +2282,247 @@ export function meanCenteringNormalization(data: number[][]): number[][] {
   
   return result;
 }
+
+
+
+// ===================================================================
+// F-TEST (Two-Sample Variance Comparison)
+// ===================================================================
+
+export interface FTestResult {
+  fStatistic: number;
+  pValue: number;
+  degreesOfFreedom1: number;
+  degreesOfFreedom2: number;
+  variance1: number;
+  variance2: number;
+  mean1: number;
+  mean2: number;
+}
+
+export function fTest(group1: number[], group2: number[]): FTestResult {
+  if (group1.length === 0 || group2.length === 0) {
+    throw new Error("Both groups must have at least one value");
+  }
+
+  const mean1 = mean(group1);
+  const mean2 = mean(group2);
+  const variance1 = variance(group1);
+  const variance2 = variance(group2);
+  const n1 = group1.length;
+  const n2 = group2.length;
+
+  const fStatistic = Math.max(variance1, variance2) / Math.max(Math.min(variance1, variance2), 1e-10);
+  const df1 = (Math.max(variance1, variance2) === variance1 ? n1 : n2) - 1;
+  const df2 = (Math.max(variance1, variance2) === variance1 ? n2 : n1) - 1;
+  
+  // Use approximation for p-value
+  const pValue = 2 * Math.min(0.5, Math.max(0, 1 - 1 / (1 + fStatistic)));
+
+  return {
+    fStatistic,
+    pValue: Math.min(pValue, 1),
+    degreesOfFreedom1: df1,
+    degreesOfFreedom2: df2,
+    variance1,
+    variance2,
+    mean1,
+    mean2,
+  };
+}
+
+// ===================================================================
+// CHI-SQUARE TEST (Goodness of Fit)
+// ===================================================================
+
+export interface ChiSquareTestResult {
+  chiSquareStatistic: number;
+  pValue: number;
+  degreesOfFreedom: number;
+  observedFrequencies: number[];
+  expectedFrequencies: number[];
+  contributionToChi2: number[];
+}
+
+export function chiSquareTest(
+  observedFrequencies: number[],
+  expectedFrequencies?: number[]
+): ChiSquareTestResult {
+  if (observedFrequencies.length === 0) {
+    throw new Error("Must provide observed frequencies");
+  }
+
+  const observed = observedFrequencies.filter(v => isFinite(v) && v >= 0);
+  
+  if (observed.length < 2) {
+    throw new Error("Chi-Square test requires at least 2 categories");
+  }
+
+  const totalObserved = observed.reduce((a, b) => a + b, 0);
+  const expected =
+    expectedFrequencies && expectedFrequencies.length === observed.length
+      ? expectedFrequencies.filter(v => isFinite(v) && v > 0)
+      : new Array(observed.length).fill(totalObserved / observed.length);
+
+  if (expected.some(e => e <= 0)) {
+    throw new Error("All expected frequencies must be greater than 0");
+  }
+
+  let chiSquareStatistic = 0;
+  const contributionToChi2: number[] = [];
+
+  for (let i = 0; i < observed.length; i++) {
+    const o = observed[i];
+    const e = expected[i];
+    const contribution = Math.pow(o - e, 2) / e;
+    chiSquareStatistic += contribution;
+    contributionToChi2.push(contribution);
+  }
+
+  const degreesOfFreedom = observed.length - 1;
+  
+  // Simplified p-value approximation
+  const pValue = Math.max(0, Math.min(1, 1 - chiSquareStatistic / (chiSquareStatistic + degreesOfFreedom)));
+
+  return {
+    chiSquareStatistic,
+    pValue,
+    degreesOfFreedom,
+    observedFrequencies: observed,
+    expectedFrequencies: expected,
+    contributionToChi2,
+  };
+}
+
+
+// ===================================================================
+// Z-SCORE OUTLIER DETECTION
+// ===================================================================
+
+export interface ZScoreOutlierResult {
+  isOutlier: boolean;
+  zScore: number;
+  value: number;
+  threshold: number;
+}
+
+export function detectZScoreOutliers(
+  values: number[],
+  threshold: number = 3
+): ZScoreOutlierResult[] {
+  if (values.length === 0) {
+    throw new Error("Cannot detect outliers in empty array");
+  }
+
+  const meanValue = mean(values);
+  const stdDevValue = stddev(values);
+
+  return values.map((value) => {
+    const zScore = stdDevValue === 0 ? 0 : (value - meanValue) / stdDevValue;
+    const isOutlier = Math.abs(zScore) > threshold;
+
+    return {
+      isOutlier,
+      zScore,
+      value,
+      threshold,
+    };
+  });
+}
+
+// ===================================================================
+// IQR OUTLIER DETECTION
+// ===================================================================
+
+export interface IQROutlierResult {
+  isOutlier: boolean;
+  value: number;
+  q1: number;
+  q3: number;
+  iqr: number;
+  lowerBound: number;
+  upperBound: number;
+}
+
+export function detectIQROutliers(
+  values: number[],
+  multiplier: number = 1.5
+): IQROutlierResult[] {
+  if (values.length === 0) {
+    throw new Error("Cannot detect outliers in empty array");
+  }
+
+  const sorted = [...values].sort((a, b) => a - b);
+  const n = sorted.length;
+
+  // Calculate Q1 (25th percentile) and Q3 (75th percentile)
+  const q1Index = Math.floor(n * 0.25);
+  const q3Index = Math.floor(n * 0.75);
+  const q1 = sorted[q1Index];
+  const q3 = sorted[q3Index];
+  const iqr = q3 - q1;
+
+  const lowerBound = q1 - multiplier * iqr;
+  const upperBound = q3 + multiplier * iqr;
+
+  return values.map((value) => {
+    const isOutlier = value < lowerBound || value > upperBound;
+
+    return {
+      isOutlier,
+      value,
+      q1,
+      q3,
+      iqr,
+      lowerBound,
+      upperBound,
+    };
+  });
+}
+
+// ===================================================================
+// GRUBBS' TEST OUTLIER DETECTION
+// ===================================================================
+
+export interface GrubbsTestResult {
+  isOutlier: boolean;
+  grubbsStatistic: number;
+  criticalValue: number;
+  value: number;
+  index: number;
+}
+
+export function detectGrubbsOutliers(
+  values: number[],
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  alpha: number = 0.05
+): GrubbsTestResult[] {
+  if (values.length < 3) {
+    throw new Error("Grubbs' test requires at least 3 data points");
+  }
+
+  const n = values.length;
+  const meanValue = mean(values);
+  const stdDevValue = stddev(values);
+
+  // Critical value approximation for Grubbs' test
+  // For α = 0.05, approximate formula
+  const tCritical = 1.96; // Approximation for large n
+  const criticalValue =
+    ((n - 1) / Math.sqrt(n)) *
+    Math.sqrt(Math.pow(tCritical, 2) / (n - 2 + Math.pow(tCritical, 2)));
+
+  return values.map((value, index) => {
+    const grubbsStatistic =
+      stdDevValue === 0 ? 0 : Math.abs(value - meanValue) / stdDevValue;
+    const isOutlier = grubbsStatistic > criticalValue;
+
+    return {
+      isOutlier,
+      grubbsStatistic,
+      criticalValue,
+      value,
+      index,
+    };
+  });
+}
