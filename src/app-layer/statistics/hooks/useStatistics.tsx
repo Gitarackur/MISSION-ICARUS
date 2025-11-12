@@ -21,6 +21,8 @@ import {
   sortDataByColumn,
   stddev,
   transposeData,
+  fTest,              // ADD THIS LINE
+  chiSquareTest,
 } from "@/app-layer/statistics/utils/statistical-engine";
 import { TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -74,6 +76,12 @@ import {
   meanCenteringNormalization
 } from '@/app-layer/statistics/utils/statistical-engine';
 
+import {
+  // ... existing imports ...
+  detectZScoreOutliers,    // ADD THIS
+  detectIQROutliers,       // ADD THIS
+  detectGrubbsOutliers,    // ADD THIS
+} from "@/app-layer/statistics/utils/statistical-engine";
 
 
 export const useStatisticalAnalysis = () => {
@@ -824,6 +832,126 @@ export const useStatisticalAnalysis = () => {
             throw error;
           }
         }
+
+
+        
+case "f-test-test": {
+  // F-Test requires at least 2 groups
+  if (numericData.length < 2) {
+    throw new Error("F-Test requires at least 2 groups of data");
+  }
+
+  const fTestResults = fTest(numericData[0], numericData[1]);
+  
+  // Only return the essential columns
+  results = [[
+    fTestResults.fStatistic,
+    fTestResults.pValue,
+    fTestResults.degreesOfFreedom1,
+    fTestResults.degreesOfFreedom2,
+  ]];
+  
+  newColumnNames = [
+    "f_statistic",
+    "p_value",
+    "df1",
+    "df2",
+  ];
+  break;
+}
+
+
+case "chi-square-test": {
+  // Chi-Square test expects at least one column of frequency data
+  if (numericData.length === 0) {
+    throw new Error("Chi-Square test requires frequency data");
+  }
+
+  const observedFrequencies = numericData[0];
+  const expectedFrequencies = numericData.length > 1 ? numericData[1] : undefined;
+  const chiSquareResults = chiSquareTest(observedFrequencies, expectedFrequencies);
+  
+  // Only return the essential columns
+  results = [[
+    chiSquareResults.chiSquareStatistic,
+    chiSquareResults.pValue,
+    chiSquareResults.degreesOfFreedom,
+  ]];
+  
+  newColumnNames = [
+    "chi_square_statistic",
+    "p_value",
+    "degrees_of_freedom",
+  ];
+  break;
+}
+
+
+
+case "z-score-outliers": {
+  if (numericData.length === 0) {
+    throw new Error("Z-Score outlier detection requires data");
+  }
+
+  const zScoreThreshold = 3; // Standard threshold
+  const outlierResults = detectZScoreOutliers(numericData[0], zScoreThreshold);
+  
+  // Return only outliers with their details
+  const outliers = outlierResults.filter(r => r.isOutlier);
+  results = outliers.map(r => [r.value, r.zScore, r.threshold]);
+  
+  newColumnNames = [
+    "outlier_value",
+    "z_score",
+    "threshold",
+  ];
+  break;
+}
+
+
+case "iqr-outliers": {
+  if (numericData.length === 0) {
+    throw new Error("IQR outlier detection requires data");
+  }
+
+  const iqrMultiplier = 1.5; // Standard IQR multiplier
+  const outlierResults = detectIQROutliers(numericData[0], iqrMultiplier);
+  
+  // Return only outliers with their details
+  const outliers = outlierResults.filter(r => r.isOutlier);
+  results = outliers.map(r => [r.value, r.lowerBound, r.upperBound, r.iqr]);
+  
+  newColumnNames = [
+    "outlier_value",
+    "lower_bound",
+    "upper_bound",
+    "iqr",
+  ];
+  break;
+}
+
+
+case "grubbs-test": {
+  if (numericData.length < 3) {
+    throw new Error("Grubbs' test requires at least 3 data points");
+  }
+
+  const alpha = 0.05; // Significance level
+  const outlierResults = detectGrubbsOutliers(numericData[0], alpha);
+  
+  // Return only outliers with their details
+  const outliers = outlierResults.filter(r => r.isOutlier);
+  results = outliers.map(r => [r.value, r.grubbsStatistic, r.criticalValue]);
+  
+  newColumnNames = [
+    "outlier_value",
+    "grubbs_statistic",
+    "critical_value",
+  ];
+  break;
+}
+
+        
 
         default: {
           throw new Error(`Action '${action}' not supported.`);

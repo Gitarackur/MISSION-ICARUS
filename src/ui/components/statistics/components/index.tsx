@@ -6576,252 +6576,560 @@ export const MissingValuesPlot = () => (
   </div>
 );
 
-/*---------------------------------------------------
-FTEST
-----------------------------------------------------*/
-
-export const FTest = ({
-  dataColumns,
-  // actionId,
-}: {
+// ===================================================================
+// F-TEST - Like Z-Score pattern
+// ===================================================================
+export const FTest: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>F-Test</h1>
-    <p className={descriptionClass}>
-      Performs an F-Test to compare the variances of two groups.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="f-test-column"
-          label={`Select Numeric Column`}
-          placeholder="Select data columns to analyze..."
-          options={["Box Plot", "Density Plot"].map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
-      </div>
-      <div>
-        <SingleSelect
-          id="f-test-group-column"
-          label={`Select Grouping Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter((col) => !col.startsWith("_"));
+  }, [allColumnarData]);
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runFTest = () => {
+    setError(null);
+
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+
+    if (columnsToUse.length < 2) {
+      setError("F-Test requires at least 2 columns of data.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size < 2) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the F-Test calculation. Please check your data.");
+      console.error("F-Test calculation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>F-Test</h1>
+      <p className={descriptionClass}>
+        Performs a statistical F-test to compare the variances of two groups and determine if they are significantly different.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="ftest-columns"
+            label="Select Columns"
+            placeholder="Select columns to analyze (leave empty for all)..."
+            options={availableColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Choose at least 2 numeric columns for F-Test comparison. ${availableColumns.length} columns available`}
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What F-Test does</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Compares variances between two or more groups</li>
+            <li>• Tests if groups have significantly different spreads</li>
+            <li>• H0: Variances are equal, H1: Variances are different</li>
+            <li>• Returns F-statistic and p-value for hypothesis testing</li>
+          </ul>
+        </div>
+
+        {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className={buttonClass} onClick={runFTest}>
+            Run F-Test
+          </button>
+        </div>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run F-Test</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-CHISQUARE
-----------------------------------------------------*/
-
-export const ChiSquareTest = ({
-  dataColumns,
-  // actionId,
-}: {
+// ===================================================================
+// CHI-SQUARE TEST - Like Z-Score pattern
+// ===================================================================
+export const ChiSquareTest: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Chi-Square Test</h1>
-    <p className={descriptionClass}>
-      Performs a Chi-Square Test for independence on categorical data.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="chi-square-col1"
-          label={`Column 1`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
-      </div>
-      <div>
-        <SingleSelect
-          id="chi-square-col2"
-          label={`Column 2`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter((col) => !col.startsWith("_"));
+  }, [allColumnarData]);
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runChiSquareTest = () => {
+    setError(null);
+
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+
+    if (columnsToUse.length < 1) {
+      setError("Chi-Square test requires at least 1 column of frequency data.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Chi-Square test. Please check your data.");
+      console.error("Chi-Square test failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Chi-Square Test</h1>
+      <p className={descriptionClass}>
+        Performs a Chi-Square test for goodness of fit to determine if observed frequencies differ from expected frequencies.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="chi-square-columns"
+            label="Select Columns"
+            placeholder="Select frequency columns to analyze (leave empty for all)..."
+            options={availableColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Choose numeric columns containing frequency data. ${availableColumns.length} columns available`}
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Chi-Square does</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Tests goodness of fit for frequency data</li>
+            <li>• Compares observed vs. expected frequencies</li>
+            <li>• H0: Distribution matches expected, H1: Distribution differs</li>
+            <li>• Returns Chi-square statistic and p-value for hypothesis testing</li>
+          </ul>
+        </div>
+
+        {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className={buttonClass} onClick={runChiSquareTest}>
+            Run Chi-Square Test
+          </button>
+        </div>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Chi-Square</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-ZSCORE OUTLIERS
-----------------------------------------------------*/
 
-export const ZScoreOutliers = ({
-  dataColumns,
-  // actionId,
-}: {
+
+
+// ===================================================================
+// Z-SCORE OUTLIER DETECTION COMPONENT
+// ===================================================================
+export const ZScoreOutlier: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Z-Score Outliers</h1>
-    <p className={descriptionClass}>
-      Identifies outliers based on a Z-Score threshold.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="z-score-outlier-column"
-          label={`Select Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
-      </div>
-      <div>
-        <label htmlFor="z-score-threshold" className={labelClass}>
-          Z-Score Threshold
-        </label>
-        <input
-          type="number"
-          id="z-score-threshold"
-          defaultValue="3"
-          step="0.1"
-          className={inputClass}
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter((col) => !col.startsWith("_"));
+  }, [allColumnarData]);
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [threshold, setThreshold] = useState<number>(3);
+  const [error, setError] = useState<string | null>(null);
+
+  const runZScoreOutlier = () => {
+    setError(null);
+
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+
+    if (columnsToUse.length === 0) {
+      setError("Please select at least one column for outlier detection.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during Z-Score outlier detection. Please check your data.");
+      console.error("Z-Score outlier detection failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Z-Score Outlier Detection</h1>
+      <p className={descriptionClass}>
+        Detects outliers using Z-Score method. Values with |Z| &gt; threshold are considered outliers.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="zscore-outlier-columns"
+            label="Select Columns"
+            placeholder="Select columns to analyze (leave empty for all)..."
+            options={availableColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Choose numeric columns for outlier detection. ${availableColumns.length} columns available`}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="zscore-threshold" className={labelClass}>
+            Z-Score Threshold
+          </label>
+          <input
+            type="number"
+            id="zscore-threshold"
+            min="1"
+            max="5"
+            step="0.1"
+            value={threshold}
+            onChange={(e) => setThreshold(parseFloat(e.target.value) || 3)}
+            className={inputClass}
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Standard threshold is 3 (99.7% confidence). Lower values = more sensitive.
+          </p>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Z-Score does</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Measures how many standard deviations away from mean</li>
+            <li>• Z = (value - mean) / std_dev</li>
+            <li>• |Z| &gt; threshold → outlier</li>
+            <li>• Works best for normally distributed data</li>
+          </ul>
+        </div>
+
+        {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className={buttonClass} onClick={runZScoreOutlier}>
+            Detect Outliers
+          </button>
+        </div>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Find Outliers</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-IQR OUTLIERS
-----------------------------------------------------*/
-
-export const IqrOutliers = ({
-  dataColumns,
-  // actionId,
-}: {
+// ===================================================================
+// IQR OUTLIER DETECTION COMPONENT
+// ===================================================================
+export const IQROutlier: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>IQR Outliers</h1>
-    <p className={descriptionClass}>
-      Identifies outliers using the Interquartile Range (IQR) method.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="iqr-outlier-column"
-          label={`Select Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to delete from your analysis"
-        />
-      </div>
-      <div>
-        <label htmlFor="iqr-factor" className={labelClass}>
-          IQR Factor
-        </label>
-        <input
-          type="number"
-          id="iqr-factor"
-          defaultValue="1.5"
-          step="0.1"
-          className={inputClass}
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter((col) => !col.startsWith("_"));
+  }, [allColumnarData]);
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [multiplier, setMultiplier] = useState<number>(1.5);
+  const [error, setError] = useState<string | null>(null);
+
+  const runIQROutlier = () => {
+    setError(null);
+
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+
+    if (columnsToUse.length === 0) {
+      setError("Please select at least one column for outlier detection.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during IQR outlier detection. Please check your data.");
+      console.error("IQR outlier detection failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>IQR Outlier Detection</h1>
+      <p className={descriptionClass}>
+        Detects outliers using Interquartile Range (IQR) method. Values outside Q1 - 1.5×IQR to Q3 + 1.5×IQR are outliers.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="iqr-outlier-columns"
+            label="Select Columns"
+            placeholder="Select columns to analyze (leave empty for all)..."
+            options={availableColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Choose numeric columns for outlier detection. ${availableColumns.length} columns available`}
+          />
+        </div>
+
+        <div>
+          <label htmlFor="iqr-multiplier" className={labelClass}>
+            IQR Multiplier
+          </label>
+          <input
+            type="number"
+            id="iqr-multiplier"
+            min="0.5"
+            max="3"
+            step="0.1"
+            value={multiplier}
+            onChange={(e) => setMultiplier(parseFloat(e.target.value) || 1.5)}
+            className={inputClass}
+          />
+          <p className="text-sm text-gray-500 mt-1">
+            Standard multiplier is 1.5. Higher values = less sensitive to outliers.
+          </p>
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What IQR does</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• IQR = Q3 - Q1 (interquartile range)</li>
+            <li>• Lower bound = Q1 - multiplier × IQR</li>
+            <li>• Upper bound = Q3 + multiplier × IQR</li>
+            <li>• Robust to non-normal distributions</li>
+          </ul>
+        </div>
+
+        {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className={buttonClass} onClick={runIQROutlier}>
+            Detect Outliers
+          </button>
+        </div>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Find Outliers</button>
-    </div>
-  </div>
-);
+  );
+};
 
-/*---------------------------------------------------
-GRUBBS TEST
-----------------------------------------------------*/
-
-export const GrubbsTest = ({
-  dataColumns,
-  // actionId,
-}: {
+// ===================================================================
+// GRUBBS' TEST OUTLIER DETECTION COMPONENT
+// ===================================================================
+export const GrubbsOutlier: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Grubbs' Test</h1>
-    <p className={descriptionClass}>
-      Performs Grubbs' test to detect outliers in a dataset.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="grubbs-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to delete from your analysis"
-      />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}> = ({ actionId, allColumnarData, onSuccess, onError }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter((col) => !col.startsWith("_"));
+  }, [allColumnarData]);
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runGrubbsOutlier = () => {
+    setError(null);
+
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+
+    if (columnsToUse.length === 0) {
+      setError("Please select at least one column for outlier detection.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during Grubbs' test. Please check your data.");
+      console.error("Grubbs' test failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Grubbs' Test</h1>
+      <p className={descriptionClass}>
+        Detects outliers using Grubbs' test (extreme studentized deviate). Tests one outlier at a time (most extreme value).
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="grubbs-outlier-columns"
+            label="Select Columns"
+            placeholder="Select columns to analyze (leave empty for all)..."
+            options={availableColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`Choose numeric columns for outlier detection. ${availableColumns.length} columns available`}
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What Grubbs' Test does</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Tests for single outlier (most extreme value)</li>
+            <li>• G = |value - mean| / std_dev</li>
+            <li>• Compares G to critical value (α = 0.05)</li>
+            <li>• Assumes normally distributed data</li>
+            <li>• Requires at least 3 data points</li>
+          </ul>
+        </div>
+
+        {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+        <div className="flex justify-end">
+          <button className={buttonClass} onClick={runGrubbsOutlier}>
+            Detect Outliers
+          </button>
+        </div>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run Grubbs' Test</button>
-    </div>
-  </div>
-);
+  );
+};
+
 
 /*---------------------------------------------------
 WGCNA ANALYSIS
