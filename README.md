@@ -17,7 +17,7 @@
 
 The **Statistical Analysis Platform** is a **React + Electron** interactive application for exploring and analyzing statistical data from various sources **like mass spectrometry–based proteomics datasets and many more**.  
 
-It supports the imports of various txt, csv formats *like **MaxQuant outputs** (e.g., `proteinGroups.txt`, `evidence.txt`)) and provides filtering, summary statistics, and statistical analysis — all within an intuitive, visual interface.
+It supports the imports of various txt, csv formats *like **MaxQuant outputs** (e.g, `proteinGroups.txt`, `evidence.txt`)) and provides filtering, summary statistics, and statistical analysis — all within an intuitive, visual interface.
 
 ---
 
