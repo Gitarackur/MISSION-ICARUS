@@ -502,6 +502,7 @@ const parser = new IcarusParser();
 // export const parseCSVFromFile = parser.parseCSVFromFileNative;
 // export const parse2DArray = parser.parse2DArrayNative;
 
-export const parseCSVFromFile = parser.parseCSVFromFilePapaParse;
+// export const parseCSVFromFile = parser.parseCSVFromFilePapaParse;
+export const parseCSVFromFile = parser.parseCSVFromFileNative;
 export const parse2DArray = parser.parse2DArrayNative2;
 export const inferColumnTypes = parser.inferColumnTypes;
