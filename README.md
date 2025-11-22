@@ -79,6 +79,22 @@ It supports the imports of various txt, csv formats *like **MaxQuant outputs** (
 
 ---
 
+
+## Future Improvements/Updates To Add
+1. **Visualization**  
+   Visualization of the processed data.
+
+2. **Tests**  
+   Test all functional components and actions.
+
+3. **Migration to SQLite from IndexedDB for data**  
+   For better relational data mapping.
+
+
+
+
+
+
 ## 🚀 Getting Started
 
 ### 📦 Installation
@@ -95,4 +111,5 @@ npm install
 
 # Start development mode
 npm run dev
+
 

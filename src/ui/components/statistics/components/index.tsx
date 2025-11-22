@@ -2284,7 +2284,7 @@ export const RollingStdDev: React.FC<{
       }
 
       // Add window size as metadata
-      filteredData.set(`__window_size__`, [windowSize] as unknown as TableMatrix);
+      //filteredData.set(`__window_size__`, [windowSize] as unknown as TableMatrix);
       
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
