@@ -67,6 +67,21 @@ It supports the imports of various txt, csv formats *like **MaxQuant outputs** (
 
 ---
 
+<img width="1436" height="898" alt="Screenshot 2025-11-22 at 20 36 41" src="https://github.com/user-attachments/assets/8c67515d-d131-43cc-a402-d9a05b308129" />
+
+<img width="1439" height="897" alt="Screenshot 2025-11-22 at 20 40 23" src="https://github.com/user-attachments/assets/62299539-5fb1-4b88-a9b5-0524f8d3c603" />
+
+
+
+<img width="1435" height="896" alt="Screenshot 2025-11-22 at 20 40 43" src="https://github.com/user-attachments/assets/bf0e8f2d-3d60-4a17-9de0-07479d486fe6" />
+
+
+<img width="1429" height="889" alt="Screenshot 2025-11-22 at 20 41 16" src="https://github.com/user-attachments/assets/3f2a7bdc-c59c-47b9-b1d0-b34af993a5dc" />
+
+
+
+---
+
 ## 🧰 Technologies Used
 
 | Category | Tools / Libraries |
@@ -111,5 +126,6 @@ npm install
 
 # Start development mode
 npm run dev
+
 
 
