@@ -23,40 +23,47 @@ import {
   transposeData,
   fTest,
   chiSquareTest,
-} from "@/app-layer/statistics/utils/statistical-engine";
-import { TableMatrix } from "@/domain/workflow/main.types";
-import { ProteinRow } from "@/domain/proteins/index.types";
-import {
-  extractNumericData,
-  transposedStatisticalResults,
-} from "@/app-layer/shared/utils";
-import {
+
   tTestTwoSample,
   oneWayANOVA,
   calculateFoldChange,
   limmaAnalysis,
+
   filterColumnsByName,
   filterColumnsByType,
+
   addRows,
   deleteRows,
+
   performPCA,
+  performPLSDA,
+  performTSNE,
+
   addPTMAnnotations,
   removePTMAnnotations,
   COMMON_PTMS,
+
   performKMeans,
   performHierarchicalClustering,
   performPCAForClustering,
   type KMeansResult,
   type HierarchicalClusteringResult,
   type PCAClusteringResult,
+
   zScoreNormalization,
   logTransformNormalization,
   quantileNormalization,
   meanCenteringNormalization,
+
   detectZScoreOutliers,
   detectIQROutliers,
   detectGrubbsOutliers,
 } from "@/app-layer/statistics/utils/statistical-engine";
+
+import { TableMatrix } from "@/domain/workflow/main.types";
+import { ProteinRow } from "@/domain/proteins/index.types";
+import { extractNumericData, transposedStatisticalResults } from "@/app-layer/shared/utils";
+
 
 export const useStatisticalAnalysis = () => {
   const performAnalysis = useCallback(
@@ -841,20 +848,29 @@ export const useStatisticalAnalysis = () => {
         }
 
         case "f-test-test": {
+          // F-Test requires at least 2 groups
           if (numericData.length < 2) {
             throw new Error("F-Test requires at least 2 groups of data");
           }
 
           const fTestResults = fTest(numericData[0], numericData[1]);
 
-          // Only return the two essential columns
-          results = [[fTestResults.fStatistic, fTestResults.pValue]];
+          // Only return the essential columns
+          results = [
+            [
+              fTestResults.fStatistic,
+              fTestResults.pValue,
+              fTestResults.degreesOfFreedom1,
+              fTestResults.degreesOfFreedom2,
+            ],
+          ];
 
-          newColumnNames = ["f_statistic", "p_value"];
+          newColumnNames = ["f_statistic", "p_value", "df1", "df2"];
           break;
         }
 
         case "chi-square-test": {
+          // Chi-Square test expects at least one column of frequency data
           if (numericData.length === 0) {
             throw new Error("Chi-Square test requires frequency data");
           }
@@ -867,12 +883,20 @@ export const useStatisticalAnalysis = () => {
             expectedFrequencies
           );
 
-          // Only return the two essential columns
+          // Only return the essential columns
           results = [
-            [chiSquareResults.chiSquareStatistic, chiSquareResults.pValue],
+            [
+              chiSquareResults.chiSquareStatistic,
+              chiSquareResults.pValue,
+              chiSquareResults.degreesOfFreedom,
+            ],
           ];
 
-          newColumnNames = ["chi_square_statistic", "p_value"];
+          newColumnNames = [
+            "chi_square_statistic",
+            "p_value",
+            "degrees_of_freedom",
+          ];
           break;
         }
 
