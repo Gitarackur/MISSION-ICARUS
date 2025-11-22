@@ -2495,7 +2495,7 @@ export interface GrubbsTestResult {
 export function detectGrubbsOutliers(
   values: number[],
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  alpha: number = 0.05
+  _alpha: number = 0.05
 ): GrubbsTestResult[] {
   if (values.length < 3) {
     throw new Error("Grubbs' test requires at least 3 data points");
