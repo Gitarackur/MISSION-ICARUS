@@ -36,8 +36,8 @@ import {
   deleteRows,
 
   performPCA,
-  performPLSDA,
-  performTSNE,
+  // performPLSDA,
+  // performTSNE,
 
   addPTMAnnotations,
   removePTMAnnotations,
