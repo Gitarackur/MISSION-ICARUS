@@ -243,20 +243,23 @@ export const useStatisticalAnalysis = () => {
           break;
         }
 
-        case "t-test":
-        case "t-test-test": {
-          if (numericData.length < 2) {
-            throw new Error("T-Test requires at least 2 groups of data");
-          }
+       
+     
+case "t-test-test": {
+  if (numericData.length < 2) {
+    throw new Error("T-Test requires at least 2 groups of data");
+  }
 
-          const tTestResults = tTestTwoSample(numericData[0], numericData[1]);
+  const tTestResults = tTestTwoSample(numericData[0], numericData[1]);
 
-          // Only return the two essential columns
-          results = [[tTestResults.tStatistic, tTestResults.pValue]];
+  // Only return t_statistic
+  results = [[tTestResults.tStatistic]];
+  newColumnNames = ["t_statistic"];
+  break;
+}
 
-          newColumnNames = ["t_statistic", "p_value"];
-          break;
-        }
+
+
 
         case "anova": {
           if (numericData.length < 2) {
@@ -847,58 +850,35 @@ export const useStatisticalAnalysis = () => {
           }
         }
 
-        case "f-test-test": {
-          // F-Test requires at least 2 groups
-          if (numericData.length < 2) {
-            throw new Error("F-Test requires at least 2 groups of data");
-          }
+        
+case "f-test-test": {
+  if (numericData.length < 2) {
+    throw new Error("F-Test requires at least 2 groups of data");
+  }
 
-          const fTestResults = fTest(numericData[0], numericData[1]);
+  const fTestResults = fTest(numericData[0], numericData[1]);
 
-          // Only return the essential columns
-          results = [
-            [
-              fTestResults.fStatistic,
-              fTestResults.pValue,
-              fTestResults.degreesOfFreedom1,
-              fTestResults.degreesOfFreedom2,
-            ],
-          ];
+  // Only return a single column: f_statistic
+  results = [[fTestResults.fStatistic]];
+  newColumnNames = ["f_statistic"];
+  break;
+}
 
-          newColumnNames = ["f_statistic", "p_value", "df1", "df2"];
-          break;
-        }
 
-        case "chi-square-test": {
-          // Chi-Square test expects at least one column of frequency data
-          if (numericData.length === 0) {
-            throw new Error("Chi-Square test requires frequency data");
-          }
-
-          const observedFrequencies = numericData[0];
-          const expectedFrequencies =
-            numericData.length > 1 ? numericData[1] : undefined;
-          const chiSquareResults = chiSquareTest(
-            observedFrequencies,
-            expectedFrequencies
-          );
-
-          // Only return the essential columns
-          results = [
-            [
-              chiSquareResults.chiSquareStatistic,
-              chiSquareResults.pValue,
-              chiSquareResults.degreesOfFreedom,
-            ],
-          ];
-
-          newColumnNames = [
-            "chi_square_statistic",
-            "p_value",
-            "degrees_of_freedom",
-          ];
-          break;
-        }
+  case "chi-square-test": {
+    if (numericData.length === 0) {
+      throw new Error("Chi-Square test requires frequency data");
+    }
+  
+    const observedFrequencies = numericData[0];
+    const expectedFrequencies = numericData.length > 1 ? numericData[1] : undefined;
+    const chiSquareResults = chiSquareTest(observedFrequencies, expectedFrequencies);
+  
+    // Only return a single column: chi_square_statistic
+    results = [[chiSquareResults.chiSquareStatistic]];
+    newColumnNames = ["chi_square_statistic"];
+    break;
+  }
 
         case "z-score-outliers": {
           if (numericData.length === 0) {
