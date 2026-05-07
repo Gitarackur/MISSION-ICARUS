@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  buildCorrelationHeatmapPayload,
   buildIntensityBarPayload,
   buildMatrixBarPayload,
   buildVolcanoPayload,
@@ -16,10 +15,14 @@ import {
 } from "@/domain/workflow/main.types";
 import {
   invokePythonBarPlot,
-  invokePythonHeatmap,
-  invokePythonVolcanoPlot,
   invokeRBarPlot,
+  renderHeatmapSvg,
+  renderVolcanoSvg,
 } from "@/app-layer/visualization/utils/renderers";
+import {
+  buildMatrixHeatmapPayload,
+  buildMatrixVolcanoPayload,
+} from "@/app-layer/visualization/utils/matrix-payloads";
 import {
   RenderJob,
   VisualizationPanelStateParams,
@@ -64,14 +67,22 @@ export const useVisualizationPanel = ({
     [activeMatrix, intensityDist]
   );
 
-  const heatmapPayload = useMemo(
-    () => buildCorrelationHeatmapPayload(activeMatrix),
+  const heatmapReadiness = useMemo(
+    () => buildMatrixHeatmapPayload(activeMatrix),
     [activeMatrix]
   );
 
-  const volcanoPayload = useMemo(
-    () => buildVolcanoPayload(volcanoData),
-    [volcanoData]
+  const volcanoReadiness = useMemo(
+    () => {
+      const matrixPayload = buildMatrixVolcanoPayload(activeMatrix);
+      if (matrixPayload.payload) return matrixPayload;
+
+      const fallbackPayload = buildVolcanoPayload(volcanoData);
+      return fallbackPayload
+        ? { payload: fallbackPayload }
+        : matrixPayload;
+    },
+    [activeMatrix, volcanoData]
   );
 
   const visualizationTitle = activeMatrix
@@ -98,7 +109,7 @@ export const useVisualizationPanel = ({
     setPythonImage(
       findLatestVisualizationImage(savedVisualizations, {
         matrixId: activeMatrix?.id,
-        renderer: "python",
+        renderer: "recharts",
       })
     );
     setRImage(
@@ -161,7 +172,7 @@ export const useVisualizationPanel = ({
       const image = await invokePythonBarPlot(intensityPayload);
       setPythonImage(image);
       await saveRenderedVisualization({
-        renderer: "python",
+        renderer: "recharts",
         image,
         visualizationType: "bar",
         title: visualizationTitle,
@@ -197,61 +208,66 @@ export const useVisualizationPanel = ({
   }, [intensityPayload, saveRenderedVisualization, visualizationTitle]);
 
   const renderHeatmap = useCallback(async () => {
-    if (!heatmapPayload) {
-      setError("Heatmap needs a matrix with numeric values.");
+    if (!heatmapReadiness.payload) {
+      setError(heatmapReadiness.reason ?? "Heatmap needs matrix-like numeric data.");
       return;
     }
 
     try {
       setError(null);
       setRenderingJob("heatmap");
-      const image = await invokePythonHeatmap(heatmapPayload);
+      const image = renderHeatmapSvg(heatmapReadiness.payload);
       await saveRenderedVisualization({
         renderer: "python",
         image,
         visualizationType: "heatmap",
         title: "Sample correlation heatmap",
-        data: heatmapPayload,
-        pointCount: heatmapPayload.matrix.length * heatmapPayload.matrix.length,
+        data: heatmapReadiness.payload,
+        pointCount:
+          heatmapReadiness.payload.matrix.length *
+          heatmapReadiness.payload.matrix.length,
       });
     } catch (err) {
       setError(`Heatmap failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [heatmapPayload, saveRenderedVisualization]);
+  }, [heatmapReadiness, saveRenderedVisualization]);
 
   const renderVolcanoPlot = useCallback(async () => {
-    if (!volcanoPayload) {
-      setError("Volcano plot needs fold-change and p-value data.");
+    if (!volcanoReadiness.payload) {
+      setError(
+        volcanoReadiness.reason ?? "Volcano plot needs fold-change and p-value data."
+      );
       return;
     }
 
     try {
       setError(null);
       setRenderingJob("volcano");
-      const image = await invokePythonVolcanoPlot(volcanoPayload);
+      const image = renderVolcanoSvg(volcanoReadiness.payload);
       await saveRenderedVisualization({
         renderer: "python",
         image,
         visualizationType: "volcano",
         title: "Volcano plot",
-        data: volcanoPayload,
-        pointCount: volcanoPayload.log2fc.length,
+        data: volcanoReadiness.payload,
+        pointCount: volcanoReadiness.payload.log2fc.length,
       });
     } catch (err) {
       setError(`Volcano plot failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [saveRenderedVisualization, volcanoPayload]);
+  }, [saveRenderedVisualization, volcanoReadiness]);
 
   return {
     activeSavedImage,
     activeSavedVisualization,
     activeVisualizationId,
     error,
-    heatmapPayload,
+    heatmapPayload: heatmapReadiness.payload,
+    heatmapReason: heatmapReadiness.reason,
     pythonImage,
     rImage,
     renderHeatmap,
@@ -261,7 +277,8 @@ export const useVisualizationPanel = ({
     renderingJob,
     savedVisualizations,
     setActiveVisualizationId,
-    volcanoPayload,
+    volcanoPayload: volcanoReadiness.payload,
+    volcanoReason: volcanoReadiness.reason,
     volcanoTickInterval,
   };
 };

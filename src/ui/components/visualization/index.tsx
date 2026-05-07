@@ -27,6 +27,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     activeVisualizationId,
     error,
     heatmapPayload,
+    heatmapReason,
     pythonImage,
     rImage,
     renderHeatmap,
@@ -37,6 +38,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     savedVisualizations,
     setActiveVisualizationId,
     volcanoPayload,
+    volcanoReason,
     volcanoTickInterval,
   } = useVisualizationPanel(props);
 
@@ -84,35 +86,41 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
               />
             </div>
             <div className={s.plotContainer()}>
-              <ResponsiveContainer width="100%" height="100%" debounce={80}>
-                <ScatterChart
-                  margin={{ top: 12, right: 18, bottom: 12, left: 0 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis
-                    dataKey="x"
-                    name="Log2 Fold Change"
-                    tickLine={false}
-                    tickFormatter={(value) => formatAxisLabel(value, 8)}
-                    interval={volcanoTickInterval}
-                    minTickGap={18}
-                  />
-                  <YAxis
-                    dataKey="y"
-                    name="-Log10 p-value"
-                    tickLine={false}
-                    tickFormatter={(value) => formatAxisLabel(value, 8)}
-                    minTickGap={12}
-                    width={46}
-                  />
-                  <RechartsTooltip content={<ScatterTooltip />} />
-                  <Scatter
-                    data={props.volcanoData}
-                    fill="#2563EB"
-                    isAnimationActive={false}
-                  />
-                </ScatterChart>
-              </ResponsiveContainer>
+              {props.volcanoData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%" debounce={80}>
+                  <ScatterChart
+                    margin={{ top: 12, right: 18, bottom: 12, left: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis
+                      dataKey="x"
+                      name="Log2 Fold Change"
+                      tickLine={false}
+                      tickFormatter={(value) => formatAxisLabel(value, 8)}
+                      interval={volcanoTickInterval}
+                      minTickGap={18}
+                    />
+                    <YAxis
+                      dataKey="y"
+                      name="-Log10 p-value"
+                      tickLine={false}
+                      tickFormatter={(value) => formatAxisLabel(value, 8)}
+                      minTickGap={12}
+                      width={46}
+                    />
+                    <RechartsTooltip content={<ScatterTooltip />} />
+                    <Scatter
+                      data={props.volcanoData}
+                      fill="#2563EB"
+                      isAnimationActive={false}
+                    />
+                  </ScatterChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className={s.emptyState()}>
+                  {volcanoReason ?? "Create a saved volcano plot from the active matrix."}
+                </div>
+              )}
             </div>
           </div>
 
@@ -176,7 +184,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
           <div className={s.card()}>
             <div className={s.cardHeader()}>
               <div>
-                <p className={s.meta()}>Python</p>
+                <p className={s.meta()}>Matrix</p>
                 <h3 className={s.heading()}>Sample Correlation Heatmap</h3>
               </div>
               <IconButton
@@ -187,14 +195,20 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
               />
             </div>
             <div className={s.placeholderBox()}>
-              <button
-                type="button"
-                className={s.button()}
-                onClick={renderHeatmap}
-                disabled={isRendering || !heatmapPayload}
-              >
-                Create Heatmap
-              </button>
+              {heatmapPayload ? (
+                <button
+                  type="button"
+                  className={s.button()}
+                  onClick={renderHeatmap}
+                  disabled={isRendering}
+                >
+                  Create Heatmap
+                </button>
+              ) : (
+                <div className={s.emptyState()}>
+                  {heatmapReason ?? "Heatmap is not available for this matrix."}
+                </div>
+              )}
             </div>
           </div>
         </div>

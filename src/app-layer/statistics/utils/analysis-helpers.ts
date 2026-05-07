@@ -1,5 +1,6 @@
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { TableMatrix } from "@/domain/workflow/main.types";
+import * as ss from "simple-statistics";
 
 const metadataColumnPrefix = "__";
 
@@ -91,13 +92,7 @@ export const parseStringMetadata = (
 export const quantile = (values: number[], probability: number) => {
   const sorted = finiteValues(values).sort((a, b) => a - b);
   if (!sorted.length) return 0;
-  if (sorted.length === 1) return sorted[0];
-
-  const position = (sorted.length - 1) * probability;
-  const lower = Math.floor(position);
-  const upper = Math.ceil(position);
-  const weight = position - lower;
-  return sorted[lower] * (1 - weight) + sorted[upper] * weight;
+  return ss.quantile(sorted, probability);
 };
 
 export const pearsonCorrelation = (xValues: number[], yValues: number[]) => {
@@ -107,20 +102,9 @@ export const pearsonCorrelation = (xValues: number[], yValues: number[]) => {
 
   if (pairs.length < 2) return 0;
 
-  const xMean = pairs.reduce((sum, [x]) => sum + x, 0) / pairs.length;
-  const yMean = pairs.reduce((sum, [, y]) => sum + y, 0) / pairs.length;
-  let numerator = 0;
-  let xDenominator = 0;
-  let yDenominator = 0;
-
-  pairs.forEach(([x, y]) => {
-    const xDelta = x - xMean;
-    const yDelta = y - yMean;
-    numerator += xDelta * yDelta;
-    xDenominator += xDelta * xDelta;
-    yDenominator += yDelta * yDelta;
-  });
-
-  const denominator = Math.sqrt(xDenominator * yDenominator);
-  return denominator === 0 ? 0 : numerator / denominator;
+  const correlation = ss.sampleCorrelation(
+    pairs.map(([x]) => x),
+    pairs.map(([, y]) => y)
+  );
+  return Number.isFinite(correlation) ? correlation : 0;
 };
