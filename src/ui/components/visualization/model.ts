@@ -1,4 +1,5 @@
 import { VisualizationPanelProps } from "./types/index.types";
+import { IcarusMatrixRecord } from "@/app-layer/database/database.types";
 
 type BarChartPayload = Record<string, number>;
 
@@ -11,6 +12,27 @@ export const buildIntensityBarPayload = (
 
   return intensityDist.reduce<BarChartPayload>((acc, item) => {
     acc[item.sample] = item.meanIntensity;
+    return acc;
+  }, {});
+};
+
+export const buildMatrixBarPayload = (
+  matrix?: IcarusMatrixRecord
+): BarChartPayload => {
+  if (!matrix?.columns.length || !matrix.data.length) {
+    return { "No matrix": 0 };
+  }
+
+  return matrix.columns.reduce<BarChartPayload>((acc, column, columnIndex) => {
+    const values = matrix.data
+      .map((row) => Number(row[columnIndex]))
+      .filter((value) => Number.isFinite(value));
+
+    acc[column] =
+      values.length > 0
+        ? values.reduce((sum, value) => sum + value, 0) / values.length
+        : 0;
+
     return acc;
   }, {});
 };

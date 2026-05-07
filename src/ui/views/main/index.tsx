@@ -14,12 +14,14 @@ import { ProteinRow } from "@/domain/proteins/index.types";
 import { BareSession } from "@/domain/session";
 import {
   SaveStatisticalActivity,
+  SaveVisualizationActivity,
   TableColumns,
 } from "@/domain/workflow/main.types";
 import {
   generateActiveSessionWitNestedWorkflow,
   reconstructOriginalRowsAndColumnsFromSessionWorkflows,
   saveNewStatisticalActivityInWorkflow,
+  saveNewVisualizationActivityInWorkflow,
 } from "@/app-layer/session/utils/main";
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 import ActivityTree2 from "@/ui/components/activity-tree/index2";
@@ -111,6 +113,25 @@ const IcarusApp: React.FC = () => {
     }
   };
 
+  const saveVisualizationInWorkflow = async (
+    params: SaveVisualizationActivity
+  ) => {
+    try {
+      if (!activeSession) throw new Error(`active session not present`);
+
+      const { sessionWithWorkflows } =
+        await saveNewVisualizationActivityInWorkflow(activeSession, params);
+
+      if (!sessionWithWorkflows) {
+        throw new Error("Failed to save visualization in session");
+      }
+
+      setActiveSession(sessionWithWorkflows);
+    } catch (err) {
+      throw new Error(`${err}`);
+    }
+  };
+
   // Memoized derived values
   const matrices = useMemo(
     () =>
@@ -190,7 +211,10 @@ const IcarusApp: React.FC = () => {
         selectedDataColumns={selectedDataColumns}
         setSelectedDataColumns={setSelectedDataColumns}
         saveActivityInWorkflow={saveActivityInWorkflow}
+        saveVisualizationInWorkflow={saveVisualizationInWorkflow}
         sessionSourceMatrix={activeMatrix || sessionSourceMatrix}
+        activeMatrix={activeMatrix}
+        activeSession={activeSession}
         openActivitySheet={() => setIsSheetOpen(true)}
       />
       {renderSlidingSheet()}
