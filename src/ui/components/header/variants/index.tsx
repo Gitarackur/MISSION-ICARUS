@@ -27,19 +27,46 @@ export const headerVariants = tv({
 // tab navigation variants
 export const tabNavigationVariants = tv({
   slots: {
-    tabList: "flex max-w-[190px] items-center gap-1 border-r px-2",
-    tabButton: "flex max-w-[58px] flex-shrink-0 items-center justify-center rounded px-2 py-1 text-[11px] font-medium transition-colors",
-    tabButtonWrapper: "min-w-[140px] max-w-none flex-1 border-r-0 text-left"
+    tabList:
+      "z-30 sticky left-0 right-0 top-0 flex w-full overflow-x-auto overflow-y-hidden border-b border-gray-200 bg-white pt-0",
+    tabButton: [
+      "relative",
+      "min-w-[160px]",
+      "max-w-[220px]",
+      "flex-1",
+      "overflow-hidden",
+      "whitespace-nowrap",
+      "text-ellipsis",
+      "border-r-0",
+      "px-4",
+      "py-2",
+      "text-left",
+      "text-sm",
+      "font-medium",
+      "transition-colors",
+      "duration-200",
+      "ease-in-out",
+      "cursor-pointer",
+    ],
+    visualizationList:
+      "flex max-w-[150px] flex-shrink-0 items-center gap-1 border-l px-2",
+    visualizationButton:
+      "flex h-6 w-7 flex-shrink-0 items-center justify-center rounded text-[11px] font-medium transition-colors",
   },
   variants: {
     active: {
       true: {
-        tabList: "border-blue-100 bg-blue-50/50",
-        tabButton: "bg-blue-100 text-blue-700 ring-1 ring-blue-300",
+        tabButton:
+          "bg-white text-blue-600 border border-l-0 border-gray-300 z-20 -mb-[1px] shadow-md",
+        visualizationList: "border-blue-100 bg-blue-50/50",
+        visualizationButton: "bg-blue-100 text-blue-700 ring-1 ring-blue-300",
       },
       false: {
-        tabList: "border-gray-200",
-        tabButton: "bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900",
+        tabButton:
+          "bg-gray-100 text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-x border-t border-transparent rounded-t-lg border-b-gray-200",
+        visualizationList: "border-gray-200",
+        visualizationButton:
+          "bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900",
       },
     },
   },
@@ -49,7 +76,8 @@ export const tabNavigationVariants = tv({
 // matrix tab variants
 export const matrixTabVariants = tv({
   slots: {
-    wrapper: "flex min-w-[220px] max-w-[440px] items-stretch border-r border-gray-200 bg-gray-50",
+    wrapper:
+      "flex min-w-[260px] max-w-[420px] items-stretch border-r border-gray-200 bg-gray-50",
   },
   variants: {
     active: {

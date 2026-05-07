@@ -40,9 +40,9 @@ const IcarusApp: React.FC = () => {
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
   const selectMatrix = (matrixId: string) => {
+    setActiveProteomicsTab("import");
     setActiveMatrixId(matrixId);
     setActiveVisualizationId("");
-    setActiveProteomicsTab("import");
   };
   const selectActivityMatrix = (matrixId: string) => {
     selectMatrix(matrixId);
@@ -68,8 +68,9 @@ const IcarusApp: React.FC = () => {
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}
+          activeTab={activeProteomicsTab}
           dataRows={originalDataRows}
-          setActiveMatrixId={selectMatrix}
+          onMatrixSelect={selectMatrix}
           toggleSidebar={toggleSidebar}
           visualizations={activeSession?.visualizations ?? []}
           activeVisualizationId={activeVisualizationId}

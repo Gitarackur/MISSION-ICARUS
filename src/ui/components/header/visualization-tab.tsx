@@ -16,7 +16,7 @@ export const VisualizationTabButton = ({
   isActive: boolean;
   onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
 }) => {
-  const { tabButton } = tabNavigationVariants({ active: isActive });
+  const { visualizationButton } = tabNavigationVariants({ active: isActive });
 
   const label = getVisualizationLabel(visualization, index);
 
@@ -24,7 +24,7 @@ export const VisualizationTabButton = ({
     <button
       type="button"
       onClick={() => onVisualizationSelect?.(visualization.id, matrixId)}
-      className={tabButton()}
+      className={visualizationButton()}
       title={label}
       role="tab"
       aria-selected={isActive}

@@ -43,6 +43,7 @@ export const useVisualizationPanel = ({
   saveVisualizationInWorkflow,
   activeVisualizationId: controlledActiveVisualizationId,
   setActiveVisualizationId: setControlledActiveVisualizationId,
+  shouldAutoSelectVisualization = true,
 }: VisualizationPanelStateParams) => {
   const [pythonImage, setPythonImage] = useState<string | null>(null);
   const [rImage, setRImage] = useState<string | null>(null);
@@ -141,6 +142,10 @@ export const useVisualizationPanel = ({
   );
 
   useEffect(() => {
+    if (!shouldAutoSelectVisualization) {
+      return;
+    }
+
     const nextId = getDefaultVisualizationId(matrixVisualizations);
     const activeIdStillExists = matrixVisualizations.some(
       (visualization) => visualization.id === activeVisualizationId
@@ -149,7 +154,12 @@ export const useVisualizationPanel = ({
     if (!activeIdStillExists) {
       setActiveVisualizationId(nextId);
     }
-  }, [activeVisualizationId, matrixVisualizations, setActiveVisualizationId]);
+  }, [
+    activeVisualizationId,
+    matrixVisualizations,
+    setActiveVisualizationId,
+    shouldAutoSelectVisualization,
+  ]);
 
   useEffect(() => {
     setPythonImage(

@@ -16,7 +16,8 @@ const MAX_VISIBLE_VISUALIZATION_TABS = 3;
 const MatrixTab = ({
   matrices,
   activeMatrixId,
-  setActiveMatrixId,
+  activeTab,
+  onMatrixSelect,
   toggleSidebar,
   dataRows,
   visualizations = [],
@@ -61,9 +62,10 @@ const MatrixTab = ({
             key={matrix.id}
             matrix={matrix}
             isActive={activeMatrixId === matrix.id}
+            activeTab={activeTab}
             visualizations={visualizationsByMatrix[matrix.id] ?? []}
             activeVisualizationId={activeVisualizationId}
-            onMatrixSelect={setActiveMatrixId}
+            onMatrixSelect={onMatrixSelect}
             onVisualizationSelect={onVisualizationSelect}
           />
         ))}
@@ -94,12 +96,12 @@ const MatrixTab = ({
 const MatrixTabGroup = ({
   matrix,
   isActive,
+  activeTab,
   visualizations,
   activeVisualizationId,
   onMatrixSelect,
   onVisualizationSelect,
 }: MatrixTabGroupProps) => {
-
   const visibleVisualizations = visualizations.slice(
     0,
     MAX_VISIBLE_VISUALIZATION_TABS,
@@ -107,14 +109,26 @@ const MatrixTabGroup = ({
   const hiddenVisualizationCount =
     visualizations.length - visibleVisualizations.length;
 
-  const { tabList, tabButton, tabButtonWrapper } = tabNavigationVariants({ active: isActive });
+  const { tabButton, visualizationList } = tabNavigationVariants({
+    active: isActive,
+  });
   const { wrapper } = matrixTabVariants({ active: isActive });
+  const isVisualizationView = activeTab === "visualization";
 
   return (
     <div className={wrapper()} aria-label={`${matrix.id} matrix tab group`}>
+      <button
+        type="button"
+        onClick={() => onMatrixSelect(matrix.id)}
+        className={tabButton()}
+        title={matrix.id}
+      >
+        <span className="block truncate">{matrix.id}</span>
+      </button>
+
       {visibleVisualizations.length > 0 && (
         <div
-          className={tabList()}
+          className={visualizationList()}
           role="tablist"
           aria-label={`${matrix.id} visualizations`}
         >
@@ -125,7 +139,11 @@ const MatrixTabGroup = ({
               visualization={visualization}
               index={index}
               isActive={activeVisualizationId === visualization.id}
-              onVisualizationSelect={onVisualizationSelect}
+              onVisualizationSelect={
+                isVisualizationView
+                  ? () => onMatrixSelect(matrix.id)
+                  : onVisualizationSelect
+              }
             />
           ))}
 
@@ -136,18 +154,6 @@ const MatrixTabGroup = ({
           )}
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={() => onMatrixSelect(matrix.id)}
-        className={[
-          tabButton({ active: isActive }),
-          tabButtonWrapper(),
-        ].join(" ")}
-        title={matrix.id}
-      >
-        <span className="block truncate">{matrix.id}</span>
-      </button>
     </div>
   );
 };
