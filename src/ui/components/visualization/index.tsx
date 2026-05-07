@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -9,19 +9,49 @@ import {
   Tooltip as RechartsTooltip,
 } from "recharts";
 import ScatterTooltip from "@/ui/components/scatter/tooltip";
-// import VisualizationExternal from "./external";
-import VisualizationTest from "@/tests/visualization-test";
 import VisualizationTab from "@/ui/components/header/visualization-tab";
 import { VisualizationPanelProps } from "./types/index.types";
 import { visualizationStyles } from "./variants/visualization.variants";
+import {
+  buildIntensityBarPayload,
+  invokePythonBarPlot,
+  invokeRBarPlot,
+} from "./model";
 
 
 
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
   volcanoData,
+  intensityDist,
 }) => {
   const s = visualizationStyles();
+  const [pythonImage, setPythonImage] = useState<string | null>(null);
+  const [rImage, setRImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const intensityPayload = useMemo(
+    () => buildIntensityBarPayload(intensityDist),
+    [intensityDist]
+  );
+
+  const renderPythonPlot = useCallback(async () => {
+    try {
+      setError(null);
+      setPythonImage(await invokePythonBarPlot(intensityPayload));
+    } catch (err) {
+      setError(`Python visualization failed: ${(err as Error).message || err}`);
+    }
+  }, [intensityPayload]);
+
+  const renderRPlot = useCallback(async () => {
+    try {
+      setError(null);
+      setRImage(await invokeRBarPlot(intensityPayload));
+    } catch (err) {
+      setError(`R visualization failed: ${(err as Error).message || err}`);
+    }
+  }, [intensityPayload]);
 
   return (
     <div>
@@ -50,22 +80,40 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
         </div>
 
         <div className={s.card()}>
-          <h3 className={s.heading()}>Bar Plot</h3>
+          <h3 className={s.heading()}>Python Intensity Plot</h3>
           <div className={s.plotContainer()}>
-            <div className={s.placeholderBox()}>
-              <p className={s.placeholderText()}>
-                Bar Plots would be rendered here (placeholder)
-              </p>
-            </div>
+            {pythonImage ? (
+              <img
+                src={pythonImage}
+                alt="Python intensity visualization"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <button className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" onClick={renderPythonPlot}>
+                Render Python Plot
+              </button>
+            )}
           </div>
         </div>
 
         <div className={s.card()}>
-          <h3 className={s.heading()}>Bar Plot</h3>
+          <h3 className={s.heading()}>R Intensity Plot</h3>
           <div className={s.plotContainer()}>
-            <VisualizationTest />
+            {rImage ? (
+              <img
+                src={rImage}
+                alt="R intensity visualization"
+                className="h-full w-full object-contain"
+              />
+            ) : (
+              <button className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" onClick={renderRPlot}>
+                Render R Plot
+              </button>
+            )}
           </div>
         </div>
+
+        {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
         <div className={s.card()}>
           <h3 className={s.heading()}>Sample Correlation Heatmap</h3>

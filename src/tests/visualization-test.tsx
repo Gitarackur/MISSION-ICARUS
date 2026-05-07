@@ -63,7 +63,7 @@ export default function VisualizationTest(): JSX.Element {
     try {
       setError(null);
       const base64 = await window.electron.ipcRenderer.invoke("run-r", {
-        scriptPath: "scripts/r/plot_r.R",
+        scriptPath: "plot_r.r",
         args: [JSON.stringify(sampleData)],
       });
       setRImage(`data:image/png;base64,${base64}`);

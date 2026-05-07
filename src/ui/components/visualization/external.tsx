@@ -49,8 +49,8 @@ export default function VisualizationExternal() {
   const runPython = useCallback(async () => {
     try {
       const pyData = JSON.stringify(data)
-      const response = await window.electron.ipcRenderer.invoke('run-python', {
-        scriptPath: 'scripts/python/plot_data.py',
+      const response = await window.electron.ipcRenderer.invoke('run:python', {
+        method: 'getPlot',
         args: [pyData],
       })
       setPythonImage(`data:image/png;base64,${response.trim()}`)
@@ -67,7 +67,7 @@ export default function VisualizationExternal() {
   const runR = useCallback(async () => {
     try {
       const response = await window.electron.ipcRenderer.invoke('run-r', {
-        scriptPath: 'scripts/r/plot_r.R',
+        scriptPath: 'plot_r.r',
         args: [JSON.stringify(data)],
       })
       setRImage(`data:image/png;base64,${response}`)

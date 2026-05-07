@@ -1,7 +1,17 @@
 import { ipcMain } from "electron";
 import EmbeddedRManager from "../../r/r-manager";
+import path from "node:path";
+import { resourcePath } from "../../core/utils";
 
 
+const resolveRScriptPath = (scriptPath: string): string => {
+  if (path.isAbsolute(scriptPath)) return scriptPath;
+
+  const normalizedPath = scriptPath.replace(/\\/g, "/");
+  const scriptName = path.basename(normalizedPath);
+
+  return resourcePath("scripts", "r", scriptName);
+};
 
 export function setupRHandlers() {
   const rManager = new EmbeddedRManager();
@@ -23,7 +33,7 @@ export function setupRHandlers() {
       rManager.ensurePackagesInstalled(["ggplot2", "dplyr", "jsonlite"]);
 
       try {
-        const output = await rManager.runRScript(scriptPath, args || []);
+        const output = await rManager.runRScript(resolveRScriptPath(scriptPath), args || []);
         return output;
       } catch (err) {
         console.error("R error:", err);

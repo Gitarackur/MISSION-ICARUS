@@ -422,34 +422,28 @@ export const extractNumericData = (
   numericColumns: TableColumns;
   numericData: TableMatrices<number>;
 } => {
+  const isMetadataColumn = (column: string) => column.startsWith("__");
+
   if (Array.isArray(data)) {
     // Handle Row[] input
     if (data.length === 0) return { numericColumns: [], numericData: [] };
 
-    const allKeys = Object.keys(data[0]);
+    const allKeys = Object.keys(data[0]).filter((key) => !isMetadataColumn(key));
     const numericColumns: string[] = [];
     const numericData: number[][] = [];
 
     // Identify numeric columns
     allKeys.forEach((key) => {
-      const values = data
-        .map((row) => row[key])
-        .filter((val) => val !== undefined);
-      const isNumeric = values.every(
-        (val) => typeof val === "number" || !isNaN(Number(val))
-      );
-      if (isNumeric && values.length > 0) {
+      const values = data.map((row) => row[key]);
+      const numericCount = values.filter((val) => Number.isFinite(toFinite(val))).length;
+      if (numericCount > 0) {
         numericColumns.push(key);
       }
     });
 
     // Extract numeric data for each column
     numericColumns.forEach((column) => {
-      const columnData = data
-        .map((row) => row[column])
-        .filter((val) => val !== undefined)
-        .map((val) => (typeof val === "number" ? val : Number(val)))
-        .filter((val) => !isNaN(val));
+      const columnData = data.map((row) => toFinite(row[column]));
       numericData.push(columnData);
     });
 
@@ -460,11 +454,11 @@ export const extractNumericData = (
     const numericData: number[][] = [];
 
     data.forEach((values, key) => {
-      const numericValues = values
-        .filter((val) => typeof val === "number" || !isNaN(Number(val)))
-        .map((val) => (typeof val === "number" ? val : Number(val)));
+      if (isMetadataColumn(key)) return;
 
-      if (numericValues.length > 0) {
+      const numericValues = values.map((val) => toFinite(val));
+
+      if (numericValues.some((value) => Number.isFinite(value))) {
         numericColumns.push(key);
         numericData.push(numericValues);
       }
@@ -521,5 +515,4 @@ export function toFinite(v: unknown): number {
   }
   return NaN;
 }
-
 
