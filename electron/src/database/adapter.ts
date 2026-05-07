@@ -343,14 +343,24 @@ export class IcarusDBAdapter {
     this.db
       .prepare(
         `
-        INSERT OR REPLACE INTO visualizations (id, createdByActivityId, createdAt, data)
-        VALUES (@id, @createdByActivityId, @createdAt, @data)
+        INSERT OR REPLACE INTO visualizations (
+          id, createdByActivityId, createdAt, sourceMatrixId, renderer,
+          visualizationType, title, data
+        )
+        VALUES (
+          @id, @createdByActivityId, @createdAt, @sourceMatrixId, @renderer,
+          @visualizationType, @title, @data
+        )
       `
       )
       .run({
         id: visualization.id,
         createdByActivityId: visualization.createdByActivityId,
         createdAt: visualization.createdAt || Date.now(),
+        sourceMatrixId: visualization.sourceMatrixId || null,
+        renderer: visualization.renderer || null,
+        visualizationType: visualization.visualizationType || null,
+        title: visualization.title || null,
         data,
       });
   }
@@ -363,6 +373,10 @@ export class IcarusDBAdapter {
           id: string;
           createdByActivityId: string | null;
           createdAt: number;
+          sourceMatrixId?: string | null;
+          renderer?: IcarusVisualizationRecord["renderer"] | null;
+          visualizationType?: IcarusVisualizationRecord["visualizationType"] | null;
+          title?: string | null;
           data: string;
         }
       | undefined;
@@ -372,6 +386,10 @@ export class IcarusDBAdapter {
       id: row.id,
       createdByActivityId: row.createdByActivityId,
       createdAt: row.createdAt,
+      sourceMatrixId: row.sourceMatrixId || undefined,
+      renderer: row.renderer || undefined,
+      visualizationType: row.visualizationType || undefined,
+      title: row.title || undefined,
       data: JSON.parse(row.data),
     };
   }

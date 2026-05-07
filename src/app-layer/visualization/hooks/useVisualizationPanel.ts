@@ -7,6 +7,7 @@ import {
   getAxisTickInterval,
   getDefaultVisualizationId,
   getVisualizationImage,
+  getVisualizationsForMatrix,
   sortVisualizationsByCreatedAt,
 } from "@/domain/visualization/utils/main";
 import {
@@ -46,12 +47,17 @@ export const useVisualizationPanel = ({
     [activeSession?.visualizations]
   );
 
+  const matrixVisualizations = useMemo(
+    () => getVisualizationsForMatrix(savedVisualizations, activeMatrix?.id),
+    [activeMatrix?.id, savedVisualizations]
+  );
+
   const activeSavedVisualization = useMemo(
     () =>
-      savedVisualizations.find(
+      matrixVisualizations.find(
         (visualization) => visualization.id === activeVisualizationId
       ),
-    [activeVisualizationId, savedVisualizations]
+    [activeVisualizationId, matrixVisualizations]
   );
 
   const activeSavedImage = useMemo(
@@ -95,30 +101,30 @@ export const useVisualizationPanel = ({
   );
 
   useEffect(() => {
-    const nextId = getDefaultVisualizationId(savedVisualizations);
-    const activeIdStillExists = savedVisualizations.some(
+    const nextId = getDefaultVisualizationId(matrixVisualizations);
+    const activeIdStillExists = matrixVisualizations.some(
       (visualization) => visualization.id === activeVisualizationId
     );
 
     if (!activeIdStillExists) {
       setActiveVisualizationId(nextId);
     }
-  }, [activeVisualizationId, savedVisualizations]);
+  }, [activeVisualizationId, matrixVisualizations]);
 
   useEffect(() => {
     setPythonImage(
-      findLatestVisualizationImage(savedVisualizations, {
+      findLatestVisualizationImage(matrixVisualizations, {
         matrixId: activeMatrix?.id,
-        renderer: "recharts",
+        renderer: "python",
       })
     );
     setRImage(
-      findLatestVisualizationImage(savedVisualizations, {
+      findLatestVisualizationImage(matrixVisualizations, {
         matrixId: activeMatrix?.id,
         renderer: "r",
       })
     );
-  }, [activeMatrix?.id, savedVisualizations]);
+  }, [activeMatrix?.id, matrixVisualizations]);
 
   const saveRenderedVisualization = useCallback(
     async ({
@@ -172,7 +178,7 @@ export const useVisualizationPanel = ({
       const image = await invokePythonBarPlot(intensityPayload);
       setPythonImage(image);
       await saveRenderedVisualization({
-        renderer: "recharts",
+        renderer: "python",
         image,
         visualizationType: "bar",
         title: visualizationTitle,
@@ -275,7 +281,7 @@ export const useVisualizationPanel = ({
     renderRPlot,
     renderVolcanoPlot,
     renderingJob,
-    savedVisualizations,
+    savedVisualizations: matrixVisualizations,
     setActiveVisualizationId,
     volcanoPayload: volcanoReadiness.payload,
     volcanoReason: volcanoReadiness.reason,

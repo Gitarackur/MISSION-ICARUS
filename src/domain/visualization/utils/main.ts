@@ -143,6 +143,26 @@ export const getVisualizationImage = (
     : null;
 };
 
+export const getVisualizationMatrixId = (
+  visualization?: VisualizationRecord
+): string | null => {
+  if (!visualization) return null;
+  if (visualization.sourceMatrixId) return visualization.sourceMatrixId;
+
+  const data = visualization.data as SavedImageVisualizationData | undefined;
+  return typeof data?.matrixId === "string" ? data.matrixId : null;
+};
+
+export const getVisualizationsForMatrix = (
+  visualizations: VisualizationRecord[],
+  matrixId?: string
+) => {
+  if (!matrixId) return [];
+  return sortVisualizationsByCreatedAt(visualizations).filter(
+    (visualization) => getVisualizationMatrixId(visualization) === matrixId
+  );
+};
+
 export const getVisualizationPayloadPointCount = (
   visualization?: VisualizationRecord
 ): number => {

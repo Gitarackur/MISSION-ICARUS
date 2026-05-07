@@ -168,5 +168,32 @@ export function setupMigrations(db: Database.Database): MigrationRunner {
     }
   });
 
+  migrationRunner.addMigration({
+    version: 8,
+    name: 'add_visualization_metadata',
+    up: (db) => {
+      const columns = db.prepare(`PRAGMA table_info(visualizations)`).all() as { name: string }[];
+      const columnNames = new Set(columns.map((column) => column.name));
+
+      if (!columnNames.has('sourceMatrixId')) {
+        db.prepare(`ALTER TABLE visualizations ADD COLUMN sourceMatrixId TEXT DEFAULT NULL`).run();
+      }
+      if (!columnNames.has('renderer')) {
+        db.prepare(`ALTER TABLE visualizations ADD COLUMN renderer TEXT DEFAULT NULL`).run();
+      }
+      if (!columnNames.has('visualizationType')) {
+        db.prepare(`ALTER TABLE visualizations ADD COLUMN visualizationType TEXT DEFAULT NULL`).run();
+      }
+      if (!columnNames.has('title')) {
+        db.prepare(`ALTER TABLE visualizations ADD COLUMN title TEXT DEFAULT NULL`).run();
+      }
+
+      db.prepare(`CREATE INDEX IF NOT EXISTS idx_visualizations_sourceMatrixId ON visualizations(sourceMatrixId)`).run();
+    },
+    down: () => {
+      // SQLite column removal requires table recreation; keeping this migration additive.
+    }
+  });
+
   return migrationRunner;
 }
