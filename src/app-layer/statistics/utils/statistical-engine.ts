@@ -1,3 +1,6 @@
+import { jStat } from "jstat";
+import * as ss from "simple-statistics";
+
 const EPSILON = 1e-12;
 
 const finiteNumbers = (values: number[]) => values.filter(Number.isFinite);
@@ -11,34 +14,36 @@ const clampProbability = (value: number) => {
 export function mean(values: number[]) {
   const finiteValues = finiteNumbers(values);
   if (!finiteValues.length) return 0;
-  return finiteValues.reduce((a, b) => a + b, 0) / finiteValues.length;
+  return ss.mean(finiteValues);
 }
 
 // Calculates the median of an array of numbers
 export function median(values: number[]) {
   const v = finiteNumbers(values).sort((a, b) => a - b);
   if (!v.length) return 0;
-  const mid = Math.floor(v.length / 2);
-  return v.length % 2 === 0 ? (v[mid - 1] + v[mid]) / 2 : v[mid];
+  return ss.median(v);
 }
 
 // Calculates sample variance by default. Use sample=false for population variance.
 export function variance(values: number[], sample = true) {
   const finiteValues = finiteNumbers(values);
   if (finiteValues.length < 2) return 0;
-  const m = mean(finiteValues);
-  const denominator = sample ? finiteValues.length - 1 : finiteValues.length;
-  return finiteValues.reduce((acc, x) => acc + (x - m) ** 2, 0) / denominator;
+  return sample ? ss.sampleVariance(finiteValues) : ss.variance(finiteValues);
 }
 
 // Calculates sample standard deviation by default. Use sample=false for population stddev.
 export function stddev(values: number[], sample = true) {
-  return Math.sqrt(variance(values, sample));
+  const finiteValues = finiteNumbers(values);
+  if (finiteValues.length < 2) return 0;
+  return sample
+    ? ss.sampleStandardDeviation(finiteValues)
+    : ss.standardDeviation(finiteValues);
 }
 
 // Calculates the sum of an array of numbers
 export function sum(values: number[]) {
-  return finiteNumbers(values).reduce((acc, val) => acc + val, 0);
+  const finiteValues = finiteNumbers(values);
+  return finiteValues.length ? ss.sum(finiteValues) : 0;
 }
 
 // calculate the normalization of the data
@@ -334,7 +339,7 @@ export function tTestTwoSample(
       : degreesOfFreedomNumerator / degreesOfFreedomDenominator;
 
   const pValue = Number.isFinite(tStatistic)
-    ? 2 * (1 - studentTCDF(Math.abs(tStatistic), degreesOfFreedom))
+    ? 2 * (1 - jStat.studentt.cdf(Math.abs(tStatistic), degreesOfFreedom))
     : mean1 === mean2
     ? 1
     : 0;
@@ -410,7 +415,7 @@ export function oneWayANOVA(groups: number[][]): ANOVAResult {
       : msBetween / msWithin;
 
   const pValue = Number.isFinite(fStatistic)
-    ? 1 - fCDF(fStatistic, dfBetween, dfWithin)
+    ? 1 - jStat.centralF.cdf(fStatistic, dfBetween, dfWithin)
     : 0;
 
   return {
@@ -514,7 +519,7 @@ export function limmaAnalysis(
   // P-value
   const degreesOfFreedom = treatmentValues.length + controlValues.length - 2;
   const pValue = Number.isFinite(tStatistic)
-    ? 2 * (1 - studentTCDF(Math.abs(tStatistic), degreesOfFreedom))
+    ? 2 * (1 - jStat.studentt.cdf(Math.abs(tStatistic), degreesOfFreedom))
     : meanTreatment === meanControl
     ? 1
     : 0;
@@ -529,176 +534,6 @@ export function limmaAnalysis(
     tStatistic,
     averageExpression,
   };
-}
-
-// Helper functions for statistical distributions
-function normalCDF(z: number): number {
-  // Approximation of standard normal CDF
-  const t = 1 / (1 + 0.3275911 * Math.abs(z));
-  const a1 = 0.254829592;
-  const a2 = -0.284496736;
-  const a3 = 1.421413741;
-  const a4 = -1.453152027;
-  const a5 = 1.061405429;
-
-  const erf =
-    1 - ((((a5 * t + a4) * t + a3) * t + a2) * t + a1) * t * Math.exp(-z * z);
-  return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
-}
-
-function logGamma(value: number): number {
-  const coefficients = [
-    676.5203681218851,
-    -1259.1392167224028,
-    771.3234287776531,
-    -176.6150291621406,
-    12.507343278686905,
-    -0.13857109526572012,
-    9.984369578019572e-6,
-    1.5056327351493116e-7,
-  ];
-
-  if (value < 0.5) {
-    return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * value)) - logGamma(1 - value);
-  }
-
-  let x = 0.9999999999998099;
-  const z = value - 1;
-  for (let i = 0; i < coefficients.length; i += 1) {
-    x += coefficients[i] / (z + i + 1);
-  }
-
-  const t = z + coefficients.length - 0.5;
-  return (
-    0.5 * Math.log(2 * Math.PI) +
-    (z + 0.5) * Math.log(t) -
-    t +
-    Math.log(x)
-  );
-}
-
-function betacf(a: number, b: number, x: number): number {
-  const maxIterations = 200;
-  const fpMin = 1e-30;
-  const qab = a + b;
-  const qap = a + 1;
-  const qam = a - 1;
-  let c = 1;
-  let d = 1 - (qab * x) / qap;
-
-  if (Math.abs(d) < fpMin) d = fpMin;
-  d = 1 / d;
-  let h = d;
-
-  for (let m = 1; m <= maxIterations; m += 1) {
-    const m2 = 2 * m;
-    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
-    d = 1 + aa * d;
-    if (Math.abs(d) < fpMin) d = fpMin;
-    c = 1 + aa / c;
-    if (Math.abs(c) < fpMin) c = fpMin;
-    d = 1 / d;
-    h *= d * c;
-
-    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
-    d = 1 + aa * d;
-    if (Math.abs(d) < fpMin) d = fpMin;
-    c = 1 + aa / c;
-    if (Math.abs(c) < fpMin) c = fpMin;
-    d = 1 / d;
-    const del = d * c;
-    h *= del;
-
-    if (Math.abs(del - 1) < 3e-7) break;
-  }
-
-  return h;
-}
-
-function regularizedBeta(x: number, a: number, b: number): number {
-  if (x <= 0) return 0;
-  if (x >= 1) return 1;
-
-  const betaLog =
-    logGamma(a + b) -
-    logGamma(a) -
-    logGamma(b) +
-    a * Math.log(x) +
-    b * Math.log(1 - x);
-  const betaTerm = Math.exp(betaLog);
-
-  if (x < (a + 1) / (a + b + 2)) {
-    return clampProbability((betaTerm * betacf(a, b, x)) / a);
-  }
-
-  return clampProbability(1 - (betaTerm * betacf(b, a, 1 - x)) / b);
-}
-
-function gammaP(a: number, x: number): number {
-  if (x <= 0) return 0;
-  if (x < a + 1) {
-    let ap = a;
-    let sumValue = 1 / a;
-    let delta = sumValue;
-
-    for (let n = 1; n <= 200; n += 1) {
-      ap += 1;
-      delta *= x / ap;
-      sumValue += delta;
-      if (Math.abs(delta) < Math.abs(sumValue) * 1e-8) {
-        return clampProbability(
-          sumValue * Math.exp(-x + a * Math.log(x) - logGamma(a))
-        );
-      }
-    }
-
-    return clampProbability(
-      sumValue * Math.exp(-x + a * Math.log(x) - logGamma(a))
-    );
-  }
-
-  return 1 - gammaQ(a, x);
-}
-
-function gammaQ(a: number, x: number): number {
-  if (x <= 0) return 1;
-  if (x < a + 1) return 1 - gammaP(a, x);
-
-  let b = x + 1 - a;
-  let c = 1 / 1e-30;
-  let d = 1 / b;
-  let h = d;
-
-  for (let i = 1; i <= 200; i += 1) {
-    const an = -i * (i - a);
-    b += 2;
-    d = an * d + b;
-    if (Math.abs(d) < 1e-30) d = 1e-30;
-    c = b + an / c;
-    if (Math.abs(c) < 1e-30) c = 1e-30;
-    d = 1 / d;
-    const delta = d * c;
-    h *= delta;
-    if (Math.abs(delta - 1) < 1e-8) break;
-  }
-
-  return clampProbability(Math.exp(-x + a * Math.log(x) - logGamma(a)) * h);
-}
-
-function studentTCDF(t: number, degreesOfFreedom: number): number {
-  if (!Number.isFinite(t)) return t > 0 ? 1 : 0;
-  if (degreesOfFreedom <= 0) return normalCDF(t);
-
-  const x = degreesOfFreedom / (degreesOfFreedom + t * t);
-  const ib = regularizedBeta(x, degreesOfFreedom / 2, 0.5);
-  return t >= 0 ? 1 - 0.5 * ib : 0.5 * ib;
-}
-
-function fCDF(f: number, df1: number, df2: number): number {
-  if (f <= 0) return 0;
-  if (!Number.isFinite(f)) return 1;
-  const x = (df1 * f) / (df1 * f + df2);
-  return regularizedBeta(x, df1 / 2, df2 / 2);
 }
 
 // ===================================================================
@@ -2531,7 +2366,11 @@ export function fTest(group1: number[], group2: number[]): FTestResult {
   const df1 = (Math.max(variance1, variance2) === variance1 ? n1 : n2) - 1;
   const df2 = (Math.max(variance1, variance2) === variance1 ? n2 : n1) - 1;
   const pValue = Number.isFinite(fStatistic)
-    ? 2 * Math.min(fCDF(fStatistic, df1, df2), 1 - fCDF(fStatistic, df1, df2))
+    ? 2 *
+      Math.min(
+        jStat.centralF.cdf(fStatistic, df1, df2),
+        1 - jStat.centralF.cdf(fStatistic, df1, df2)
+      )
     : 0;
 
   return {
@@ -2595,7 +2434,7 @@ export function chiSquareTest(
   }
 
   const degreesOfFreedom = observed.length - 1;
-  const pValue = gammaQ(degreesOfFreedom / 2, chiSquareStatistic / 2);
+  const pValue = 1 - jStat.chisquare.cdf(chiSquareStatistic, degreesOfFreedom);
 
   return {
     chiSquareStatistic,
