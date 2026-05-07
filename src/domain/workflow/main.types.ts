@@ -70,9 +70,14 @@ export type VisualizationKind =
   | "bar"
   | "box"
   | "scatter"
+  | "line"
+  | "histogram"
+  | "density"
+  | "violin"
   | "heatmap"
   | "volcano"
   | "pca"
+  | "custom"
   | "generic";
 
 export interface IcarusVisualization {

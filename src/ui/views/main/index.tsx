@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useState } from "react";
 import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import MatrixTab from "@/ui/components/header/matrix-tab";
 import CreateSession from "@/ui/components/session/create-session";
 import { useIcarusAppSession } from "@/app-layer/session/hooks/useIcarusAppSession";
+import { tabTypes } from "@/ui/views/proteomics/types/index.types";
 import { ActivitySheet } from "./components/activity-sheet";
 
 const IcarusApp: React.FC = () => {
@@ -32,11 +33,32 @@ const IcarusApp: React.FC = () => {
     setShowSession,
     showSession,
   } = useIcarusAppSession();
+  const [activeProteomicsTab, setActiveProteomicsTab] =
+    useState<tabTypes>("import");
+  const [activeVisualizationId, setActiveVisualizationId] = useState("");
 
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
-  const selectActivityMatrix = (matrixId: string) => {
+  const selectMatrix = (matrixId: string) => {
     setActiveMatrixId(matrixId);
+    setActiveVisualizationId("");
+    setActiveProteomicsTab("import");
+    window.setTimeout(() => setActiveProteomicsTab("import"), 0);
+  };
+  const selectActivityMatrix = (matrixId: string) => {
+    selectMatrix(matrixId);
+    closeActivitySheet();
+  };
+  const selectVisualization = (
+    visualizationId: string,
+    sourceMatrixId?: string
+  ) => {
+    if (sourceMatrixId) {
+      setActiveMatrixId(sourceMatrixId);
+    }
+
+    setActiveVisualizationId(visualizationId);
+    setActiveProteomicsTab("visualization");
     closeActivitySheet();
   };
   const toggleSidebar = () => setShowSession((value) => !value);
@@ -47,9 +69,13 @@ const IcarusApp: React.FC = () => {
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}
+          activeTab={activeProteomicsTab}
           dataRows={originalDataRows}
-          setActiveMatrixId={setActiveMatrixId}
+          setActiveMatrixId={selectMatrix}
           toggleSidebar={toggleSidebar}
+          visualizations={activeSession?.visualizations ?? []}
+          activeVisualizationId={activeVisualizationId}
+          onVisualizationSelect={selectVisualization}
         />
 
         {activeMatrix ? (
@@ -65,6 +91,10 @@ const IcarusApp: React.FC = () => {
               activeMatrix={activeMatrix}
               activeSession={activeSession}
               openActivitySheet={openActivitySheet}
+              activeTab={activeProteomicsTab}
+              setActiveTab={setActiveProteomicsTab}
+              activeVisualizationId={activeVisualizationId}
+              setActiveVisualizationId={setActiveVisualizationId}
             />
             <ActivitySheet
               activeMatrixId={activeMatrixId}
@@ -72,6 +102,7 @@ const IcarusApp: React.FC = () => {
               isOpen={isSheetOpen}
               onClose={closeActivitySheet}
               onMatrixSelect={selectActivityMatrix}
+              onVisualizationSelect={selectVisualization}
             />
           </>
         ) : (

@@ -10,7 +10,6 @@ import {
 } from "recharts";
 import { Loader2, RefreshCw } from "lucide-react";
 import ScatterTooltip from "@/ui/components/scatter/tooltip";
-import VisualizationTab from "@/ui/components/header/visualization-tab";
 import { useVisualizationPanel } from "@/app-layer/visualization/hooks/useVisualizationPanel";
 import {
   formatAxisLabel,
@@ -24,19 +23,29 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const {
     activeSavedImage,
     activeSavedVisualization,
-    activeVisualizationId,
+    boxImage,
+    boxPayload,
+    boxReason,
     error,
     heatmapPayload,
     heatmapReason,
+    pcaImage,
+    pcaPayload,
+    pcaReason,
     pythonImage,
     rImage,
+    renderBoxPlot,
     renderHeatmap,
+    renderPcaPlot,
     renderPythonPlot,
     renderRPlot,
+    renderScatterPlot,
     renderVolcanoPlot,
     renderingJob,
     savedVisualizations,
-    setActiveVisualizationId,
+    scatterImage,
+    scatterPayload,
+    scatterReason,
     volcanoPayload,
     volcanoReason,
     volcanoTickInterval,
@@ -45,14 +54,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const isRendering = renderingJob !== null;
 
   return (
-    <div>
-      <VisualizationTab
-        visualizations={savedVisualizations}
-        activeVisualizationId={activeVisualizationId}
-        setActiveVisualizationId={setActiveVisualizationId}
-      />
-
-      <div className={s.container()}>
+    <div className={s.container()}>
         {savedVisualizations.length > 0 && (
           <div className={s.savedPreview()}>
             {activeSavedImage ? (
@@ -146,6 +148,41 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
             onRender={renderRPlot}
           />
 
+          <ImagePlotCard
+            eyebrow="Python"
+            title="Box Plot"
+            image={boxImage}
+            alt="Python box plot"
+            buttonLabel={boxPayload ? "Create Box Plot" : boxReason ?? "Box plot unavailable"}
+            isLoading={renderingJob === "box"}
+            isRendering={isRendering || !boxPayload}
+            onRender={renderBoxPlot}
+          />
+
+          <ImagePlotCard
+            eyebrow="Python"
+            title="Scatter Plot"
+            image={scatterImage}
+            alt="Python scatter plot"
+            buttonLabel={
+              scatterPayload ? "Create Scatter Plot" : scatterReason ?? "Scatter plot unavailable"
+            }
+            isLoading={renderingJob === "scatter"}
+            isRendering={isRendering || !scatterPayload}
+            onRender={renderScatterPlot}
+          />
+
+          <ImagePlotCard
+            eyebrow="Python"
+            title="PCA Plot"
+            image={pcaImage}
+            alt="Python PCA plot"
+            buttonLabel={pcaPayload ? "Create PCA Plot" : pcaReason ?? "PCA plot unavailable"}
+            isLoading={renderingJob === "pca"}
+            isRendering={isRendering || !pcaPayload}
+            onRender={renderPcaPlot}
+          />
+
           <div className={s.card()}>
             <div className={s.cardHeader()}>
               <div>
@@ -214,7 +251,6 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         </div>
 
         {error && <p className="text-sm font-medium text-red-600">{error}</p>}
-      </div>
     </div>
   );
 };

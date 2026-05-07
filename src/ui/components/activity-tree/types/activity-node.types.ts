@@ -19,6 +19,10 @@ export interface DisplayedActivityTree {
   activeMatrixId?: string | null;
   onClickOfOutputButton?: (matrixId: string) => void;
   onClickOfInputButton?: (inputMatrixRef: string) => void;
+  onClickOfVisualizationButton?: (
+    visualizationId: string,
+    sourceMatrixId?: string
+  ) => void;
 }
 
 

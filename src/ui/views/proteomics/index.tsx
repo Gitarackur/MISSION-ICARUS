@@ -13,6 +13,8 @@ export default function ProteomicsAnalysisHomeView(
   const {
     activeMatrix,
     activeSession,
+    activeTab,
+    activeVisualizationId,
     originalDataColumns,
     originalDataRows,
     openActivitySheet,
@@ -20,11 +22,15 @@ export default function ProteomicsAnalysisHomeView(
     saveVisualizationInWorkflow,
     selectedDataColumns,
     sessionSourceMatrix,
+    setActiveTab,
+    setActiveVisualizationId,
     setSelectedDataColumns,
   } = props;
   const styles = proteomicsPagestyles();
-  const { activeTab, intensityDist, setActiveTab, stats, volcanoData } =
-    useProteomicsAnalysisView({ originalDataColumns, originalDataRows });
+  const { intensityDist, stats, volcanoData } = useProteomicsAnalysisView({
+    originalDataColumns,
+    originalDataRows,
+  });
 
   return (
     <div className={styles.container()}>
@@ -63,6 +69,8 @@ export default function ProteomicsAnalysisHomeView(
             activeMatrix={activeMatrix}
             activeSession={activeSession}
             saveVisualizationInWorkflow={saveVisualizationInWorkflow}
+            activeVisualizationId={activeVisualizationId}
+            setActiveVisualizationId={setActiveVisualizationId}
           />
         )}
 

@@ -1,7 +1,10 @@
 import { jStat } from "jstat";
 import {
+  BoxPlotPayload,
   HeatmapPayload,
   MatrixRecord,
+  PcaPlotPayload,
+  ScatterPlotPayload,
   VolcanoPayload,
 } from "@/domain/visualization/index.types";
 import { mean, tTestTwoSample } from "@/app-layer/statistics/utils/statistical-engine";
@@ -27,6 +30,23 @@ const getNumericColumnIndices = (matrix: MatrixRecord) =>
       matrix.data.some((row) => toFinite(row[index]) !== null)
     );
 
+const getFiniteColumnValues = (matrix: MatrixRecord, columnIndex: number) =>
+  matrix.data
+    .map((row) => toFinite(row[columnIndex]))
+    .filter((value): value is number => value !== null);
+
+const getRowLabel = (matrix: MatrixRecord, rowIndex: number) => {
+  const labelColumnIndex = matrix.columns.findIndex((column) =>
+    /(protein|gene|id|name|label|feature)/i.test(column)
+  );
+  const value =
+    labelColumnIndex >= 0 ? matrix.data[rowIndex]?.[labelColumnIndex] : null;
+
+  return value === null || value === undefined || value === ""
+    ? `row_${rowIndex + 1}`
+    : String(value);
+};
+
 const getPairedFiniteValues = (
   matrix: MatrixRecord,
   xIndex: number,
@@ -37,6 +57,107 @@ const getPairedFiniteValues = (
     .filter((pair): pair is readonly [number, number] =>
       pair.every((value) => value !== null)
     );
+
+export const buildMatrixBoxPlotPayload = (
+  matrix?: MatrixRecord
+): VisualizationReadiness<BoxPlotPayload> => {
+  if (!matrix) {
+    return { payload: null, reason: "No active matrix selected." };
+  }
+
+  const numericColumns = getNumericColumnIndices(matrix).slice(0, 24);
+  if (!numericColumns.length) {
+    return { payload: null, reason: "Box plot needs at least one numeric column." };
+  }
+
+  const payload = numericColumns.reduce<BoxPlotPayload>((acc, { column, index }) => {
+    const values = getFiniteColumnValues(matrix, index);
+    if (values.length) {
+      acc[column] = values;
+    }
+    return acc;
+  }, {});
+
+  return Object.keys(payload).length
+    ? { payload }
+    : { payload: null, reason: "Box plot could not find finite numeric values." };
+};
+
+export const buildMatrixScatterPayload = (
+  matrix?: MatrixRecord
+): VisualizationReadiness<ScatterPlotPayload> => {
+  if (!matrix) {
+    return { payload: null, reason: "No active matrix selected." };
+  }
+
+  const numericColumns = getNumericColumnIndices(matrix);
+  if (numericColumns.length < 2) {
+    return { payload: null, reason: "Scatter plot needs at least two numeric columns." };
+  }
+
+  const [xColumn, yColumn] = numericColumns;
+  const rows = matrix.data
+    .map((row, rowIndex) => ({
+      x: toFinite(row[xColumn.index]),
+      y: toFinite(row[yColumn.index]),
+      label: getRowLabel(matrix, rowIndex),
+    }))
+    .filter(
+      (row): row is { x: number; y: number; label: string } =>
+        row.x !== null && row.y !== null
+    );
+
+  if (!rows.length) {
+    return { payload: null, reason: "Scatter plot could not find paired numeric values." };
+  }
+
+  return {
+    payload: {
+      x: rows.map((row) => row.x),
+      y: rows.map((row) => row.y),
+      labels: rows.map((row) => row.label),
+    },
+  };
+};
+
+export const buildMatrixPcaPayload = (
+  matrix?: MatrixRecord
+): VisualizationReadiness<PcaPlotPayload> => {
+  if (!matrix) {
+    return { payload: null, reason: "No active matrix selected." };
+  }
+
+  const numericColumns = getNumericColumnIndices(matrix).slice(0, 80);
+  if (numericColumns.length < 2 || matrix.data.length < 2) {
+    return {
+      payload: null,
+      reason: "PCA plot needs at least two rows and two numeric columns.",
+    };
+  }
+
+  const rows = matrix.data
+    .map((row, rowIndex) => {
+      const values = numericColumns.map(({ index }) => toFinite(row[index]));
+      if (values.some((value) => value === null)) return null;
+      return {
+        values: values as number[],
+        label: getRowLabel(matrix, rowIndex),
+      };
+    })
+    .filter((row): row is { values: number[]; label: string } => row !== null);
+
+  if (rows.length < 2) {
+    return { payload: null, reason: "PCA plot could not find enough complete numeric rows." };
+  }
+
+  return {
+    payload: {
+      data: rows.map((row) => row.values),
+      labels: rows.map((row) => row.label),
+      n_components: 2,
+    },
+  };
+};
 
 export const buildMatrixHeatmapPayload = (
   matrix?: MatrixRecord

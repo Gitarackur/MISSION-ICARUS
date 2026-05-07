@@ -17,8 +17,8 @@ import { activityFloatingButton } from '@/ui/views/main/variants/main.variants';
 const NavTabs: React.FC<NavTabsProps> = ({ active, setActive, openActivitySheet }) => {
   const tabs: TabsTypes[] = [
     { id: 'import', label: 'Data Import', icon: Upload },
-    { id: 'protein-data-info-panel', label: 'Protein Data Info Panel', icon: Calculator },
     { id: 'visualization', label: 'Visualization', icon: BarChart3 },
+    { id: 'protein-data-info-panel', label: 'Protein Data Info Panel', icon: Calculator },
     { id: 'analysis', label: 'Analysis', icon: TrendingUp }
   ];
 

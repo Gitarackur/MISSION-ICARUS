@@ -1,23 +1,36 @@
-import { IcarusMatrix } from '@/domain/workflow/main.types'
+import { IcarusMatrix, IcarusVisualization } from '@/domain/workflow/main.types'
 import { tabNavigationVariants } from './variants'
-import { Download, Settings } from 'lucide-react';
+import { BarChart3, Download, Settings } from 'lucide-react';
 import { headerVariants } from "./variants";
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { handleFileExport } from '@/app-layer/shared/utils';
 import { ProteinRow } from '@/domain/proteins/index.types';
+import {
+  getVisualizationLabel,
+  getVisualizationsForMatrix,
+} from '@/domain/visualization/utils/main';
+import { tabsIdTypes } from '@/ui/components/tabs/types/index.types';
 
 const MatrixTab = ({
   matrices,
   activeMatrixId,
+  activeTab,
   setActiveMatrixId,
   toggleSidebar,
-  dataRows
+  dataRows,
+  visualizations = [],
+  activeVisualizationId,
+  onVisualizationSelect,
 }: {
   matrices: IcarusMatrix[];
   activeMatrixId: string;
+  activeTab: tabsIdTypes;
   toggleSidebar: () => void;
   setActiveMatrixId: (id: string) => void;
-  dataRows?: ProteinRow[]
+  dataRows?: ProteinRow[];
+  visualizations?: IcarusVisualization[];
+  activeVisualizationId?: string;
+  onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
 }) => {
   const { tabList, tabButton } = tabNavigationVariants();
   const s = headerVariants();
@@ -25,6 +38,15 @@ const MatrixTab = ({
   const handleExport = useCallback(
     () => handleFileExport(dataRows, 'proteomics-data'),
     [dataRows]
+  );
+
+  const visualizationsByMatrix = useMemo(
+    () =>
+      matrices.reduce<Record<string, IcarusVisualization[]>>((acc, matrix) => {
+        acc[matrix.id] = getVisualizationsForMatrix(visualizations, matrix.id);
+        return acc;
+      }, {}),
+    [matrices, visualizations]
   );
 
   return (
@@ -41,16 +63,110 @@ const MatrixTab = ({
             className="h-8 w-auto select-none mx-4 my-2"
           />
         </button>
-        <div className="border-x border-gray-300 w-full flex overflow-x-auto overflow-y-clip">
-          {matrices.map((matrix) => (
-            <button
-              key={matrix.id}
-              onClick={() => setActiveMatrixId(matrix.id)}
-              className={tabButton({ active: activeMatrixId === matrix.id })}
-            >
-              {matrix.id}
-            </button>
-          ))}
+        <div className="border-x border-gray-300 w-full flex overflow-x-auto overflow-y-hidden">
+          {matrices.map((matrix) => {
+            const matrixVisualizations = visualizationsByMatrix[matrix.id] ?? [];
+            const isActiveMatrix = activeMatrixId === matrix.id;
+            const selectMatrix = () => setActiveMatrixId(matrix.id);
+            const shouldMatrixClickWin = activeTab === "visualization";
+            const activeMatrixVisualization = matrixVisualizations.find(
+              (visualization) => visualization.id === activeVisualizationId
+            );
+            const visualizationCount = matrixVisualizations.length;
+
+            return (
+              <div
+                key={matrix.id}
+                onClickCapture={(event) => {
+                  const target = event.target as HTMLElement;
+                  if (target.closest("[data-visualization-control='true']")) {
+                    return;
+                  }
+
+                  selectMatrix();
+                }}
+                onClick={selectMatrix}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    selectMatrix();
+                  }
+                }}
+                className={[
+                  "flex min-w-[220px] max-w-[420px] cursor-pointer items-stretch border-r border-gray-200 bg-gray-50 text-left",
+                  isActiveMatrix
+                    ? "bg-white shadow-sm ring-1 ring-inset ring-blue-200"
+                    : "",
+                ].join(" ")}
+                role="button"
+                tabIndex={0}
+                aria-label={`${matrix.id} matrix tab`}
+              >
+                {matrixVisualizations.length > 0 && (
+                  <div
+                    className={[
+                      "flex max-w-[180px] items-center gap-1 border-r px-2",
+                      isActiveMatrix
+                        ? "border-blue-100 bg-blue-50/50"
+                        : "border-gray-200 bg-gray-100/80",
+                    ].join(" ")}
+                    role="tablist"
+                    aria-label={`${matrix.id} visualizations`}
+                  >
+                    {(activeMatrixVisualization
+                      ? [activeMatrixVisualization]
+                      : matrixVisualizations.slice(0, 1)
+                    ).map((visualization, index) => (
+                      <button
+                        key={visualization.id}
+                        type="button"
+                        data-visualization-control="true"
+                        onPointerDown={(event) => event.stopPropagation()}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          if (shouldMatrixClickWin) {
+                            selectMatrix();
+                            return;
+                          }
+
+                          onVisualizationSelect?.(visualization.id, matrix.id);
+                        }}
+                        className={[
+                          "flex max-w-[120px] flex-shrink-0 items-center justify-center rounded p-1 text-[11px] font-medium transition-colors",
+                          activeVisualizationId === visualization.id
+                            ? "bg-blue-100 text-blue-700 ring-1 ring-blue-300"
+                            : "bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900",
+                        ].join(" ")}
+                        title={getVisualizationLabel(visualization, index)}
+                        role="tab"
+                        aria-selected={activeVisualizationId === visualization.id}
+                      >
+                        <BarChart3 className="h-3 w-3 flex-shrink-0" />
+                        <span className="sr-only">
+                          {getVisualizationLabel(visualization, index)}
+                        </span>
+                      </button>
+                    ))}
+                    {visualizationCount > 1 && (
+                      <span className="text-[10px] font-medium text-gray-500">
+                        {visualizationCount}
+                      </span>
+                    )}
+                  </div>
+                )}
+
+                <span
+                  className={[
+                    tabButton({ active: isActiveMatrix }),
+                    "min-w-[140px] max-w-none flex-1 border-r-0 text-left",
+                  ].join(" ")}
+                  title={matrix.id}
+                >
+                  <span className="block truncate">{matrix.id}</span>
+                </span>
+              </div>
+            );
+          })}
           &nbsp;
         </div>
 

@@ -1,6 +1,9 @@
 import {
   BarChartPayload,
+  BoxPlotPayload,
   HeatmapPayload,
+  PcaPlotPayload,
+  ScatterPlotPayload,
   VolcanoPayload,
 } from "@/domain/visualization/index.types";
 
@@ -44,6 +47,39 @@ export const invokePythonVolcanoPlot = async (
 ): Promise<string> => {
   const base64 = await window.electron.ipcRenderer.invoke("run:python", {
     method: "getVolcanoPlot",
+    args: [payload],
+  });
+
+  return toPngDataUrl(base64);
+};
+
+export const invokePythonBoxPlot = async (
+  payload: BoxPlotPayload
+): Promise<string> => {
+  const base64 = await window.electron.ipcRenderer.invoke("run:python", {
+    method: "getBoxPlot",
+    args: [payload],
+  });
+
+  return toPngDataUrl(base64);
+};
+
+export const invokePythonScatterPlot = async (
+  payload: ScatterPlotPayload
+): Promise<string> => {
+  const base64 = await window.electron.ipcRenderer.invoke("run:python", {
+    method: "getScatterPlot",
+    args: [payload],
+  });
+
+  return toPngDataUrl(base64);
+};
+
+export const invokePythonPcaPlot = async (
+  payload: PcaPlotPayload
+): Promise<string> => {
+  const base64 = await window.electron.ipcRenderer.invoke("run:python", {
+    method: "getPcaPlot",
     args: [payload],
   });
 
