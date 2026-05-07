@@ -12,8 +12,6 @@ class PlotCommand(Command):
         use_json = "--use-json" in self.args
         input_arg = self.args[0];
 
-        open("f.txt", "w").write(str(self.args))
-
         if use_json:
             data = json.loads(input_arg)
         else:

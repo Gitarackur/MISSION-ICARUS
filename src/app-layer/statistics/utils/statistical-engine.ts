@@ -1,48 +1,57 @@
 // Calculates the mean, median, and standard deviation of an array of numbers
 export function mean(values: number[]) {
-  if (!values.length) return 0;
-  return values.reduce((a, b) => a + b, 0) / values.length;
+  const finiteValues = values.filter(Number.isFinite);
+  if (!finiteValues.length) return 0;
+  return finiteValues.reduce((a, b) => a + b, 0) / finiteValues.length;
 }
 
 // Calculates the median of an array of numbers
 export function median(values: number[]) {
-  if (!values.length) return 0;
-  const v = [...values].sort((a, b) => a - b);
+  const v = values.filter(Number.isFinite).sort((a, b) => a - b);
+  if (!v.length) return 0;
   const mid = Math.floor(v.length / 2);
   return v.length % 2 === 0 ? (v[mid - 1] + v[mid]) / 2 : v[mid];
 }
 
 // Calculates the standard deviation of an array of numbers
 export function stddev(values: number[]) {
-  if (!values.length) return 0;
-  const m = mean(values);
+  const finiteValues = values.filter(Number.isFinite);
+  if (!finiteValues.length) return 0;
+  const m = mean(finiteValues);
   const variance =
-    values.reduce((acc, x) => acc + (x - m) ** 2, 0) / values.length;
+    finiteValues.reduce((acc, x) => acc + (x - m) ** 2, 0) / finiteValues.length;
   return Math.sqrt(variance);
 }
 
 // Calculates the variance of an array of numbers
 export function variance(values: number[]) {
-  if (!values.length) return 0;
-  const m = mean(values);
+  const finiteValues = values.filter(Number.isFinite);
+  if (!finiteValues.length) return 0;
+  const m = mean(finiteValues);
   const variance =
-    values.reduce((acc, x) => acc + (x - m) ** 2, 0) / values.length;
+    finiteValues.reduce((acc, x) => acc + (x - m) ** 2, 0) / finiteValues.length;
   return variance;
 }
 
 // Calculates the sum of an array of numbers
 export function sum(values: number[]) {
-  return values.reduce((acc, val) => acc + val, 0);
+  return values.filter(Number.isFinite).reduce((acc, val) => acc + val, 0);
 }
 
 // calculate the normalization of the data
 export function normalization(values: number[][]) {
   // max-min normalization: (x - min) / (max - min)
   return values.map((firstNestedValue) => {
-    const max_value = Math.max.apply(Math, [...firstNestedValue]);
-    const min_value = Math.min.apply(Math, [...firstNestedValue]);
+    const finiteValues = firstNestedValue.filter(Number.isFinite);
+    if (finiteValues.length === 0) return firstNestedValue.map(() => NaN);
+
+    const max_value = Math.max(...finiteValues);
+    const min_value = Math.min(...finiteValues);
+    const range = max_value - min_value;
+
     return firstNestedValue.map((value) => {
-      return (value - min_value) / (max_value - min_value);
+      if (!Number.isFinite(value)) return NaN;
+      return range === 0 ? 0 : (value - min_value) / range;
     });
   });
 }

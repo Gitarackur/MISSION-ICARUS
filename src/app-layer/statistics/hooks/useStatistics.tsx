@@ -9,6 +9,7 @@ import {
   filterType,
   imputeMeanColumn,
   imputeMedianColumn,
+  imputeZeroColumn,
   knnImputeTarget,
   mean,
   median,
@@ -20,7 +21,9 @@ import {
   rollingStdDev,
   sortDataByColumn,
   stddev,
+  sum,
   transposeData,
+  variance,
   fTest,
   chiSquareTest,
 
@@ -36,8 +39,8 @@ import {
   deleteRows,
 
   performPCA,
-  // performPLSDA,
-  // performTSNE,
+  performPLSDA,
+  performTSNE,
 
   addPTMAnnotations,
   removePTMAnnotations,
@@ -64,6 +67,70 @@ import { TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { extractNumericData, transposedStatisticalResults } from "@/app-layer/shared/utils";
 
+const metadataColumnPrefix = "__";
+
+const isMetadataColumn = (column: string) => column.startsWith(metadataColumnPrefix);
+
+const getRawColumnData = (
+  data: ProteinRow[] | Map<string, TableMatrix>
+): { columns: string[]; values: unknown[][] } => {
+  if (Array.isArray(data)) {
+    const columns = data.length > 0 ? Object.keys(data[0]).filter((column) => !isMetadataColumn(column)) : [];
+    return {
+      columns,
+      values: columns.map((column) => data.map((row) => row[column])),
+    };
+  }
+
+  const columns: string[] = [];
+  const values: unknown[][] = [];
+  data.forEach((columnValues, column) => {
+    if (isMetadataColumn(column)) return;
+    columns.push(column);
+    values.push(columnValues);
+  });
+
+  return { columns, values };
+};
+
+const isMissingValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return true;
+  if (typeof value === "number") return !Number.isFinite(value);
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    return normalized === "" || normalized === "na" || normalized === "n/a" || normalized === "nan" || normalized === "null";
+  }
+  return false;
+};
+
+const finiteValues = (values: number[]): number[] =>
+  values.filter((value) => Number.isFinite(value));
+
+const product = (values: number[]): number =>
+  values.reduce((acc, value) => acc * value, 1);
+
+const parseNumberMetadata = (
+  data: ProteinRow[] | Map<string, TableMatrix>,
+  key: string,
+  fallback: number
+): number => {
+  if (!(data instanceof Map) || !data.has(key)) return fallback;
+  const metadata = data.get(key);
+  const value = Array.isArray(metadata) ? Number(metadata[0]) : NaN;
+  return Number.isFinite(value) ? value : fallback;
+};
+
+const parseStringMetadata = (
+  data: ProteinRow[] | Map<string, TableMatrix>,
+  key: string,
+  fallback: string
+): string => {
+  if (!(data instanceof Map) || !data.has(key)) return fallback;
+  const metadata = data.get(key);
+  const value = Array.isArray(metadata) ? metadata[0] : undefined;
+  return typeof value === "string" && value.length > 0 ? value : fallback;
+};
+
 
 export const useStatisticalAnalysis = () => {
   const performAnalysis = useCallback(
@@ -74,6 +141,7 @@ export const useStatisticalAnalysis = () => {
       console.log("data", data);
 
       const { numericColumns, numericData } = extractNumericData(data);
+      const rawData = getRawColumnData(data);
 
       console.log(
         "numericColumns and numericData",
@@ -81,7 +149,11 @@ export const useStatisticalAnalysis = () => {
         numericData
       );
 
-      if (numericColumns.length === 0 || numericData.length === 0) {
+      if (
+        (numericColumns.length === 0 || numericData.length === 0) &&
+        action !== "count-missing" &&
+        action !== "count-valid"
+      ) {
         const output = {
           inputParameters: {
             columns: [],
@@ -108,27 +180,72 @@ export const useStatisticalAnalysis = () => {
       const calculationMethod = action;
 
       switch (action) {
+        case "mean-values":
         case "mean": {
           results = numericData.map((columnData) => [mean(columnData)]);
           newColumnNames = numericColumns.map((col) => `${col}_mean`);
           break;
         }
+        case "median-values":
         case "median": {
           results = numericData.map((columnData) => [median(columnData)]);
           newColumnNames = numericColumns.map((col) => `${col}_median`);
           break;
         }
+        case "stddev-values":
         case "stdDev": {
           results = numericData.map((columnData) => [stddev(columnData)]);
           newColumnNames = numericColumns.map((col) => `${col}_stddev`);
           break;
         }
         case "count": {
-          results = numericData.map((value) => {
-            const count = value.reduce((acc, value) => (acc += value));
-            return [count];
-          });
+          results = numericData.map((value) => [value.length]);
           newColumnNames = numericColumns.map((col) => `${col}_count`);
+          break;
+        }
+        case "count-missing": {
+          results = rawData.values.map((values) => [
+            values.filter((value) => isMissingValue(value)).length,
+          ]);
+          newColumnNames = rawData.columns.map((col) => `${col}_missing_count`);
+          break;
+        }
+        case "count-valid": {
+          results = rawData.values.map((values) => [
+            values.filter((value) => !isMissingValue(value)).length,
+          ]);
+          newColumnNames = rawData.columns.map((col) => `${col}_valid_count`);
+          break;
+        }
+        case "variance": {
+          results = numericData.map((columnData) => [variance(finiteValues(columnData))]);
+          newColumnNames = numericColumns.map((col) => `${col}_variance`);
+          break;
+        }
+        case "sum": {
+          results = numericData.map((columnData) => [sum(finiteValues(columnData))]);
+          newColumnNames = numericColumns.map((col) => `${col}_sum`);
+          break;
+        }
+        case "product": {
+          results = numericData.map((columnData) => [product(finiteValues(columnData))]);
+          newColumnNames = numericColumns.map((col) => `${col}_product`);
+          break;
+        }
+        case "min": {
+          results = numericData.map((columnData) => {
+            const values = finiteValues(columnData);
+            return [values.length > 0 ? Math.min(...values) : NaN];
+          });
+          newColumnNames = numericColumns.map((col) => `${col}_min`);
+          break;
+        }
+        case "max": {
+          results = numericData.map((columnData) => {
+            const values = finiteValues(columnData);
+            return [values.length > 0 ? Math.max(...values) : NaN];
+          });
+          newColumnNames = numericColumns.map((col) => `${col}_max`);
           break;
         }
         case "normalization": {
@@ -193,7 +310,7 @@ export const useStatisticalAnalysis = () => {
         }
 
         case "impute-zero": {
-          const imputedZero = numericData.map((col) => imputeMeanColumn(col));
+          const imputedZero = numericData.map((col) => imputeZeroColumn(col));
           results = imputedZero;
           newColumnNames = numericColumns.map((c) => `${c}_imputed_zero`);
           break;
@@ -245,6 +362,7 @@ export const useStatisticalAnalysis = () => {
 
        
      
+        case "t-test":
 case "t-test-test": {
   if (numericData.length < 2) {
     throw new Error("T-Test requires at least 2 groups of data");
@@ -252,9 +370,14 @@ case "t-test-test": {
 
   const tTestResults = tTestTwoSample(numericData[0], numericData[1]);
 
-  // Only return t_statistic
-  results = [[tTestResults.tStatistic]];
-  newColumnNames = ["t_statistic"];
+  results = [[
+    tTestResults.tStatistic,
+    tTestResults.pValue,
+    tTestResults.degreesOfFreedom,
+    tTestResults.mean1,
+    tTestResults.mean2,
+  ]];
+  newColumnNames = ["t_statistic", "p_value", "degrees_of_freedom", "mean_1", "mean_2"];
   break;
 }
 
@@ -569,9 +692,14 @@ case "t-test-test": {
               }
             }
 
-            // For now, just return the first numComponents of the input data
-            // This is a placeholder until performPLSDA is fixed
-            results = numericData.slice(0, numComponents);
+            const labelsData = data.get("__labels__");
+            const labels =
+              Array.isArray(labelsData) && labelsData.length === numericData[0]?.length
+                ? labelsData.map((label) => Number(label))
+                : Array.from({ length: numericData[0]?.length || 0 }, (_, index) => index % 2);
+
+            const plsdaResult = performPLSDA(numericData, labels, numComponents);
+            results = plsdaResult.transformed_data;
             newColumnNames = Array.from(
               { length: numComponents },
               (_, i) => `LV${i + 1}`
@@ -585,12 +713,11 @@ case "t-test-test": {
         }
 
         case "tsne-learning": {
-          let numDimensions = 2;
-          if (data instanceof Map && data.has("__num_dimensions__")) {
-            numDimensions =
-              Number((data.get("__num_dimensions__") as TableMatrix)[0]) || 2;
-          }
-          results = numericData.slice(0, numDimensions);
+          const numDimensions = parseNumberMetadata(data, "__num_dimensions__", 2);
+          const perplexity = parseNumberMetadata(data, "__perplexity__", 30);
+          const iterations = parseNumberMetadata(data, "__iterations__", 1000);
+          const tsneResult = performTSNE(numericData, numDimensions, perplexity, iterations);
+          results = tsneResult.embedded_data;
           newColumnNames = Array.from(
             { length: numDimensions },
             (_, i) => `tSNE${i + 1}`
@@ -714,10 +841,10 @@ case "t-test-test": {
               Array.isArray(data.get("__num_clusters__"))
                 ? (data.get("__num_clusters__") as number[])[0]
                 : 3;
-            const linkageData = data.get("__linkage__");
             const linkage: "single" | "complete" | "average" =
-              Array.isArray(linkageData) && typeof linkageData[0] === "string"
-                ? (linkageData[0] as "single" | "complete" | "average")
+              parseStringMetadata(data, "__linkage__", "average") === "single" ||
+              parseStringMetadata(data, "__linkage__", "average") === "complete"
+                ? (parseStringMetadata(data, "__linkage__", "average") as "single" | "complete")
                 : "average";
 
             const hierarchicalResult: HierarchicalClusteringResult =

@@ -1,4 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { TableColumns } from "@/domain/workflow/main.types"
 import { ProteinRow } from "@/domain/proteins/index.types"
 
