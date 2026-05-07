@@ -40,6 +40,10 @@ export type ProteomicsAnalysisHomeViewProps = {
   sessionSourceMatrix?: IcarusMatrix
   activeMatrix?: IcarusMatrixRecord;
   activeSession: IcarusSessionWithWorkflowRecord | null;
+  activeTab: tabTypes;
+  setActiveTab: (tab: tabTypes) => void;
+  activeVisualizationId: string;
+  setActiveVisualizationId: (visualizationId: string) => void;
 };
 
 export type tabTypes = tabsIdTypes;

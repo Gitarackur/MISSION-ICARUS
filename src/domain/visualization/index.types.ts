@@ -19,6 +19,20 @@ export type VolcanoPayload = {
   pval_threshold: number;
 };
 
+export type BoxPlotPayload = Record<string, number[]>;
+
+export type ScatterPlotPayload = {
+  x: number[];
+  y: number[];
+  labels?: string[];
+};
+
+export type PcaPlotPayload = {
+  data: number[][];
+  labels?: string[];
+  n_components?: number;
+};
+
 export type SavedImageVisualizationData = {
   image?: unknown;
   payload?: unknown;

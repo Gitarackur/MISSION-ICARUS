@@ -7,6 +7,13 @@ import {
   buttonStyle,
 } from "./variants/activity.style.variant";
 import { DisplayedActivityTree } from "./types/activity-node.types";
+import { IcarusVisualization } from "@/domain/workflow/main.types";
+import {
+  formatAxisLabel,
+  getVisualizationLabel,
+  getVisualizationMatrixId,
+  sortVisualizationsByCreatedAt,
+} from "@/domain/visualization/utils/main";
 import { Minus, Plus, RefreshCcw } from "lucide-react";
 import { wrapText } from "./utils/main";
 
@@ -15,6 +22,7 @@ const ActivityTree2 = ({
   activeMatrixId,
   onClickOfInputButton,
   onClickOfOutputButton,
+  onClickOfVisualizationButton,
 }: DisplayedActivityTree) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -37,6 +45,16 @@ const ActivityTree2 = ({
     if (!sessionData.activities?.length) return;
 
     const activities = sessionData.activities;
+    const visualizationsByActivity = sortVisualizationsByCreatedAt(
+      sessionData.visualizations ?? []
+    ).reduce<Map<string, IcarusVisualization[]>>((acc, visualization) => {
+      if (!visualization.createdByActivityId) return acc;
+
+      const current = acc.get(visualization.createdByActivityId) ?? [];
+      current.push(visualization);
+      acc.set(visualization.createdByActivityId, current);
+      return acc;
+    }, new Map());
     const roots = buildActivityTree(activities);
 
     const hierarchyRoots = roots.map((r) =>
@@ -192,6 +210,71 @@ const ActivityTree2 = ({
         .text((d) => d.data.activity.name)
         .call(wrapText, 80);
 
+      nodes.each(function (d) {
+        const activityVisualizations =
+          visualizationsByActivity.get(d.data.activity.id) ?? [];
+
+        if (!activityVisualizations.length || !onClickOfVisualizationButton) {
+          return;
+        }
+
+        const plotGroup = d3
+          .select(this)
+          .append("g")
+          .attr("transform", `translate(${-nodeWidth / 2 + 12}, 10)`);
+
+        activityVisualizations.slice(0, 4).forEach((visualization, index) => {
+          const sourceMatrixId =
+            getVisualizationMatrixId(visualization) ??
+            d.data.activity.outputMatrixReference ??
+            d.data.activity.inputMatrixReferences;
+          const label =
+            visualization.visualizationType ??
+            getVisualizationLabel(visualization, index);
+          const button = plotGroup
+            .append("g")
+            .attr(
+              "transform",
+              `translate(${(index % 2) * 80}, ${Math.floor(index / 2) * 20})`
+            )
+            .style("cursor", "pointer")
+            .on("click", (event: MouseEvent) => {
+              event.stopPropagation();
+              onClickOfVisualizationButton(
+                visualization.id,
+                sourceMatrixId ?? undefined
+              );
+            });
+
+          button
+            .append("rect")
+            .attr("width", 74)
+            .attr("height", 18)
+            .attr("rx", 4)
+            .attr("fill", "#f5f3ff")
+            .attr("stroke", "#c4b5fd");
+
+          button
+            .append("text")
+            .attr("x", 37)
+            .attr("y", 12)
+            .attr("font-size", "9px")
+            .attr("text-anchor", "middle")
+            .attr("fill", "#6d28d9")
+            .text(formatAxisLabel(label, 11));
+        });
+
+        if (activityVisualizations.length > 4) {
+          plotGroup
+            .append("text")
+            .attr("x", 166)
+            .attr("y", 32)
+            .attr("font-size", "10px")
+            .attr("fill", "#6b7280")
+            .text(`+${activityVisualizations.length - 4}`);
+        }
+      });
+
       // Count tspans (number of wrapped lines)
       // const lineCount = activityNameText.selectAll("tspan").size();
 
@@ -298,7 +381,13 @@ const ActivityTree2 = ({
         d3.zoomIdentity.translate(translateX, translateY).scale(scale)
       );
     }
-  }, [sessionData, onClickOfInputButton, onClickOfOutputButton, activeMatrixId]);
+  }, [
+    sessionData,
+    onClickOfInputButton,
+    onClickOfOutputButton,
+    onClickOfVisualizationButton,
+    activeMatrixId,
+  ]);
 
   const handleZoomIn = () => {
     if (svgRef.current && zoomBehaviorRef.current) {

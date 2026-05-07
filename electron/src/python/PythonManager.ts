@@ -60,4 +60,36 @@ export class PythonManager extends Manager {
   public async getVolcanoPlot<T = Record<string, unknown>>(data: T): Promise<string> {
     return this.runCommanderCommand('volcano', data);
   }
+
+  public async getBoxPlot<T = Record<string, unknown>>(data: T): Promise<string> {
+    return this.runCommanderCommand('boxplot', data);
+  }
+
+  public async getScatterPlot<T = Record<string, unknown>>(data: T): Promise<string> {
+    return this.runCommanderCommand('scatter', data);
+  }
+
+  public async getPcaPlot<T = Record<string, unknown>>(data: T): Promise<string> {
+    return this.runCommanderCommand('pca', data);
+  }
+
+  public async getPlotByCommand<T = Record<string, unknown>>(
+    command: string,
+    data: T
+  ): Promise<string> {
+    const allowedCommands = new Set([
+      'plot',
+      'boxplot',
+      'scatter',
+      'heatmap',
+      'volcano',
+      'pca',
+    ]);
+
+    if (!allowedCommands.has(command)) {
+      throw new Error(`Unsupported Python plot command: ${command}`);
+    }
+
+    return this.runCommanderCommand(command, data);
+  }
 }

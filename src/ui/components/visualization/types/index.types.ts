@@ -15,4 +15,6 @@ export type VisualizationPanelProps = {
   activeSession: IcarusSessionWithWorkflowRecord | null;
   activeMatrix?: IcarusMatrixRecord;
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
+  activeVisualizationId?: string;
+  setActiveVisualizationId?: (visualizationId: string) => void;
 };

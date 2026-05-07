@@ -22,6 +22,15 @@ export type VisualizationPanelStateParams = {
   activeSession: IcarusSessionWithWorkflowRecord | null;
   activeMatrix?: IcarusMatrixRecord;
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
+  activeVisualizationId?: string;
+  setActiveVisualizationId?: (visualizationId: string) => void;
 };
 
-export type RenderJob = "python-bar" | "r-bar" | "heatmap" | "volcano";
+export type RenderJob =
+  | "python-bar"
+  | "r-bar"
+  | "box"
+  | "scatter"
+  | "pca"
+  | "heatmap"
+  | "volcano";
