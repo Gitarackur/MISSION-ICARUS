@@ -1,5 +1,10 @@
 import IcarusWorkflow from "@/app-layer/algorithms/workflow";
-import { TableColumns, TableMatrices } from "@/domain/workflow/main.types";
+import {
+  TableColumns,
+  TableMatrices,
+  VisualizationKind,
+  VisualizationRenderer,
+} from "@/domain/workflow/main.types";
 
 // WORKFLOW RECORD
 export interface IcarusWorkflowRecord {
@@ -65,5 +70,9 @@ export interface IcarusVisualizationRecord {
   id: string;
   createdByActivityId: string | null;
   createdAt?: number;
+  sourceMatrixId?: string;
+  renderer?: VisualizationRenderer;
+  visualizationType?: VisualizationKind;
+  title?: string;
   data: unknown;
 }

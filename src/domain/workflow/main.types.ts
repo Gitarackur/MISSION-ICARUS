@@ -63,17 +63,42 @@ export type SaveStatisticalActivity = IcarusActivity & {
 }
 
 
-
 // Icarus Visualizations
+export type VisualizationRenderer = "python" | "r" | "recharts";
+
+export type VisualizationKind =
+  | "bar"
+  | "box"
+  | "scatter"
+  | "heatmap"
+  | "volcano"
+  | "pca"
+  | "generic";
+
 export interface IcarusVisualization {
   id: string;
   createdByActivityId: string | null;
   createdAt?: number;
+  sourceMatrixId?: string;
+  renderer?: VisualizationRenderer;
+  visualizationType?: VisualizationKind;
+  title?: string;
   data: unknown;
 }
 export interface IMapVisualizationData {
   activityId: string;
   data: unknown;
+}
+
+export type SaveVisualizationActivity = {
+  sourceMatrixId?: string;
+  inputMatrixReferences?: string;
+  inputColumnNames?: TableColumns;
+  visualizationType: VisualizationKind;
+  renderer: VisualizationRenderer;
+  title?: string;
+  data: unknown;
+  outputMetrics?: Record<string, string | number | boolean | unknown | null>;
 }
 
 // Icarus Plugins

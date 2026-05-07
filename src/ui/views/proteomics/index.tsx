@@ -23,9 +23,12 @@ export default function ProteomicsAnalysisHomeView({
 
   // callback to save activity on statistical analysis
   saveActivityInWorkflow,
+  saveVisualizationInWorkflow,
 
   // session source matrix
   sessionSourceMatrix,
+  activeMatrix,
+  activeSession,
 
   openActivitySheet
 
@@ -70,6 +73,9 @@ export default function ProteomicsAnalysisHomeView({
           <VisualizationPanel
             volcanoData={volcanoData}
             intensityDist={intensityDist}
+            activeMatrix={activeMatrix}
+            activeSession={activeSession}
+            saveVisualizationInWorkflow={saveVisualizationInWorkflow}
           />
         )}
 

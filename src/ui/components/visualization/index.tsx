@@ -13,6 +13,7 @@ import VisualizationTab from "@/ui/components/header/visualization-tab";
 import { VisualizationPanelProps } from "./types/index.types";
 import { visualizationStyles } from "./variants/visualization.variants";
 import {
+  buildMatrixBarPayload,
   buildIntensityBarPayload,
   invokePythonBarPlot,
   invokeRBarPlot,
@@ -24,43 +25,89 @@ import {
 const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
   volcanoData,
   intensityDist,
+  activeSession,
+  activeMatrix,
+  saveVisualizationInWorkflow,
 }) => {
   const s = visualizationStyles();
   const [pythonImage, setPythonImage] = useState<string | null>(null);
   const [rImage, setRImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeVisualizationId, setActiveVisualizationId] = useState("");
 
   const intensityPayload = useMemo(
-    () => buildIntensityBarPayload(intensityDist),
-    [intensityDist]
+    () =>
+      activeMatrix
+        ? buildMatrixBarPayload(activeMatrix)
+        : buildIntensityBarPayload(intensityDist),
+    [activeMatrix, intensityDist]
+  );
+
+  const visualizationTitle = activeMatrix
+    ? `${activeMatrix.columns.join(", ")} summary`
+    : "Sample intensity distribution";
+
+  const saveRenderedVisualization = useCallback(
+    async (renderer: "python" | "r", image: string) => {
+      if (!activeSession || !activeMatrix || !saveVisualizationInWorkflow) {
+        return;
+      }
+
+      await saveVisualizationInWorkflow({
+        sourceMatrixId: activeMatrix.id,
+        inputMatrixReferences: activeMatrix.id,
+        inputColumnNames: activeMatrix.columns,
+        renderer,
+        visualizationType: "bar",
+        title: visualizationTitle,
+        data: {
+          image,
+          payload: intensityPayload,
+          matrixId: activeMatrix.id,
+          columns: activeMatrix.columns,
+        },
+        outputMetrics: {
+          pointCount: Object.keys(intensityPayload).length,
+        },
+      });
+    },
+    [
+      activeMatrix,
+      activeSession,
+      intensityPayload,
+      saveVisualizationInWorkflow,
+      visualizationTitle,
+    ]
   );
 
   const renderPythonPlot = useCallback(async () => {
     try {
       setError(null);
-      setPythonImage(await invokePythonBarPlot(intensityPayload));
+      const image = await invokePythonBarPlot(intensityPayload);
+      setPythonImage(image);
+      await saveRenderedVisualization("python", image);
     } catch (err) {
       setError(`Python visualization failed: ${(err as Error).message || err}`);
     }
-  }, [intensityPayload]);
+  }, [intensityPayload, saveRenderedVisualization]);
 
   const renderRPlot = useCallback(async () => {
     try {
       setError(null);
-      setRImage(await invokeRBarPlot(intensityPayload));
+      const image = await invokeRBarPlot(intensityPayload);
+      setRImage(image);
+      await saveRenderedVisualization("r", image);
     } catch (err) {
       setError(`R visualization failed: ${(err as Error).message || err}`);
     }
-  }, [intensityPayload]);
+  }, [intensityPayload, saveRenderedVisualization]);
 
   return (
     <div>
       <VisualizationTab
-        visualizations={[]}
-        activeVisualizationId={""}
-        setActiveVisualizationId={function (): void {
-          throw new Error("Function not implemented.");
-        }}
+        visualizations={activeSession?.visualizations ?? []}
+        activeVisualizationId={activeVisualizationId}
+        setActiveVisualizationId={setActiveVisualizationId}
       />
 
       <div className={s.container()}>
@@ -80,7 +127,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
         </div>
 
         <div className={s.card()}>
-          <h3 className={s.heading()}>Python Intensity Plot</h3>
+          <h3 className={s.heading()}>Python Matrix Plot</h3>
           <div className={s.plotContainer()}>
             {pythonImage ? (
               <img
@@ -97,7 +144,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
         </div>
 
         <div className={s.card()}>
-          <h3 className={s.heading()}>R Intensity Plot</h3>
+          <h3 className={s.heading()}>R Matrix Plot</h3>
           <div className={s.plotContainer()}>
             {rImage ? (
               <img

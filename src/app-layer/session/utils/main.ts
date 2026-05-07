@@ -10,6 +10,7 @@ import { BareSession } from "@/domain/session";
 import {
   IcarusActivity,
   IcarusMatrix,
+  SaveVisualizationActivity,
   SaveStatisticalActivity,
 } from "@/domain/workflow/main.types";
 import {
@@ -371,7 +372,7 @@ export const saveNewStatisticalActivityInWorkflow = async (
 
     const activityIds = [...(activeSession.activityIds ?? []), newActivityId];
 
-    const matrixIds = [...(activeSession.activityIds ?? []), newMatrixId];
+    const matrixIds = [...(activeSession.matrixIds ?? []), newMatrixId];
 
     // store Id references in session
     await IcarusDBAdapter.updateSessionWorkflows({
@@ -391,5 +392,89 @@ export const saveNewStatisticalActivityInWorkflow = async (
     };
   } catch (err) {
     throw new Error(`${err}`);
+  }
+};
+
+//-------------------------------------------------------------------------------------------------------------------
+// save new visualization activity and visualization record
+//
+// It returns the updated sessionWithWorkflows with newly added activities and visualizations
+//
+//-------------------------------------------------------------------------------------------------------------------
+
+export const saveNewVisualizationActivityInWorkflow = async (
+  activeSession: IcarusSessionWithWorkflowRecord,
+  params: SaveVisualizationActivity
+) => {
+  const {
+    sourceMatrixId,
+    inputMatrixReferences,
+    inputColumnNames,
+    visualizationType,
+    renderer,
+    title,
+    data,
+    outputMetrics,
+  } = params;
+
+  try {
+    const matrixReference =
+      inputMatrixReferences ||
+      sourceMatrixId ||
+      activeSession?.matrices?.[0]?.id;
+
+    const newActivityId = await IcarusDBAdapter.saveActivity({
+      id: `icarus-activity-${uuidv4()}`,
+      name: `visualization--${visualizationType}`,
+      sourceMatrixId: sourceMatrixId || matrixReference,
+      inputColumnNames,
+      inputMatrixReferences: matrixReference,
+      inputParameters: {
+        renderer,
+        visualizationType,
+        title,
+      },
+      outputColumnNames: [],
+      outputMatrixReference: undefined,
+      outputMetrics: {
+        renderer,
+        visualizationType,
+        ...(outputMetrics ?? {}),
+      },
+      pluginId: "visualization-engine",
+      timestamp: Date.now(),
+    });
+
+    const newVisualizationId = await IcarusDBAdapter.saveVisualization({
+      id: `icarus-visualization-${uuidv4()}`,
+      createdByActivityId: newActivityId,
+      createdAt: Date.now(),
+      sourceMatrixId: sourceMatrixId || matrixReference,
+      renderer,
+      visualizationType,
+      title,
+      data,
+    });
+
+    await IcarusDBAdapter.updateSessionWorkflows({
+      sessionId: activeSession.id,
+      workflowIds: activeSession.workflowIds,
+      activityIds: [...(activeSession.activityIds ?? []), newActivityId],
+      matrixIds: activeSession.matrixIds,
+      visualizationIds: [
+        ...(activeSession.visualizationIds ?? []),
+        newVisualizationId,
+      ],
+    });
+
+    const sessionWithWorkflows = await fetchAllDataForSession(activeSession.id);
+
+    return {
+      sessionWithWorkflows,
+      activityId: newActivityId,
+      visualizationId: newVisualizationId,
+    };
+  } catch (err) {
+    throw new Error(`unable to save visualization activity: ${String(err)}`);
   }
 };
