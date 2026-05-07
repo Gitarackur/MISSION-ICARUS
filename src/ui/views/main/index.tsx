@@ -43,7 +43,6 @@ const IcarusApp: React.FC = () => {
     setActiveMatrixId(matrixId);
     setActiveVisualizationId("");
     setActiveProteomicsTab("import");
-    window.setTimeout(() => setActiveProteomicsTab("import"), 0);
   };
   const selectActivityMatrix = (matrixId: string) => {
     selectMatrix(matrixId);
@@ -69,7 +68,6 @@ const IcarusApp: React.FC = () => {
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}
-          activeTab={activeProteomicsTab}
           dataRows={originalDataRows}
           setActiveMatrixId={selectMatrix}
           toggleSidebar={toggleSidebar}
