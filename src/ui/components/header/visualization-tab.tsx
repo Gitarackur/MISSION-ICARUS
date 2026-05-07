@@ -1,4 +1,5 @@
 import { IcarusVisualization } from '@/domain/workflow/main.types'
+import { getVisualizationLabel } from '@/domain/visualization/utils/main'
 import { tabNavigationVariants } from './variants'
 
 const VisualizationTab = ({
@@ -19,13 +20,15 @@ const VisualizationTab = ({
   return (
     <>
       <div className={tabList()}>
-        {visualizations.map((visualization) => (
+        {visualizations.map((visualization, index) => (
           <button
             key={visualization.id}
+            type="button"
+            title={visualization.id}
             onClick={() => setActiveVisualizationId(visualization.id)}
             className={tabButton({ active: activeVisualizationId === visualization.id })}
           >
-            {visualization.id}
+            {getVisualizationLabel(visualization, index)}
           </button>
         ))}
       </div>

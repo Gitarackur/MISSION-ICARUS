@@ -66,70 +66,18 @@ import {
 import { TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { extractNumericData, transposedStatisticalResults } from "@/app-layer/shared/utils";
-
-const metadataColumnPrefix = "__";
-
-const isMetadataColumn = (column: string) => column.startsWith(metadataColumnPrefix);
-
-const getRawColumnData = (
-  data: ProteinRow[] | Map<string, TableMatrix>
-): { columns: string[]; values: unknown[][] } => {
-  if (Array.isArray(data)) {
-    const columns = data.length > 0 ? Object.keys(data[0]).filter((column) => !isMetadataColumn(column)) : [];
-    return {
-      columns,
-      values: columns.map((column) => data.map((row) => row[column])),
-    };
-  }
-
-  const columns: string[] = [];
-  const values: unknown[][] = [];
-  data.forEach((columnValues, column) => {
-    if (isMetadataColumn(column)) return;
-    columns.push(column);
-    values.push(columnValues);
-  });
-
-  return { columns, values };
-};
-
-const isMissingValue = (value: unknown): boolean => {
-  if (value === null || value === undefined) return true;
-  if (typeof value === "number") return !Number.isFinite(value);
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    return normalized === "" || normalized === "na" || normalized === "n/a" || normalized === "nan" || normalized === "null";
-  }
-  return false;
-};
-
-const finiteValues = (values: number[]): number[] =>
-  values.filter((value) => Number.isFinite(value));
-
-const product = (values: number[]): number =>
-  values.reduce((acc, value) => acc * value, 1);
-
-const parseNumberMetadata = (
-  data: ProteinRow[] | Map<string, TableMatrix>,
-  key: string,
-  fallback: number
-): number => {
-  if (!(data instanceof Map) || !data.has(key)) return fallback;
-  const metadata = data.get(key);
-  const value = Array.isArray(metadata) ? Number(metadata[0]) : NaN;
-  return Number.isFinite(value) ? value : fallback;
-};
-
-const parseStringMetadata = (
-  data: ProteinRow[] | Map<string, TableMatrix>,
-  key: string,
-  fallback: string
-): string => {
-  if (!(data instanceof Map) || !data.has(key)) return fallback;
-  const metadata = data.get(key);
-  const value = Array.isArray(metadata) ? metadata[0] : undefined;
-  return typeof value === "string" && value.length > 0 ? value : fallback;
-};
+import {
+  fallbackFiniteStat,
+  finiteValues,
+  getRawColumnData,
+  isMissingValue,
+  parseNumberMetadata,
+  parseStringMetadata,
+  pearsonCorrelation,
+  product,
+  quantile,
+  sanitizeStatisticalResults,
+} from "@/app-layer/statistics/utils/analysis-helpers";
 
 
 export const useStatisticalAnalysis = () => {
@@ -182,24 +130,30 @@ export const useStatisticalAnalysis = () => {
       switch (action) {
         case "mean-values":
         case "mean": {
-          results = numericData.map((columnData) => [mean(columnData)]);
+          results = numericData.map((columnData) => [
+            fallbackFiniteStat(columnData, mean),
+          ]);
           newColumnNames = numericColumns.map((col) => `${col}_mean`);
           break;
         }
         case "median-values":
         case "median": {
-          results = numericData.map((columnData) => [median(columnData)]);
+          results = numericData.map((columnData) => [
+            fallbackFiniteStat(columnData, median),
+          ]);
           newColumnNames = numericColumns.map((col) => `${col}_median`);
           break;
         }
         case "stddev-values":
         case "stdDev": {
-          results = numericData.map((columnData) => [stddev(columnData)]);
+          results = numericData.map((columnData) => [
+            fallbackFiniteStat(columnData, stddev),
+          ]);
           newColumnNames = numericColumns.map((col) => `${col}_stddev`);
           break;
         }
         case "count": {
-          results = numericData.map((value) => [value.length]);
+          results = numericData.map((value) => [finiteValues(value).length]);
           newColumnNames = numericColumns.map((col) => `${col}_count`);
           break;
         }
@@ -233,18 +187,16 @@ export const useStatisticalAnalysis = () => {
           break;
         }
         case "min": {
-          results = numericData.map((columnData) => {
-            const values = finiteValues(columnData);
-            return [values.length > 0 ? Math.min(...values) : NaN];
-          });
+          results = numericData.map((columnData) => [
+            fallbackFiniteStat(columnData, (values) => Math.min(...values)),
+          ]);
           newColumnNames = numericColumns.map((col) => `${col}_min`);
           break;
         }
         case "max": {
-          results = numericData.map((columnData) => {
-            const values = finiteValues(columnData);
-            return [values.length > 0 ? Math.max(...values) : NaN];
-          });
+          results = numericData.map((columnData) => [
+            fallbackFiniteStat(columnData, (values) => Math.max(...values)),
+          ]);
           newColumnNames = numericColumns.map((col) => `${col}_max`);
           break;
         }
@@ -479,6 +431,75 @@ case "t-test-test": {
             console.error("Purity correction error:", error);
             throw error;
           }
+        }
+
+        case "box-plot": {
+          results = numericData.map((columnData) => {
+            const values = finiteValues(columnData);
+            return [
+              quantile(values, 0),
+              quantile(values, 0.25),
+              quantile(values, 0.5),
+              quantile(values, 0.75),
+              quantile(values, 1),
+            ];
+          });
+          newColumnNames = numericColumns.map((column) => `${column}_boxplot`);
+          break;
+        }
+
+        case "scatter-plot": {
+          if (numericData.length < 2) {
+            throw new Error("Scatter plot requires at least two numeric columns");
+          }
+          results = numericData.slice(0, 2);
+          newColumnNames = numericColumns.slice(0, 2);
+          break;
+        }
+
+        case "heatmap": {
+          if (numericData.length < 2) {
+            throw new Error("Heatmap requires at least two numeric columns");
+          }
+
+          results = numericData.map((columnData) =>
+            numericData.map((comparisonColumnData) =>
+              pearsonCorrelation(columnData, comparisonColumnData)
+            )
+          );
+          newColumnNames = numericColumns.map((column) => `${column}_corr`);
+          break;
+        }
+
+        case "volcano-plot": {
+          if (numericData.length < 2) {
+            throw new Error(
+              "Volcano plot requires fold-change and p-value columns"
+            );
+          }
+
+          const logFoldChange = numericData[0].map((value) =>
+            Number.isFinite(value) ? value : 0
+          );
+          const negLogPValue = numericData[1].map((value) => {
+            if (!Number.isFinite(value) || value <= 0) return 0;
+            return -Math.log10(Math.min(value, 1));
+          });
+
+          results = [logFoldChange, negLogPValue];
+          newColumnNames = ["log_fold_change", "negative_log10_p_value"];
+          break;
+        }
+
+        case "pca-plot": {
+          if (numericData.length < 2) {
+            throw new Error("PCA plot requires at least two numeric columns");
+          }
+
+          const pcaResult = performPCA(numericData, 2);
+          results = pcaResult.transformed_data;
+          newColumnNames = ["PC1", "PC2"];
+          break;
         }
 
         case "sort-asc": {
@@ -1084,6 +1105,9 @@ case "f-test-test": {
         }
       }
 
+      const sanitizedResults = sanitizeStatisticalResults(results);
+      const transposedResults = transposedStatisticalResults(sanitizedResults);
+
       return {
         inputParameters: {
           columns: numericColumns,
@@ -1097,14 +1121,14 @@ case "f-test-test": {
           },
         },
         newly_created_columns: newColumnNames,
-        data: transposedStatisticalResults(results),
+        data: transposedResults,
         outputParameters: {
           columns: newColumnNames,
           calculationMethod,
           resultType: "statistical_summary",
           metadata: {
             calculationTimestamp: new Date().toISOString(),
-            resultCount: transposedStatisticalResults(results).length,
+            resultCount: transposedResults.length,
           },
         },
       };

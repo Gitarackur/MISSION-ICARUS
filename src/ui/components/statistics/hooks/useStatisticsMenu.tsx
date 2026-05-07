@@ -265,10 +265,40 @@ const useStatisticsMenu = ({
         );
         break;
       case "min":
-        content = <Min dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <Min
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "max":
-        content = <Max dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <Max
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "filter-by-value":
         content = (
@@ -521,19 +551,94 @@ const useStatisticsMenu = ({
             
         break;
       case "box-plot":
-        content = <BoxPlot dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <BoxPlot
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "scatter-plot":
-        content = <ScatterPlot dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <ScatterPlot
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "heatmap":
-        content = <Heatmap dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <Heatmap
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "volcano-plot":
-        content = <VolcanoPlot dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <VolcanoPlot
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "pca-plot":
-        content = <PcaPlot dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <PcaPlot
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
         case 'sort-asc':
           content = (

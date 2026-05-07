@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React from "react";
 import {
   ResponsiveContainer,
   ScatterChart,
@@ -8,171 +8,290 @@ import {
   YAxis,
   Tooltip as RechartsTooltip,
 } from "recharts";
+import { Loader2, RefreshCw } from "lucide-react";
 import ScatterTooltip from "@/ui/components/scatter/tooltip";
 import VisualizationTab from "@/ui/components/header/visualization-tab";
+import { useVisualizationPanel } from "@/app-layer/visualization/hooks/useVisualizationPanel";
+import {
+  formatAxisLabel,
+  getVisualizationPayloadPointCount,
+} from "@/domain/visualization/utils/main";
 import { VisualizationPanelProps } from "./types/index.types";
 import { visualizationStyles } from "./variants/visualization.variants";
-import {
-  buildMatrixBarPayload,
-  buildIntensityBarPayload,
-  invokePythonBarPlot,
-  invokeRBarPlot,
-} from "./model";
 
-
-
-
-const VisualizationPanel: React.FC<VisualizationPanelProps> = ({
-  volcanoData,
-  intensityDist,
-  activeSession,
-  activeMatrix,
-  saveVisualizationInWorkflow,
-}) => {
+const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const s = visualizationStyles();
-  const [pythonImage, setPythonImage] = useState<string | null>(null);
-  const [rImage, setRImage] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [activeVisualizationId, setActiveVisualizationId] = useState("");
+  const {
+    activeSavedImage,
+    activeSavedVisualization,
+    activeVisualizationId,
+    error,
+    heatmapPayload,
+    pythonImage,
+    rImage,
+    renderHeatmap,
+    renderPythonPlot,
+    renderRPlot,
+    renderVolcanoPlot,
+    renderingJob,
+    savedVisualizations,
+    setActiveVisualizationId,
+    volcanoPayload,
+    volcanoTickInterval,
+  } = useVisualizationPanel(props);
 
-  const intensityPayload = useMemo(
-    () =>
-      activeMatrix
-        ? buildMatrixBarPayload(activeMatrix)
-        : buildIntensityBarPayload(intensityDist),
-    [activeMatrix, intensityDist]
-  );
-
-  const visualizationTitle = activeMatrix
-    ? `${activeMatrix.columns.join(", ")} summary`
-    : "Sample intensity distribution";
-
-  const saveRenderedVisualization = useCallback(
-    async (renderer: "python" | "r", image: string) => {
-      if (!activeSession || !activeMatrix || !saveVisualizationInWorkflow) {
-        return;
-      }
-
-      await saveVisualizationInWorkflow({
-        sourceMatrixId: activeMatrix.id,
-        inputMatrixReferences: activeMatrix.id,
-        inputColumnNames: activeMatrix.columns,
-        renderer,
-        visualizationType: "bar",
-        title: visualizationTitle,
-        data: {
-          image,
-          payload: intensityPayload,
-          matrixId: activeMatrix.id,
-          columns: activeMatrix.columns,
-        },
-        outputMetrics: {
-          pointCount: Object.keys(intensityPayload).length,
-        },
-      });
-    },
-    [
-      activeMatrix,
-      activeSession,
-      intensityPayload,
-      saveVisualizationInWorkflow,
-      visualizationTitle,
-    ]
-  );
-
-  const renderPythonPlot = useCallback(async () => {
-    try {
-      setError(null);
-      const image = await invokePythonBarPlot(intensityPayload);
-      setPythonImage(image);
-      await saveRenderedVisualization("python", image);
-    } catch (err) {
-      setError(`Python visualization failed: ${(err as Error).message || err}`);
-    }
-  }, [intensityPayload, saveRenderedVisualization]);
-
-  const renderRPlot = useCallback(async () => {
-    try {
-      setError(null);
-      const image = await invokeRBarPlot(intensityPayload);
-      setRImage(image);
-      await saveRenderedVisualization("r", image);
-    } catch (err) {
-      setError(`R visualization failed: ${(err as Error).message || err}`);
-    }
-  }, [intensityPayload, saveRenderedVisualization]);
+  const isRendering = renderingJob !== null;
 
   return (
     <div>
       <VisualizationTab
-        visualizations={activeSession?.visualizations ?? []}
+        visualizations={savedVisualizations}
         activeVisualizationId={activeVisualizationId}
         setActiveVisualizationId={setActiveVisualizationId}
       />
 
       <div className={s.container()}>
-        <div className={s.card()}>
-          <h3 className={s.heading()}>Volcano Plot</h3>
-          <div className={s.plotContainer()}>
-            <ResponsiveContainer width="100%" height={320}>
-              <ScatterChart>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="x" name="Log2 Fold Change" />
-                <YAxis dataKey="y" name="-Log10 p-value" />
-                <RechartsTooltip content={<ScatterTooltip />} />
-                <Scatter data={volcanoData} fill="#6B7280" />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className={s.card()}>
-          <h3 className={s.heading()}>Python Matrix Plot</h3>
-          <div className={s.plotContainer()}>
-            {pythonImage ? (
+        {savedVisualizations.length > 0 && (
+          <div className={s.savedPreview()}>
+            {activeSavedImage ? (
               <img
-                src={pythonImage}
-                alt="Python intensity visualization"
-                className="h-full w-full object-contain"
+                src={activeSavedImage}
+                alt={activeSavedVisualization?.title ?? "Saved visualization"}
+                className={s.savedImage()}
+                loading="eager"
+                decoding="async"
               />
             ) : (
-              <button className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" onClick={renderPythonPlot}>
-                Render Python Plot
-              </button>
+              <div className={s.emptyState()}>
+                This saved visualization does not include a displayable image.
+              </div>
             )}
           </div>
-        </div>
+        )}
 
-        <div className={s.card()}>
-          <h3 className={s.heading()}>R Matrix Plot</h3>
-          <div className={s.plotContainer()}>
-            {rImage ? (
-              <img
-                src={rImage}
-                alt="R intensity visualization"
-                className="h-full w-full object-contain"
+        <div className={s.grid()}>
+          <div className={s.card()}>
+            <div className={s.cardHeader()}>
+              <div>
+                <p className={s.meta()}>Interactive</p>
+                <h3 className={s.heading()}>Volcano Plot</h3>
+              </div>
+              <IconButton
+                isLoading={renderingJob === "volcano"}
+                disabled={isRendering || !volcanoPayload}
+                label="Create saved volcano plot"
+                onClick={renderVolcanoPlot}
               />
+            </div>
+            <div className={s.plotContainer()}>
+              <ResponsiveContainer width="100%" height="100%" debounce={80}>
+                <ScatterChart
+                  margin={{ top: 12, right: 18, bottom: 12, left: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                  <XAxis
+                    dataKey="x"
+                    name="Log2 Fold Change"
+                    tickLine={false}
+                    tickFormatter={(value) => formatAxisLabel(value, 8)}
+                    interval={volcanoTickInterval}
+                    minTickGap={18}
+                  />
+                  <YAxis
+                    dataKey="y"
+                    name="-Log10 p-value"
+                    tickLine={false}
+                    tickFormatter={(value) => formatAxisLabel(value, 8)}
+                    minTickGap={12}
+                    width={46}
+                  />
+                  <RechartsTooltip content={<ScatterTooltip />} />
+                  <Scatter
+                    data={props.volcanoData}
+                    fill="#2563EB"
+                    isAnimationActive={false}
+                  />
+                </ScatterChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          <ImagePlotCard
+            eyebrow="Python"
+            title="Matrix Plot"
+            image={pythonImage}
+            alt="Python intensity visualization"
+            buttonLabel="Render Python Plot"
+            isLoading={renderingJob === "python-bar"}
+            isRendering={isRendering}
+            onRender={renderPythonPlot}
+          />
+
+          <ImagePlotCard
+            eyebrow="R"
+            title="Matrix Plot"
+            image={rImage}
+            alt="R intensity visualization"
+            buttonLabel="Render R Plot"
+            isLoading={renderingJob === "r-bar"}
+            isRendering={isRendering}
+            onRender={renderRPlot}
+          />
+
+          <div className={s.card()}>
+            <div className={s.cardHeader()}>
+              <div>
+                <p className={s.meta()}>Preview</p>
+                <h3 className={s.heading()}>Saved Visualization Details</h3>
+              </div>
+            </div>
+            {activeSavedVisualization ? (
+              <div className="space-y-2 text-sm text-gray-600">
+                <p>
+                  Renderer:{" "}
+                  <span className="font-medium text-gray-900">
+                    {activeSavedVisualization.renderer ?? "Unknown"}
+                  </span>
+                </p>
+                <p>
+                  Type:{" "}
+                  <span className="font-medium text-gray-900">
+                    {activeSavedVisualization.visualizationType ?? "Unknown"}
+                  </span>
+                </p>
+                <p>
+                  Points:{" "}
+                  <span className="font-medium text-gray-900">
+                    {getVisualizationPayloadPointCount(activeSavedVisualization)}
+                  </span>
+                </p>
+              </div>
             ) : (
-              <button className="rounded bg-gray-900 px-4 py-2 text-sm font-medium text-white" onClick={renderRPlot}>
-                Render R Plot
-              </button>
+              <div className={s.emptyState()}>
+                Render a plot to save it in the workflow.
+              </div>
             )}
+          </div>
+
+          <div className={s.card()}>
+            <div className={s.cardHeader()}>
+              <div>
+                <p className={s.meta()}>Python</p>
+                <h3 className={s.heading()}>Sample Correlation Heatmap</h3>
+              </div>
+              <IconButton
+                isLoading={renderingJob === "heatmap"}
+                disabled={isRendering || !heatmapPayload}
+                label="Create saved heatmap"
+                onClick={renderHeatmap}
+              />
+            </div>
+            <div className={s.placeholderBox()}>
+              <button
+                type="button"
+                className={s.button()}
+                onClick={renderHeatmap}
+                disabled={isRendering || !heatmapPayload}
+              >
+                Create Heatmap
+              </button>
+            </div>
           </div>
         </div>
 
         {error && <p className="text-sm font-medium text-red-600">{error}</p>}
-
-        <div className={s.card()}>
-          <h3 className={s.heading()}>Sample Correlation Heatmap</h3>
-          <div className={s.placeholderBox()}>
-            <p className={s.placeholderText()}>
-              Correlation heatmap would be rendered here (placeholder)
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
 };
+
+function IconButton({
+  disabled,
+  isLoading,
+  label,
+  onClick,
+}: {
+  disabled: boolean;
+  isLoading: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  const s = visualizationStyles();
+
+  return (
+    <button
+      type="button"
+      className={s.secondaryButton()}
+      onClick={onClick}
+      disabled={disabled}
+      title={label}
+    >
+      {isLoading ? (
+        <Loader2 className="h-4 w-4 animate-spin" />
+      ) : (
+        <RefreshCw className="h-4 w-4" />
+      )}
+    </button>
+  );
+}
+
+function ImagePlotCard({
+  alt,
+  buttonLabel,
+  eyebrow,
+  image,
+  isLoading,
+  isRendering,
+  onRender,
+  title,
+}: {
+  alt: string;
+  buttonLabel: string;
+  eyebrow: string;
+  image: string | null;
+  isLoading: boolean;
+  isRendering: boolean;
+  onRender: () => void;
+  title: string;
+}) {
+  const s = visualizationStyles();
+
+  return (
+    <div className={s.card()}>
+      <div className={s.cardHeader()}>
+        <div>
+          <p className={s.meta()}>{eyebrow}</p>
+          <h3 className={s.heading()}>{title}</h3>
+        </div>
+        <IconButton
+          isLoading={isLoading}
+          disabled={isRendering}
+          label={`Refresh ${eyebrow} plot`}
+          onClick={onRender}
+        />
+      </div>
+      <div className={s.plotContainer()}>
+        {image ? (
+          <img
+            src={image}
+            alt={alt}
+            className="h-full w-full object-contain"
+            loading="eager"
+            decoding="async"
+          />
+        ) : (
+          <button
+            type="button"
+            className={s.button()}
+            onClick={onRender}
+            disabled={isRendering}
+          >
+            {buttonLabel}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default VisualizationPanel;

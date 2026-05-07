@@ -1,56 +1,59 @@
+const EPSILON = 1e-12;
+
+const finiteNumbers = (values: number[]) => values.filter(Number.isFinite);
+
+const clampProbability = (value: number) => {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(1, Math.max(0, value));
+};
+
 // Calculates the mean, median, and standard deviation of an array of numbers
 export function mean(values: number[]) {
-  const finiteValues = values.filter(Number.isFinite);
+  const finiteValues = finiteNumbers(values);
   if (!finiteValues.length) return 0;
   return finiteValues.reduce((a, b) => a + b, 0) / finiteValues.length;
 }
 
 // Calculates the median of an array of numbers
 export function median(values: number[]) {
-  const v = values.filter(Number.isFinite).sort((a, b) => a - b);
+  const v = finiteNumbers(values).sort((a, b) => a - b);
   if (!v.length) return 0;
   const mid = Math.floor(v.length / 2);
   return v.length % 2 === 0 ? (v[mid - 1] + v[mid]) / 2 : v[mid];
 }
 
-// Calculates the standard deviation of an array of numbers
-export function stddev(values: number[]) {
-  const finiteValues = values.filter(Number.isFinite);
-  if (!finiteValues.length) return 0;
+// Calculates sample variance by default. Use sample=false for population variance.
+export function variance(values: number[], sample = true) {
+  const finiteValues = finiteNumbers(values);
+  if (finiteValues.length < 2) return 0;
   const m = mean(finiteValues);
-  const variance =
-    finiteValues.reduce((acc, x) => acc + (x - m) ** 2, 0) / finiteValues.length;
-  return Math.sqrt(variance);
+  const denominator = sample ? finiteValues.length - 1 : finiteValues.length;
+  return finiteValues.reduce((acc, x) => acc + (x - m) ** 2, 0) / denominator;
 }
 
-// Calculates the variance of an array of numbers
-export function variance(values: number[]) {
-  const finiteValues = values.filter(Number.isFinite);
-  if (!finiteValues.length) return 0;
-  const m = mean(finiteValues);
-  const variance =
-    finiteValues.reduce((acc, x) => acc + (x - m) ** 2, 0) / finiteValues.length;
-  return variance;
+// Calculates sample standard deviation by default. Use sample=false for population stddev.
+export function stddev(values: number[], sample = true) {
+  return Math.sqrt(variance(values, sample));
 }
 
 // Calculates the sum of an array of numbers
 export function sum(values: number[]) {
-  return values.filter(Number.isFinite).reduce((acc, val) => acc + val, 0);
+  return finiteNumbers(values).reduce((acc, val) => acc + val, 0);
 }
 
 // calculate the normalization of the data
 export function normalization(values: number[][]) {
   // max-min normalization: (x - min) / (max - min)
   return values.map((firstNestedValue) => {
-    const finiteValues = firstNestedValue.filter(Number.isFinite);
-    if (finiteValues.length === 0) return firstNestedValue.map(() => NaN);
+    const finiteValues = finiteNumbers(firstNestedValue);
+    if (finiteValues.length === 0) return firstNestedValue.map(() => 0);
 
     const max_value = Math.max(...finiteValues);
     const min_value = Math.min(...finiteValues);
     const range = max_value - min_value;
 
     return firstNestedValue.map((value) => {
-      if (!Number.isFinite(value)) return NaN;
+      if (!Number.isFinite(value)) return 0;
       return range === 0 ? 0 : (value - min_value) / range;
     });
   });
@@ -248,14 +251,12 @@ export function movingAverage(
   for (let i = 0; i < values.length; i++) {
     if (i < windowSize - 1) {
       // For initial values, use all available data up to current point
-      const slice = values.slice(0, i + 1);
-      const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
-      result.push(avg);
+      const slice = finiteNumbers(values.slice(0, i + 1));
+      result.push(slice.length ? mean(slice) : 0);
     } else {
       // Calculate moving average for the window
-      const slice = values.slice(i - windowSize + 1, i + 1);
-      const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
-      result.push(avg);
+      const slice = finiteNumbers(values.slice(i - windowSize + 1, i + 1));
+      result.push(slice.length ? mean(slice) : 0);
     }
   }
   return result;
@@ -298,33 +299,49 @@ export function tTestTwoSample(
   group1: number[],
   group2: number[]
 ): TTestResult {
-  if (group1.length === 0 || group2.length === 0) {
-    throw new Error("Both groups must have at least one value");
+  const values1 = finiteNumbers(group1);
+  const values2 = finiteNumbers(group2);
+
+  if (values1.length < 2 || values2.length < 2) {
+    throw new Error("Both groups must have at least two finite values");
   }
 
-  const mean1 = mean(group1);
-  const mean2 = mean(group2);
-  const std1 = stddev(group1);
-  const std2 = stddev(group2);
+  const mean1 = mean(values1);
+  const mean2 = mean(values2);
+  const std1 = stddev(values1);
+  const std2 = stddev(values2);
 
-  const n1 = group1.length;
-  const n2 = group2.length;
+  const n1 = values1.length;
+  const n2 = values2.length;
+  const variance1 = variance(values1);
+  const variance2 = variance(values2);
+  const standardErrorSquared = variance1 / n1 + variance2 / n2;
 
-  // Pooled standard deviation for equal variance t-test
-  const pooledStd = Math.sqrt(
-    ((n1 - 1) * std1 * std1 + (n2 - 1) * std2 * std2) / (n1 + n2 - 2)
-  );
-  const standardError = pooledStd * Math.sqrt(1 / n1 + 1 / n2);
+  const tStatistic =
+    standardErrorSquared <= EPSILON
+      ? mean1 === mean2
+        ? 0
+        : (mean1 > mean2 ? 1 : -1) * Number.POSITIVE_INFINITY
+      : (mean1 - mean2) / Math.sqrt(standardErrorSquared);
 
-  const tStatistic = (mean1 - mean2) / standardError;
-  const degreesOfFreedom = n1 + n2 - 2;
+  const degreesOfFreedomNumerator = standardErrorSquared ** 2;
+  const degreesOfFreedomDenominator =
+    variance1 ** 2 / (n1 ** 2 * (n1 - 1)) +
+    variance2 ** 2 / (n2 ** 2 * (n2 - 1));
+  const degreesOfFreedom =
+    degreesOfFreedomDenominator <= EPSILON
+      ? n1 + n2 - 2
+      : degreesOfFreedomNumerator / degreesOfFreedomDenominator;
 
-  // Simple p-value approximation (you might want to use a more sophisticated method)
-  const pValue = 2 * (1 - normalCDF(Math.abs(tStatistic)));
+  const pValue = Number.isFinite(tStatistic)
+    ? 2 * (1 - studentTCDF(Math.abs(tStatistic), degreesOfFreedom))
+    : mean1 === mean2
+    ? 1
+    : 0;
 
   return {
     tStatistic,
-    pValue,
+    pValue: clampProbability(pValue),
     degreesOfFreedom,
     mean1,
     mean2,
@@ -345,17 +362,23 @@ export interface ANOVAResult {
 }
 
 export function oneWayANOVA(groups: number[][]): ANOVAResult {
-  if (groups.length < 2) {
+  const cleanedGroups = groups.map(finiteNumbers).filter((group) => group.length > 0);
+
+  if (cleanedGroups.length < 2) {
     throw new Error("ANOVA requires at least 2 groups");
   }
 
-  const k = groups.length; // number of groups
-  const groupMeans = groups.map((group) => mean(group));
-  const groupSizes = groups.map((group) => group.length);
+  const k = cleanedGroups.length; // number of groups
+  const groupMeans = cleanedGroups.map((group) => mean(group));
+  const groupSizes = cleanedGroups.map((group) => group.length);
   const totalSize = groupSizes.reduce((sum, n) => sum + n, 0);
 
+  if (totalSize <= k) {
+    throw new Error("ANOVA requires at least one residual degree of freedom");
+  }
+
   // Calculate grand mean
-  const allValues = groups.flat();
+  const allValues = cleanedGroups.flat();
   const grandMean = mean(allValues);
 
   // Sum of squares between groups (SSB)
@@ -364,7 +387,7 @@ export function oneWayANOVA(groups: number[][]): ANOVAResult {
   }, 0);
 
   // Sum of squares within groups (SSW)
-  const ssw = groups.reduce((sum, group, i) => {
+  const ssw = cleanedGroups.reduce((sum, group, i) => {
     return (
       sum +
       group.reduce((groupSum, value) => {
@@ -379,14 +402,20 @@ export function oneWayANOVA(groups: number[][]): ANOVAResult {
   const msBetween = ssb / dfBetween;
   const msWithin = ssw / dfWithin;
 
-  const fStatistic = msBetween / msWithin;
+  const fStatistic =
+    msWithin <= EPSILON
+      ? msBetween <= EPSILON
+        ? 0
+        : Number.POSITIVE_INFINITY
+      : msBetween / msWithin;
 
-  // Simple F-distribution p-value approximation
-  const pValue = 1 - fCDF(fStatistic, dfBetween, dfWithin);
+  const pValue = Number.isFinite(fStatistic)
+    ? 1 - fCDF(fStatistic, dfBetween, dfWithin)
+    : 0;
 
   return {
     fStatistic,
-    pValue,
+    pValue: clampProbability(pValue),
     dfBetween,
     dfWithin,
     msBetween,
@@ -408,16 +437,19 @@ export function calculateFoldChange(
   group1: number[],
   group2: number[]
 ): FoldChangeResult {
-  if (group1.length === 0 || group2.length === 0) {
-    throw new Error("Both groups must have at least one value");
+  const values1 = finiteNumbers(group1);
+  const values2 = finiteNumbers(group2);
+
+  if (values1.length === 0 || values2.length === 0) {
+    throw new Error("Both groups must have at least one finite value");
   }
 
-  const mean1 = mean(group1);
-  const mean2 = mean(group2);
+  const mean1 = mean(values1);
+  const mean2 = mean(values2);
 
-  if (mean2 === 0) {
+  if (mean1 <= 0 || mean2 <= 0) {
     throw new Error(
-      "Cannot calculate fold change when control group mean is zero"
+      "Fold change requires positive treatment and control means"
     );
   }
 
@@ -447,12 +479,19 @@ export function limmaAnalysis(
   treatmentGroup: number[],
   controlGroup: number[]
 ): LIMMAResult {
-  if (treatmentGroup.length === 0 || controlGroup.length === 0) {
-    throw new Error("Both groups must have at least one value");
+  const treatmentValues = finiteNumbers(treatmentGroup);
+  const controlValues = finiteNumbers(controlGroup);
+
+  if (treatmentValues.length < 2 || controlValues.length < 2) {
+    throw new Error("Both groups must have at least two finite values");
   }
 
-  const meanTreatment = mean(treatmentGroup);
-  const meanControl = mean(controlGroup);
+  const meanTreatment = mean(treatmentValues);
+  const meanControl = mean(controlValues);
+
+  if (meanTreatment <= 0 || meanControl <= 0) {
+    throw new Error("LIMMA log fold change requires positive group means");
+  }
 
   // Log2 fold change
   const logFoldChange = Math.log2(meanTreatment / meanControl);
@@ -461,28 +500,38 @@ export function limmaAnalysis(
   const averageExpression = (meanTreatment + meanControl) / 2;
 
   // Moderated t-statistic (simplified)
-  const pooledVar = (variance(treatmentGroup) + variance(controlGroup)) / 2;
+  const pooledVar = (variance(treatmentValues) + variance(controlValues)) / 2;
   const standardError = Math.sqrt(
-    pooledVar * (1 / treatmentGroup.length + 1 / controlGroup.length)
+    pooledVar * (1 / treatmentValues.length + 1 / controlValues.length)
   );
-  const tStatistic = (meanTreatment - meanControl) / standardError;
+  const tStatistic =
+    standardError <= EPSILON
+      ? meanTreatment === meanControl
+        ? 0
+        : (meanTreatment > meanControl ? 1 : -1) * Number.POSITIVE_INFINITY
+      : (meanTreatment - meanControl) / standardError;
 
   // P-value
-  const pValue = 2 * (1 - normalCDF(Math.abs(tStatistic)));
+  const degreesOfFreedom = treatmentValues.length + controlValues.length - 2;
+  const pValue = Number.isFinite(tStatistic)
+    ? 2 * (1 - studentTCDF(Math.abs(tStatistic), degreesOfFreedom))
+    : meanTreatment === meanControl
+    ? 1
+    : 0;
 
   // Adjusted p-value (simplified Benjamini-Hochberg)
   const adjustedPValue = Math.min(pValue * 1.5, 1); // Simplified adjustment
 
   return {
     logFoldChange,
-    pValue,
-    adjustedPValue,
+    pValue: clampProbability(pValue),
+    adjustedPValue: clampProbability(adjustedPValue),
     tStatistic,
     averageExpression,
   };
 }
 
-// Helper functions for statistical distributions (simplified implementations)
+// Helper functions for statistical distributions
 function normalCDF(z: number): number {
   // Approximation of standard normal CDF
   const t = 1 / (1 + 0.3275911 * Math.abs(z));
@@ -497,12 +546,159 @@ function normalCDF(z: number): number {
   return z >= 0 ? (1 + erf) / 2 : (1 - erf) / 2;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function fCDF(f: number, _df1: number, _df2: number): number {
-  // Very simplified F-distribution CDF approximation
-  // In a real implementation, you would use a proper statistical library
-  if (f <= 1) return f * 0.5;
-  return Math.min(0.95, 1 - 1 / (1 + f));
+function logGamma(value: number): number {
+  const coefficients = [
+    676.5203681218851,
+    -1259.1392167224028,
+    771.3234287776531,
+    -176.6150291621406,
+    12.507343278686905,
+    -0.13857109526572012,
+    9.984369578019572e-6,
+    1.5056327351493116e-7,
+  ];
+
+  if (value < 0.5) {
+    return Math.log(Math.PI) - Math.log(Math.sin(Math.PI * value)) - logGamma(1 - value);
+  }
+
+  let x = 0.9999999999998099;
+  const z = value - 1;
+  for (let i = 0; i < coefficients.length; i += 1) {
+    x += coefficients[i] / (z + i + 1);
+  }
+
+  const t = z + coefficients.length - 0.5;
+  return (
+    0.5 * Math.log(2 * Math.PI) +
+    (z + 0.5) * Math.log(t) -
+    t +
+    Math.log(x)
+  );
+}
+
+function betacf(a: number, b: number, x: number): number {
+  const maxIterations = 200;
+  const fpMin = 1e-30;
+  const qab = a + b;
+  const qap = a + 1;
+  const qam = a - 1;
+  let c = 1;
+  let d = 1 - (qab * x) / qap;
+
+  if (Math.abs(d) < fpMin) d = fpMin;
+  d = 1 / d;
+  let h = d;
+
+  for (let m = 1; m <= maxIterations; m += 1) {
+    const m2 = 2 * m;
+    let aa = (m * (b - m) * x) / ((qam + m2) * (a + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < fpMin) d = fpMin;
+    c = 1 + aa / c;
+    if (Math.abs(c) < fpMin) c = fpMin;
+    d = 1 / d;
+    h *= d * c;
+
+    aa = (-(a + m) * (qab + m) * x) / ((a + m2) * (qap + m2));
+    d = 1 + aa * d;
+    if (Math.abs(d) < fpMin) d = fpMin;
+    c = 1 + aa / c;
+    if (Math.abs(c) < fpMin) c = fpMin;
+    d = 1 / d;
+    const del = d * c;
+    h *= del;
+
+    if (Math.abs(del - 1) < 3e-7) break;
+  }
+
+  return h;
+}
+
+function regularizedBeta(x: number, a: number, b: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+
+  const betaLog =
+    logGamma(a + b) -
+    logGamma(a) -
+    logGamma(b) +
+    a * Math.log(x) +
+    b * Math.log(1 - x);
+  const betaTerm = Math.exp(betaLog);
+
+  if (x < (a + 1) / (a + b + 2)) {
+    return clampProbability((betaTerm * betacf(a, b, x)) / a);
+  }
+
+  return clampProbability(1 - (betaTerm * betacf(b, a, 1 - x)) / b);
+}
+
+function gammaP(a: number, x: number): number {
+  if (x <= 0) return 0;
+  if (x < a + 1) {
+    let ap = a;
+    let sumValue = 1 / a;
+    let delta = sumValue;
+
+    for (let n = 1; n <= 200; n += 1) {
+      ap += 1;
+      delta *= x / ap;
+      sumValue += delta;
+      if (Math.abs(delta) < Math.abs(sumValue) * 1e-8) {
+        return clampProbability(
+          sumValue * Math.exp(-x + a * Math.log(x) - logGamma(a))
+        );
+      }
+    }
+
+    return clampProbability(
+      sumValue * Math.exp(-x + a * Math.log(x) - logGamma(a))
+    );
+  }
+
+  return 1 - gammaQ(a, x);
+}
+
+function gammaQ(a: number, x: number): number {
+  if (x <= 0) return 1;
+  if (x < a + 1) return 1 - gammaP(a, x);
+
+  let b = x + 1 - a;
+  let c = 1 / 1e-30;
+  let d = 1 / b;
+  let h = d;
+
+  for (let i = 1; i <= 200; i += 1) {
+    const an = -i * (i - a);
+    b += 2;
+    d = an * d + b;
+    if (Math.abs(d) < 1e-30) d = 1e-30;
+    c = b + an / c;
+    if (Math.abs(c) < 1e-30) c = 1e-30;
+    d = 1 / d;
+    const delta = d * c;
+    h *= delta;
+    if (Math.abs(delta - 1) < 1e-8) break;
+  }
+
+  return clampProbability(Math.exp(-x + a * Math.log(x) - logGamma(a)) * h);
+}
+
+function studentTCDF(t: number, degreesOfFreedom: number): number {
+  if (!Number.isFinite(t)) return t > 0 ? 1 : 0;
+  if (degreesOfFreedom <= 0) return normalCDF(t);
+
+  const x = degreesOfFreedom / (degreesOfFreedom + t * t);
+  const ib = regularizedBeta(x, degreesOfFreedom / 2, 0.5);
+  return t >= 0 ? 1 - 0.5 * ib : 0.5 * ib;
+}
+
+function fCDF(f: number, df1: number, df2: number): number {
+  if (f <= 0) return 0;
+  if (!Number.isFinite(f)) return 1;
+  const x = (df1 * f) / (df1 * f + df2);
+  return regularizedBeta(x, df1 / 2, df2 / 2);
 }
 
 // ===================================================================
@@ -2310,27 +2506,37 @@ export interface FTestResult {
 }
 
 export function fTest(group1: number[], group2: number[]): FTestResult {
-  if (group1.length === 0 || group2.length === 0) {
-    throw new Error("Both groups must have at least one value");
+  const values1 = finiteNumbers(group1);
+  const values2 = finiteNumbers(group2);
+
+  if (values1.length < 2 || values2.length < 2) {
+    throw new Error("Both groups must have at least two finite values");
   }
 
-  const mean1 = mean(group1);
-  const mean2 = mean(group2);
-  const variance1 = variance(group1);
-  const variance2 = variance(group2);
-  const n1 = group1.length;
-  const n2 = group2.length;
+  const mean1 = mean(values1);
+  const mean2 = mean(values2);
+  const variance1 = variance(values1);
+  const variance2 = variance(values2);
+  const n1 = values1.length;
+  const n2 = values2.length;
 
-  const fStatistic = Math.max(variance1, variance2) / Math.max(Math.min(variance1, variance2), 1e-10);
+  const smallerVariance = Math.min(variance1, variance2);
+  const largerVariance = Math.max(variance1, variance2);
+  const fStatistic =
+    smallerVariance <= EPSILON
+      ? largerVariance <= EPSILON
+        ? 1
+        : Number.POSITIVE_INFINITY
+      : largerVariance / smallerVariance;
   const df1 = (Math.max(variance1, variance2) === variance1 ? n1 : n2) - 1;
   const df2 = (Math.max(variance1, variance2) === variance1 ? n2 : n1) - 1;
-  
-  // Use approximation for p-value
-  const pValue = 2 * Math.min(0.5, Math.max(0, 1 - 1 / (1 + fStatistic)));
+  const pValue = Number.isFinite(fStatistic)
+    ? 2 * Math.min(fCDF(fStatistic, df1, df2), 1 - fCDF(fStatistic, df1, df2))
+    : 0;
 
   return {
     fStatistic,
-    pValue: Math.min(pValue, 1),
+    pValue: clampProbability(pValue),
     degreesOfFreedom1: df1,
     degreesOfFreedom2: df2,
     variance1,
@@ -2389,9 +2595,7 @@ export function chiSquareTest(
   }
 
   const degreesOfFreedom = observed.length - 1;
-  
-  // Simplified p-value approximation
-  const pValue = Math.max(0, Math.min(1, 1 - chiSquareStatistic / (chiSquareStatistic + degreesOfFreedom)));
+  const pValue = gammaQ(degreesOfFreedom / 2, chiSquareStatistic / 2);
 
   return {
     chiSquareStatistic,

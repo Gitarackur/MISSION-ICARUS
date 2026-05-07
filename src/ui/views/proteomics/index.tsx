@@ -1,43 +1,30 @@
-import { useState } from 'react';
-import NavTabs from '@/ui/components/tabs';
-import DataPreview from '@/ui/components/data-output/preview';
-import ProteinDataPanel from '@/ui/components/statistics/components/panel';
-import VisualizationPanel from '@/ui/components/visualization';
-import AnalysisPanel from '@/ui/components/analysis';
+import NavTabs from "@/ui/components/tabs";
+import DataPreview from "@/ui/components/data-output/preview";
+import ProteinDataPanel from "@/ui/components/statistics/components/panel";
+import VisualizationPanel from "@/ui/components/visualization";
+import AnalysisPanel from "@/ui/components/analysis";
+import { useProteomicsAnalysisView } from "./hooks/useProteomicsAnalysisView";
+import { ProteomicsAnalysisHomeViewProps } from "./types/index.types";
+import { proteomicsPagestyles } from "./variants/proteomics.variants";
 
-import { useIntensityDist } from '@/app-layer/proteins/useIntensityDist';
-import { useProteomicsStats } from '@/app-layer/proteins/useProteinStats';
-import { useVolcanoData } from '@/app-layer/proteins/useVolcanoStats';
-import { ProteomicsAnalysisHomeViewProps, tabTypes } from './types/index.types';
-import { proteomicsPagestyles } from './variants/proteomics.variants';
-
-
-export default function ProteomicsAnalysisHomeView({
-  // data rows and column values and setters
-  originalDataRows,
-  originalDataColumns,
-
-  // selected columns
-  selectedDataColumns,
-  setSelectedDataColumns,
-
-  // callback to save activity on statistical analysis
-  saveActivityInWorkflow,
-  saveVisualizationInWorkflow,
-
-  // session source matrix
-  sessionSourceMatrix,
-  activeMatrix,
-  activeSession,
-
-  openActivitySheet
-
-}: ProteomicsAnalysisHomeViewProps) {
+export default function ProteomicsAnalysisHomeView(
+  props: ProteomicsAnalysisHomeViewProps
+) {
+  const {
+    activeMatrix,
+    activeSession,
+    originalDataColumns,
+    originalDataRows,
+    openActivitySheet,
+    saveActivityInWorkflow,
+    saveVisualizationInWorkflow,
+    selectedDataColumns,
+    sessionSourceMatrix,
+    setSelectedDataColumns,
+  } = props;
   const styles = proteomicsPagestyles();
-  const [activeTab, setActiveTab] = useState<tabTypes>('import');
-  const stats = useProteomicsStats(originalDataRows, originalDataColumns);
-  const volcanoData = useVolcanoData(originalDataRows);
-  const intensityDist = useIntensityDist(originalDataRows, originalDataColumns);
+  const { activeTab, intensityDist, setActiveTab, stats, volcanoData } =
+    useProteomicsAnalysisView({ originalDataColumns, originalDataRows });
 
   return (
     <div className={styles.container()}>

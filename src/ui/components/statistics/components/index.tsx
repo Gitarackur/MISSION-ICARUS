@@ -23,6 +23,132 @@ const buttonClass =
 const dangerButtonClass =
   "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors";
 
+type StatisticalComponentProps = {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+};
+
+const buildSelectedColumnData = (
+  selectedColumns: string[],
+  allColumnarData: Map<string, TableMatrix>
+) => {
+  const filteredData = new Map<string, TableMatrix>();
+  selectedColumns.forEach((column) => {
+    const values = allColumnarData.get(column);
+    if (values) filteredData.set(column, values);
+  });
+  return filteredData;
+};
+
+const ColumnAnalysisRunner = ({
+  actionId,
+  allColumnarData,
+  buttonLabel = "Calculate",
+  dataColumns,
+  dataRows,
+  description,
+  minSelections = 1,
+  multi = true,
+  onError,
+  onSuccess,
+  title,
+}: StatisticalComponentProps & {
+  buttonLabel?: string;
+  description: string;
+  minSelections?: number;
+  multi?: boolean;
+  title: string;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = () => {
+    setError(null);
+
+    if (selectedColumns.length < minSelections) {
+      setError(`Please select at least ${minSelections} column${minSelections > 1 ? "s" : ""}.`);
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = buildSelectedColumnData(selectedColumns, allColumnarData);
+      if (filteredData.size < minSelections) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("The analysis failed. Please check the selected columns.");
+      console.error(`${actionId} failed:`, err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>{title}</h1>
+      <p className={descriptionClass}>{description}</p>
+      <div className="mb-6">
+        {multi ? (
+          <MultiSelect
+            id={`${actionId}-columns`}
+            label="Select Columns"
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((column) => ({
+              value: column,
+              label: column,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText="Choose numeric columns for this analysis"
+          />
+        ) : (
+          <SingleSelect
+            id={`${actionId}-column`}
+            label="Select Column"
+            placeholder="Select a data column..."
+            options={numericColumns.map((column) => ({
+              value: column,
+              label: column,
+              disabled: false,
+            }))}
+            defaultValue=""
+            onChange={(value) => setSelectedColumns(value ? [value] : [])}
+            helperText="Choose a numeric column for this analysis"
+          />
+        )}
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={selectedColumns.length < minSelections}
+          onClick={runAnalysis}
+        >
+          {buttonLabel}
+        </button>
+      </div>
+    </div>
+  );
+};
+
 
 // --- UI COMPONENTS FOR EACH STATISTICAL ACTION ---
 
@@ -1043,35 +1169,23 @@ MIN COLUMN VALUES
 
 export const Min = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Find Minimum</h1>
-    <p className={descriptionClass}>
-      Identifies the minimum value in the selected column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="min-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Calculate</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="Find Minimum"
+    description="Identifies the minimum finite value in the selected column."
+    multi={false}
+  />
 );
 
 /*---------------------------------------------------
@@ -1080,35 +1194,23 @@ MAX COLUMN VALUES
 
 export const Max = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Find Maximum</h1>
-    <p className={descriptionClass}>
-      Identifies the maximum value in the selected column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="max-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Calculate</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="Find Maximum"
+    description="Identifies the maximum finite value in the selected column."
+    multi={false}
+  />
 );
 
 /*---------------------------------------------------
@@ -3162,35 +3264,23 @@ BOX PLOT COLUMN VALUES
 
 export const BoxPlot = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Box Plot</h1>
-    <p className={descriptionClass}>
-      Generates a box plot visualization for a selected column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="boxplot-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Generate Plot</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="Box Plot"
+    description="Calculates box plot summary values for selected columns."
+    buttonLabel="Generate Plot Data"
+  />
 );
 
 /*---------------------------------------------------
@@ -3199,53 +3289,24 @@ SCATTER PLOT COLUMN VALUES
 
 export const ScatterPlot = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Scatter Plot</h1>
-    <p className={descriptionClass}>
-      Creates a scatter plot to visualize the relationship between two
-      variables.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="scatter-x-column"
-          label={`Select X-Axis Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div>
-        <SingleSelect
-          id="scatter-y-column"
-          label={`Select Y-Axis Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Generate Plot</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="Scatter Plot"
+    description="Prepares paired numeric columns for scatter plot visualization."
+    buttonLabel="Generate Plot Data"
+    minSelections={2}
+  />
 );
 
 /*---------------------------------------------------
@@ -3254,37 +3315,24 @@ HEATMAP COLUMN VALUES
 
 export const Heatmap = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Heatmap</h1>
-    <p className={descriptionClass}>
-      Generates a heatmap to visualize data matrices.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="heatmap-columns"
-          label={`Select Columns`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Generate Plot</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="Heatmap"
+    description="Calculates a column-correlation matrix for heatmap visualization."
+    buttonLabel="Generate Heatmap Data"
+    minSelections={2}
+  />
 );
 
 /*---------------------------------------------------
@@ -3293,52 +3341,24 @@ VOLCANO PLOT COLUMN VALUES
 
 export const VolcanoPlot = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Volcano Plot</h1>
-    <p className={descriptionClass}>
-      Creates a volcano plot to visualize differential expression results.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="volcano-pvalue"
-          label={`Select P-value Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div>
-        <SingleSelect
-          id="volcano-foldchange"
-          label={`Select Fold Change Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Generate Plot</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="Volcano Plot"
+    description="Prepares log fold-change and p-value columns for volcano visualization."
+    buttonLabel="Generate Volcano Data"
+    minSelections={2}
+  />
 );
 
 /*---------------------------------------------------
@@ -3347,35 +3367,24 @@ PCA PLOT COLUMN VALUES
 
 export const PcaPlot = ({
   dataColumns,
-  // actionId,
-}: {
-  dataColumns: TableColumns;
-  actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>PCA Plot</h1>
-    <p className={descriptionClass}>
-      Generates a PCA plot to visualize principal components.
-    </p>
-    <div className="mb-6">
-      <MultiSelect
-        id="pca-plot-columns"
-        label={`Select Columns`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={[]}
-        onChange={(values) => console.log(values)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Generate Plot</button>
-    </div>
-  </div>
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => (
+  <ColumnAnalysisRunner
+    dataColumns={dataColumns}
+    actionId={actionId}
+    dataRows={dataRows}
+    allColumnarData={allColumnarData}
+    onSuccess={onSuccess}
+    onError={onError}
+    title="PCA Plot"
+    description="Calculates PCA coordinates for selected numeric columns."
+    buttonLabel="Generate PCA Data"
+    minSelections={2}
+  />
 );
 
 
