@@ -43,4 +43,21 @@ export class PythonManager extends Manager {
     const stringifiedData = typeof data == 'string' ? data : JSON.stringify(data);
     return this.runScript(scriptPath, ['plot', stringifiedData, '--use-json']);
   }
+
+  private async runCommanderCommand<T = Record<string, unknown>>(
+    command: string,
+    data: T
+  ): Promise<string> {
+    const scriptPath = resourcePath('scripts', 'python', 'commander.py');
+    const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
+    return this.runScript(scriptPath, [command, stringifiedData, '--use-json']);
+  }
+
+  public async getHeatmap<T = Record<string, unknown>>(data: T): Promise<string> {
+    return this.runCommanderCommand('heatmap', data);
+  }
+
+  public async getVolcanoPlot<T = Record<string, unknown>>(data: T): Promise<string> {
+    return this.runCommanderCommand('volcano', data);
+  }
 }

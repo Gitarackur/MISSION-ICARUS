@@ -2,7 +2,7 @@ import {
   IcarusSessionWithWorkflowRecord,
   IcarusMatrixRecord,
 } from "@/app-layer/database/database.types";
-import { SaveVisualizationActivity } from "@/domain/workflow/main.types";
+import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
 
 export type VisualizationPanelProps = {
   volcanoData: {
@@ -14,7 +14,5 @@ export type VisualizationPanelProps = {
   intensityDist: { sample: string; meanIntensity: number; count: number }[];
   activeSession: IcarusSessionWithWorkflowRecord | null;
   activeMatrix?: IcarusMatrixRecord;
-  saveVisualizationInWorkflow?: (
-    params: SaveVisualizationActivity
-  ) => Promise<void> | void;
+  saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
 };

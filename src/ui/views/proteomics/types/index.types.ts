@@ -1,9 +1,9 @@
 import {
   IcarusMatrix,
   SaveStatisticalActivity,
-  SaveVisualizationActivity,
   TableColumns,
 } from "@/domain/workflow/main.types";
+import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
 import {
   IcarusMatrixRecord,
   IcarusSessionWithWorkflowRecord,
@@ -35,9 +35,7 @@ export type ProteomicsAnalysisHomeViewProps = {
     action
   }: Partial<SaveStatisticalActivity>) => void;
 
-  saveVisualizationInWorkflow?: (
-    params: SaveVisualizationActivity
-  ) => Promise<void> | void;
+  saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
 
   sessionSourceMatrix?: IcarusMatrix
   activeMatrix?: IcarusMatrixRecord;

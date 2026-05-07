@@ -470,7 +470,9 @@ export const extractNumericData = (
 
 // Transpose results to match expected format (rows x columns)
 export const transposedStatisticalResults = (results: number[][]) =>
-  results[0].map((_, rowIndex) => results.map((col) => col[rowIndex]));
+  results.length > 0 && results[0]
+    ? results[0].map((_, rowIndex) => results.map((col) => col[rowIndex] ?? 0))
+    : [];
 
 
 export const isMissing = (v: unknown): boolean =>
@@ -515,4 +517,3 @@ export function toFinite(v: unknown): number {
   }
   return NaN;
 }
-
