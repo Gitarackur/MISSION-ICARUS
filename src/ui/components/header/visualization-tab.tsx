@@ -1,39 +1,36 @@
 import { IcarusVisualization } from '@/domain/workflow/main.types'
 import { getVisualizationLabel } from '@/domain/visualization/utils/main'
 import { tabNavigationVariants } from './variants'
+import { BarChart3 } from 'lucide-react';
 
-const VisualizationTab = ({
-  visualizations,
-  activeVisualizationId,
-  setActiveVisualizationId
+export const VisualizationTabButton = ({
+  matrixId,
+  visualization,
+  index,
+  isActive,
+  onVisualizationSelect,
 }: {
-  visualizations: IcarusVisualization[],
-  activeVisualizationId: string,
-  setActiveVisualizationId: (id: string) => void
+  matrixId: string;
+  visualization: IcarusVisualization;
+  index: number;
+  isActive: boolean;
+  onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
 }) => {
+  const { tabButton } = tabNavigationVariants({ active: isActive });
 
-  const {
-    tabList,
-    tabButton,
-  } = tabNavigationVariants()
+  const label = getVisualizationLabel(visualization, index);
 
   return (
-    <>
-      <div className={tabList()}>
-        {visualizations.map((visualization, index) => (
-          <button
-            key={visualization.id}
-            type="button"
-            title={visualization.id}
-            onClick={() => setActiveVisualizationId(visualization.id)}
-            className={tabButton({ active: activeVisualizationId === visualization.id })}
-          >
-            {getVisualizationLabel(visualization, index)}
-          </button>
-        ))}
-      </div>
-    </>
-  )
-}
-
-export default VisualizationTab;
+    <button
+      type="button"
+      onClick={() => onVisualizationSelect?.(visualization.id, matrixId)}
+      className={tabButton()}
+      title={label}
+      role="tab"
+      aria-selected={isActive}
+    >
+      <BarChart3 className="h-3 w-3 flex-shrink-0" />
+      <span className="sr-only">{label}</span>
+    </button>
+  );
+};
