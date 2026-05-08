@@ -1,15 +1,16 @@
-import React from "react";
-import { Download, Settings2 } from "lucide-react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Download, Minus, Plus, RotateCcw, Settings2 } from "lucide-react";
 import { VisualizationRecord } from "@/domain/visualization/index.types";
 import { VisualizationDisplaySettings } from "@/domain/visualization/index.types";
 import { getVisualizationPayloadPointCount } from "@/domain/visualization/utils/main";
+import SingleSelect from "@/ui/design-system/Select/select";
 import { visualizationStyles } from "../variants/visualization.variants";
 
 export function VisualizationViewer({
   activeDisplayImage,
   activeVisualization,
-  canUseNativeView,
   displayMode,
+  displayRendererOptions,
   hasVisualizations,
   onDownload,
   onSelectVisualization,
@@ -19,8 +20,11 @@ export function VisualizationViewer({
 }: {
   activeDisplayImage: string | null;
   activeVisualization?: VisualizationRecord;
-  canUseNativeView: boolean;
   displayMode: "saved" | "native";
+  displayRendererOptions: Array<{
+    value: "saved" | "native";
+    label: string;
+  }>;
   hasVisualizations: boolean;
   onDownload: () => void;
   onSelectVisualization: (visualizationId: string) => void;
@@ -29,6 +33,47 @@ export function VisualizationViewer({
   savedVisualizations: VisualizationRecord[];
 }) {
   const s = visualizationStyles();
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const dragRef = useRef<{ active: boolean; startX: number; startY: number; originX: number; originY: number }>({
+    active: false,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+  });
+  const zoomText = useMemo(() => `${Math.round(zoomLevel * 100)}%`, [zoomLevel]);
+  useEffect(() => {
+    setZoomLevel(1);
+    setPan({ x: 0, y: 0 });
+  }, [activeDisplayImage, activeVisualization?.id, displayMode]);
+
+  useEffect(() => {
+    const handlePointerMove = (event: MouseEvent) => {
+      if (!dragRef.current.active || zoomLevel <= 1) return;
+      setPan({
+        x: dragRef.current.originX + event.clientX - dragRef.current.startX,
+        y: dragRef.current.originY + event.clientY - dragRef.current.startY,
+      });
+    };
+
+    const handlePointerUp = () => {
+      dragRef.current.active = false;
+    };
+
+    window.addEventListener("mousemove", handlePointerMove);
+    window.addEventListener("mouseup", handlePointerUp);
+    return () => {
+      window.removeEventListener("mousemove", handlePointerMove);
+      window.removeEventListener("mouseup", handlePointerUp);
+    };
+  }, [zoomLevel]);
+
+  const clampZoom = (value: number) => Math.min(3, Math.max(0.5, value));
+  const resetViewport = () => {
+    setZoomLevel(1);
+    setPan({ x: 0, y: 0 });
+  };
 
   return (
     <section className={s.hero()}>
@@ -46,29 +91,48 @@ export function VisualizationViewer({
         </div>
 
         <div className={s.actionRow()}>
-          {activeVisualization && (
+          {activeDisplayImage && (
             <>
               <button
                 type="button"
-                className={`${s.secondaryButton()} ${
-                  displayMode === "saved" ? "border-blue-500 text-blue-700 dark:text-blue-200" : ""
-                }`}
-                onClick={() => onSetDisplayMode("saved")}
+                className={s.secondaryButton()}
+                onClick={() => setZoomLevel((value) => clampZoom(value - 0.1))}
               >
-                Original
+                <Minus className="h-4 w-4" />
               </button>
-              {canUseNativeView && (
-                <button
-                  type="button"
-                  className={`${s.secondaryButton()} ${
-                    displayMode === "native" ? "border-blue-500 text-blue-700 dark:text-blue-200" : ""
-                  }`}
-                  onClick={() => onSetDisplayMode("native")}
-                >
-                  Native View
-                </button>
-              )}
+              <span className="min-w-14 text-center text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
+                {zoomText}
+              </span>
+              <button
+                type="button"
+                className={s.secondaryButton()}
+                onClick={() => setZoomLevel((value) => clampZoom(value + 0.1))}
+              >
+                <Plus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                className={s.secondaryButton()}
+                onClick={resetViewport}
+              >
+                <RotateCcw className="h-4 w-4" />
+                Reset
+              </button>
             </>
+          )}
+          {activeVisualization && (
+            <div className="min-w-44">
+              <SingleSelect
+                options={displayRendererOptions}
+                value={displayMode}
+                onChange={(value) =>
+                  value && onSetDisplayMode(value as "saved" | "native")
+                }
+                placeholder="Select renderer"
+                searchable={false}
+                clearable={false}
+              />
+            </div>
           )}
           <button
             type="button"
@@ -114,13 +178,51 @@ export function VisualizationViewer({
             className="animate-[fade-slide-in_220ms_ease-out]"
           >
             {activeDisplayImage ? (
-              <img
-                src={activeDisplayImage}
-                alt={activeVisualization?.title ?? "Selected visualization"}
-                className={s.viewerImage()}
-                loading="eager"
-                decoding="async"
-              />
+              <div
+                className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950"
+                onWheel={(event) => {
+                  event.preventDefault();
+                  const delta = event.deltaY > 0 ? -0.1 : 0.1;
+                  setZoomLevel((value) => clampZoom(value + delta));
+                }}
+                onMouseDown={(event) => {
+                  if (zoomLevel <= 1) return;
+                  event.preventDefault();
+                  dragRef.current = {
+                    active: true,
+                    startX: event.clientX,
+                    startY: event.clientY,
+                    originX: pan.x,
+                    originY: pan.y,
+                  };
+                }}
+                onMouseLeave={() => {
+                  if (!dragRef.current.active) return;
+                }}
+                style={{
+                  cursor:
+                    zoomLevel > 1
+                      ? dragRef.current.active
+                        ? "grabbing"
+                        : "grab"
+                      : "default",
+                }}
+              >
+                <img
+                  src={activeDisplayImage}
+                  alt={activeVisualization?.title ?? "Selected visualization"}
+                  className={s.viewerImage()}
+                  loading="eager"
+                  decoding="async"
+                  style={{
+                    transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`,
+                    transformOrigin: "center center",
+                    userSelect: "none",
+                    pointerEvents: "none",
+                    transition: dragRef.current.active ? "none" : "transform 160ms ease-out",
+                  }}
+                />
+              </div>
             ) : (
               <div className={s.viewerEmpty()}>
                 {hasVisualizations

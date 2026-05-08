@@ -30,7 +30,7 @@ export function setupRHandlers() {
         throw new Error("R is not available on this system.");
       }
 
-      rManager.ensurePackagesInstalled(["ggplot2", "dplyr", "jsonlite"]);
+      rManager.ensurePackagesInstalled(["ggplot2", "jsonlite"]);
 
       try {
         const output = await rManager.runRScript(resolveRScriptPath(scriptPath), args || []);
