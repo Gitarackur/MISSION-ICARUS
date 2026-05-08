@@ -17,12 +17,16 @@ import {
 import {
   invokePythonBarPlot,
   invokePythonPcaPlot,
-  invokePythonScatterPlot,
   invokeRBarPlot,
   renderBoxPlotSvg,
   renderHeatmapSvg,
+  renderScatterSvg,
   renderVolcanoSvg,
 } from "@/app-layer/visualization/utils/renderers";
+import {
+  SavedImageVisualizationData,
+  ScatterPlotPayload,
+} from "@/domain/visualization/index.types";
 import {
   buildMatrixBoxPlotPayload,
   buildMatrixHeatmapPayload,
@@ -34,6 +38,16 @@ import {
   RenderJob,
   VisualizationPanelStateParams,
 } from "@/app-layer/visualization/types";
+
+const isScatterPlotPayload = (payload: unknown): payload is ScatterPlotPayload => {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Partial<ScatterPlotPayload>;
+  return Array.isArray(candidate.x) && Array.isArray(candidate.y);
+};
+
+const getSavedVisualizationPayload = (visualization?: {
+  data: unknown;
+}) => (visualization?.data as SavedImageVisualizationData | undefined)?.payload;
 
 export const useVisualizationPanel = ({
   volcanoData,
@@ -77,6 +91,15 @@ export const useVisualizationPanel = ({
     () => getVisualizationsForMatrix(savedVisualizations, activeMatrix?.id),
     [activeMatrix?.id, savedVisualizations]
   );
+  const hasSavedVisualization = useCallback(
+    (visualizationType: VisualizationKind, renderer?: VisualizationRenderer) =>
+      matrixVisualizations.some(
+        (visualization) =>
+          visualization.visualizationType === visualizationType &&
+          (!renderer || visualization.renderer === renderer)
+      ),
+    [matrixVisualizations]
+  );
 
   const activeSavedVisualization = useMemo(
     () =>
@@ -87,7 +110,17 @@ export const useVisualizationPanel = ({
   );
 
   const activeSavedImage = useMemo(
-    () => getVisualizationImage(activeSavedVisualization),
+    () => {
+      const payload = getSavedVisualizationPayload(activeSavedVisualization);
+      if (
+        activeSavedVisualization?.visualizationType === "scatter" &&
+        isScatterPlotPayload(payload)
+      ) {
+        return renderScatterSvg(payload);
+      }
+
+      return getVisualizationImage(activeSavedVisualization);
+    },
     [activeSavedVisualization]
   );
 
@@ -166,12 +199,14 @@ export const useVisualizationPanel = ({
       findLatestVisualizationImage(matrixVisualizations, {
         matrixId: activeMatrix?.id,
         renderer: "python",
+        visualizationType: "bar",
       })
     );
     setRImage(
       findLatestVisualizationImage(matrixVisualizations, {
         matrixId: activeMatrix?.id,
         renderer: "r",
+        visualizationType: "bar",
       })
     );
     setBoxImage(null);
@@ -306,10 +341,10 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("scatter");
-      const image = await invokePythonScatterPlot(scatterReadiness.payload);
+      const image = renderScatterSvg(scatterReadiness.payload);
       setScatterImage(image);
       await saveRenderedVisualization({
-        renderer: "python",
+        renderer: "recharts",
         image,
         visualizationType: "scatter",
         title: "Scatter plot",
@@ -413,6 +448,7 @@ export const useVisualizationPanel = ({
     error,
     heatmapPayload: heatmapReadiness.payload,
     heatmapReason: heatmapReadiness.reason,
+    hasSavedVisualization,
     pcaImage,
     pcaPayload: pcaReadiness.payload,
     pcaReason: pcaReadiness.reason,

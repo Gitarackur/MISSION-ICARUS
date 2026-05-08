@@ -4,7 +4,7 @@ import { tv, type VariantProps } from "tailwind-variants";
 import { cn } from "@/ui/utils";
 
 const input = tv({
-  base: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-500",
+  base: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 shadow-sm transition-colors placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500",
   variants: {
     scale: {
       sm: "px-2 py-1 text-sm",
@@ -19,7 +19,7 @@ const input = tv({
         "border-green-500 focus:ring-green-500 focus:border-green-500 placeholder:text-green-400",
     },
     disabled: {
-      true: "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70",
+      true: "bg-gray-100 text-gray-400 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-500",
     },
   },
   defaultVariants: {

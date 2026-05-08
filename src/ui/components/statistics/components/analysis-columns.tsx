@@ -4,11 +4,11 @@ import { ColumnStats } from "@/domain/statistics/index.types";
 
 const statisticalAnalysisColumns = tv({
   slots: {
-    container: "mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm",
+    container: "mb-6 bg-white border border-gray-200 rounded-lg p-4 shadow-sm dark:border-gray-800 dark:bg-gray-900",
     grid: "grid grid-cols-2 md:grid-cols-4 gap-4",
-    item: "bg-gray-50 p-3 rounded",
-    label: "text-sm text-gray-600",
-    value: "text-lg font-semibold text-gray-800",
+    item: "bg-gray-50 p-3 rounded dark:bg-gray-950",
+    label: "text-sm text-gray-600 dark:text-gray-400",
+    value: "text-lg font-semibold text-gray-800 dark:text-gray-100",
   },
 });
 

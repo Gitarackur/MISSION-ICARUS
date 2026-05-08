@@ -4,8 +4,8 @@ import { tv } from "tailwind-variants";
 const slidingSheetStyles = tv({
   slots: {
     overlay: 'fixed bg-black z-70 transition-opacity duration-300',
-    panel: 'fixed bg-white shadow-lg transform transition-transform ease-in-out duration-300 z-70 flex flex-col',
-    header: 'flex items-center justify-between p-4 border-b border-gray-200',
+    panel: 'fixed bg-white text-gray-900 shadow-lg transform transition-transform ease-in-out duration-300 z-70 flex flex-col dark:bg-gray-950 dark:text-gray-100',
+    header: 'flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-800',
     body: 'flex-1 overflow-y-auto ',
   },
   variants: {
@@ -104,10 +104,10 @@ const SlidingSheet: React.FC<SheetProps> = ({
         className={clsx(panel(), panelClassName)}
       >
         <div className={clsx(header(), headerClassName)}>
-          <h2 className="text-xl font-semibold text-gray-700">{title}</h2>
+          <h2 className="text-xl font-semibold text-gray-700 dark:text-gray-100">{title}</h2>
           <button
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            className="text-gray-500 hover:text-gray-700 focus:outline-none dark:text-gray-400 dark:hover:text-gray-100"
           >
             <svg
               className="w-6 h-6"

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as d3 from "d3";
 import { buildActivityTree } from "@/app-layer/algorithms/tree";
 import { ActivityTreeNodeForD3 } from "@/domain/tree/tree.types";
@@ -8,6 +8,7 @@ import {
 } from "./variants/activity.style.variant";
 import { DisplayedActivityTree } from "./types/activity-node.types";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
+import { useThemeMode } from "@/ui/theme/use-theme-mode";
 import {
   formatAxisLabel,
   getVisualizationLabel,
@@ -29,6 +30,55 @@ const ActivityTree2 = ({
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const [isPanning, setIsPanning] = useState(false);
   const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
+  const { resolvedMode } = useThemeMode();
+  const isDarkMode = resolvedMode === "dark";
+  const palette = useMemo(
+    () =>
+      isDarkMode
+        ? {
+            link: "#374151",
+            text: "#e5e7eb",
+            mutedText: "#9ca3af",
+            nodeStroke: "#374151",
+            nodeFill: {
+              0: "#172554",
+              1: "#052e1b",
+              2: "#451a03",
+              default: "#111827",
+            },
+            visualizationFill: "#2e1065",
+            visualizationStroke: "#6d28d9",
+            visualizationText: "#ddd6fe",
+            inputFill: "#172554",
+            inputStroke: "#1d4ed8",
+            inputText: "#bfdbfe",
+            outputFill: "#052e1b",
+            outputStroke: "#15803d",
+            outputText: "#bbf7d0",
+          }
+        : {
+            link: "#d1d5db",
+            text: "#374151",
+            mutedText: "#6b7280",
+            nodeStroke: "#d1d5db",
+            nodeFill: {
+              0: "#eff6ff",
+              1: "#ecfdf5",
+              2: "#fffbeb",
+              default: "#f9fafb",
+            },
+            visualizationFill: "#f5f3ff",
+            visualizationStroke: "#c4b5fd",
+            visualizationText: "#6d28d9",
+            inputFill: "#dbeafe",
+            inputStroke: "#93c5fd",
+            inputText: "#1d4ed8",
+            outputFill: "#dcfce7",
+            outputStroke: "#86efac",
+            outputText: "#15803d",
+          },
+    [isDarkMode]
+  );
 
   // Extract the styles
   const {
@@ -145,7 +195,7 @@ const ActivityTree2 = ({
         .join("path")
         .attr("class", `link-${i}`)
         .attr("fill", "none")
-        .attr("stroke", "#d1d5db")
+        .attr("stroke", palette.link)
         .attr("stroke-width", 1.5)
         .attr(
           "d",
@@ -177,20 +227,20 @@ const ActivityTree2 = ({
         .attr("fill", (d) => {
           switch (d.data.depth) {
             case 0:
-              return "#eff6ff"; // blue-50
+              return palette.nodeFill[0];
             case 1:
-              return "#ecfdf5"; // green-50
+              return palette.nodeFill[1];
             case 2:
-              return "#fffbeb"; // amber-50
+              return palette.nodeFill[2];
             default:
-              return "#f9fafb"; // gray-50
+              return palette.nodeFill.default;
           }
         })
         .attr("stroke", (d) => {
           if (d.data.activity.outputMatrixReference === activeMatrixId) {
             return "red";
           }
-          return "#d1d5db"; // gray-300
+          return palette.nodeStroke;
         })
         .attr("stroke-width", 1.5)
         .on("click", (event: MouseEvent, d) => {
@@ -206,7 +256,7 @@ const ActivityTree2 = ({
         .attr("text-anchor", "middle")
         .attr("font-size", "12px")
         .attr("font-weight", "600")
-        .attr("fill", "#374151")
+        .attr("fill", palette.text)
         .text((d) => d.data.activity.name)
         .call(wrapText, 80);
 
@@ -251,8 +301,8 @@ const ActivityTree2 = ({
             .attr("width", 74)
             .attr("height", 18)
             .attr("rx", 4)
-            .attr("fill", "#f5f3ff")
-            .attr("stroke", "#c4b5fd");
+            .attr("fill", palette.visualizationFill)
+            .attr("stroke", palette.visualizationStroke);
 
           button
             .append("text")
@@ -260,7 +310,7 @@ const ActivityTree2 = ({
             .attr("y", 12)
             .attr("font-size", "9px")
             .attr("text-anchor", "middle")
-            .attr("fill", "#6d28d9")
+            .attr("fill", palette.visualizationText)
             .text(formatAxisLabel(label, 11));
         });
 
@@ -270,7 +320,7 @@ const ActivityTree2 = ({
             .attr("x", 166)
             .attr("y", 32)
             .attr("font-size", "10px")
-            .attr("fill", "#6b7280")
+            .attr("fill", palette.mutedText)
             .text(`+${activityVisualizations.length - 4}`);
         }
       });
@@ -310,8 +360,8 @@ const ActivityTree2 = ({
         .attr("width", 77)
         .attr("height", 24)
         .attr("rx", 4)
-        .attr("fill", "#dbeafe")
-        .attr("stroke", "#93c5fd");
+        .attr("fill", palette.inputFill)
+        .attr("stroke", palette.inputStroke);
 
       inputButton
         .append("text")
@@ -319,7 +369,7 @@ const ActivityTree2 = ({
         .attr("y", 14)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
-        .attr("fill", "#1d4ed8")
+        .attr("fill", palette.inputText)
         .text("⬇ Input");
 
       // Output button
@@ -339,8 +389,8 @@ const ActivityTree2 = ({
         .attr("width", 75)
         .attr("height", 24)
         .attr("rx", 4)
-        .attr("fill", "#dcfce7")
-        .attr("stroke", "#86efac");
+        .attr("fill", palette.outputFill)
+        .attr("stroke", palette.outputStroke);
 
       outputButton
         .append("text")
@@ -348,7 +398,7 @@ const ActivityTree2 = ({
         .attr("y", 14)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
-        .attr("fill", "#15803d")
+        .attr("fill", palette.outputText)
         .text("⬆ Output");
 
       // Update xOffset for next tree
@@ -386,6 +436,7 @@ const ActivityTree2 = ({
     onClickOfInputButton,
     onClickOfOutputButton,
     onClickOfVisualizationButton,
+    palette,
     activeMatrixId,
   ]);
 

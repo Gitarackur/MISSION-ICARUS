@@ -16,9 +16,9 @@ interface ScatterTooltipProps extends TooltipProps<number, string> {
 
 const styles = tv({
   slots: {
-    container: 'bg-white p-3 border border-gray-300 rounded shadow',
-    proteinName: 'font-medium',
-    statText: '',
+    container: 'bg-white p-3 border border-gray-300 rounded shadow text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200',
+    proteinName: 'font-medium text-gray-900 dark:text-gray-100',
+    statText: 'text-gray-600 dark:text-gray-300',
   },
 });
 
