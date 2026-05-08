@@ -99,11 +99,10 @@ jobs:
             echo "APPLE_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
           fi
 
-      - name: Build Electron app
+      - name: Build macOS app
+        if: matrix.os == 'macos-latest'
         shell: bash
         env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
           APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
           APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
           APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
@@ -115,41 +114,42 @@ jobs:
           VERSION_NO_V="${VERSION#v}"
           echo "Building version: $VERSION_NO_V"
 
-          if [ "${{ matrix.os }}" = "macos-latest" ]; then
-            brew install create-dmg || true
+          brew install create-dmg || true
 
-            if [ -z "${CSC_LINK:-}" ] || [ -z "${CSC_KEY_PASSWORD:-}" ]; then
-              echo "No mac signing credentials detected. Building unsigned macOS artifacts."
-              env -u CSC_LINK -u CSC_KEY_PASSWORD -u CSC_NAME \
-                CSC_IDENTITY_AUTO_DISCOVERY=false \
-                npm run build -- --publish never
-            else
-              npm run build -- --publish never
-            fi
-
-            # Find the actual .app
-            APP_PATH=$(find "release/$VERSION_NO_V" -name "*.app" | head -n 1)
-            echo "Found .app at: $APP_PATH"
-
-            # Remove quarantine attribute
-            if [ -n "$APP_PATH" ]; then
-              xattr -r -d com.apple.quarantine "$APP_PATH" || true
-            fi
-
-            # Create zip for macOS
-            if [ -n "$APP_PATH" ]; then
-              ZIP_NAME="release/$VERSION_NO_V/Icarus-Mac-${VERSION_NO_V}.zip"
-              ditto -c -k --keepParent "$APP_PATH" "$ZIP_NAME"
-            fi
-
-          elif [ "${{ matrix.os }}" = "windows-latest" ]; then
-            npm run build:windows -- --publish never
-
+          if [ -n "${{ secrets.CSC_LINK }}" ] && [ -n "${{ secrets.CSC_KEY_PASSWORD }}" ]; then
+            echo "Using mac signing credentials."
+            export CSC_LINK="${{ secrets.CSC_LINK }}"
+            export CSC_KEY_PASSWORD="${{ secrets.CSC_KEY_PASSWORD }}"
+            npm run build -- --publish never
           else
-            sudo apt-get update
-            sudo apt-get install -y fuse libarchive-tools
-            npm run build:linux -- --publish never
+            echo "No mac signing credentials detected. Building unsigned macOS artifacts."
+            CSC_IDENTITY_AUTO_DISCOVERY=false npm run build -- --publish never
           fi
+
+          APP_PATH=$(find "release/$VERSION_NO_V" -name "*.app" | head -n 1)
+          echo "Found .app at: $APP_PATH"
+
+          if [ -n "$APP_PATH" ]; then
+            xattr -r -d com.apple.quarantine "$APP_PATH" || true
+          fi
+
+          if [ -n "$APP_PATH" ]; then
+            ZIP_NAME="release/$VERSION_NO_V/Icarus-Mac-${VERSION_NO_V}.zip"
+            ditto -c -k --keepParent "$APP_PATH" "$ZIP_NAME"
+          fi
+
+      - name: Build Windows app
+        if: matrix.os == 'windows-latest'
+        shell: bash
+        run: npm run build:windows -- --publish never
+
+      - name: Build Linux app
+        if: matrix.os == 'ubuntu-latest'
+        shell: bash
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse libarchive-tools
+          npm run build:linux -- --publish never
 
       - name: Find built installers dynamically
         id: find_files
