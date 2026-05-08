@@ -116,6 +116,14 @@ jobs:
           echo "Building version: $VERSION_NO_V"
 
           if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            if [ -z "${CSC_LINK:-}" ] || [ -z "${CSC_KEY_PASSWORD:-}" ]; then
+              echo "No mac signing credentials detected. Building unsigned macOS artifacts."
+              unset CSC_LINK
+              unset CSC_KEY_PASSWORD
+              unset CSC_NAME
+              export CSC_IDENTITY_AUTO_DISCOVERY=false
+            fi
+
             brew install create-dmg || true
             npm run build -- --publish never
 
