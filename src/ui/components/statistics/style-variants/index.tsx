@@ -43,22 +43,22 @@ export const statisticsStyles = tv({
 export const statisticsMenuStyles = tv({
   slots: {
     // mainContainer: "w-full bg-white rounded-lg   flex flex-col font-sans text-gray-800",
-    mainContainer: "w-full bg-white rounded-lg shadow-xl p-6 flex flex-col font-sans text-gray-800",
+    mainContainer: "w-full bg-white rounded-lg shadow-xl p-6 flex flex-col font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-100",
     mainContent: "flex flex-row",
 
     rightToolbarArea: "flex-1 flex flex-col gap-2",
     // toolbarRow: "flex  items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm",
-    toolbarRow: "flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm",
+    toolbarRow: "flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm dark:border-gray-800 dark:bg-gray-950",
 
-    toolbarButton: "flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm cursor-pointer hover:bg-gray-200 transition-colors space-x-1",
-    toolbarButtonIcon: "text-lg size-4",
-    toolbarButtonText: "whitespace-nowrap text-sm",
-    dropdownArrow: "ml-auto text-xs",
+    toolbarButton: "flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm cursor-pointer text-gray-700 hover:bg-gray-200 hover:border-gray-400 transition-colors space-x-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-gray-600 dark:hover:bg-gray-700",
+    toolbarButtonIcon: "text-lg size-4 text-current",
+    toolbarButtonText: "whitespace-nowrap text-sm text-current",
+    dropdownArrow: "ml-auto text-xs text-current",
 
-    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 w-48 mt-2 p-1 rounded-lg shadow-lg bg-white border border-gray-300 max-h-60 overflow-y-auto",
-    dropdownItem: "flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors duration-150",
+    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 w-48 mt-2 p-1 rounded-lg shadow-lg bg-white border border-gray-300 max-h-60 overflow-y-auto dark:border-gray-700 dark:bg-gray-900",
+    dropdownItem: "flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors duration-150 dark:text-gray-200 dark:hover:bg-gray-800",
 
-    sectionLabelContainer: "flex-1 flex items-center justify-center pt-2 text-xs text-gray-500",
-    sectionLabel: "border-b border-gray-300 pb-1 px-4",
+    sectionLabelContainer: "flex-1 flex items-center justify-center pt-2 text-xs text-gray-500 dark:text-gray-400",
+    sectionLabel: "border-b border-gray-300 pb-1 px-4 dark:border-gray-700",
   },
 });

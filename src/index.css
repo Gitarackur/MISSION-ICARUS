@@ -117,3 +117,15 @@ body {
   scrollbar-base-color: #9ca3af;
   scrollbar-track-color: transparent;
 }
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

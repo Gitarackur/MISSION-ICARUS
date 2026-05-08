@@ -89,8 +89,27 @@ jobs:
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
+      - name: Prepare macOS notarization assets
+        if: matrix.os == 'macos-latest'
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.APPLE_API_KEY }}" ] && [ -n "${{ secrets.APPLE_API_KEY_ID }}" ]; then
+            KEY_PATH="$RUNNER_TEMP/AuthKey_${{ secrets.APPLE_API_KEY_ID }}.p8"
+            printf '%s' "${{ secrets.APPLE_API_KEY }}" > "$KEY_PATH"
+            echo "APPLE_API_KEY_PATH=$KEY_PATH" >> "$GITHUB_ENV"
+          fi
+
       - name: Build Electron app
         shell: bash
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_PATH: ${{ env.APPLE_API_KEY_PATH }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           VERSION=${{ needs.create-release.outputs.new_tag }}
           VERSION_NO_V="${VERSION#v}"
@@ -127,6 +146,8 @@ jobs:
       - name: Find built installers dynamically
         id: find_files
         shell: bash
+        env:
+          HAS_MAC_SIGNING: ${{ secrets.CSC_LINK != '' && secrets.CSC_KEY_PASSWORD != '' }}
         run: |
           VERSION=${{ needs.create-release.outputs.new_tag }}
           VERSION_NO_V="${VERSION#v}"
@@ -134,13 +155,18 @@ jobs:
 
           echo "Looking for installers in $RELEASE_DIR"
 
-          # Only match final Electron Builder installers or zip for mac
-          find "$RELEASE_DIR" -type f \( \
-            -name "Icarus-Mac-*-Installer.dmg" -o \
-            -name "Icarus-Mac-*.zip" -o \
-            -name "Icarus-Windows-*-Setup.exe" -o \
-            -name "Icarus-Linux-*.AppImage" \
-          \) > files.txt || true
+          if [ "${{ matrix.os }}" = "macos-latest" ] && [ "$HAS_MAC_SIGNING" != "true" ]; then
+            find "$RELEASE_DIR" -type f \( \
+              -name "Icarus-Mac-*.zip" \
+            \) > files.txt || true
+          else
+            find "$RELEASE_DIR" -type f \( \
+              -name "Icarus-Mac-*-Installer.dmg" -o \
+              -name "Icarus-Mac-*.zip" -o \
+              -name "Icarus-Windows-*-Setup.exe" -o \
+              -name "Icarus-Linux-*.AppImage" \
+            \) > files.txt || true
+          fi
 
           echo "Found installer files:"
           cat files.txt || echo "No installer files found."
@@ -156,4 +182,3 @@ jobs:
           files: ${{ steps.find_files.outputs.files }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-

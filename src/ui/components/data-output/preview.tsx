@@ -96,7 +96,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           }
 
           const visualizationActivity =
-            buildVisualizationActivityFromStatisticalResult({
+            await buildVisualizationActivityFromStatisticalResult({
               result,
               sourceMatrixId: sessionSourceMatrix?.id,
             });
