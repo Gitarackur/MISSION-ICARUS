@@ -23,7 +23,7 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive, openActivitySheet 
   ];
 
   return (
-    <div className="bg-white border-gray-400 overflow-x-hidden">
+    <div className="overflow-x-hidden border-gray-400 bg-white dark:border-gray-800 dark:bg-gray-950">
       <div className="px-3 sm:px-6 flex items-center justify-between  max-w-full">
         <nav
           className="
@@ -44,7 +44,7 @@ const NavTabs: React.FC<NavTabsProps> = ({ active, setActive, openActivitySheet 
                 className={tabButtonStyles({ active: isActive })}
               >
                 <Icon
-                  className={`flex-shrink-0 ${isActive ? 'text-blue-600' : 'text-gray-600'}`}
+                  className={`flex-shrink-0 ${isActive ? 'text-blue-600 dark:text-blue-300' : 'text-gray-600 dark:text-gray-400'}`}
                   size={18}
                 />
                 <span className="hidden sm:inline truncate">{tab.label}</span>

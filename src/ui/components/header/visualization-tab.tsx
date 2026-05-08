@@ -23,7 +23,10 @@ export const VisualizationTabButton = ({
   return (
     <button
       type="button"
-      onClick={() => onVisualizationSelect?.(visualization.id, matrixId)}
+      onClick={(event) => {
+        event.stopPropagation();
+        onVisualizationSelect?.(visualization.id, matrixId);
+      }}
       className={visualizationButton()}
       title={label}
       role="tab"

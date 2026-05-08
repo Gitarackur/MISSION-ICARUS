@@ -16,10 +16,10 @@ import {
 } from "@/domain/workflow/main.types";
 import {
   invokePythonBarPlot,
-  invokePythonBoxPlot,
   invokePythonPcaPlot,
   invokePythonScatterPlot,
   invokeRBarPlot,
+  renderBoxPlotSvg,
   renderHeatmapSvg,
   renderVolcanoSvg,
 } from "@/app-layer/visualization/utils/renderers";
@@ -280,10 +280,10 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("box");
-      const image = await invokePythonBoxPlot(boxReadiness.payload);
+      const image = renderBoxPlotSvg(boxReadiness.payload);
       setBoxImage(image);
       await saveRenderedVisualization({
-        renderer: "python",
+        renderer: "recharts",
         image,
         visualizationType: "box",
         title: "Box plot",

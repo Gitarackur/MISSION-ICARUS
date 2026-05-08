@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { flushSync } from "react-dom";
 import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import MatrixTab from "@/ui/components/header/matrix-tab";
@@ -40,9 +41,11 @@ const IcarusApp: React.FC = () => {
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
   const selectMatrix = (matrixId: string) => {
-    setActiveProteomicsTab("import");
-    setActiveMatrixId(matrixId);
-    setActiveVisualizationId("");
+    flushSync(() => {
+      setActiveProteomicsTab("import");
+      setActiveMatrixId(matrixId);
+      setActiveVisualizationId("");
+    });
   };
   const selectActivityMatrix = (matrixId: string) => {
     selectMatrix(matrixId);
@@ -63,12 +66,11 @@ const IcarusApp: React.FC = () => {
   const toggleSidebar = () => setShowSession((value) => !value);
 
   return (
-    <div className="flex flex-col h-screen bg-white text-gray-800">
-      <main className="flex-1 overflow-y-auto bg-white">
+    <div className="flex h-screen flex-col bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100">
+      <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}
-          activeTab={activeProteomicsTab}
           dataRows={originalDataRows}
           onMatrixSelect={selectMatrix}
           toggleSidebar={toggleSidebar}

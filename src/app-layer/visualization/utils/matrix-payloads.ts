@@ -65,6 +65,13 @@ export const buildMatrixBoxPlotPayload = (
     return { payload: null, reason: "No active matrix selected." };
   }
 
+  if (matrix.data.length < 2) {
+    return {
+      payload: null,
+      reason: "Box plot needs at least two rows; summary matrices are not suitable.",
+    };
+  }
+
   const numericColumns = getNumericColumnIndices(matrix).slice(0, 24);
   if (!numericColumns.length) {
     return { payload: null, reason: "Box plot needs at least one numeric column." };
@@ -72,7 +79,7 @@ export const buildMatrixBoxPlotPayload = (
 
   const payload = numericColumns.reduce<BoxPlotPayload>((acc, { column, index }) => {
     const values = getFiniteColumnValues(matrix, index);
-    if (values.length) {
+    if (values.length >= 2) {
       acc[column] = values;
     }
     return acc;
@@ -80,7 +87,7 @@ export const buildMatrixBoxPlotPayload = (
 
   return Object.keys(payload).length
     ? { payload }
-    : { payload: null, reason: "Box plot could not find finite numeric values." };
+    : { payload: null, reason: "Box plot needs at least one numeric column with two finite values." };
 };
 
 export const buildMatrixScatterPayload = (
