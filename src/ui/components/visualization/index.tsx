@@ -191,22 +191,22 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
               </div>
             </div>
             {activeSavedVisualization ? (
-              <div className="space-y-2 text-sm text-gray-600">
+              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
                 <p>
                   Renderer:{" "}
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     {activeSavedVisualization.renderer ?? "Unknown"}
                   </span>
                 </p>
                 <p>
                   Type:{" "}
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     {activeSavedVisualization.visualizationType ?? "Unknown"}
                   </span>
                 </p>
                 <p>
                   Points:{" "}
-                  <span className="font-medium text-gray-900">
+                  <span className="font-medium text-gray-900 dark:text-gray-100">
                     {getVisualizationPayloadPointCount(activeSavedVisualization)}
                   </span>
                 </p>

@@ -8,7 +8,10 @@ import {
   VolcanoPayload,
   VolcanoPoint,
 } from "@/domain/visualization/index.types";
-import { VisualizationRenderer } from "@/domain/workflow/main.types";
+import {
+  VisualizationKind,
+  VisualizationRenderer,
+} from "@/domain/workflow/main.types";
 
 export const buildIntensityBarPayload = (
   intensityDist: IntensityDistribution
@@ -188,15 +191,18 @@ export const findLatestVisualizationImage = (
   {
     matrixId,
     renderer,
+    visualizationType,
   }: {
     matrixId?: string;
     renderer: VisualizationRenderer;
+    visualizationType?: VisualizationKind;
   }
 ) => {
   const visualization = sortVisualizationsByCreatedAt(visualizations).find(
     (item) =>
       item.renderer === renderer &&
       getVisualizationImage(item) &&
+      (!visualizationType || item.visualizationType === visualizationType) &&
       (!matrixId || item.sourceMatrixId === matrixId)
   );
 

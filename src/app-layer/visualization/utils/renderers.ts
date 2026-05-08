@@ -169,6 +169,65 @@ export const invokePythonScatterPlot = async (
   return toPngDataUrl(base64);
 };
 
+export const renderScatterSvg = (payload: ScatterPlotPayload): string => {
+  const points = payload.x
+    .map((xValue, index) => ({
+      x: Number(xValue),
+      y: Number(payload.y[index]),
+      label: payload.labels?.[index] ?? `point_${index + 1}`,
+    }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+
+  if (!points.length) {
+    return toSvgDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="720" height="420" viewBox="0 0 720 420">
+        <rect width="100%" height="100%" fill="#ffffff"/>
+        <text x="360" y="210" text-anchor="middle" font-size="16" fill="#6b7280">Scatter plot needs paired numeric values.</text>
+      </svg>
+    `);
+  }
+
+  const width = 760;
+  const height = 460;
+  const margin = { top: 52, right: 34, bottom: 66, left: 76 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const xMin = Math.min(...points.map((point) => point.x));
+  const xMax = Math.max(...points.map((point) => point.x));
+  const yMin = Math.min(...points.map((point) => point.y));
+  const yMax = Math.max(...points.map((point) => point.y));
+  const xPadding = (xMax - xMin || 1) * 0.08;
+  const yPadding = (yMax - yMin || 1) * 0.08;
+  const domainXMin = xMin - xPadding;
+  const domainXMax = xMax + xPadding;
+  const domainYMin = yMin - yPadding;
+  const domainYMax = yMax + yPadding;
+  const scaleX = (value: number) =>
+    margin.left +
+    ((value - domainXMin) / (domainXMax - domainXMin || 1)) * plotWidth;
+  const scaleY = (value: number) =>
+    margin.top +
+    plotHeight -
+    ((value - domainYMin) / (domainYMax - domainYMin || 1)) * plotHeight;
+
+  const circles = points
+    .map(
+      (point) =>
+        `<circle cx="${scaleX(point.x)}" cy="${scaleY(point.y)}" r="4" fill="#2563eb" opacity="0.72"><title>${escapeXml(point.label)}: ${point.x.toFixed(3)}, ${point.y.toFixed(3)}</title></circle>`
+    )
+    .join("");
+
+  return toSvgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect width="100%" height="100%" fill="#ffffff"/>
+      <text x="${margin.left}" y="32" font-size="20" font-weight="700" fill="#111827">Scatter Plot</text>
+      <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
+      <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
+      ${circles}
+    </svg>
+  `);
+};
+
 export const invokePythonPcaPlot = async (
   payload: PcaPlotPayload
 ): Promise<string> => {
