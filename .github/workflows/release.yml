@@ -147,26 +147,26 @@ jobs:
 
           if [ -z "${{ secrets.CSC_LINK }}" ] || [ -z "${{ secrets.CSC_KEY_PASSWORD }}" ]; then
             NOTE_PATH="release/$VERSION_NO_V/Icarus-Mac-${VERSION_NO_V}-Install-Notes.txt"
-            cat > "$NOTE_PATH" <<EOF
-            Icarus macOS install notes
-            =========================
-
-            This build is unsigned and not notarized. macOS may warn that the app is damaged
-            or from an unidentified developer. That does not necessarily mean the app is broken.
-
-            Recommended install path:
-            1. Download the .tar.gz asset if available, or use the .zip asset.
-            2. Extract the archive.
-            3. Move Icarus.app into /Applications.
-            4. If macOS blocks it, run:
-
-               xattr -dr com.apple.quarantine /Applications/Icarus.app
-
-            5. Then open the app again. If needed, right-click Icarus.app and choose Open.
-
-            Full signing and notarization require Apple Developer credentials, which are not
-            currently configured for this build.
-            EOF
+            printf '%s\n' \
+              'Icarus macOS install notes' \
+              '=========================' \
+              '' \
+              'This build is unsigned and not notarized. macOS may warn that the app is damaged' \
+              'or from an unidentified developer. That does not necessarily mean the app is broken.' \
+              '' \
+              'Recommended install path:' \
+              '1. Download the .tar.gz asset if available, or use the .zip asset.' \
+              '2. Extract the archive.' \
+              '3. Move Icarus.app into /Applications.' \
+              '4. If macOS blocks it, run:' \
+              '' \
+              '   xattr -dr com.apple.quarantine /Applications/Icarus.app' \
+              '' \
+              '5. Then open the app again. If needed, right-click Icarus.app and choose Open.' \
+              '' \
+              'Full signing and notarization require Apple Developer credentials, which are not' \
+              'currently configured for this build.' \
+              > "$NOTE_PATH"
           fi
 
       - name: Build Windows app
