@@ -21,12 +21,30 @@ class PlotCommand(Command):
             except (FileNotFoundError, OSError):
                 data = json.loads(input_arg)
 
-        labels = list(data.keys())
-        values = list(data.values())
+        categories = data.get('categories', [])
+        series = data.get('series', [])
+        if not categories and not series:
+            categories = list(data.keys())
+            series = [{
+                'name': data.get('title', 'Series'),
+                'values': list(data.values())
+            }]
 
-        plt.figure(figsize=(6,4))
-        plt.bar(labels, values)
-        plt.title('Python Bar Chart')
+        plt.figure(figsize=(10, 8))
+        x = range(len(categories))
+        total_series = max(1, len(series))
+        width = 0.8 / total_series
+
+        for index, entry in enumerate(series):
+            offsets = [item + (index - (total_series - 1) / 2) * width for item in x]
+            plt.bar(offsets, entry.get('values', []), width=width, label=entry.get('name', f'Series {index + 1}'))
+
+        plt.xticks(list(x), categories, rotation=35, ha='right')
+        if len(series) > 1:
+            plt.legend()
+        plt.xlabel(data.get('xAxisLabel', 'X Axis'))
+        plt.ylabel(data.get('yAxisLabel', 'Y Axis'))
+        plt.title(data.get('title', 'Bar Plot'))
         plt.tight_layout()
 
         if preview:

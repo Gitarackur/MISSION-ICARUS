@@ -3,34 +3,75 @@ import {
   IcarusVisualization,
 } from "@/domain/workflow/main.types";
 
-export type BarChartPayload = Record<string, number>;
+export type PlotSeries = {
+  name: string;
+  values: number[];
+};
+
+export type PlotAxisSelection = {
+  renderer?: "python" | "r" | "recharts";
+  xAxis?: string;
+  yAxes?: string[];
+  labelAxis?: string;
+  columns?: string[];
+  applyNegativeLog10ToY?: boolean;
+  nComponents?: number;
+};
+
+export type MultiBarChartPayload = {
+  categories: string[];
+  series: PlotSeries[];
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  title?: string;
+};
+
+export type BarChartPayload = MultiBarChartPayload;
 
 export type HeatmapPayload = {
   matrix: number[][];
   row_labels: string[];
   col_labels: string[];
+  title?: string;
 };
 
 export type VolcanoPayload = {
-  log2fc: number[];
-  pvalues: number[];
-  labels: string[];
-  fc_threshold: number;
-  pval_threshold: number;
-};
-
-export type BoxPlotPayload = Record<string, number[]>;
-
-export type ScatterPlotPayload = {
   x: number[];
   y: number[];
-  labels?: string[];
+  labels: string[];
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  title?: string;
+  xThreshold?: number;
+  yThreshold?: number;
+  yTransform?: "none" | "negative-log10";
+};
+
+export type BoxPlotPayload = {
+  series: PlotSeries[];
+  yAxisLabel?: string;
+  title?: string;
+};
+
+export type ScatterPlotPayload = {
+  series: Array<{
+    name: string;
+    x: number[];
+    y: number[];
+    labels?: string[];
+  }>;
+  xAxisLabel?: string;
+  yAxisLabel?: string;
+  title?: string;
 };
 
 export type PcaPlotPayload = {
   data: number[][];
   labels?: string[];
+  groups?: string[];
+  featureLabels?: string[];
   n_components?: number;
+  title?: string;
 };
 
 export type SavedImageVisualizationData = {

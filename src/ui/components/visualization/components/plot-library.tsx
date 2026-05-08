@@ -1,26 +1,36 @@
-import { useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
+import SingleSelect from "@/ui/design-system/Select/select";
+import MultiSelect from "@/ui/design-system/Select/Multi/select";
+import { Input } from "@/ui/design-system/Input";
 import { VisualizationRenderer } from "@/domain/workflow/main.types";
+import { PlotAxisSelection } from "@/domain/visualization/index.types";
 import { visualizationStyles } from "../variants/visualization.variants";
 
-type PlotEngine = "python" | "r" | "recharts";
+type PlotLibraryCard = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  disabled: boolean;
+  disabledReason?: string;
+  isLoading: boolean;
+  renderer: VisualizationRenderer;
+  renderers: readonly VisualizationRenderer[];
+  selection: PlotAxisSelection;
+  xAxisOptions?: string[];
+  yAxisOptions?: string[];
+  labelAxisOptions?: string[];
+  onRendererChange: (renderer: VisualizationRenderer) => void;
+  onSelectionChange: (selection: Partial<PlotAxisSelection>) => void;
+  onRender: () => void | Promise<void>;
+};
 
 export function PlotLibrary({
   isRendering,
   plots,
 }: {
   isRendering: boolean;
-  plots: Array<{
-    id: string;
-    eyebrow: string;
-    title: string;
-    description: string;
-    disabled: boolean;
-    disabledReason?: string;
-    isLoading: boolean;
-    onRender: (renderer?: VisualizationRenderer) => void | Promise<void>;
-      renderers: readonly PlotEngine[];
-  }>;
+  plots: PlotLibraryCard[];
 }) {
   const s = visualizationStyles();
 
@@ -28,9 +38,9 @@ export function PlotLibrary({
     <section className={s.gallerySection()}>
       <div>
         <p className={s.meta()}>Plot Library</p>
-        <h3 className={s.heading()}>Supported Plot Types</h3>
+        <h3 className={s.heading()}>Available Plot Types</h3>
         <p className={s.galleryMeta()}>
-          Python is the default engine where available. Native rendering stays available as a fallback.
+          Choose the plot once, then decide the renderer and axes from the same card.
         </p>
       </div>
 
@@ -50,22 +60,24 @@ function PlotActionCard({
   eyebrow,
   isLoading,
   isRendering,
+  labelAxisOptions,
   onRender,
+  onRendererChange,
+  onSelectionChange,
   renderers,
+  renderer,
+  selection,
   title,
-}: {
-  description: string;
-  disabled: boolean;
-  disabledReason?: string;
-  eyebrow: string;
-  isLoading: boolean;
-  isRendering: boolean;
-  onRender: (renderer?: VisualizationRenderer) => void | Promise<void>;
-  renderers: readonly PlotEngine[];
-  title: string;
-}) {
+  xAxisOptions,
+  yAxisOptions,
+}: PlotLibraryCard & { isRendering: boolean }) {
   const s = visualizationStyles();
-  const [engine, setEngine] = useState<PlotEngine>(renderers[0]);
+  const rendererOptions = renderers.map((item) => ({
+    value: item,
+    label: item === "recharts" ? "Native" : item.toUpperCase(),
+  }));
+  const axisOptions = (values?: string[]) =>
+    (values ?? []).map((value) => ({ value, label: value }));
 
   return (
     <div className={s.card()}>
@@ -77,7 +89,7 @@ function PlotActionCard({
         <button
           type="button"
           className={s.secondaryButton()}
-          onClick={() => onRender(engine)}
+          onClick={() => onRender()}
           disabled={disabled}
           title={disabledReason ?? `Create ${title}`}
         >
@@ -89,22 +101,85 @@ function PlotActionCard({
         </button>
       </div>
 
-      <div className="mb-3 flex flex-wrap gap-2">
-        {renderers.map((renderer) => (
-          <button
-            key={renderer}
-            type="button"
-            className={`${s.chip()} ${engine === renderer ? s.chipActive() : ""}`}
-            onClick={() => setEngine(renderer)}
-            disabled={disabled || isRendering}
-          >
-            {renderer === "recharts" ? "Native" : renderer.toUpperCase()}
-          </button>
-        ))}
+      <div className="grid gap-3 md:grid-cols-2">
+        <SingleSelect
+          label="Renderer"
+          options={rendererOptions}
+          value={renderer}
+          onChange={(value) =>
+            value && onRendererChange(value as VisualizationRenderer)
+          }
+          searchable={false}
+          clearable={false}
+        />
+
+        {labelAxisOptions?.length ? (
+          <SingleSelect
+            label="Label Column"
+            options={axisOptions(labelAxisOptions)}
+            value={selection.labelAxis ?? null}
+            onChange={(value) => onSelectionChange({ labelAxis: value ?? undefined })}
+            placeholder="Optional label column"
+            clearable
+          />
+        ) : (
+          <div />
+        )}
+
+        {xAxisOptions?.length ? (
+          <SingleSelect
+            label="X Axis"
+            options={axisOptions(xAxisOptions)}
+            value={selection.xAxis ?? null}
+            onChange={(value) => onSelectionChange({ xAxis: value ?? undefined })}
+            placeholder="Select x-axis"
+            clearable={false}
+          />
+        ) : null}
+
+        {yAxisOptions?.length ? (
+          <MultiSelect
+            label={xAxisOptions?.length ? "Y Axis / Series" : "Columns"}
+            options={axisOptions(yAxisOptions)}
+            value={
+              selection.yAxes ??
+              selection.columns ??
+              []
+            }
+            onChange={(values) =>
+              onSelectionChange(
+                xAxisOptions?.length
+                  ? { yAxes: values }
+                  : { columns: values }
+              )
+            }
+            placeholder="Select columns"
+            maxDisplayed={2}
+          />
+        ) : null}
+
+        {!xAxisOptions?.length && selection.nComponents !== undefined ? (
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+              Principal Components
+            </label>
+            <Input
+              type="number"
+              min={2}
+              max={10}
+              value={selection.nComponents}
+              onChange={(event) =>
+                onSelectionChange({
+                  nComponents: Math.max(2, Number(event.target.value) || 2),
+                })
+              }
+            />
+          </div>
+        ) : null}
       </div>
 
       <div className={s.plotContainer()}>
-        <div className="space-y-2 text-center">
+        <div className="space-y-3 text-center">
           <p className={s.subtleText()}>{description}</p>
           {disabledReason ? (
             <div className={s.emptyState()}>{disabledReason}</div>
@@ -112,10 +187,10 @@ function PlotActionCard({
             <button
               type="button"
               className={s.button()}
-              onClick={() => onRender(engine)}
-              disabled={disabled}
+              onClick={() => onRender()}
+              disabled={disabled || isRendering}
             >
-              Create with {engine === "recharts" ? "Native" : engine.toUpperCase()}
+              Create with {renderer === "recharts" ? "Native" : renderer.toUpperCase()}
             </button>
           )}
         </div>

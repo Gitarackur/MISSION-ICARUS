@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useVisualizationPanel } from "@/app-layer/visualization/hooks/useVisualizationPanel";
 import { useVisualizationDisplay } from "@/app-layer/visualization/hooks/useVisualizationDisplay";
 import { VisualizationPanelProps } from "./types/index.types";
+import { PlotAxisSelection } from "@/domain/visualization/index.types";
+import { VisualizationRenderer } from "@/domain/workflow/main.types";
 import {
   VisualizationSettingsPanel,
   VisualizationViewer,
@@ -14,28 +16,21 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const [showSettings, setShowSettings] = useState(false);
   const {
     activeSavedVisualization,
-    boxPayload,
-    boxReason,
+    columnOptions,
     error,
     hasSavedVisualization,
-    heatmapPayload,
-    heatmapReason,
-    pcaPayload,
-    pcaReason,
+    plotReadiness,
+    plotSelections,
+    renderBarPlot,
     renderBoxPlot,
     renderHeatmap,
     renderPcaPlot,
-    renderPythonPlot,
-    renderRPlot,
     renderScatterPlot,
     renderVolcanoPlot,
     renderingJob,
     savedVisualizations,
-    scatterPayload,
-    scatterReason,
     setActiveVisualizationId,
-    volcanoPayload,
-    volcanoReason,
+    setPlotSelection,
   } = useVisualizationPanel(props);
   const {
     activeDisplayImage,
@@ -55,105 +50,152 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
 
   const plotActions = [
     {
-      id: "python-bar",
-      eyebrow: "Python",
-      title: "Matrix Plot",
-      description: "Create a saved matrix summary bar chart.",
-      disabled: isRendering || hasSavedVisualization("bar", "python"),
-      disabledReason: hasSavedVisualization("bar", "python")
+      id: "bar",
+      eyebrow: "Summary",
+      title: "Bar Plot",
+      description: plotReadiness.bar.payload
+        ? "Plot one x-axis against one or more numeric series."
+        : plotReadiness.bar.reason ?? "Bar plot is unavailable for this matrix.",
+      disabled: isRendering || !plotReadiness.bar.payload || hasSavedVisualization("bar"),
+      disabledReason: hasSavedVisualization("bar")
         ? "Already created for this matrix."
         : undefined,
-      onRender: renderPythonPlot,
-      isLoading: renderingJob === "python-bar",
-      renderers: ["python", "recharts"] as const,
-    },
-    {
-      id: "r-bar",
-      eyebrow: "R",
-      title: "Matrix Plot",
-      description: "Create an R-rendered matrix summary chart.",
-      disabled: isRendering || hasSavedVisualization("bar", "r"),
-      disabledReason: hasSavedVisualization("bar", "r")
-        ? "Already created for this matrix."
-        : undefined,
-      onRender: renderRPlot,
-      isLoading: renderingJob === "r-bar",
-      renderers: ["r"] as const,
+      onRender: () => renderBarPlot(plotSelections.bar.renderer ?? "python"),
+      isLoading: renderingJob === "python-bar" || renderingJob === "r-bar",
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.bar.renderer ?? "python",
+      selection: plotSelections.bar,
+      xAxisOptions: columnOptions.allColumns,
+      yAxisOptions: columnOptions.numericColumns,
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("bar", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("bar", selection),
     },
     {
       id: "box",
       eyebrow: "Distribution",
       title: "Box Plot",
-      description: boxPayload
+      description: plotReadiness.box.payload
         ? "Summarize spread and outliers across numeric columns."
-        : boxReason ?? "Box plot is unavailable for this matrix.",
-      disabled: isRendering || !boxPayload || hasSavedVisualization("box"),
+        : plotReadiness.box.reason ?? "Box plot is unavailable for this matrix.",
+      disabled: isRendering || !plotReadiness.box.payload || hasSavedVisualization("box"),
       disabledReason: hasSavedVisualization("box")
         ? "Already created for this matrix."
         : undefined,
-      onRender: renderBoxPlot,
+      onRender: () => renderBoxPlot(plotSelections.box.renderer ?? "python"),
       isLoading: renderingJob === "box",
-      renderers: ["python", "recharts"] as const,
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.box.renderer ?? "python",
+      selection: plotSelections.box,
+      yAxisOptions: columnOptions.numericColumns,
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("box", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("box", selection),
     },
     {
       id: "scatter",
       eyebrow: "Relationship",
       title: "Scatter Plot",
-      description: scatterPayload
+      description: plotReadiness.scatter.payload
         ? "Plot paired numeric values from the active matrix."
-        : scatterReason ?? "Scatter plot is unavailable for this matrix.",
-      disabled: isRendering || !scatterPayload || hasSavedVisualization("scatter"),
+        : plotReadiness.scatter.reason ?? "Scatter plot is unavailable for this matrix.",
+      disabled:
+        isRendering || !plotReadiness.scatter.payload || hasSavedVisualization("scatter"),
       disabledReason: hasSavedVisualization("scatter")
         ? "Already created for this matrix."
         : undefined,
-      onRender: renderScatterPlot,
+      onRender: () => renderScatterPlot(plotSelections.scatter.renderer ?? "python"),
       isLoading: renderingJob === "scatter",
-      renderers: ["python", "recharts"] as const,
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.scatter.renderer ?? "python",
+      selection: plotSelections.scatter,
+      xAxisOptions: columnOptions.numericColumns,
+      yAxisOptions: columnOptions.numericColumns.filter(
+        (column) => column !== plotSelections.scatter.xAxis
+      ),
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("scatter", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("scatter", selection),
     },
     {
       id: "heatmap",
       eyebrow: "Correlation",
       title: "Heatmap",
-      description: heatmapPayload
+      description: plotReadiness.heatmap.payload
         ? "Create a correlation heatmap for the active matrix."
-        : heatmapReason ?? "Heatmap is unavailable for this matrix.",
-      disabled: isRendering || !heatmapPayload || hasSavedVisualization("heatmap"),
+        : plotReadiness.heatmap.reason ?? "Heatmap is unavailable for this matrix.",
+      disabled:
+        isRendering || !plotReadiness.heatmap.payload || hasSavedVisualization("heatmap"),
       disabledReason: hasSavedVisualization("heatmap")
         ? "Already created for this matrix."
         : undefined,
-      onRender: renderHeatmap,
+      onRender: () => renderHeatmap(plotSelections.heatmap.renderer ?? "python"),
       isLoading: renderingJob === "heatmap",
-      renderers: ["python", "recharts"] as const,
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.heatmap.renderer ?? "python",
+      selection: plotSelections.heatmap,
+      yAxisOptions: columnOptions.numericColumns,
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("heatmap", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("heatmap", selection),
     },
     {
       id: "volcano",
       eyebrow: "Significance",
       title: "Volcano Plot",
-      description: volcanoPayload
+      description: plotReadiness.volcano.payload
         ? "Visualize fold change against significance."
-        : volcanoReason ?? "Volcano plot is unavailable for this matrix.",
-      disabled: isRendering || !volcanoPayload || hasSavedVisualization("volcano"),
+        : plotReadiness.volcano.reason ?? "Volcano plot is unavailable for this matrix.",
+      disabled:
+        isRendering || !plotReadiness.volcano.payload || hasSavedVisualization("volcano"),
       disabledReason: hasSavedVisualization("volcano")
         ? "Already created for this matrix."
         : undefined,
-      onRender: renderVolcanoPlot,
+      onRender: () => renderVolcanoPlot(plotSelections.volcano.renderer ?? "python"),
       isLoading: renderingJob === "volcano",
-      renderers: ["python", "recharts"] as const,
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.volcano.renderer ?? "python",
+      selection: plotSelections.volcano,
+      xAxisOptions: columnOptions.numericColumns,
+      yAxisOptions: columnOptions.numericColumns.filter(
+        (column) => column !== plotSelections.volcano.xAxis
+      ),
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("volcano", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("volcano", selection),
     },
     {
       id: "pca",
       eyebrow: "Dimensionality",
       title: "PCA Plot",
-      description: pcaPayload
+      description: plotReadiness.pca.payload
         ? "Project the active matrix into principal components."
-        : pcaReason ?? "PCA plot is unavailable for this matrix.",
-      disabled: isRendering || !pcaPayload || hasSavedVisualization("pca"),
+        : plotReadiness.pca.reason ?? "PCA plot is unavailable for this matrix.",
+      disabled: isRendering || !plotReadiness.pca.payload || hasSavedVisualization("pca"),
       disabledReason: hasSavedVisualization("pca")
         ? "Already created for this matrix."
         : undefined,
-      onRender: renderPcaPlot,
+      onRender: () => renderPcaPlot(plotSelections.pca.renderer ?? "python"),
       isLoading: renderingJob === "pca",
-      renderers: ["python", "recharts"] as const,
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.pca.renderer ?? "python",
+      selection: plotSelections.pca,
+      yAxisOptions: columnOptions.numericColumns,
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("pca", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("pca", selection),
     },
   ];
 

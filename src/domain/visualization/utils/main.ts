@@ -18,34 +18,61 @@ export const buildIntensityBarPayload = (
   intensityDist: IntensityDistribution
 ): BarChartPayload => {
   if (!intensityDist.length) {
-    return { "No data": 0 };
+    return {
+      categories: ["No data"],
+      series: [{ name: "Intensity", values: [0] }],
+      xAxisLabel: "Sample",
+      yAxisLabel: "Mean intensity",
+      title: "Intensity Distribution",
+    };
   }
 
-  return intensityDist.reduce<BarChartPayload>((acc, item) => {
-    acc[item.sample] = item.meanIntensity;
-    return acc;
-  }, {});
+  return {
+    categories: intensityDist.map((item) => item.sample),
+    series: [
+      {
+        name: "Mean intensity",
+        values: intensityDist.map((item) => item.meanIntensity),
+      },
+    ],
+    xAxisLabel: "Sample",
+    yAxisLabel: "Mean intensity",
+    title: "Intensity Distribution",
+  };
 };
 
 export const buildMatrixBarPayload = (
   matrix?: MatrixRecord
 ): BarChartPayload => {
   if (!matrix?.columns.length || !matrix.data.length) {
-    return { "No matrix": 0 };
+    return {
+      categories: ["No matrix"],
+      series: [{ name: "Value", values: [0] }],
+      xAxisLabel: "Column",
+      yAxisLabel: "Mean value",
+      title: "Matrix Summary",
+    };
   }
 
-  return matrix.columns.reduce<BarChartPayload>((acc, column, columnIndex) => {
-    const values = matrix.data
-      .map((row) => Number(row[columnIndex]))
-      .filter((value) => Number.isFinite(value));
-
-    acc[column] =
-      values.length > 0
-        ? values.reduce((sum, value) => sum + value, 0) / values.length
-        : 0;
-
-    return acc;
-  }, {});
+  return {
+    categories: matrix.columns,
+    series: [
+      {
+        name: "Mean value",
+        values: matrix.columns.map((_, columnIndex) => {
+          const values = matrix.data
+            .map((row) => Number(row[columnIndex]))
+            .filter((value) => Number.isFinite(value));
+          return values.length > 0
+            ? values.reduce((sum, value) => sum + value, 0) / values.length
+            : 0;
+        }),
+      },
+    ],
+    xAxisLabel: "Column",
+    yAxisLabel: "Mean value",
+    title: "Matrix Summary",
+  };
 };
 
 const getFiniteMatrixColumnValues = (matrix: MatrixRecord, columnIndex: number) =>
@@ -113,11 +140,15 @@ export const buildVolcanoPayload = (
   }
 
   return {
-    log2fc: points.map((point) => point.x),
-    pvalues: points.map((point) => Math.max(10 ** -point.y, 1e-300)),
+    x: points.map((point) => point.x),
+    y: points.map((point) => Math.max(10 ** -point.y, 1e-300)),
     labels: points.map((point) => point.protein),
-    fc_threshold: 1,
-    pval_threshold: 0.05,
+    xAxisLabel: "Log2 Fold Change",
+    yAxisLabel: "-Log10 p-value",
+    title: "Volcano Plot",
+    xThreshold: 1,
+    yThreshold: 0.05,
+    yTransform: "negative-log10",
   };
 };
 
@@ -198,12 +229,20 @@ export const buildDefaultVisualizationDisplaySettings = (
   visualization?: VisualizationRecord
 ): VisualizationDisplaySettings => {
   const visualizationType = visualization?.visualizationType;
+  const payload = getSavedVisualizationPayload(visualization) as
+    | {
+        xAxisLabel?: string;
+        yAxisLabel?: string;
+      }
+    | undefined;
+  const xAxisLabel = payload?.xAxisLabel;
+  const yAxisLabel = payload?.yAxisLabel;
 
   switch (visualizationType) {
     case "heatmap":
       return {
-        xAxisLabel: "Columns",
-        yAxisLabel: "Rows",
+        xAxisLabel: xAxisLabel ?? "Columns",
+        yAxisLabel: yAxisLabel ?? "Rows",
         xTickAngle: -45,
         xMaxLabelLength: 16,
         yMaxLabelLength: 16,
@@ -213,8 +252,8 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "volcano":
       return {
-        xAxisLabel: "Log2 Fold Change",
-        yAxisLabel: "-Log10 p-value",
+        xAxisLabel: xAxisLabel ?? "Log2 Fold Change",
+        yAxisLabel: yAxisLabel ?? "-Log10 p-value",
         xTickAngle: 0,
         xMaxLabelLength: 14,
         yMaxLabelLength: 10,
@@ -224,8 +263,8 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "scatter":
       return {
-        xAxisLabel: "X Axis",
-        yAxisLabel: "Y Axis",
+        xAxisLabel: xAxisLabel ?? "X Axis",
+        yAxisLabel: yAxisLabel ?? "Y Axis",
         xTickAngle: 0,
         xMaxLabelLength: 14,
         yMaxLabelLength: 10,
@@ -235,8 +274,8 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "pca":
       return {
-        xAxisLabel: "PC1",
-        yAxisLabel: "PC2",
+        xAxisLabel: xAxisLabel ?? "PC1",
+        yAxisLabel: yAxisLabel ?? "PC2",
         xTickAngle: 0,
         xMaxLabelLength: 14,
         yMaxLabelLength: 10,
@@ -246,8 +285,8 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "box":
       return {
-        xAxisLabel: "Columns",
-        yAxisLabel: "Value",
+        xAxisLabel: xAxisLabel ?? "Columns",
+        yAxisLabel: yAxisLabel ?? "Value",
         xTickAngle: -35,
         xMaxLabelLength: 16,
         yMaxLabelLength: 10,
@@ -257,8 +296,8 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "bar":
       return {
-        xAxisLabel: "Columns",
-        yAxisLabel: "Value",
+        xAxisLabel: xAxisLabel ?? "Columns",
+        yAxisLabel: yAxisLabel ?? "Value",
         xTickAngle: -35,
         xMaxLabelLength: 16,
         yMaxLabelLength: 10,

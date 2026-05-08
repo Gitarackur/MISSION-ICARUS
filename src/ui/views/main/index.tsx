@@ -64,6 +64,11 @@ const IcarusApp: React.FC = () => {
     closeActivitySheet();
   };
   const toggleSidebar = () => setShowSession((value) => !value);
+  const handleCreateSessionAndOpenImport = async (sessionData: Parameters<typeof handleSessionCreate>[0]) => {
+    setActiveProteomicsTab("import");
+    setActiveVisualizationId("");
+    await handleSessionCreate(sessionData);
+  };
 
   return (
     <div className="flex h-screen flex-col bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100">
@@ -111,7 +116,7 @@ const IcarusApp: React.FC = () => {
             <CreateSession
               isProcessing={isProcessing}
               setIsProcessing={setIsProcessing}
-              handleSessionCreate={handleSessionCreate}
+              handleSessionCreate={handleCreateSessionAndOpenImport}
             />
           </div>
         )}

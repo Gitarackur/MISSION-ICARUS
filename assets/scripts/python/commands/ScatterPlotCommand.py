@@ -21,24 +21,28 @@ class ScatterPlotCommand(Command):
             except (FileNotFoundError, OSError):
                 data = json.loads(input_arg)
 
-        # Expected format: {"x": [x_values], "y": [y_values], "labels": [optional]}
-        x = data['x']
-        y = data['y']
-        labels = data.get('labels', None)
+        series = data.get('series', [])
+        if not series and 'x' in data and 'y' in data:
+            series = [{
+                'name': data.get('title', 'Series'),
+                'x': data.get('x', []),
+                'y': data.get('y', []),
+                'labels': data.get('labels', [])
+            }]
 
-        plt.figure(figsize=(8, 6))
-        if labels:
-            unique_labels = list(set(labels))
-            for label in unique_labels:
-                indices = [i for i, l in enumerate(labels) if l == label]
-                plt.scatter([x[i] for i in indices], [y[i] for i in indices], label=label, alpha=0.6)
+        plt.figure(figsize=(10, 8))
+        for entry in series:
+            x = entry.get('x', [])
+            y = entry.get('y', [])
+            label = entry.get('name', 'Series')
+            plt.scatter(x, y, label=label, alpha=0.65)
+
+        if len(series) > 1:
             plt.legend()
-        else:
-            plt.scatter(x, y, alpha=0.6)
-        
-        plt.xlabel('X')
-        plt.ylabel('Y')
-        plt.title('Scatter Plot')
+
+        plt.xlabel(data.get('xAxisLabel', 'X'))
+        plt.ylabel(data.get('yAxisLabel', 'Y'))
+        plt.title(data.get('title', 'Scatter Plot'))
         plt.tight_layout()
 
         if preview:
@@ -49,6 +53,4 @@ class ScatterPlotCommand(Command):
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             print(img_base64)
-
-
 

@@ -32,7 +32,7 @@ class HeatmapCommand(Command):
         sns.heatmap(matrix, annot=True, fmt='.2f', cmap='coolwarm',
                     xticklabels=col_labels if col_labels else 'auto',
                     yticklabels=row_labels if row_labels else 'auto')
-        plt.title('Heatmap')
+        plt.title(data.get('title', 'Heatmap'))
         plt.tight_layout()
 
         if preview:
