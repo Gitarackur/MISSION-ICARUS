@@ -10,6 +10,12 @@ import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 import { StatisticalAnalysisResult } from '@/domain/statistics/index.types';
+import {
+  buildVisualizationActivityFromStatisticalResult,
+  getVisualizationKindForStatisticalAction,
+  isVisualizationStatisticalAction,
+} from '@/app-layer/statistics/utils/statistical-visualization';
+import { getVisualizationMatrixId } from '@/domain/visualization/utils/main';
 
 
 const ROWS_PER_PAGE = 20;
@@ -27,6 +33,9 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   onSelectButtonForUpload,
   // callback to save activity on statistical analysis
   saveActivityInWorkflow,
+  saveVisualizationInWorkflow,
+  onVisualizationCreated,
+  visualizations = [],
   // the source session matrix
   sessionSourceMatrix
 }) => {
@@ -59,7 +68,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     toggleViewOfColumnOnPreviewTable(column, checked, ontoggle)
   };
 
-  const handleMenuAction = useCallback((result: StatisticalAnalysisResult) => {
+  const handleMenuAction = useCallback(async (result: StatisticalAnalysisResult) => {
     try {
       console.log("result", result)
 
@@ -71,6 +80,36 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       } = result
 
       if (result !== undefined) {
+        if (isVisualizationStatisticalAction(inputParameters.action)) {
+          const visualizationKind = getVisualizationKindForStatisticalAction(
+            inputParameters.action
+          );
+          const existingVisualization = visualizations.find(
+            (visualization) =>
+              visualization.visualizationType === visualizationKind &&
+              getVisualizationMatrixId(visualization) === sessionSourceMatrix?.id
+          );
+
+          if (existingVisualization) {
+            onVisualizationCreated?.(existingVisualization.id);
+            return;
+          }
+
+          const visualizationActivity =
+            buildVisualizationActivityFromStatisticalResult({
+              result,
+              sourceMatrixId: sessionSourceMatrix?.id,
+            });
+          const saveResult = visualizationActivity
+            ? await saveVisualizationInWorkflow?.(visualizationActivity)
+            : undefined;
+
+          if (saveResult?.visualizationId) {
+            onVisualizationCreated?.(saveResult.visualizationId);
+          }
+          return;
+        }
+
         saveActivityInWorkflow?.({
           // input keys, values and references
           inputColumnNames: inputParameters.columns,
@@ -90,7 +129,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     } catch (err) {
       throw new Error(`unable to handle menu selection: ${err}`)
     }
-  }, [saveActivityInWorkflow, sessionSourceMatrix]);
+  }, [
+    onVisualizationCreated,
+    saveActivityInWorkflow,
+    saveVisualizationInWorkflow,
+    sessionSourceMatrix,
+    visualizations,
+  ]);
 
 
   // account for empty state from raw data

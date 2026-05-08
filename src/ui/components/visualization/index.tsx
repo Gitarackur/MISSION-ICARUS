@@ -27,6 +27,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     boxPayload,
     boxReason,
     error,
+    hasSavedVisualization,
     heatmapPayload,
     heatmapReason,
     pcaImage,
@@ -52,6 +53,13 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   } = useVisualizationPanel(props);
 
   const isRendering = renderingJob !== null;
+  const hasPythonBar = hasSavedVisualization("bar", "python");
+  const hasRBar = hasSavedVisualization("bar", "r");
+  const hasBoxPlot = hasSavedVisualization("box");
+  const hasScatterPlot = hasSavedVisualization("scatter");
+  const hasPcaPlot = hasSavedVisualization("pca");
+  const hasVolcanoPlot = hasSavedVisualization("volcano");
+  const hasHeatmap = hasSavedVisualization("heatmap");
 
   return (
     <div className={s.container()}>
@@ -80,12 +88,14 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
                 <p className={s.meta()}>Interactive</p>
                 <h3 className={s.heading()}>Volcano Plot</h3>
               </div>
-              <IconButton
-                isLoading={renderingJob === "volcano"}
-                disabled={isRendering || !volcanoPayload}
-                label="Create saved volcano plot"
-                onClick={renderVolcanoPlot}
-              />
+              {!hasVolcanoPlot && (
+                <IconButton
+                  isLoading={renderingJob === "volcano"}
+                  disabled={isRendering || !volcanoPayload}
+                  label="Create saved volcano plot"
+                  onClick={renderVolcanoPlot}
+                />
+              )}
             </div>
             <div className={s.plotContainer()}>
               {props.volcanoData.length > 0 ? (
@@ -132,6 +142,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
             image={pythonImage}
             alt="Python intensity visualization"
             buttonLabel="Render Python Plot"
+            isCreated={hasPythonBar}
             isLoading={renderingJob === "python-bar"}
             isRendering={isRendering}
             onRender={renderPythonPlot}
@@ -143,6 +154,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
             image={rImage}
             alt="R intensity visualization"
             buttonLabel="Render R Plot"
+            isCreated={hasRBar}
             isLoading={renderingJob === "r-bar"}
             isRendering={isRendering}
             onRender={renderRPlot}
@@ -154,6 +166,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
             image={boxImage}
             alt="Python box plot"
             buttonLabel={boxPayload ? "Create Box Plot" : boxReason ?? "Box plot unavailable"}
+            isCreated={hasBoxPlot}
             isLoading={renderingJob === "box"}
             isRendering={isRendering || !boxPayload}
             onRender={renderBoxPlot}
@@ -167,6 +180,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
             buttonLabel={
               scatterPayload ? "Create Scatter Plot" : scatterReason ?? "Scatter plot unavailable"
             }
+            isCreated={hasScatterPlot}
             isLoading={renderingJob === "scatter"}
             isRendering={isRendering || !scatterPayload}
             onRender={renderScatterPlot}
@@ -178,6 +192,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
             image={pcaImage}
             alt="Python PCA plot"
             buttonLabel={pcaPayload ? "Create PCA Plot" : pcaReason ?? "PCA plot unavailable"}
+            isCreated={hasPcaPlot}
             isLoading={renderingJob === "pca"}
             isRendering={isRendering || !pcaPayload}
             onRender={renderPcaPlot}
@@ -224,15 +239,21 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
                 <p className={s.meta()}>Matrix</p>
                 <h3 className={s.heading()}>Sample Correlation Heatmap</h3>
               </div>
-              <IconButton
-                isLoading={renderingJob === "heatmap"}
-                disabled={isRendering || !heatmapPayload}
-                label="Create saved heatmap"
-                onClick={renderHeatmap}
-              />
+              {!hasHeatmap && (
+                <IconButton
+                  isLoading={renderingJob === "heatmap"}
+                  disabled={isRendering || !heatmapPayload}
+                  label="Create saved heatmap"
+                  onClick={renderHeatmap}
+                />
+              )}
             </div>
             <div className={s.placeholderBox()}>
-              {heatmapPayload ? (
+              {hasHeatmap ? (
+                <div className={s.emptyState()}>
+                  Heatmap already exists for this matrix.
+                </div>
+              ) : heatmapPayload ? (
                 <button
                   type="button"
                   className={s.button()}
@@ -290,6 +311,7 @@ function ImagePlotCard({
   buttonLabel,
   eyebrow,
   image,
+  isCreated = false,
   isLoading,
   isRendering,
   onRender,
@@ -299,6 +321,7 @@ function ImagePlotCard({
   buttonLabel: string;
   eyebrow: string;
   image: string | null;
+  isCreated?: boolean;
   isLoading: boolean;
   isRendering: boolean;
   onRender: () => void;
@@ -313,12 +336,14 @@ function ImagePlotCard({
           <p className={s.meta()}>{eyebrow}</p>
           <h3 className={s.heading()}>{title}</h3>
         </div>
-        <IconButton
-          isLoading={isLoading}
-          disabled={isRendering}
-          label={`Refresh ${eyebrow} plot`}
-          onClick={onRender}
-        />
+        {!isCreated && (
+          <IconButton
+            isLoading={isLoading}
+            disabled={isRendering}
+            label={`Refresh ${eyebrow} plot`}
+            onClick={onRender}
+          />
+        )}
       </div>
       <div className={s.plotContainer()}>
         {image ? (
@@ -329,6 +354,10 @@ function ImagePlotCard({
             loading="eager"
             decoding="async"
           />
+        ) : isCreated ? (
+          <div className={s.emptyState()}>
+            This plot already exists for the active matrix.
+          </div>
         ) : (
           <button
             type="button"

@@ -5,6 +5,8 @@ import {
   SaveStatisticalActivity,
   TableColumns,
 } from "@/domain/workflow/main.types";
+import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
+import { VisualizationRecord } from "@/domain/visualization/index.types";
 
 export type DataPreviewProps = {
   originalDataRows: ProteinRow[];
@@ -31,6 +33,10 @@ export type DataPreviewProps = {
 
     action,
   }: Partial<SaveStatisticalActivity>) => void;
+
+  saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
+  onVisualizationCreated?: (visualizationId: string) => void;
+  visualizations?: VisualizationRecord[];
 
   sessionSourceMatrix?: IcarusMatrix
 };

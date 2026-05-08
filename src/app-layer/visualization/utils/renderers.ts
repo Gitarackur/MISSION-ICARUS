@@ -169,7 +169,10 @@ export const invokePythonScatterPlot = async (
   return toPngDataUrl(base64);
 };
 
-export const renderScatterSvg = (payload: ScatterPlotPayload): string => {
+export const renderScatterSvg = (
+  payload: ScatterPlotPayload,
+  title = "Scatter Plot"
+): string => {
   const points = payload.x
     .map((xValue, index) => ({
       x: Number(xValue),
@@ -220,12 +223,31 @@ export const renderScatterSvg = (payload: ScatterPlotPayload): string => {
   return toSvgDataUrl(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" fill="#ffffff"/>
-      <text x="${margin.left}" y="32" font-size="20" font-weight="700" fill="#111827">Scatter Plot</text>
+      <text x="${margin.left}" y="32" font-size="20" font-weight="700" fill="#111827">${escapeXml(title)}</text>
       <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       ${circles}
     </svg>
   `);
+};
+
+export const renderPcaSvg = (payload: PcaPlotPayload): string => {
+  const rows = payload.data
+    .map((row, index) => ({
+      x: Number(row[0]),
+      y: Number(row[1]),
+      label: payload.labels?.[index] ?? `sample_${index + 1}`,
+    }))
+    .filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y));
+
+  return renderScatterSvg(
+    {
+      x: rows.map((point) => point.x),
+      y: rows.map((point) => point.y),
+      labels: rows.map((point) => point.label),
+    },
+    "PCA Plot"
+  );
 };
 
 export const invokePythonPcaPlot = async (

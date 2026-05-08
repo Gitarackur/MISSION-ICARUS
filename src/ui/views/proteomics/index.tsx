@@ -37,6 +37,10 @@ export default function ProteomicsAnalysisHomeView(
       setActiveVisualizationId("");
     }
   };
+  const selectCreatedVisualization = (visualizationId: string) => {
+    setActiveVisualizationId(visualizationId);
+    setActiveTab("visualization");
+  };
 
   return (
     <div className={styles.container()}>
@@ -59,6 +63,9 @@ export default function ProteomicsAnalysisHomeView(
               setSelectedDataColumns={setSelectedDataColumns}
               onSelectButtonForUpload={() => {}}
               saveActivityInWorkflow={saveActivityInWorkflow}
+              saveVisualizationInWorkflow={saveVisualizationInWorkflow}
+              onVisualizationCreated={selectCreatedVisualization}
+              visualizations={activeSession?.visualizations ?? []}
               sessionSourceMatrix={sessionSourceMatrix}
             />
           </div>

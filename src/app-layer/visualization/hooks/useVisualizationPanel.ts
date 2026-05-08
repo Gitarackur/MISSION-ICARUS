@@ -91,6 +91,15 @@ export const useVisualizationPanel = ({
     () => getVisualizationsForMatrix(savedVisualizations, activeMatrix?.id),
     [activeMatrix?.id, savedVisualizations]
   );
+  const hasSavedVisualization = useCallback(
+    (visualizationType: VisualizationKind, renderer?: VisualizationRenderer) =>
+      matrixVisualizations.some(
+        (visualization) =>
+          visualization.visualizationType === visualizationType &&
+          (!renderer || visualization.renderer === renderer)
+      ),
+    [matrixVisualizations]
+  );
 
   const activeSavedVisualization = useMemo(
     () =>
@@ -439,6 +448,7 @@ export const useVisualizationPanel = ({
     error,
     heatmapPayload: heatmapReadiness.payload,
     heatmapReason: heatmapReadiness.reason,
+    hasSavedVisualization,
     pcaImage,
     pcaPayload: pcaReadiness.payload,
     pcaReason: pcaReadiness.reason,
