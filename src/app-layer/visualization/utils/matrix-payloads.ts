@@ -204,29 +204,56 @@ export const buildConfiguredBarPayload = (
     (item) => selection.yAxes?.includes(item.column) && item.numeric
   );
 
-  if (!xDescriptor || !yDescriptors.length) {
+  if (!xDescriptor) {
     return {
       payload: null,
-      reason: "Bar plot needs one x-axis column and at least one numeric y-axis column.",
+      reason: "Bar plot needs an x-axis column.",
     };
   }
 
-  const categories = matrix.data.map((row, rowIndex) => {
-    const value = row[xDescriptor.index];
-    return value === null || value === undefined || value === ""
-      ? `row_${rowIndex + 1}`
-      : String(value);
-  });
+  const categories = Array.from(
+    new Set(
+      matrix.data.map((row, rowIndex) => {
+        const value = row[xDescriptor.index];
+        return value === null || value === undefined || value === ""
+          ? `row_${rowIndex + 1}`
+          : String(value);
+      })
+    )
+  );
 
-  const series = yDescriptors
-    .map((descriptor) => ({
-      name: descriptor.column,
-      values: matrix.data.map((row) => Number(toFinite(row[descriptor.index]) ?? 0)),
-    }))
-    .filter((entry) => entry.values.some((value) => Number.isFinite(value)));
+  const groupedRows = categories.map((category) =>
+    matrix.data.filter((row, rowIndex) => {
+      const value = row[xDescriptor.index];
+      const rowCategory =
+        value === null || value === undefined || value === ""
+          ? `row_${rowIndex + 1}`
+          : String(value);
+      return rowCategory === category;
+    })
+  );
+
+  const series = yDescriptors.length
+    ? yDescriptors
+        .map((descriptor) => ({
+          name: descriptor.column,
+          values: groupedRows.map((rows) => {
+            const values = rows
+              .map((row) => toFinite(row[descriptor.index]))
+              .filter((value): value is number => value !== null);
+            return values.length ? mean(values) : 0;
+          }),
+        }))
+        .filter((entry) => entry.values.some((value) => Number.isFinite(value)))
+    : [
+        {
+          name: "Count",
+          values: groupedRows.map((rows) => rows.length),
+        },
+      ];
 
   if (!series.length) {
-    return { payload: null, reason: "Bar plot could not find finite y-axis values." };
+    return { payload: null, reason: "Bar plot could not find values for the chosen axes." };
   }
 
   return {
@@ -235,8 +262,11 @@ export const buildConfiguredBarPayload = (
       series,
       title: "Bar Plot",
       xAxisLabel: selection.xAxis,
-      yAxisLabel:
-        yDescriptors.length === 1 ? yDescriptors[0].column : "Selected values",
+      yAxisLabel: yDescriptors.length
+        ? yDescriptors.length === 1
+          ? `${yDescriptors[0].column} (mean)`
+          : "Mean of selected values"
+        : "Count",
     },
   };
 };

@@ -55,6 +55,18 @@ type PlotSelectionState = Record<
   PlotAxisSelection
 >;
 
+const normalizeColumns = (columns?: string[]) =>
+  [...(columns ?? [])].filter(Boolean).sort();
+
+const sameColumns = (left?: string[], right?: string[]) => {
+  const leftNormalized = normalizeColumns(left);
+  const rightNormalized = normalizeColumns(right);
+  return (
+    leftNormalized.length === rightNormalized.length &&
+    leftNormalized.every((value, index) => value === rightNormalized[index])
+  );
+};
+
 const isScatterPayload = (payload: unknown): payload is ScatterPlotPayload =>
   Boolean(payload) &&
   typeof payload === "object" &&
@@ -211,12 +223,25 @@ export const useVisualizationPanel = ({
   );
 
   const hasSavedVisualization = useCallback(
-    (visualizationType: VisualizationKind, renderer?: VisualizationRenderer) =>
-      matrixVisualizations.some(
-        (visualization) =>
-          visualization.visualizationType === visualizationType &&
-          (!renderer || visualization.renderer === renderer)
-      ),
+    (
+      visualizationType: VisualizationKind,
+      renderer?: VisualizationRenderer,
+      inputColumnNames?: string[]
+    ) =>
+      matrixVisualizations.some((visualization) => {
+        if (visualization.visualizationType !== visualizationType) return false;
+        if (renderer && visualization.renderer !== renderer) return false;
+        if (inputColumnNames?.length) {
+          const savedColumns = (
+            visualization.data as SavedImageVisualizationData | undefined
+          )?.columns as string[] | undefined;
+          return sameColumns(
+            inputColumnNames,
+            savedColumns
+          );
+        }
+        return true;
+      }),
     [matrixVisualizations]
   );
 

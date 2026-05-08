@@ -47,6 +47,36 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   });
 
   const isRendering = renderingJob !== null;
+  const displayRendererOptions = activeSavedVisualization
+    ? [
+        {
+          value: "saved" as const,
+          label:
+            activeSavedVisualization.renderer === "recharts"
+              ? "Native Renderer"
+              : `${(activeSavedVisualization.renderer ?? "saved").toUpperCase()} Renderer`,
+        },
+        ...(canUseNativeView &&
+        activeSavedVisualization.renderer !== "recharts"
+          ? [{ value: "native" as const, label: "Native Renderer" }]
+          : []),
+      ]
+    : [];
+  const barColumns = [
+    plotSelections.bar.xAxis ?? "",
+    ...(plotSelections.bar.yAxes ?? []),
+  ].filter(Boolean);
+  const boxColumns = plotSelections.box.yAxes ?? [];
+  const scatterColumns = [
+    plotSelections.scatter.xAxis ?? "",
+    ...(plotSelections.scatter.yAxes ?? []),
+  ].filter(Boolean);
+  const heatmapColumns = plotSelections.heatmap.columns ?? [];
+  const volcanoColumns = [
+    plotSelections.volcano.xAxis ?? "",
+    ...(plotSelections.volcano.yAxes ?? []),
+  ].filter(Boolean);
+  const pcaColumns = plotSelections.pca.columns ?? [];
 
   const plotActions = [
     {
@@ -56,9 +86,16 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
       description: plotReadiness.bar.payload
         ? "Plot one x-axis against one or more numeric series."
         : plotReadiness.bar.reason ?? "Bar plot is unavailable for this matrix.",
-      disabled: isRendering || !plotReadiness.bar.payload || hasSavedVisualization("bar"),
-      disabledReason: hasSavedVisualization("bar")
-        ? "Already created for this matrix."
+      disabled:
+        isRendering ||
+        !plotReadiness.bar.payload ||
+        hasSavedVisualization("bar", plotSelections.bar.renderer, barColumns),
+      disabledReason: hasSavedVisualization(
+        "bar",
+        plotSelections.bar.renderer,
+        barColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
         : undefined,
       onRender: () => renderBarPlot(plotSelections.bar.renderer ?? "python"),
       isLoading: renderingJob === "python-bar" || renderingJob === "r-bar",
@@ -80,9 +117,16 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
       description: plotReadiness.box.payload
         ? "Summarize spread and outliers across numeric columns."
         : plotReadiness.box.reason ?? "Box plot is unavailable for this matrix.",
-      disabled: isRendering || !plotReadiness.box.payload || hasSavedVisualization("box"),
-      disabledReason: hasSavedVisualization("box")
-        ? "Already created for this matrix."
+      disabled:
+        isRendering ||
+        !plotReadiness.box.payload ||
+        hasSavedVisualization("box", plotSelections.box.renderer, boxColumns),
+      disabledReason: hasSavedVisualization(
+        "box",
+        plotSelections.box.renderer,
+        boxColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
         : undefined,
       onRender: () => renderBoxPlot(plotSelections.box.renderer ?? "python"),
       isLoading: renderingJob === "box",
@@ -104,9 +148,15 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         ? "Plot paired numeric values from the active matrix."
         : plotReadiness.scatter.reason ?? "Scatter plot is unavailable for this matrix.",
       disabled:
-        isRendering || !plotReadiness.scatter.payload || hasSavedVisualization("scatter"),
-      disabledReason: hasSavedVisualization("scatter")
-        ? "Already created for this matrix."
+        isRendering ||
+        !plotReadiness.scatter.payload ||
+        hasSavedVisualization("scatter", plotSelections.scatter.renderer, scatterColumns),
+      disabledReason: hasSavedVisualization(
+        "scatter",
+        plotSelections.scatter.renderer,
+        scatterColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
         : undefined,
       onRender: () => renderScatterPlot(plotSelections.scatter.renderer ?? "python"),
       isLoading: renderingJob === "scatter",
@@ -131,9 +181,15 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         ? "Create a correlation heatmap for the active matrix."
         : plotReadiness.heatmap.reason ?? "Heatmap is unavailable for this matrix.",
       disabled:
-        isRendering || !plotReadiness.heatmap.payload || hasSavedVisualization("heatmap"),
-      disabledReason: hasSavedVisualization("heatmap")
-        ? "Already created for this matrix."
+        isRendering ||
+        !plotReadiness.heatmap.payload ||
+        hasSavedVisualization("heatmap", plotSelections.heatmap.renderer, heatmapColumns),
+      disabledReason: hasSavedVisualization(
+        "heatmap",
+        plotSelections.heatmap.renderer,
+        heatmapColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
         : undefined,
       onRender: () => renderHeatmap(plotSelections.heatmap.renderer ?? "python"),
       isLoading: renderingJob === "heatmap",
@@ -155,9 +211,15 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         ? "Visualize fold change against significance."
         : plotReadiness.volcano.reason ?? "Volcano plot is unavailable for this matrix.",
       disabled:
-        isRendering || !plotReadiness.volcano.payload || hasSavedVisualization("volcano"),
-      disabledReason: hasSavedVisualization("volcano")
-        ? "Already created for this matrix."
+        isRendering ||
+        !plotReadiness.volcano.payload ||
+        hasSavedVisualization("volcano", plotSelections.volcano.renderer, volcanoColumns),
+      disabledReason: hasSavedVisualization(
+        "volcano",
+        plotSelections.volcano.renderer,
+        volcanoColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
         : undefined,
       onRender: () => renderVolcanoPlot(plotSelections.volcano.renderer ?? "python"),
       isLoading: renderingJob === "volcano",
@@ -181,9 +243,16 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
       description: plotReadiness.pca.payload
         ? "Project the active matrix into principal components."
         : plotReadiness.pca.reason ?? "PCA plot is unavailable for this matrix.",
-      disabled: isRendering || !plotReadiness.pca.payload || hasSavedVisualization("pca"),
-      disabledReason: hasSavedVisualization("pca")
-        ? "Already created for this matrix."
+      disabled:
+        isRendering ||
+        !plotReadiness.pca.payload ||
+        hasSavedVisualization("pca", plotSelections.pca.renderer, pcaColumns),
+      disabledReason: hasSavedVisualization(
+        "pca",
+        plotSelections.pca.renderer,
+        pcaColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
         : undefined,
       onRender: () => renderPcaPlot(plotSelections.pca.renderer ?? "python"),
       isLoading: renderingJob === "pca",
@@ -204,8 +273,8 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
       <VisualizationViewer
         activeDisplayImage={activeDisplayImage}
         activeVisualization={activeSavedVisualization}
-        canUseNativeView={canUseNativeView}
         displayMode={displayMode}
+        displayRendererOptions={displayRendererOptions}
         hasVisualizations={hasVisualizations}
         onDownload={downloadCurrentVisualization}
         onSelectVisualization={setActiveVisualizationId}
