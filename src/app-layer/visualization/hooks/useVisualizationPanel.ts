@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   buildIntensityBarPayload,
+  buildDefaultVisualizationDisplaySettings,
   buildMatrixBarPayload,
   buildVolcanoPayload,
   findLatestVisualizationImage,
@@ -10,20 +11,27 @@ import {
   getVisualizationsForMatrix,
   sortVisualizationsByCreatedAt,
 } from "@/domain/visualization/utils/main";
+import { renderBarSvg } from "@/app-layer/visualization/utils/display";
 import {
   VisualizationKind,
   VisualizationRenderer,
 } from "@/domain/workflow/main.types";
 import {
   invokePythonBarPlot,
+  invokePythonBoxPlot,
+  invokePythonHeatmap,
   invokePythonPcaPlot,
+  invokePythonScatterPlot,
+  invokePythonVolcanoPlot,
   invokeRBarPlot,
   renderBoxPlotSvg,
   renderHeatmapSvg,
+  renderPcaSvg,
   renderScatterSvg,
   renderVolcanoSvg,
 } from "@/app-layer/visualization/utils/renderers";
 import {
+  PcaPlotPayload,
   SavedImageVisualizationData,
   ScatterPlotPayload,
 } from "@/domain/visualization/index.types";
@@ -43,6 +51,12 @@ const isScatterPlotPayload = (payload: unknown): payload is ScatterPlotPayload =
   if (!payload || typeof payload !== "object") return false;
   const candidate = payload as Partial<ScatterPlotPayload>;
   return Array.isArray(candidate.x) && Array.isArray(candidate.y);
+};
+
+const isPcaPlotPayload = (payload: unknown): payload is PcaPlotPayload => {
+  if (!payload || typeof payload !== "object") return false;
+  const candidate = payload as Partial<PcaPlotPayload>;
+  return Array.isArray(candidate.data);
 };
 
 const getSavedVisualizationPayload = (visualization?: {
@@ -117,6 +131,13 @@ export const useVisualizationPanel = ({
         isScatterPlotPayload(payload)
       ) {
         return renderScatterSvg(payload);
+      }
+
+      if (
+        activeSavedVisualization?.visualizationType === "pca" &&
+        isPcaPlotPayload(payload)
+      ) {
+        return renderPcaSvg(payload);
       }
 
       return getVisualizationImage(activeSavedVisualization);
@@ -264,14 +285,67 @@ export const useVisualizationPanel = ({
     ]
   );
 
-  const renderPythonPlot = useCallback(async () => {
+  const renderVisualizationAsset = useCallback(
+    async ({
+      nativeRenderer,
+      pythonRenderer,
+      payload,
+      preferredRenderer = "python",
+    }: {
+      nativeRenderer: () => string;
+      pythonRenderer: () => Promise<string>;
+      payload: unknown;
+      preferredRenderer?: VisualizationRenderer;
+    }) => {
+      if (preferredRenderer === "recharts") {
+        return {
+          image: nativeRenderer(),
+          renderer: "recharts" as const,
+          payload,
+        };
+      }
+
+      try {
+        return {
+          image: await pythonRenderer(),
+          renderer: "python" as const,
+          payload,
+        };
+      } catch (error) {
+        console.error("Falling back to native visualization renderer", error);
+        return {
+          image: nativeRenderer(),
+          renderer: "recharts" as const,
+          payload,
+        };
+      }
+    },
+    []
+  );
+
+  const renderPythonPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
     try {
       setError(null);
       setRenderingJob("python-bar");
-      const image = await invokePythonBarPlot(intensityPayload);
+      const image =
+        preferredRenderer === "recharts"
+          ? renderBarSvg(
+              intensityPayload,
+              buildDefaultVisualizationDisplaySettings({
+                id: "preview",
+                createdByActivityId: null,
+                data: intensityPayload,
+                visualizationType: "bar",
+              }),
+              visualizationTitle
+            )
+          : await invokePythonBarPlot(intensityPayload);
+      if (!image) {
+        throw new Error("Unable to render bar chart for the active matrix.");
+      }
       setPythonImage(image);
       await saveRenderedVisualization({
-        renderer: "python",
+        renderer: preferredRenderer === "recharts" ? "recharts" : "python",
         image,
         visualizationType: "bar",
         title: visualizationTitle,
@@ -306,8 +380,9 @@ export const useVisualizationPanel = ({
     }
   }, [intensityPayload, saveRenderedVisualization, visualizationTitle]);
 
-  const renderBoxPlot = useCallback(async () => {
-    if (!boxReadiness.payload) {
+  const renderBoxPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
+    const payload = boxReadiness.payload;
+    if (!payload) {
       setError(boxReadiness.reason ?? "Box plot needs numeric matrix data.");
       return;
     }
@@ -315,25 +390,31 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("box");
-      const image = renderBoxPlotSvg(boxReadiness.payload);
+      const { image, renderer } = await renderVisualizationAsset({
+        nativeRenderer: () => renderBoxPlotSvg(payload),
+        pythonRenderer: () => invokePythonBoxPlot(payload),
+        payload,
+        preferredRenderer,
+      });
       setBoxImage(image);
       await saveRenderedVisualization({
-        renderer: "recharts",
+        renderer,
         image,
         visualizationType: "box",
         title: "Box plot",
-        data: boxReadiness.payload,
-        pointCount: Object.values(boxReadiness.payload).flat().length,
+        data: payload,
+        pointCount: Object.values(payload).flat().length,
       });
     } catch (err) {
       setError(`Box plot failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [boxReadiness, saveRenderedVisualization]);
+  }, [boxReadiness, renderVisualizationAsset, saveRenderedVisualization]);
 
-  const renderScatterPlot = useCallback(async () => {
-    if (!scatterReadiness.payload) {
+  const renderScatterPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
+    const payload = scatterReadiness.payload;
+    if (!payload) {
       setError(scatterReadiness.reason ?? "Scatter plot needs paired numeric data.");
       return;
     }
@@ -341,25 +422,31 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("scatter");
-      const image = renderScatterSvg(scatterReadiness.payload);
+      const { image, renderer } = await renderVisualizationAsset({
+        nativeRenderer: () => renderScatterSvg(payload),
+        pythonRenderer: () => invokePythonScatterPlot(payload),
+        payload,
+        preferredRenderer,
+      });
       setScatterImage(image);
       await saveRenderedVisualization({
-        renderer: "recharts",
+        renderer,
         image,
         visualizationType: "scatter",
         title: "Scatter plot",
-        data: scatterReadiness.payload,
-        pointCount: scatterReadiness.payload.x.length,
+        data: payload,
+        pointCount: payload.x.length,
       });
     } catch (err) {
       setError(`Scatter plot failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [saveRenderedVisualization, scatterReadiness]);
+  }, [renderVisualizationAsset, saveRenderedVisualization, scatterReadiness]);
 
-  const renderPcaPlot = useCallback(async () => {
-    if (!pcaReadiness.payload) {
+  const renderPcaPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
+    const payload = pcaReadiness.payload;
+    if (!payload) {
       setError(pcaReadiness.reason ?? "PCA plot needs numeric matrix data.");
       return;
     }
@@ -367,25 +454,31 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("pca");
-      const image = await invokePythonPcaPlot(pcaReadiness.payload);
+      const { image, renderer } = await renderVisualizationAsset({
+        nativeRenderer: () => renderPcaSvg(payload),
+        pythonRenderer: () => invokePythonPcaPlot(payload),
+        payload,
+        preferredRenderer,
+      });
       setPcaImage(image);
       await saveRenderedVisualization({
-        renderer: "python",
+        renderer,
         image,
         visualizationType: "pca",
         title: "PCA plot",
-        data: pcaReadiness.payload,
-        pointCount: pcaReadiness.payload.data.length,
+        data: payload,
+        pointCount: payload.data.length,
       });
     } catch (err) {
       setError(`PCA plot failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [pcaReadiness, saveRenderedVisualization]);
+  }, [pcaReadiness, renderVisualizationAsset, saveRenderedVisualization]);
 
-  const renderHeatmap = useCallback(async () => {
-    if (!heatmapReadiness.payload) {
+  const renderHeatmap = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
+    const payload = heatmapReadiness.payload;
+    if (!payload) {
       setError(heatmapReadiness.reason ?? "Heatmap needs matrix-like numeric data.");
       return;
     }
@@ -393,26 +486,32 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("heatmap");
-      const image = renderHeatmapSvg(heatmapReadiness.payload);
+      const { image, renderer } = await renderVisualizationAsset({
+        nativeRenderer: () => renderHeatmapSvg(payload),
+        pythonRenderer: () => invokePythonHeatmap(payload),
+        payload,
+        preferredRenderer,
+      });
       await saveRenderedVisualization({
-        renderer: "recharts",
+        renderer,
         image,
         visualizationType: "heatmap",
         title: "Sample correlation heatmap",
-        data: heatmapReadiness.payload,
+        data: payload,
         pointCount:
-          heatmapReadiness.payload.matrix.length *
-          heatmapReadiness.payload.matrix.length,
+          payload.matrix.length *
+          payload.matrix.length,
       });
     } catch (err) {
       setError(`Heatmap failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [heatmapReadiness, saveRenderedVisualization]);
+  }, [heatmapReadiness, renderVisualizationAsset, saveRenderedVisualization]);
 
-  const renderVolcanoPlot = useCallback(async () => {
-    if (!volcanoReadiness.payload) {
+  const renderVolcanoPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
+    const payload = volcanoReadiness.payload;
+    if (!payload) {
       setError(
         volcanoReadiness.reason ?? "Volcano plot needs fold-change and p-value data."
       );
@@ -422,21 +521,26 @@ export const useVisualizationPanel = ({
     try {
       setError(null);
       setRenderingJob("volcano");
-      const image = renderVolcanoSvg(volcanoReadiness.payload);
+      const { image, renderer } = await renderVisualizationAsset({
+        nativeRenderer: () => renderVolcanoSvg(payload),
+        pythonRenderer: () => invokePythonVolcanoPlot(payload),
+        payload,
+        preferredRenderer,
+      });
       await saveRenderedVisualization({
-        renderer: "recharts",
+        renderer,
         image,
         visualizationType: "volcano",
         title: "Volcano plot",
-        data: volcanoReadiness.payload,
-        pointCount: volcanoReadiness.payload.log2fc.length,
+        data: payload,
+        pointCount: payload.log2fc.length,
       });
     } catch (err) {
       setError(`Volcano plot failed: ${(err as Error).message || err}`);
     } finally {
       setRenderingJob(null);
     }
-  }, [saveRenderedVisualization, volcanoReadiness]);
+  }, [renderVisualizationAsset, saveRenderedVisualization, volcanoReadiness]);
 
   return {
     activeSavedImage,

@@ -1,4 +1,9 @@
 import {
+  invokePythonBoxPlot,
+  invokePythonHeatmap,
+  invokePythonPcaPlot,
+  invokePythonScatterPlot,
+  invokePythonVolcanoPlot,
   renderBoxPlotSvg,
   renderHeatmapSvg,
   renderPcaSvg,
@@ -53,13 +58,14 @@ export const buildVisualizationActivityFromStatisticalResult = ({
 }: {
   result: StatisticalAnalysisResult;
   sourceMatrixId?: string;
-}): SaveVisualizationActivity | null => {
+}): Promise<SaveVisualizationActivity | null> => {
+  return (async () => {
   const action = result.inputParameters.action;
   const config = visualizationActionMap[action];
   if (!config) return null;
 
   const columns = result.inputParameters.columns;
-  const payloadAndImage = buildVisualizationPayloadAndImage(
+  const payloadAndImage = await buildVisualizationPayloadAndImage(
     config.kind,
     result.data,
     columns
@@ -71,7 +77,7 @@ export const buildVisualizationActivityFromStatisticalResult = ({
     sourceMatrixId,
     inputMatrixReferences: sourceMatrixId,
     inputColumnNames: columns,
-    renderer: "recharts",
+    renderer: payloadAndImage.renderer,
     visualizationType: config.kind,
     title: config.title,
     data: {
@@ -85,15 +91,17 @@ export const buildVisualizationActivityFromStatisticalResult = ({
       source: "column-analysis",
     },
   };
+  })();
 };
 
-const buildVisualizationPayloadAndImage = (
+const buildVisualizationPayloadAndImage = async (
   kind: VisualizationKind,
   data: unknown[][],
   columns: TableColumns
-):
+): Promise<
   | {
       image: string;
+      renderer: "python" | "recharts";
       payload:
         | BoxPlotPayload
         | ScatterPlotPayload
@@ -102,7 +110,7 @@ const buildVisualizationPayloadAndImage = (
         | PcaPlotPayload;
       pointCount: number;
     }
-  | null => {
+  | null> => {
   switch (kind) {
     case "box": {
       const payload = columns.reduce<BoxPlotPayload>((acc, column, index) => {
@@ -113,8 +121,13 @@ const buildVisualizationPayloadAndImage = (
         (sum, values) => sum + values.length,
         0
       );
+      const image = await invokeWithFallback({
+        python: () => invokePythonBoxPlot(payload),
+        native: () => renderBoxPlotSvg(payload),
+      });
       return {
-        image: renderBoxPlotSvg(payload),
+        image: image.value,
+        renderer: image.renderer,
         payload,
         pointCount,
       };
@@ -128,8 +141,13 @@ const buildVisualizationPayloadAndImage = (
         y: y.slice(0, pointCount),
         labels: buildPointLabels(pointCount),
       };
+      const image = await invokeWithFallback({
+        python: () => invokePythonScatterPlot(payload),
+        native: () => renderScatterSvg(payload),
+      });
       return {
-        image: renderScatterSvg(payload),
+        image: image.value,
+        renderer: image.renderer,
         payload,
         pointCount,
       };
@@ -141,8 +159,13 @@ const buildVisualizationPayloadAndImage = (
         row_labels: labels,
         col_labels: labels,
       };
+      const image = await invokeWithFallback({
+        python: () => invokePythonHeatmap(payload),
+        native: () => renderHeatmapSvg(payload),
+      });
       return {
-        image: renderHeatmapSvg(payload),
+        image: image.value,
+        renderer: image.renderer,
         payload,
         pointCount: payload.matrix.length * labels.length,
       };
@@ -160,8 +183,13 @@ const buildVisualizationPayloadAndImage = (
         fc_threshold: 1,
         pval_threshold: 0.05,
       };
+      const image = await invokeWithFallback({
+        python: () => invokePythonVolcanoPlot(payload),
+        native: () => renderVolcanoSvg(payload),
+      });
       return {
-        image: renderVolcanoSvg(payload),
+        image: image.value,
+        renderer: image.renderer,
         payload,
         pointCount,
       };
@@ -178,13 +206,39 @@ const buildVisualizationPayloadAndImage = (
         labels: buildPointLabels(pointCount),
         n_components: 2,
       };
+      const image = await invokeWithFallback({
+        python: () => invokePythonPcaPlot(payload),
+        native: () => renderPcaSvg(payload),
+      });
       return {
-        image: renderPcaSvg(payload),
+        image: image.value,
+        renderer: image.renderer,
         payload,
         pointCount,
       };
     }
     default:
       return null;
+  }
+};
+
+const invokeWithFallback = async ({
+  native,
+  python,
+}: {
+  native: () => string;
+  python: () => Promise<string>;
+}) => {
+  try {
+    return {
+      value: await python(),
+      renderer: "python" as const,
+    };
+  } catch (error) {
+    console.error("Falling back to native statistical visualization", error);
+    return {
+      value: native(),
+      renderer: "recharts" as const,
+    };
   }
 };

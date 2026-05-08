@@ -4,6 +4,7 @@ import {
   IntensityDistribution,
   MatrixRecord,
   SavedImageVisualizationData,
+  VisualizationDisplaySettings,
   VisualizationRecord,
   VolcanoPayload,
   VolcanoPoint,
@@ -146,6 +147,13 @@ export const getVisualizationImage = (
     : null;
 };
 
+export const getSavedVisualizationPayload = (
+  visualization?: VisualizationRecord
+) => {
+  const data = visualization?.data as SavedImageVisualizationData | undefined;
+  return data?.payload;
+};
+
 export const getVisualizationMatrixId = (
   visualization?: VisualizationRecord
 ): string | null => {
@@ -184,6 +192,92 @@ export const getVisualizationLabel = (
   }
 
   return `${visualization.renderer ?? "plot"} ${index + 1}`;
+};
+
+export const buildDefaultVisualizationDisplaySettings = (
+  visualization?: VisualizationRecord
+): VisualizationDisplaySettings => {
+  const visualizationType = visualization?.visualizationType;
+
+  switch (visualizationType) {
+    case "heatmap":
+      return {
+        xAxisLabel: "Columns",
+        yAxisLabel: "Rows",
+        xTickAngle: -45,
+        xMaxLabelLength: 16,
+        yMaxLabelLength: 16,
+        maxXTicks: 18,
+        maxYTicks: 18,
+        showGrid: false,
+      };
+    case "volcano":
+      return {
+        xAxisLabel: "Log2 Fold Change",
+        yAxisLabel: "-Log10 p-value",
+        xTickAngle: 0,
+        xMaxLabelLength: 14,
+        yMaxLabelLength: 10,
+        maxXTicks: 8,
+        maxYTicks: 8,
+        showGrid: true,
+      };
+    case "scatter":
+      return {
+        xAxisLabel: "X Axis",
+        yAxisLabel: "Y Axis",
+        xTickAngle: 0,
+        xMaxLabelLength: 14,
+        yMaxLabelLength: 10,
+        maxXTicks: 8,
+        maxYTicks: 8,
+        showGrid: true,
+      };
+    case "pca":
+      return {
+        xAxisLabel: "PC1",
+        yAxisLabel: "PC2",
+        xTickAngle: 0,
+        xMaxLabelLength: 14,
+        yMaxLabelLength: 10,
+        maxXTicks: 8,
+        maxYTicks: 8,
+        showGrid: true,
+      };
+    case "box":
+      return {
+        xAxisLabel: "Columns",
+        yAxisLabel: "Value",
+        xTickAngle: -35,
+        xMaxLabelLength: 16,
+        yMaxLabelLength: 10,
+        maxXTicks: 14,
+        maxYTicks: 8,
+        showGrid: true,
+      };
+    case "bar":
+      return {
+        xAxisLabel: "Columns",
+        yAxisLabel: "Value",
+        xTickAngle: -35,
+        xMaxLabelLength: 16,
+        yMaxLabelLength: 10,
+        maxXTicks: 14,
+        maxYTicks: 8,
+        showGrid: true,
+      };
+    default:
+      return {
+        xAxisLabel: "X Axis",
+        yAxisLabel: "Y Axis",
+        xTickAngle: -20,
+        xMaxLabelLength: 14,
+        yMaxLabelLength: 10,
+        maxXTicks: 10,
+        maxYTicks: 8,
+        showGrid: true,
+      };
+  }
 };
 
 export const findLatestVisualizationImage = (

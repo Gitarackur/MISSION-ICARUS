@@ -40,6 +40,17 @@ export type SavedImageVisualizationData = {
   columns?: unknown;
 };
 
+export type VisualizationDisplaySettings = {
+  xAxisLabel: string;
+  yAxisLabel: string;
+  xTickAngle: number;
+  xMaxLabelLength: number;
+  yMaxLabelLength: number;
+  maxXTicks: number;
+  maxYTicks: number;
+  showGrid: boolean;
+};
+
 export type IntensityDistribution = {
   sample: string;
   meanIntensity: number;

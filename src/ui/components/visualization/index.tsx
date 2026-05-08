@@ -1,40 +1,27 @@
-import React from "react";
-import {
-  ResponsiveContainer,
-  ScatterChart,
-  Scatter,
-  CartesianGrid,
-  XAxis,
-  YAxis,
-  Tooltip as RechartsTooltip,
-} from "recharts";
-import { Loader2, RefreshCw } from "lucide-react";
-import ScatterTooltip from "@/ui/components/scatter/tooltip";
+import React, { useState } from "react";
 import { useVisualizationPanel } from "@/app-layer/visualization/hooks/useVisualizationPanel";
-import {
-  formatAxisLabel,
-  getVisualizationPayloadPointCount,
-} from "@/domain/visualization/utils/main";
+import { useVisualizationDisplay } from "@/app-layer/visualization/hooks/useVisualizationDisplay";
 import { VisualizationPanelProps } from "./types/index.types";
+import {
+  VisualizationSettingsPanel,
+  VisualizationViewer,
+} from "./components/visualization-viewer";
+import { PlotLibrary } from "./components/plot-library";
 import { visualizationStyles } from "./variants/visualization.variants";
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const s = visualizationStyles();
+  const [showSettings, setShowSettings] = useState(false);
   const {
-    activeSavedImage,
     activeSavedVisualization,
-    boxImage,
     boxPayload,
     boxReason,
     error,
     hasSavedVisualization,
     heatmapPayload,
     heatmapReason,
-    pcaImage,
     pcaPayload,
     pcaReason,
-    pythonImage,
-    rImage,
     renderBoxPlot,
     renderHeatmap,
     renderPcaPlot,
@@ -44,333 +31,159 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     renderVolcanoPlot,
     renderingJob,
     savedVisualizations,
-    scatterImage,
     scatterPayload,
     scatterReason,
+    setActiveVisualizationId,
     volcanoPayload,
     volcanoReason,
-    volcanoTickInterval,
   } = useVisualizationPanel(props);
+  const {
+    activeDisplayImage,
+    canUseNativeView,
+    displayMode,
+    downloadCurrentVisualization,
+    hasVisualizations,
+    setDisplayMode,
+    settings,
+    setSettings,
+  } = useVisualizationDisplay({
+    activeVisualization: activeSavedVisualization,
+    visualizations: savedVisualizations,
+  });
 
   const isRendering = renderingJob !== null;
-  const hasPythonBar = hasSavedVisualization("bar", "python");
-  const hasRBar = hasSavedVisualization("bar", "r");
-  const hasBoxPlot = hasSavedVisualization("box");
-  const hasScatterPlot = hasSavedVisualization("scatter");
-  const hasPcaPlot = hasSavedVisualization("pca");
-  const hasVolcanoPlot = hasSavedVisualization("volcano");
-  const hasHeatmap = hasSavedVisualization("heatmap");
+
+  const plotActions = [
+    {
+      id: "python-bar",
+      eyebrow: "Python",
+      title: "Matrix Plot",
+      description: "Create a saved matrix summary bar chart.",
+      disabled: isRendering || hasSavedVisualization("bar", "python"),
+      disabledReason: hasSavedVisualization("bar", "python")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderPythonPlot,
+      isLoading: renderingJob === "python-bar",
+      renderers: ["python", "recharts"] as const,
+    },
+    {
+      id: "r-bar",
+      eyebrow: "R",
+      title: "Matrix Plot",
+      description: "Create an R-rendered matrix summary chart.",
+      disabled: isRendering || hasSavedVisualization("bar", "r"),
+      disabledReason: hasSavedVisualization("bar", "r")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderRPlot,
+      isLoading: renderingJob === "r-bar",
+      renderers: ["r"] as const,
+    },
+    {
+      id: "box",
+      eyebrow: "Distribution",
+      title: "Box Plot",
+      description: boxPayload
+        ? "Summarize spread and outliers across numeric columns."
+        : boxReason ?? "Box plot is unavailable for this matrix.",
+      disabled: isRendering || !boxPayload || hasSavedVisualization("box"),
+      disabledReason: hasSavedVisualization("box")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderBoxPlot,
+      isLoading: renderingJob === "box",
+      renderers: ["python", "recharts"] as const,
+    },
+    {
+      id: "scatter",
+      eyebrow: "Relationship",
+      title: "Scatter Plot",
+      description: scatterPayload
+        ? "Plot paired numeric values from the active matrix."
+        : scatterReason ?? "Scatter plot is unavailable for this matrix.",
+      disabled: isRendering || !scatterPayload || hasSavedVisualization("scatter"),
+      disabledReason: hasSavedVisualization("scatter")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderScatterPlot,
+      isLoading: renderingJob === "scatter",
+      renderers: ["python", "recharts"] as const,
+    },
+    {
+      id: "heatmap",
+      eyebrow: "Correlation",
+      title: "Heatmap",
+      description: heatmapPayload
+        ? "Create a correlation heatmap for the active matrix."
+        : heatmapReason ?? "Heatmap is unavailable for this matrix.",
+      disabled: isRendering || !heatmapPayload || hasSavedVisualization("heatmap"),
+      disabledReason: hasSavedVisualization("heatmap")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderHeatmap,
+      isLoading: renderingJob === "heatmap",
+      renderers: ["python", "recharts"] as const,
+    },
+    {
+      id: "volcano",
+      eyebrow: "Significance",
+      title: "Volcano Plot",
+      description: volcanoPayload
+        ? "Visualize fold change against significance."
+        : volcanoReason ?? "Volcano plot is unavailable for this matrix.",
+      disabled: isRendering || !volcanoPayload || hasSavedVisualization("volcano"),
+      disabledReason: hasSavedVisualization("volcano")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderVolcanoPlot,
+      isLoading: renderingJob === "volcano",
+      renderers: ["python", "recharts"] as const,
+    },
+    {
+      id: "pca",
+      eyebrow: "Dimensionality",
+      title: "PCA Plot",
+      description: pcaPayload
+        ? "Project the active matrix into principal components."
+        : pcaReason ?? "PCA plot is unavailable for this matrix.",
+      disabled: isRendering || !pcaPayload || hasSavedVisualization("pca"),
+      disabledReason: hasSavedVisualization("pca")
+        ? "Already created for this matrix."
+        : undefined,
+      onRender: renderPcaPlot,
+      isLoading: renderingJob === "pca",
+      renderers: ["python", "recharts"] as const,
+    },
+  ];
 
   return (
     <div className={s.container()}>
-        {savedVisualizations.length > 0 && (
-          <div className={s.savedPreview()}>
-            {activeSavedImage ? (
-              <img
-                src={activeSavedImage}
-                alt={activeSavedVisualization?.title ?? "Saved visualization"}
-                className={s.savedImage()}
-                loading="eager"
-                decoding="async"
-              />
-            ) : (
-              <div className={s.emptyState()}>
-                This saved visualization does not include a displayable image.
-              </div>
-            )}
-          </div>
-        )}
+      <VisualizationViewer
+        activeDisplayImage={activeDisplayImage}
+        activeVisualization={activeSavedVisualization}
+        canUseNativeView={canUseNativeView}
+        displayMode={displayMode}
+        hasVisualizations={hasVisualizations}
+        onDownload={downloadCurrentVisualization}
+        onSelectVisualization={setActiveVisualizationId}
+        onSetDisplayMode={setDisplayMode}
+        onToggleSettings={() => setShowSettings((value) => !value)}
+        savedVisualizations={savedVisualizations}
+      />
 
-        <div className={s.grid()}>
-          <div className={s.card()}>
-            <div className={s.cardHeader()}>
-              <div>
-                <p className={s.meta()}>Interactive</p>
-                <h3 className={s.heading()}>Volcano Plot</h3>
-              </div>
-              {!hasVolcanoPlot && (
-                <IconButton
-                  isLoading={renderingJob === "volcano"}
-                  disabled={isRendering || !volcanoPayload}
-                  label="Create saved volcano plot"
-                  onClick={renderVolcanoPlot}
-                />
-              )}
-            </div>
-            <div className={s.plotContainer()}>
-              {props.volcanoData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%" debounce={80}>
-                  <ScatterChart
-                    margin={{ top: 12, right: 18, bottom: 12, left: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                    <XAxis
-                      dataKey="x"
-                      name="Log2 Fold Change"
-                      tickLine={false}
-                      tickFormatter={(value) => formatAxisLabel(value, 8)}
-                      interval={volcanoTickInterval}
-                      minTickGap={18}
-                    />
-                    <YAxis
-                      dataKey="y"
-                      name="-Log10 p-value"
-                      tickLine={false}
-                      tickFormatter={(value) => formatAxisLabel(value, 8)}
-                      minTickGap={12}
-                      width={46}
-                    />
-                    <RechartsTooltip content={<ScatterTooltip />} />
-                    <Scatter
-                      data={props.volcanoData}
-                      fill="#2563EB"
-                      isAnimationActive={false}
-                    />
-                  </ScatterChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className={s.emptyState()}>
-                  {volcanoReason ?? "Create a saved volcano plot from the active matrix."}
-                </div>
-              )}
-            </div>
-          </div>
+      {showSettings && activeSavedVisualization && (
+        <VisualizationSettingsPanel
+          settings={settings}
+          setSettings={setSettings}
+        />
+      )}
 
-          <ImagePlotCard
-            eyebrow="Python"
-            title="Matrix Plot"
-            image={pythonImage}
-            alt="Python intensity visualization"
-            buttonLabel="Render Python Plot"
-            isCreated={hasPythonBar}
-            isLoading={renderingJob === "python-bar"}
-            isRendering={isRendering}
-            onRender={renderPythonPlot}
-          />
+      <PlotLibrary isRendering={isRendering} plots={plotActions} />
 
-          <ImagePlotCard
-            eyebrow="R"
-            title="Matrix Plot"
-            image={rImage}
-            alt="R intensity visualization"
-            buttonLabel="Render R Plot"
-            isCreated={hasRBar}
-            isLoading={renderingJob === "r-bar"}
-            isRendering={isRendering}
-            onRender={renderRPlot}
-          />
-
-          <ImagePlotCard
-            eyebrow="Python"
-            title="Box Plot"
-            image={boxImage}
-            alt="Python box plot"
-            buttonLabel={boxPayload ? "Create Box Plot" : boxReason ?? "Box plot unavailable"}
-            isCreated={hasBoxPlot}
-            isLoading={renderingJob === "box"}
-            isRendering={isRendering || !boxPayload}
-            onRender={renderBoxPlot}
-          />
-
-          <ImagePlotCard
-            eyebrow="Python"
-            title="Scatter Plot"
-            image={scatterImage}
-            alt="Python scatter plot"
-            buttonLabel={
-              scatterPayload ? "Create Scatter Plot" : scatterReason ?? "Scatter plot unavailable"
-            }
-            isCreated={hasScatterPlot}
-            isLoading={renderingJob === "scatter"}
-            isRendering={isRendering || !scatterPayload}
-            onRender={renderScatterPlot}
-          />
-
-          <ImagePlotCard
-            eyebrow="Python"
-            title="PCA Plot"
-            image={pcaImage}
-            alt="Python PCA plot"
-            buttonLabel={pcaPayload ? "Create PCA Plot" : pcaReason ?? "PCA plot unavailable"}
-            isCreated={hasPcaPlot}
-            isLoading={renderingJob === "pca"}
-            isRendering={isRendering || !pcaPayload}
-            onRender={renderPcaPlot}
-          />
-
-          <div className={s.card()}>
-            <div className={s.cardHeader()}>
-              <div>
-                <p className={s.meta()}>Preview</p>
-                <h3 className={s.heading()}>Saved Visualization Details</h3>
-              </div>
-            </div>
-            {activeSavedVisualization ? (
-              <div className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <p>
-                  Renderer:{" "}
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {activeSavedVisualization.renderer ?? "Unknown"}
-                  </span>
-                </p>
-                <p>
-                  Type:{" "}
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {activeSavedVisualization.visualizationType ?? "Unknown"}
-                  </span>
-                </p>
-                <p>
-                  Points:{" "}
-                  <span className="font-medium text-gray-900 dark:text-gray-100">
-                    {getVisualizationPayloadPointCount(activeSavedVisualization)}
-                  </span>
-                </p>
-              </div>
-            ) : (
-              <div className={s.emptyState()}>
-                Render a plot to save it in the workflow.
-              </div>
-            )}
-          </div>
-
-          <div className={s.card()}>
-            <div className={s.cardHeader()}>
-              <div>
-                <p className={s.meta()}>Matrix</p>
-                <h3 className={s.heading()}>Sample Correlation Heatmap</h3>
-              </div>
-              {!hasHeatmap && (
-                <IconButton
-                  isLoading={renderingJob === "heatmap"}
-                  disabled={isRendering || !heatmapPayload}
-                  label="Create saved heatmap"
-                  onClick={renderHeatmap}
-                />
-              )}
-            </div>
-            <div className={s.placeholderBox()}>
-              {hasHeatmap ? (
-                <div className={s.emptyState()}>
-                  Heatmap already exists for this matrix.
-                </div>
-              ) : heatmapPayload ? (
-                <button
-                  type="button"
-                  className={s.button()}
-                  onClick={renderHeatmap}
-                  disabled={isRendering}
-                >
-                  Create Heatmap
-                </button>
-              ) : (
-                <div className={s.emptyState()}>
-                  {heatmapReason ?? "Heatmap is not available for this matrix."}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
     </div>
   );
 };
-
-function IconButton({
-  disabled,
-  isLoading,
-  label,
-  onClick,
-}: {
-  disabled: boolean;
-  isLoading: boolean;
-  label: string;
-  onClick: () => void;
-}) {
-  const s = visualizationStyles();
-
-  return (
-    <button
-      type="button"
-      className={s.secondaryButton()}
-      onClick={onClick}
-      disabled={disabled}
-      title={label}
-    >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <RefreshCw className="h-4 w-4" />
-      )}
-    </button>
-  );
-}
-
-function ImagePlotCard({
-  alt,
-  buttonLabel,
-  eyebrow,
-  image,
-  isCreated = false,
-  isLoading,
-  isRendering,
-  onRender,
-  title,
-}: {
-  alt: string;
-  buttonLabel: string;
-  eyebrow: string;
-  image: string | null;
-  isCreated?: boolean;
-  isLoading: boolean;
-  isRendering: boolean;
-  onRender: () => void;
-  title: string;
-}) {
-  const s = visualizationStyles();
-
-  return (
-    <div className={s.card()}>
-      <div className={s.cardHeader()}>
-        <div>
-          <p className={s.meta()}>{eyebrow}</p>
-          <h3 className={s.heading()}>{title}</h3>
-        </div>
-        {!isCreated && (
-          <IconButton
-            isLoading={isLoading}
-            disabled={isRendering}
-            label={`Refresh ${eyebrow} plot`}
-            onClick={onRender}
-          />
-        )}
-      </div>
-      <div className={s.plotContainer()}>
-        {image ? (
-          <img
-            src={image}
-            alt={alt}
-            className="h-full w-full object-contain"
-            loading="eager"
-            decoding="async"
-          />
-        ) : isCreated ? (
-          <div className={s.emptyState()}>
-            This plot already exists for the active matrix.
-          </div>
-        ) : (
-          <button
-            type="button"
-            className={s.button()}
-            onClick={onRender}
-            disabled={isRendering}
-          >
-            {buttonLabel}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
 
 export default VisualizationPanel;

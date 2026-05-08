@@ -1,8 +1,9 @@
 // @see - https://www.electron.build/configuration/configuration
 {
   $schema: "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
-  appId: "YourAppID",
+  appId: "com.missionicarus.app",
   asar: true,
+  afterSign: "electron/notarize.mjs",
   productName: "Icarus",
   directories: {
     output: "release/${version}",
@@ -18,6 +19,10 @@
   mac: {
     icon: "public/assets/icarus-compressed.png",
     target: ["dmg"],
+    hardenedRuntime: true,
+    gatekeeperAssess: false,
+    entitlements: "build/entitlements.mac.plist",
+    entitlementsInherit: "build/entitlements.mac.inherit.plist",
     artifactName: "${productName}-Mac-${version}-Installer.${ext}",
   },
   win: {

@@ -1,21 +1,36 @@
 import { tv } from "tailwind-variants";
 
-
-
 // Define button variants with tailwind-variants
 export const tabButtonStyles = tv({
-  base: `
-    flex items-center space-x-2
-    px-4 py-1.5 pt-2.5
-    border-b-4 font-semibold text-sm 
-    flex-grow sm:flex-grow-0 min-w-0
-    transition-colors duration-200 ease-in-out
-    focus:outline-none  focus:ring-offset-2
-  `,
+  slots: {
+    navContainer: "overflow-x-hidden border-gray-400 bg-white dark:border-gray-800 dark:bg-gray-950",
+    subNavContainer: "px-3 sm:px-6 flex items-center justify-between max-w-full",
+    navBase: `
+      inline-flex flex-wrap justify-center sm:justify-start
+      gap-x-1 gap-y-2  rounded-t 
+      max-w-full 
+    `,
+    base: `
+      flex items-center space-x-2
+      px-4 py-1.5 pt-2.5
+      border-b-4 font-semibold text-sm 
+      flex-grow sm:flex-grow-0 min-w-0
+      transition-colors duration-200 ease-in-out
+      focus:outline-none  focus:ring-offset-2
+    `,
+    icon: "flex-shrink-0",
+  },
   variants: {
     active: {
-      true: 'border-blue-600 text-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300',
-      false: 'border-transparent text-gray-600 hover:text-blue-600 hover:border-blue-300 dark:text-gray-400 dark:hover:text-blue-300',
+      true: {
+        icon: "text-blue-600 dark:text-blue-300",
+        base: "border-blue-600 text-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300",
+      },
+      false: {
+        icon: "text-gray-600 dark:text-gray-400",
+        base:
+          "border-transparent text-gray-600 hover:text-blue-600 hover:border-blue-300 dark:text-gray-400 dark:hover:text-blue-300",
+      },
     },
   },
 });

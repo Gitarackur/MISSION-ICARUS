@@ -339,7 +339,11 @@ const ActivityTree2 = ({
       //   .text((d) => `ID: ${d.data.activity.id.slice(-8)}`);
 
       // Button container
-      const buttonGroup = nodes
+      const nonVisualizationNodes = nodes.filter(
+        (node) => !node.data.activity.name.startsWith("visualization--")
+      );
+
+      const buttonGroup = nonVisualizationNodes
         .append("g")
         .attr("transform", `translate(0, ${nodeHeight / 2 - 30})`);
 
