@@ -14,8 +14,8 @@ export const tabButtonStyles = tv({
   `,
   variants: {
     active: {
-      true: 'border-blue-600 text-blue-600 bg-blue-50',
-      false: 'border-transparent text-gray-600 hover:text-blue-600 hover:border-blue-300',
+      true: 'border-blue-600 text-blue-600 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/40 dark:text-blue-300',
+      false: 'border-transparent text-gray-600 hover:text-blue-600 hover:border-blue-300 dark:text-gray-400 dark:hover:text-blue-300',
     },
   },
 });

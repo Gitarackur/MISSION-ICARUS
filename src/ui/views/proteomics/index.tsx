@@ -31,13 +31,19 @@ export default function ProteomicsAnalysisHomeView(
     originalDataColumns,
     originalDataRows,
   });
+  const selectTab = (tab: typeof activeTab) => {
+    setActiveTab(tab);
+    if (tab !== "visualization") {
+      setActiveVisualizationId("");
+    }
+  };
 
   return (
     <div className={styles.container()}>
       <div className={styles.stickyHeader()}>
         <NavTabs
           active={activeTab}
-          setActive={setActiveTab}
+          setActive={selectTab}
           openActivitySheet={openActivitySheet}
         />
       </div>
@@ -71,6 +77,7 @@ export default function ProteomicsAnalysisHomeView(
             saveVisualizationInWorkflow={saveVisualizationInWorkflow}
             activeVisualizationId={activeVisualizationId}
             setActiveVisualizationId={setActiveVisualizationId}
+            shouldAutoSelectVisualization={activeTab === "visualization"}
           />
         )}
 

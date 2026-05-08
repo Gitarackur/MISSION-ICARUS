@@ -3,6 +3,7 @@ import { Download, Settings } from "lucide-react";
 import { handleFileExport } from "@/app-layer/shared/utils";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationsForMatrix } from "@/domain/visualization/utils/main";
+import { ThemeModeControl } from "@/ui/theme/theme-mode-control";
 import {
   headerVariants,
   tabNavigationVariants,
@@ -11,12 +12,10 @@ import {
 import { VisualizationTabButton } from "./visualization-tab";
 import { MatrixTabProps, MatrixTabGroupProps } from "./types/index.types";
 
-const MAX_VISIBLE_VISUALIZATION_TABS = 3;
-
 const MatrixTab = ({
   matrices,
   activeMatrixId,
-  setActiveMatrixId,
+  onMatrixSelect,
   toggleSidebar,
   dataRows,
   visualizations = [],
@@ -45,7 +44,7 @@ const MatrixTab = ({
       <button
         type="button"
         onClick={toggleSidebar}
-        className="flex flex-shrink-0 items-center border-r border-gray-300"
+        className="flex flex-shrink-0 items-center border-r border-gray-300 dark:border-gray-700 dark:bg-gray-950"
       >
         <img
           alt="icarus-image"
@@ -55,7 +54,7 @@ const MatrixTab = ({
         />
       </button>
 
-      <div className="flex w-full overflow-x-auto overflow-y-hidden border-x border-gray-300">
+      <div className="flex w-full overflow-x-auto overflow-y-hidden border-x border-gray-300 dark:border-gray-700">
         {matrices.map((matrix) => (
           <MatrixTabGroup
             key={matrix.id}
@@ -63,7 +62,7 @@ const MatrixTab = ({
             isActive={activeMatrixId === matrix.id}
             visualizations={visualizationsByMatrix[matrix.id] ?? []}
             activeVisualizationId={activeVisualizationId}
-            onMatrixSelect={setActiveMatrixId}
+            onMatrixSelect={onMatrixSelect}
             onVisualizationSelect={onVisualizationSelect}
           />
         ))}
@@ -71,20 +70,25 @@ const MatrixTab = ({
       </div>
 
       {activeMatrixId && (
-        <div className="flex flex-row gap-3 px-5">
+        <div className="flex flex-row gap-3 px-5 dark:bg-gray-950">
           <button
             type="button"
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
             onClick={handleExport}
           >
             <Download className={s.buttonIcon()} />
             <span className="text-sm">Export</span>
           </button>
 
-          <button type="button" className="flex items-center gap-2">
+          <button
+            type="button"
+            className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+          >
             <Settings className={s.buttonIcon()} />
             <span className="text-sm">Settings</span>
           </button>
+
+          <ThemeModeControl />
         </div>
       )}
     </div>
@@ -99,26 +103,36 @@ const MatrixTabGroup = ({
   onMatrixSelect,
   onVisualizationSelect,
 }: MatrixTabGroupProps) => {
-
-  const visibleVisualizations = visualizations.slice(
-    0,
-    MAX_VISIBLE_VISUALIZATION_TABS,
-  );
-  const hiddenVisualizationCount =
-    visualizations.length - visibleVisualizations.length;
-
-  const { tabList, tabButton, tabButtonWrapper } = tabNavigationVariants({ active: isActive });
+  const { tabButton, visualizationList } = tabNavigationVariants({
+    active: isActive,
+  });
   const { wrapper } = matrixTabVariants({ active: isActive });
 
   return (
-    <div className={wrapper()} aria-label={`${matrix.id} matrix tab group`}>
-      {visibleVisualizations.length > 0 && (
+    <div
+      className={wrapper()}
+      aria-label={`${matrix.id} matrix tab group`}
+      onClick={() => onMatrixSelect(matrix.id)}
+    >
+      <button
+        type="button"
+        onClick={(event) => {
+          event.stopPropagation();
+          onMatrixSelect(matrix.id);
+        }}
+        className={tabButton()}
+        title={matrix.id}
+      >
+        <span className="block truncate">{matrix.id}</span>
+      </button>
+
+      {visualizations.length > 0 && (
         <div
-          className={tabList()}
+          className={visualizationList()}
           role="tablist"
           aria-label={`${matrix.id} visualizations`}
         >
-          {visibleVisualizations.map((visualization, index) => (
+          {visualizations.map((visualization, index) => (
             <VisualizationTabButton
               key={visualization.id}
               matrixId={matrix.id}
@@ -128,26 +142,8 @@ const MatrixTabGroup = ({
               onVisualizationSelect={onVisualizationSelect}
             />
           ))}
-
-          {hiddenVisualizationCount > 0 && (
-            <span className="px-1 text-[10px] font-medium text-gray-500">
-              +{hiddenVisualizationCount}
-            </span>
-          )}
         </div>
       )}
-
-      <button
-        type="button"
-        onClick={() => onMatrixSelect(matrix.id)}
-        className={[
-          tabButton({ active: isActive }),
-          tabButtonWrapper(),
-        ].join(" ")}
-        title={matrix.id}
-      >
-        <span className="block truncate">{matrix.id}</span>
-      </button>
     </div>
   );
 };

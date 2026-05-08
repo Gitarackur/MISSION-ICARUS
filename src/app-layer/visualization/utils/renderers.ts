@@ -20,6 +20,16 @@ const escapeXml = (value: string | number) =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+const quantile = (values: number[], probability: number) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  if (!sorted.length) return 0;
+  const position = (sorted.length - 1) * probability;
+  const base = Math.floor(position);
+  const rest = position - base;
+  const next = sorted[base + 1];
+  return next === undefined ? sorted[base] : sorted[base] + rest * (next - sorted[base]);
+};
+
 export const invokePythonBarPlot = async (
   payload: BarChartPayload
 ): Promise<string> => {
@@ -62,6 +72,90 @@ export const invokePythonBoxPlot = async (
   });
 
   return toPngDataUrl(base64);
+};
+
+export const renderBoxPlotSvg = (payload: BoxPlotPayload): string => {
+  const entries = Object.entries(payload)
+    .map(([label, values]) => ({
+      label,
+      values: values.filter((value) => Number.isFinite(value)),
+    }))
+    .filter((entry) => entry.values.length >= 2)
+    .slice(0, 24);
+
+  if (!entries.length) {
+    return toSvgDataUrl(`
+      <svg xmlns="http://www.w3.org/2000/svg" width="720" height="360" viewBox="0 0 720 360">
+        <rect width="100%" height="100%" fill="#ffffff"/>
+        <text x="360" y="180" text-anchor="middle" font-size="16" fill="#6b7280">Box plot needs numeric columns with at least two values.</text>
+      </svg>
+    `);
+  }
+
+  const width = Math.max(720, entries.length * 64 + 140);
+  const height = 420;
+  const margin = { top: 52, right: 32, bottom: 108, left: 76 };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const stats = entries.map(({ label, values }) => {
+    const sorted = [...values].sort((a, b) => a - b);
+    const q1 = quantile(sorted, 0.25);
+    const median = quantile(sorted, 0.5);
+    const q3 = quantile(sorted, 0.75);
+    const iqr = q3 - q1;
+    const lowFence = q1 - 1.5 * iqr;
+    const highFence = q3 + 1.5 * iqr;
+    const whiskerLow = sorted.find((value) => value >= lowFence) ?? sorted[0];
+    const whiskerHigh =
+      [...sorted].reverse().find((value) => value <= highFence) ??
+      sorted[sorted.length - 1];
+    return { label, q1, median, q3, whiskerLow, whiskerHigh };
+  });
+
+  const yMin = Math.min(...stats.map((item) => item.whiskerLow));
+  const yMax = Math.max(...stats.map((item) => item.whiskerHigh));
+  const yPadding = (yMax - yMin || 1) * 0.08;
+  const domainMin = yMin - yPadding;
+  const domainMax = yMax + yPadding;
+  const scaleY = (value: number) =>
+    margin.top +
+    plotHeight -
+    ((value - domainMin) / (domainMax - domainMin || 1)) * plotHeight;
+  const step = plotWidth / entries.length;
+  const boxWidth = Math.min(38, step * 0.48);
+
+  const boxes = stats
+    .map((item, index) => {
+      const centerX = margin.left + step * index + step / 2;
+      const q3Y = scaleY(item.q3);
+      const q1Y = scaleY(item.q1);
+      const medianY = scaleY(item.median);
+      const lowY = scaleY(item.whiskerLow);
+      const highY = scaleY(item.whiskerHigh);
+      const label = escapeXml(item.label);
+      return `
+        <line x1="${centerX}" y1="${highY}" x2="${centerX}" y2="${q3Y}" stroke="#1f2937" stroke-width="1.5"/>
+        <line x1="${centerX}" y1="${q1Y}" x2="${centerX}" y2="${lowY}" stroke="#1f2937" stroke-width="1.5"/>
+        <line x1="${centerX - boxWidth / 3}" y1="${highY}" x2="${centerX + boxWidth / 3}" y2="${highY}" stroke="#1f2937" stroke-width="1.5"/>
+        <line x1="${centerX - boxWidth / 3}" y1="${lowY}" x2="${centerX + boxWidth / 3}" y2="${lowY}" stroke="#1f2937" stroke-width="1.5"/>
+        <rect x="${centerX - boxWidth / 2}" y="${q3Y}" width="${boxWidth}" height="${Math.max(1, q1Y - q3Y)}" fill="#bfdbfe" stroke="#2563eb" stroke-width="1.5">
+          <title>${label}: median ${item.median.toFixed(3)}</title>
+        </rect>
+        <line x1="${centerX - boxWidth / 2}" y1="${medianY}" x2="${centerX + boxWidth / 2}" y2="${medianY}" stroke="#1d4ed8" stroke-width="2"/>
+        <text transform="translate(${centerX} ${height - margin.bottom + 28}) rotate(-45)" text-anchor="end" font-size="11" fill="#374151">${label}</text>
+      `;
+    })
+    .join("");
+
+  return toSvgDataUrl(`
+    <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
+      <rect width="100%" height="100%" fill="#ffffff"/>
+      <text x="${margin.left}" y="32" font-size="20" font-weight="700" fill="#111827">Box Plot</text>
+      <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
+      <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
+      ${boxes}
+    </svg>
+  `);
 };
 
 export const invokePythonScatterPlot = async (

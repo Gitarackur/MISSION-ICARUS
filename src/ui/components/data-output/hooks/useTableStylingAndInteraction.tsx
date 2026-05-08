@@ -44,23 +44,23 @@ export const useTableStylingAndInteraction = (
 
     if (isHeader) {
       if (isNumeric) {
-        className += ' cursor-pointer hover:bg-blue-100 transition-colors duration-200';
+        className += ' cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:hover:bg-blue-950/40';
       }
 
       if (isString) {
-        className += ' cursor-pointer hover:bg-yellow-100 transition-colors duration-200';
+        className += ' cursor-pointer hover:bg-yellow-100 transition-colors duration-200 dark:hover:bg-yellow-950/40';
       }
 
       if (isBoolean) {
-        className += ' cursor-pointer hover:bg-red-100 transition-colors duration-200';
+        className += ' cursor-pointer hover:bg-red-100 transition-colors duration-200 dark:hover:bg-red-950/40';
       }
 
     } else if (isNumeric) {
-      className += ' bg-green-50';
+      className += ' bg-green-50 dark:bg-green-950/30';
     } else if (isString) {
-      className += ' bg-yellow-50';
+      className += ' bg-yellow-50 dark:bg-yellow-950/30';
     } else if (isBoolean) {
-      className += ' bg-red-50';
+      className += ' bg-red-50 dark:bg-red-950/30';
     }
 
     return className;

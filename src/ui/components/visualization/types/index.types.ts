@@ -17,4 +17,5 @@ export type VisualizationPanelProps = {
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
   activeVisualizationId?: string;
   setActiveVisualizationId?: (visualizationId: string) => void;
+  shouldAutoSelectVisualization?: boolean;
 };

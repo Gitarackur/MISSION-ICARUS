@@ -16,15 +16,18 @@ export const VisualizationTabButton = ({
   isActive: boolean;
   onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
 }) => {
-  const { tabButton } = tabNavigationVariants({ active: isActive });
+  const { visualizationButton } = tabNavigationVariants({ active: isActive });
 
   const label = getVisualizationLabel(visualization, index);
 
   return (
     <button
       type="button"
-      onClick={() => onVisualizationSelect?.(visualization.id, matrixId)}
-      className={tabButton()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onVisualizationSelect?.(visualization.id, matrixId);
+      }}
+      className={visualizationButton()}
       title={label}
       role="tab"
       aria-selected={isActive}

@@ -24,6 +24,7 @@ export type VisualizationPanelStateParams = {
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
   activeVisualizationId?: string;
   setActiveVisualizationId?: (visualizationId: string) => void;
+  shouldAutoSelectVisualization?: boolean;
 };
 
 export type RenderJob =

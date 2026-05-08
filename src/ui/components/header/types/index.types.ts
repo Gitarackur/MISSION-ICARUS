@@ -8,7 +8,7 @@ export type MatrixTabProps = {
   matrices: IcarusMatrix[];
   activeMatrixId: string;
   toggleSidebar: () => void;
-  setActiveMatrixId: (id: string) => void;
+  onMatrixSelect: (id: string) => void;
   dataRows?: ProteinRow[];
   visualizations?: IcarusVisualization[];
   activeVisualizationId?: string;
