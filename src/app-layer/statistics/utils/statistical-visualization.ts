@@ -52,14 +52,13 @@ export const getVisualizationKindForStatisticalAction = (
   action: StatisticalAction
 ) => visualizationActionMap[action]?.kind;
 
-export const buildVisualizationActivityFromStatisticalResult = ({
+export const buildVisualizationActivityFromStatisticalResult = async ({
   result,
   sourceMatrixId,
 }: {
   result: StatisticalAnalysisResult;
   sourceMatrixId?: string;
 }): Promise<SaveVisualizationActivity | null> => {
-  return (async () => {
   const action = result.inputParameters.action;
   const config = visualizationActionMap[action];
   if (!config) return null;
@@ -79,7 +78,7 @@ export const buildVisualizationActivityFromStatisticalResult = ({
     inputColumnNames: columns,
     renderer: payloadAndImage.renderer,
     visualizationType: config.kind,
-    title: config.title,
+    title: payloadAndImage.title,
     data: {
       image: payloadAndImage.image,
       payload: payloadAndImage.payload,
@@ -91,7 +90,6 @@ export const buildVisualizationActivityFromStatisticalResult = ({
       source: "column-analysis",
     },
   };
-  })();
 };
 
 const buildVisualizationPayloadAndImage = async (
@@ -109,16 +107,22 @@ const buildVisualizationPayloadAndImage = async (
         | VolcanoPayload
         | PcaPlotPayload;
       pointCount: number;
+      title: string;
     }
-  | null> => {
+  | null
+> => {
   switch (kind) {
     case "box": {
-      const payload = columns.reduce<BoxPlotPayload>((acc, column, index) => {
-        acc[column] = toFiniteNumbers(data[index]);
-        return acc;
-      }, {});
-      const pointCount = Object.values(payload).reduce(
-        (sum, values) => sum + values.length,
+      const payload: BoxPlotPayload = {
+        series: columns.map((column, index) => ({
+          name: column,
+          values: toFiniteNumbers(data[index]),
+        })),
+        title: "Box Plot",
+        yAxisLabel: columns.length === 1 ? columns[0] : "Selected values",
+      };
+      const pointCount = payload.series.reduce(
+        (sum, entry) => sum + entry.values.length,
         0
       );
       const image = await invokeWithFallback({
@@ -130,16 +134,26 @@ const buildVisualizationPayloadAndImage = async (
         renderer: image.renderer,
         payload,
         pointCount,
+        title: payload.title ?? "Box Plot",
       };
     }
     case "scatter": {
       const x = toFiniteNumbers(data[0]);
-      const y = toFiniteNumbers(data[1]);
-      const pointCount = Math.min(x.length, y.length);
+      const pointCount = Math.min(
+        x.length,
+        ...data.slice(1).map((column) => toFiniteNumbers(column).length)
+      );
       const payload: ScatterPlotPayload = {
-        x: x.slice(0, pointCount),
-        y: y.slice(0, pointCount),
-        labels: buildPointLabels(pointCount),
+        series: columns.slice(1).map((column, index) => ({
+          name: column,
+          x: x.slice(0, pointCount),
+          y: toFiniteNumbers(data[index + 1]).slice(0, pointCount),
+          labels: buildPointLabels(pointCount),
+        })),
+        title: "Scatter Plot",
+        xAxisLabel: columns[0] ?? "X Axis",
+        yAxisLabel:
+          columns.length === 2 ? (columns[1] ?? "Y Axis") : "Selected values",
       };
       const image = await invokeWithFallback({
         python: () => invokePythonScatterPlot(payload),
@@ -150,6 +164,7 @@ const buildVisualizationPayloadAndImage = async (
         renderer: image.renderer,
         payload,
         pointCount,
+        title: payload.title ?? "Scatter Plot",
       };
     }
     case "heatmap": {
@@ -158,6 +173,7 @@ const buildVisualizationPayloadAndImage = async (
         matrix: data.map((row) => toFiniteNumbers(row).slice(0, labels.length)),
         row_labels: labels,
         col_labels: labels,
+        title: "Heatmap",
       };
       const image = await invokeWithFallback({
         python: () => invokePythonHeatmap(payload),
@@ -168,20 +184,23 @@ const buildVisualizationPayloadAndImage = async (
         renderer: image.renderer,
         payload,
         pointCount: payload.matrix.length * labels.length,
+        title: payload.title ?? "Heatmap",
       };
     }
     case "volcano": {
-      const log2fc = toFiniteNumbers(data[0]);
-      const negativeLogPValues = toFiniteNumbers(data[1]);
-      const pointCount = Math.min(log2fc.length, negativeLogPValues.length);
+      const x = toFiniteNumbers(data[0]);
+      const y = toFiniteNumbers(data[1]);
+      const pointCount = Math.min(x.length, y.length);
       const payload: VolcanoPayload = {
-        log2fc: log2fc.slice(0, pointCount),
-        pvalues: negativeLogPValues
-          .slice(0, pointCount)
-          .map((value) => Math.pow(10, -Math.max(0, value))),
+        x: x.slice(0, pointCount),
+        y: y.slice(0, pointCount),
         labels: buildPointLabels(pointCount),
-        fc_threshold: 1,
-        pval_threshold: 0.05,
+        title: "Volcano Plot",
+        xAxisLabel: columns[0] ?? "X Axis",
+        yAxisLabel: `-log10(${columns[1] ?? "Y Axis"})`,
+        xThreshold: 1,
+        yThreshold: 0.05,
+        yTransform: "negative-log10",
       };
       const image = await invokeWithFallback({
         python: () => invokePythonVolcanoPlot(payload),
@@ -192,6 +211,7 @@ const buildVisualizationPayloadAndImage = async (
         renderer: image.renderer,
         payload,
         pointCount,
+        title: payload.title ?? "Volcano Plot",
       };
     }
     case "pca": {
@@ -204,7 +224,9 @@ const buildVisualizationPayloadAndImage = async (
           secondComponent[index],
         ]),
         labels: buildPointLabels(pointCount),
+        featureLabels: columns,
         n_components: 2,
+        title: "PCA Plot",
       };
       const image = await invokeWithFallback({
         python: () => invokePythonPcaPlot(payload),
@@ -215,6 +237,7 @@ const buildVisualizationPayloadAndImage = async (
         renderer: image.renderer,
         payload,
         pointCount,
+        title: payload.title ?? "PCA Plot",
       };
     }
     default:
@@ -226,7 +249,7 @@ const invokeWithFallback = async ({
   native,
   python,
 }: {
-  native: () => string;
+  native: () => string | null;
   python: () => Promise<string>;
 }) => {
   try {
@@ -236,8 +259,12 @@ const invokeWithFallback = async ({
     };
   } catch (error) {
     console.error("Falling back to native statistical visualization", error);
+    const nativeValue = native();
+    if (!nativeValue) {
+      throw error;
+    }
     return {
-      value: native(),
+      value: nativeValue,
       renderer: "recharts" as const,
     };
   }

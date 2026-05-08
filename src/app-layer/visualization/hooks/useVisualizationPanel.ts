@@ -1,21 +1,31 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  buildIntensityBarPayload,
   buildDefaultVisualizationDisplaySettings,
-  buildMatrixBarPayload,
-  buildVolcanoPayload,
-  findLatestVisualizationImage,
-  getAxisTickInterval,
   getDefaultVisualizationId,
-  getVisualizationImage,
   getVisualizationsForMatrix,
   sortVisualizationsByCreatedAt,
 } from "@/domain/visualization/utils/main";
 import { renderBarSvg } from "@/app-layer/visualization/utils/display";
 import {
+  PlotAxisSelection,
+  PcaPlotPayload,
+  SavedImageVisualizationData,
+  ScatterPlotPayload,
+} from "@/domain/visualization/index.types";
+import {
   VisualizationKind,
   VisualizationRenderer,
 } from "@/domain/workflow/main.types";
+import {
+  buildConfiguredBarPayload,
+  buildConfiguredBoxPayload,
+  buildConfiguredHeatmapPayload,
+  buildConfiguredPcaPayload,
+  buildConfiguredScatterPayload,
+  buildConfiguredVolcanoPayload,
+  getDefaultPlotSelection,
+  getMatrixPlotColumnOptions,
+} from "@/app-layer/visualization/utils/matrix-payloads";
 import {
   invokePythonBarPlot,
   invokePythonBoxPlot,
@@ -24,6 +34,11 @@ import {
   invokePythonScatterPlot,
   invokePythonVolcanoPlot,
   invokeRBarPlot,
+  invokeRBoxPlot,
+  invokeRHeatmap,
+  invokeRPcaPlot,
+  invokeRScatterPlot,
+  invokeRVolcanoPlot,
   renderBoxPlotSvg,
   renderHeatmapSvg,
   renderPcaSvg,
@@ -31,57 +46,63 @@ import {
   renderVolcanoSvg,
 } from "@/app-layer/visualization/utils/renderers";
 import {
-  PcaPlotPayload,
-  SavedImageVisualizationData,
-  ScatterPlotPayload,
-} from "@/domain/visualization/index.types";
-import {
-  buildMatrixBoxPlotPayload,
-  buildMatrixHeatmapPayload,
-  buildMatrixPcaPayload,
-  buildMatrixScatterPayload,
-  buildMatrixVolcanoPayload,
-} from "@/app-layer/visualization/utils/matrix-payloads";
-import {
   RenderJob,
   VisualizationPanelStateParams,
 } from "@/app-layer/visualization/types";
 
-const isScatterPlotPayload = (payload: unknown): payload is ScatterPlotPayload => {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<ScatterPlotPayload>;
-  return Array.isArray(candidate.x) && Array.isArray(candidate.y);
-};
+type PlotSelectionState = Record<
+  "bar" | "box" | "scatter" | "heatmap" | "volcano" | "pca",
+  PlotAxisSelection
+>;
 
-const isPcaPlotPayload = (payload: unknown): payload is PcaPlotPayload => {
-  if (!payload || typeof payload !== "object") return false;
-  const candidate = payload as Partial<PcaPlotPayload>;
-  return Array.isArray(candidate.data);
-};
+const isScatterPayload = (payload: unknown): payload is ScatterPlotPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<ScatterPlotPayload>).series);
 
-const getSavedVisualizationPayload = (visualization?: {
-  data: unknown;
-}) => (visualization?.data as SavedImageVisualizationData | undefined)?.payload;
+const isLegacyScatterPayload = (
+  payload: unknown
+): payload is { x: number[]; y: number[]; labels?: string[] } =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as { x?: unknown }).x) &&
+  Array.isArray((payload as { y?: unknown }).y);
+
+const isPcaPayload = (payload: unknown): payload is PcaPlotPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<PcaPlotPayload>).data);
+
+const getSavedPayload = (visualization?: { data: unknown }) =>
+  (visualization?.data as SavedImageVisualizationData | undefined)?.payload;
+
+const createDefaultSelections = (
+  activeMatrix?: VisualizationPanelStateParams["activeMatrix"]
+): PlotSelectionState => ({
+  bar: getDefaultPlotSelection("bar", activeMatrix),
+  box: getDefaultPlotSelection("box", activeMatrix),
+  scatter: getDefaultPlotSelection("scatter", activeMatrix),
+  heatmap: getDefaultPlotSelection("heatmap", activeMatrix),
+  volcano: getDefaultPlotSelection("volcano", activeMatrix),
+  pca: getDefaultPlotSelection("pca", activeMatrix),
+});
 
 export const useVisualizationPanel = ({
-  volcanoData,
-  intensityDist,
-  activeSession,
   activeMatrix,
+  activeSession,
   saveVisualizationInWorkflow,
   activeVisualizationId: controlledActiveVisualizationId,
   setActiveVisualizationId: setControlledActiveVisualizationId,
   shouldAutoSelectVisualization = true,
 }: VisualizationPanelStateParams) => {
-  const [pythonImage, setPythonImage] = useState<string | null>(null);
-  const [rImage, setRImage] = useState<string | null>(null);
-  const [boxImage, setBoxImage] = useState<string | null>(null);
-  const [scatterImage, setScatterImage] = useState<string | null>(null);
-  const [pcaImage, setPcaImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [internalActiveVisualizationId, setInternalActiveVisualizationId] =
     useState("");
   const [renderingJob, setRenderingJob] = useState<RenderJob | null>(null);
+  const [plotSelections, setPlotSelections] = useState<PlotSelectionState>(
+    createDefaultSelections(activeMatrix)
+  );
+
   const activeVisualizationId =
     controlledActiveVisualizationId ?? internalActiveVisualizationId;
   const setActiveVisualizationId = useCallback(
@@ -90,11 +111,14 @@ export const useVisualizationPanel = ({
         setControlledActiveVisualizationId(visualizationId);
         return;
       }
-
       setInternalActiveVisualizationId(visualizationId);
     },
     [setControlledActiveVisualizationId]
   );
+
+  useEffect(() => {
+    setPlotSelections(createDefaultSelections(activeMatrix));
+  }, [activeMatrix]);
 
   const savedVisualizations = useMemo(
     () => sortVisualizationsByCreatedAt(activeSession?.visualizations ?? []),
@@ -105,15 +129,6 @@ export const useVisualizationPanel = ({
     () => getVisualizationsForMatrix(savedVisualizations, activeMatrix?.id),
     [activeMatrix?.id, savedVisualizations]
   );
-  const hasSavedVisualization = useCallback(
-    (visualizationType: VisualizationKind, renderer?: VisualizationRenderer) =>
-      matrixVisualizations.some(
-        (visualization) =>
-          visualization.visualizationType === visualizationType &&
-          (!renderer || visualization.renderer === renderer)
-      ),
-    [matrixVisualizations]
-  );
 
   const activeSavedVisualization = useMemo(
     () =>
@@ -123,88 +138,12 @@ export const useVisualizationPanel = ({
     [activeVisualizationId, matrixVisualizations]
   );
 
-  const activeSavedImage = useMemo(
-    () => {
-      const payload = getSavedVisualizationPayload(activeSavedVisualization);
-      if (
-        activeSavedVisualization?.visualizationType === "scatter" &&
-        isScatterPlotPayload(payload)
-      ) {
-        return renderScatterSvg(payload);
-      }
-
-      if (
-        activeSavedVisualization?.visualizationType === "pca" &&
-        isPcaPlotPayload(payload)
-      ) {
-        return renderPcaSvg(payload);
-      }
-
-      return getVisualizationImage(activeSavedVisualization);
-    },
-    [activeSavedVisualization]
-  );
-
-  const intensityPayload = useMemo(
-    () =>
-      activeMatrix
-        ? buildMatrixBarPayload(activeMatrix)
-        : buildIntensityBarPayload(intensityDist),
-    [activeMatrix, intensityDist]
-  );
-
-  const heatmapReadiness = useMemo(
-    () => buildMatrixHeatmapPayload(activeMatrix),
-    [activeMatrix]
-  );
-
-  const boxReadiness = useMemo(
-    () => buildMatrixBoxPlotPayload(activeMatrix),
-    [activeMatrix]
-  );
-
-  const scatterReadiness = useMemo(
-    () => buildMatrixScatterPayload(activeMatrix),
-    [activeMatrix]
-  );
-
-  const pcaReadiness = useMemo(
-    () => buildMatrixPcaPayload(activeMatrix),
-    [activeMatrix]
-  );
-
-  const volcanoReadiness = useMemo(
-    () => {
-      const matrixPayload = buildMatrixVolcanoPayload(activeMatrix);
-      if (matrixPayload.payload) return matrixPayload;
-
-      const fallbackPayload = buildVolcanoPayload(volcanoData);
-      return fallbackPayload
-        ? { payload: fallbackPayload }
-        : matrixPayload;
-    },
-    [activeMatrix, volcanoData]
-  );
-
-  const visualizationTitle = activeMatrix
-    ? `${activeMatrix.columns.join(", ")} summary`
-    : "Sample intensity distribution";
-
-  const volcanoTickInterval = useMemo(
-    () => getAxisTickInterval(volcanoData.length, 8),
-    [volcanoData.length]
-  );
-
   useEffect(() => {
-    if (!shouldAutoSelectVisualization) {
-      return;
-    }
-
+    if (!shouldAutoSelectVisualization) return;
     const nextId = getDefaultVisualizationId(matrixVisualizations);
     const activeIdStillExists = matrixVisualizations.some(
       (visualization) => visualization.id === activeVisualizationId
     );
-
     if (!activeIdStillExists) {
       setActiveVisualizationId(nextId);
     }
@@ -215,25 +154,89 @@ export const useVisualizationPanel = ({
     shouldAutoSelectVisualization,
   ]);
 
-  useEffect(() => {
-    setPythonImage(
-      findLatestVisualizationImage(matrixVisualizations, {
-        matrixId: activeMatrix?.id,
-        renderer: "python",
-        visualizationType: "bar",
-      })
+  const activeSavedImage = useMemo(() => {
+    const payload = getSavedPayload(activeSavedVisualization);
+    if (
+      activeSavedVisualization?.visualizationType === "scatter" &&
+      isScatterPayload(payload)
+    ) {
+      return renderScatterSvg(payload);
+    }
+
+    if (
+      activeSavedVisualization?.visualizationType === "scatter" &&
+      isLegacyScatterPayload(payload)
+    ) {
+      return renderScatterSvg({
+        series: [
+          {
+            name: activeSavedVisualization.title ?? "Scatter",
+            x: payload.x,
+            y: payload.y,
+            labels: payload.labels,
+          },
+        ],
+        title: activeSavedVisualization.title ?? "Scatter Plot",
+      });
+    }
+
+    if (
+      activeSavedVisualization?.visualizationType === "pca" &&
+      isPcaPayload(payload)
+    ) {
+      return renderPcaSvg(payload);
+    }
+
+    return (
+      (activeSavedVisualization?.data as SavedImageVisualizationData | undefined)
+        ?.image as string | undefined
     );
-    setRImage(
-      findLatestVisualizationImage(matrixVisualizations, {
-        matrixId: activeMatrix?.id,
-        renderer: "r",
-        visualizationType: "bar",
-      })
-    );
-    setBoxImage(null);
-    setScatterImage(null);
-    setPcaImage(null);
-  }, [activeMatrix?.id, matrixVisualizations]);
+  }, [activeSavedVisualization]);
+
+  const columnOptions = useMemo(
+    () => getMatrixPlotColumnOptions(activeMatrix),
+    [activeMatrix]
+  );
+
+  const plotReadiness = useMemo(
+    () => ({
+      bar: buildConfiguredBarPayload(activeMatrix, plotSelections.bar),
+      box: buildConfiguredBoxPayload(activeMatrix, plotSelections.box),
+      scatter: buildConfiguredScatterPayload(activeMatrix, plotSelections.scatter),
+      heatmap: buildConfiguredHeatmapPayload(activeMatrix, plotSelections.heatmap),
+      volcano: buildConfiguredVolcanoPayload(activeMatrix, plotSelections.volcano),
+      pca: buildConfiguredPcaPayload(activeMatrix, plotSelections.pca),
+    }),
+    [activeMatrix, plotSelections]
+  );
+
+  const hasSavedVisualization = useCallback(
+    (visualizationType: VisualizationKind, renderer?: VisualizationRenderer) =>
+      matrixVisualizations.some(
+        (visualization) =>
+          visualization.visualizationType === visualizationType &&
+          (!renderer || visualization.renderer === renderer)
+      ),
+    [matrixVisualizations]
+  );
+
+  const setPlotSelection = useCallback(
+    (
+      kind: keyof PlotSelectionState,
+      nextSelection:
+        | Partial<PlotAxisSelection>
+        | ((previous: PlotAxisSelection) => PlotAxisSelection)
+    ) => {
+      setPlotSelections((previous) => ({
+        ...previous,
+        [kind]:
+          typeof nextSelection === "function"
+            ? nextSelection(previous[kind])
+            : { ...previous[kind], ...nextSelection },
+      }));
+    },
+    []
+  );
 
   const saveRenderedVisualization = useCallback(
     async ({
@@ -243,6 +246,7 @@ export const useVisualizationPanel = ({
       title,
       data,
       pointCount,
+      inputColumnNames,
     }: {
       renderer: VisualizationRenderer;
       image: string;
@@ -250,15 +254,16 @@ export const useVisualizationPanel = ({
       title: string;
       data: unknown;
       pointCount: number;
+      inputColumnNames?: string[];
     }) => {
-      if (!activeSession || !activeMatrix || !saveVisualizationInWorkflow) {
+      if (!activeMatrix || !activeSession || !saveVisualizationInWorkflow) {
         return;
       }
 
       const result = await saveVisualizationInWorkflow({
         sourceMatrixId: activeMatrix.id,
         inputMatrixReferences: activeMatrix.id,
-        inputColumnNames: activeMatrix.columns,
+        inputColumnNames: inputColumnNames ?? activeMatrix.columns,
         renderer,
         visualizationType,
         title,
@@ -266,7 +271,7 @@ export const useVisualizationPanel = ({
           image,
           payload: data,
           matrixId: activeMatrix.id,
-          columns: activeMatrix.columns,
+          columns: inputColumnNames ?? activeMatrix.columns,
         },
         outputMetrics: {
           pointCount,
@@ -285,294 +290,310 @@ export const useVisualizationPanel = ({
     ]
   );
 
-  const renderVisualizationAsset = useCallback(
+  const runRenderer = useCallback(
     async ({
+      kind,
       nativeRenderer,
       pythonRenderer,
+      rRenderer,
       payload,
-      preferredRenderer = "python",
+      preferredRenderer,
     }: {
-      nativeRenderer: () => string;
+      kind: RenderJob;
+      nativeRenderer: () => string | null;
       pythonRenderer: () => Promise<string>;
+      rRenderer?: () => Promise<string>;
       payload: unknown;
-      preferredRenderer?: VisualizationRenderer;
+      preferredRenderer: VisualizationRenderer;
     }) => {
-      if (preferredRenderer === "recharts") {
-        return {
-          image: nativeRenderer(),
-          renderer: "recharts" as const,
-          payload,
-        };
-      }
-
+      setError(null);
+      setRenderingJob(kind);
       try {
+        if (preferredRenderer === "recharts") {
+          const image = nativeRenderer();
+          if (!image) throw new Error("Native renderer could not build this plot.");
+          return { image, renderer: "recharts" as const, payload };
+        }
+
+        if (preferredRenderer === "r") {
+          if (!rRenderer) {
+            throw new Error("R renderer is not available for this plot type.");
+          }
+          return { image: await rRenderer(), renderer: "r" as const, payload };
+        }
+
         return {
           image: await pythonRenderer(),
           renderer: "python" as const,
           payload,
         };
-      } catch (error) {
-        console.error("Falling back to native visualization renderer", error);
-        return {
-          image: nativeRenderer(),
-          renderer: "recharts" as const,
-          payload,
-        };
+      } catch (rendererError) {
+        if (preferredRenderer === "python") {
+          const image = nativeRenderer();
+          if (image) {
+            return { image, renderer: "recharts" as const, payload };
+          }
+        }
+        throw rendererError;
+      } finally {
+        setRenderingJob(null);
       }
     },
     []
   );
 
-  const renderPythonPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
-    try {
-      setError(null);
-      setRenderingJob("python-bar");
-      const image =
-        preferredRenderer === "recharts"
-          ? renderBarSvg(
-              intensityPayload,
+  const renderBarPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.bar;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "Bar plot is unavailable for this matrix.");
+        return;
+      }
+
+      try {
+        const result = await runRenderer({
+          kind: preferredRenderer === "r" ? "r-bar" : "python-bar",
+          nativeRenderer: () =>
+            renderBarSvg(
+              readiness.payload!,
               buildDefaultVisualizationDisplaySettings({
                 id: "preview",
                 createdByActivityId: null,
-                data: intensityPayload,
+                data: readiness.payload,
                 visualizationType: "bar",
               }),
-              visualizationTitle
-            )
-          : await invokePythonBarPlot(intensityPayload);
-      if (!image) {
-        throw new Error("Unable to render bar chart for the active matrix.");
+              readiness.payload!.title
+            ),
+          pythonRenderer: () => invokePythonBarPlot(readiness.payload!),
+          rRenderer: () => invokeRBarPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "bar",
+          title: readiness.payload.title ?? "Bar Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.categories.length,
+          inputColumnNames: [
+            plotSelections.bar.xAxis ?? "",
+            ...(plotSelections.bar.yAxes ?? []),
+          ].filter(Boolean),
+        });
+      } catch (err) {
+        setError(`Bar plot failed: ${(err as Error).message || err}`);
       }
-      setPythonImage(image);
-      await saveRenderedVisualization({
-        renderer: preferredRenderer === "recharts" ? "recharts" : "python",
-        image,
-        visualizationType: "bar",
-        title: visualizationTitle,
-        data: intensityPayload,
-        pointCount: Object.keys(intensityPayload).length,
-      });
-    } catch (err) {
-      setError(`Python visualization failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [intensityPayload, saveRenderedVisualization, visualizationTitle]);
+    },
+    [plotReadiness.bar, plotSelections.bar, runRenderer, saveRenderedVisualization]
+  );
 
-  const renderRPlot = useCallback(async () => {
-    try {
-      setError(null);
-      setRenderingJob("r-bar");
-      const image = await invokeRBarPlot(intensityPayload);
-      setRImage(image);
-      await saveRenderedVisualization({
-        renderer: "r",
-        image,
-        visualizationType: "bar",
-        title: visualizationTitle,
-        data: intensityPayload,
-        pointCount: Object.keys(intensityPayload).length,
-      });
-    } catch (err) {
-      setError(`R visualization failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [intensityPayload, saveRenderedVisualization, visualizationTitle]);
+  const renderBoxPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.box;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "Box plot is unavailable for this matrix.");
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "box",
+          nativeRenderer: () => renderBoxPlotSvg(readiness.payload!),
+          pythonRenderer: () => invokePythonBoxPlot(readiness.payload!),
+          rRenderer: () => invokeRBoxPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "box",
+          title: readiness.payload.title ?? "Box Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.series.reduce(
+            (sum, entry) => sum + entry.values.length,
+            0
+          ),
+          inputColumnNames: plotSelections.box.yAxes,
+        });
+      } catch (err) {
+        setError(`Box plot failed: ${(err as Error).message || err}`);
+      }
+    },
+    [plotReadiness.box, plotSelections.box.yAxes, runRenderer, saveRenderedVisualization]
+  );
 
-  const renderBoxPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
-    const payload = boxReadiness.payload;
-    if (!payload) {
-      setError(boxReadiness.reason ?? "Box plot needs numeric matrix data.");
-      return;
-    }
+  const renderScatterPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.scatter;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "Scatter plot is unavailable for this matrix.");
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "scatter",
+          nativeRenderer: () => renderScatterSvg(readiness.payload!),
+          pythonRenderer: () => invokePythonScatterPlot(readiness.payload!),
+          rRenderer: () => invokeRScatterPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "scatter",
+          title: readiness.payload.title ?? "Scatter Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.series.reduce(
+            (sum, entry) => sum + entry.x.length,
+            0
+          ),
+          inputColumnNames: [
+            plotSelections.scatter.xAxis ?? "",
+            ...(plotSelections.scatter.yAxes ?? []),
+          ].filter(Boolean),
+        });
+      } catch (err) {
+        setError(`Scatter plot failed: ${(err as Error).message || err}`);
+      }
+    },
+    [
+      plotReadiness.scatter,
+      plotSelections.scatter,
+      runRenderer,
+      saveRenderedVisualization,
+    ]
+  );
 
-    try {
-      setError(null);
-      setRenderingJob("box");
-      const { image, renderer } = await renderVisualizationAsset({
-        nativeRenderer: () => renderBoxPlotSvg(payload),
-        pythonRenderer: () => invokePythonBoxPlot(payload),
-        payload,
-        preferredRenderer,
-      });
-      setBoxImage(image);
-      await saveRenderedVisualization({
-        renderer,
-        image,
-        visualizationType: "box",
-        title: "Box plot",
-        data: payload,
-        pointCount: Object.values(payload).flat().length,
-      });
-    } catch (err) {
-      setError(`Box plot failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [boxReadiness, renderVisualizationAsset, saveRenderedVisualization]);
+  const renderHeatmap = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.heatmap;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "Heatmap is unavailable for this matrix.");
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "heatmap",
+          nativeRenderer: () => renderHeatmapSvg(readiness.payload!),
+          pythonRenderer: () => invokePythonHeatmap(readiness.payload!),
+          rRenderer: () => invokeRHeatmap(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "heatmap",
+          title: readiness.payload.title ?? "Heatmap",
+          data: readiness.payload,
+          pointCount:
+            readiness.payload.matrix.length * readiness.payload.col_labels.length,
+          inputColumnNames: plotSelections.heatmap.columns,
+        });
+      } catch (err) {
+        setError(`Heatmap failed: ${(err as Error).message || err}`);
+      }
+    },
+    [
+      plotReadiness.heatmap,
+      plotSelections.heatmap.columns,
+      runRenderer,
+      saveRenderedVisualization,
+    ]
+  );
 
-  const renderScatterPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
-    const payload = scatterReadiness.payload;
-    if (!payload) {
-      setError(scatterReadiness.reason ?? "Scatter plot needs paired numeric data.");
-      return;
-    }
+  const renderVolcanoPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.volcano;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "Volcano plot is unavailable for this matrix.");
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "volcano",
+          nativeRenderer: () => renderVolcanoSvg(readiness.payload!),
+          pythonRenderer: () => invokePythonVolcanoPlot(readiness.payload!),
+          rRenderer: () => invokeRVolcanoPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "volcano",
+          title: readiness.payload.title ?? "Volcano Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.x.length,
+          inputColumnNames: [
+            plotSelections.volcano.xAxis ?? "",
+            ...(plotSelections.volcano.yAxes ?? []),
+          ].filter(Boolean),
+        });
+      } catch (err) {
+        setError(`Volcano plot failed: ${(err as Error).message || err}`);
+      }
+    },
+    [
+      plotReadiness.volcano,
+      plotSelections.volcano,
+      runRenderer,
+      saveRenderedVisualization,
+    ]
+  );
 
-    try {
-      setError(null);
-      setRenderingJob("scatter");
-      const { image, renderer } = await renderVisualizationAsset({
-        nativeRenderer: () => renderScatterSvg(payload),
-        pythonRenderer: () => invokePythonScatterPlot(payload),
-        payload,
-        preferredRenderer,
-      });
-      setScatterImage(image);
-      await saveRenderedVisualization({
-        renderer,
-        image,
-        visualizationType: "scatter",
-        title: "Scatter plot",
-        data: payload,
-        pointCount: payload.x.length,
-      });
-    } catch (err) {
-      setError(`Scatter plot failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [renderVisualizationAsset, saveRenderedVisualization, scatterReadiness]);
-
-  const renderPcaPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
-    const payload = pcaReadiness.payload;
-    if (!payload) {
-      setError(pcaReadiness.reason ?? "PCA plot needs numeric matrix data.");
-      return;
-    }
-
-    try {
-      setError(null);
-      setRenderingJob("pca");
-      const { image, renderer } = await renderVisualizationAsset({
-        nativeRenderer: () => renderPcaSvg(payload),
-        pythonRenderer: () => invokePythonPcaPlot(payload),
-        payload,
-        preferredRenderer,
-      });
-      setPcaImage(image);
-      await saveRenderedVisualization({
-        renderer,
-        image,
-        visualizationType: "pca",
-        title: "PCA plot",
-        data: payload,
-        pointCount: payload.data.length,
-      });
-    } catch (err) {
-      setError(`PCA plot failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [pcaReadiness, renderVisualizationAsset, saveRenderedVisualization]);
-
-  const renderHeatmap = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
-    const payload = heatmapReadiness.payload;
-    if (!payload) {
-      setError(heatmapReadiness.reason ?? "Heatmap needs matrix-like numeric data.");
-      return;
-    }
-
-    try {
-      setError(null);
-      setRenderingJob("heatmap");
-      const { image, renderer } = await renderVisualizationAsset({
-        nativeRenderer: () => renderHeatmapSvg(payload),
-        pythonRenderer: () => invokePythonHeatmap(payload),
-        payload,
-        preferredRenderer,
-      });
-      await saveRenderedVisualization({
-        renderer,
-        image,
-        visualizationType: "heatmap",
-        title: "Sample correlation heatmap",
-        data: payload,
-        pointCount:
-          payload.matrix.length *
-          payload.matrix.length,
-      });
-    } catch (err) {
-      setError(`Heatmap failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [heatmapReadiness, renderVisualizationAsset, saveRenderedVisualization]);
-
-  const renderVolcanoPlot = useCallback(async (preferredRenderer: VisualizationRenderer = "python") => {
-    const payload = volcanoReadiness.payload;
-    if (!payload) {
-      setError(
-        volcanoReadiness.reason ?? "Volcano plot needs fold-change and p-value data."
-      );
-      return;
-    }
-
-    try {
-      setError(null);
-      setRenderingJob("volcano");
-      const { image, renderer } = await renderVisualizationAsset({
-        nativeRenderer: () => renderVolcanoSvg(payload),
-        pythonRenderer: () => invokePythonVolcanoPlot(payload),
-        payload,
-        preferredRenderer,
-      });
-      await saveRenderedVisualization({
-        renderer,
-        image,
-        visualizationType: "volcano",
-        title: "Volcano plot",
-        data: payload,
-        pointCount: payload.log2fc.length,
-      });
-    } catch (err) {
-      setError(`Volcano plot failed: ${(err as Error).message || err}`);
-    } finally {
-      setRenderingJob(null);
-    }
-  }, [renderVisualizationAsset, saveRenderedVisualization, volcanoReadiness]);
+  const renderPcaPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.pca;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "PCA plot is unavailable for this matrix.");
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "pca",
+          nativeRenderer: () => renderPcaSvg(readiness.payload!),
+          pythonRenderer: () => invokePythonPcaPlot(readiness.payload!),
+          rRenderer: () => invokeRPcaPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "pca",
+          title: readiness.payload.title ?? "PCA Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.data.length,
+          inputColumnNames: plotSelections.pca.columns,
+        });
+      } catch (err) {
+        setError(`PCA plot failed: ${(err as Error).message || err}`);
+      }
+    },
+    [plotReadiness.pca, plotSelections.pca.columns, runRenderer, saveRenderedVisualization]
+  );
 
   return {
     activeSavedImage,
     activeSavedVisualization,
-    activeVisualizationId,
-    boxImage,
-    boxPayload: boxReadiness.payload,
-    boxReason: boxReadiness.reason,
+    columnOptions,
     error,
-    heatmapPayload: heatmapReadiness.payload,
-    heatmapReason: heatmapReadiness.reason,
     hasSavedVisualization,
-    pcaImage,
-    pcaPayload: pcaReadiness.payload,
-    pcaReason: pcaReadiness.reason,
-    pythonImage,
-    rImage,
+    plotReadiness,
+    plotSelections,
+    renderBarPlot,
     renderBoxPlot,
     renderHeatmap,
     renderPcaPlot,
-    renderPythonPlot,
-    renderRPlot,
     renderScatterPlot,
     renderVolcanoPlot,
     renderingJob,
     savedVisualizations: matrixVisualizations,
-    scatterImage,
-    scatterPayload: scatterReadiness.payload,
-    scatterReason: scatterReadiness.reason,
     setActiveVisualizationId,
-    volcanoPayload: volcanoReadiness.payload,
-    volcanoReason: volcanoReadiness.reason,
-    volcanoTickInterval,
+    setPlotSelection,
   };
 };

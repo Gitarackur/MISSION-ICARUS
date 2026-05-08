@@ -22,41 +22,52 @@ class VolcanoPlotCommand(Command):
             except (FileNotFoundError, OSError):
                 data = json.loads(input_arg)
 
-        # Expected format: {"log2fc": [values], "pvalues": [values], "labels": [optional]}
-        log2fc = np.array(data['log2fc'])
-        pvalues = np.array(data['pvalues'])
-        labels = data.get('labels', None)
-        
-        # Calculate -log10(p-values)
-        neg_log_pvalues = -np.log10(pvalues + 1e-300)  # Add small value to avoid log(0)
-        
-        # Significance thresholds
-        fc_threshold = data.get('fc_threshold', 1.0)
-        pval_threshold = data.get('pval_threshold', 0.05)
-        neg_log_pval_threshold = -np.log10(pval_threshold)
+        if 'x' in data and 'y' in data:
+            x_values = np.array(data['x'])
+            y_values = np.array(data['y'])
+            y_transform = data.get('yTransform', 'none')
+        else:
+            x_values = np.array(data['log2fc'])
+            y_values = np.array(data['pvalues'])
+            y_transform = 'negative-log10'
+
+        if y_transform == 'negative-log10':
+            plotted_y = -np.log10(y_values + 1e-300)
+            y_threshold = data.get('yThreshold', 0.05)
+            plotted_y_threshold = -np.log10(y_threshold)
+        else:
+            plotted_y = y_values
+            plotted_y_threshold = data.get('yThreshold', None)
+
+        x_threshold = data.get('xThreshold', 1.0)
 
         plt.figure(figsize=(10, 8))
         
         # Color points based on significance
-        significant_up = (log2fc > fc_threshold) & (neg_log_pvalues > neg_log_pval_threshold)
-        significant_down = (log2fc < -fc_threshold) & (neg_log_pvalues > neg_log_pval_threshold)
+        if plotted_y_threshold is not None:
+            significant_up = (x_values > x_threshold) & (plotted_y > plotted_y_threshold)
+            significant_down = (x_values < -x_threshold) & (plotted_y > plotted_y_threshold)
+        else:
+            significant_up = x_values > x_threshold
+            significant_down = x_values < -x_threshold
         not_significant = ~(significant_up | significant_down)
         
-        plt.scatter(log2fc[not_significant], neg_log_pvalues[not_significant], 
+        plt.scatter(x_values[not_significant], plotted_y[not_significant], 
                    c='gray', alpha=0.5, label='Not significant')
-        plt.scatter(log2fc[significant_up], neg_log_pvalues[significant_up], 
+        plt.scatter(x_values[significant_up], plotted_y[significant_up], 
                    c='red', alpha=0.6, label='Upregulated')
-        plt.scatter(log2fc[significant_down], neg_log_pvalues[significant_down], 
+        plt.scatter(x_values[significant_down], plotted_y[significant_down], 
                    c='blue', alpha=0.6, label='Downregulated')
         
         # Add threshold lines
-        plt.axhline(y=neg_log_pval_threshold, color='black', linestyle='--', linewidth=0.8)
-        plt.axvline(x=fc_threshold, color='black', linestyle='--', linewidth=0.8)
-        plt.axvline(x=-fc_threshold, color='black', linestyle='--', linewidth=0.8)
+        if plotted_y_threshold is not None:
+            plt.axhline(y=plotted_y_threshold, color='black', linestyle='--', linewidth=0.8)
+        plt.axvline(x=x_threshold, color='black', linestyle='--', linewidth=0.8)
+        plt.axvline(x=-x_threshold, color='black', linestyle='--', linewidth=0.8)
         
-        plt.xlabel('Log2 Fold Change')
-        plt.ylabel('-Log10(p-value)')
-        plt.title('Volcano Plot')
+        plt.xlabel(data.get('xAxisLabel', 'X Axis'))
+        plt.ylabel(data.get('yAxisLabel', 'Y Axis'))
+        plt.title(data.get('title', 'Volcano Plot'))
         plt.legend()
         plt.tight_layout()
 
@@ -68,5 +79,3 @@ class VolcanoPlotCommand(Command):
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             print(img_base64)
-
-

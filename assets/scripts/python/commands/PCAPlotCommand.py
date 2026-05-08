@@ -26,6 +26,7 @@ class PCAPlotCommand(Command):
         # Expected format: {"data": [[sample_features]], "labels": [optional]}
         features = np.array(data['data'])
         labels = data.get('labels', None)
+        groups = data.get('groups', None)
         n_components = data.get('n_components', 2)
 
         # Perform PCA
@@ -34,10 +35,10 @@ class PCAPlotCommand(Command):
 
         plt.figure(figsize=(10, 8))
         
-        if labels:
-            unique_labels = list(set(labels))
+        if groups:
+            unique_labels = list(set(groups))
             for label in unique_labels:
-                indices = [i for i, l in enumerate(labels) if l == label]
+                indices = [i for i, l in enumerate(groups) if l == label]
                 plt.scatter(principal_components[indices, 0], 
                            principal_components[indices, 1], 
                            label=label, alpha=0.6, s=50)
@@ -50,7 +51,7 @@ class PCAPlotCommand(Command):
         variance = pca.explained_variance_ratio_
         plt.xlabel(f'PC1 ({variance[0]:.2%} variance)')
         plt.ylabel(f'PC2 ({variance[1]:.2%} variance)')
-        plt.title('PCA Plot')
+        plt.title(data.get('title', 'PCA Plot'))
         plt.grid(True, alpha=0.3)
         plt.tight_layout()
 

@@ -69,7 +69,6 @@ import {
   parseStringMetadata,
   pearsonCorrelation,
   product,
-  quantile,
   sanitizeStatisticalResults,
 } from "@/app-layer/statistics/utils/analysis-helpers";
 
@@ -416,17 +415,8 @@ export const runStatisticalAnalysis = (
     }
 
     case "box-plot": {
-      results = numericData.map((columnData) => {
-        const values = finiteValues(columnData);
-        return [
-          quantile(values, 0),
-          quantile(values, 0.25),
-          quantile(values, 0.5),
-          quantile(values, 0.75),
-          quantile(values, 1),
-        ];
-      });
-      newColumnNames = numericColumns.map((column) => `${column}_boxplot`);
+      results = numericData;
+      newColumnNames = numericColumns;
       break;
     }
 
@@ -434,8 +424,8 @@ export const runStatisticalAnalysis = (
       if (numericData.length < 2) {
         throw new Error("Scatter plot requires at least two numeric columns");
       }
-      results = numericData.slice(0, 2);
-      newColumnNames = numericColumns.slice(0, 2);
+      results = numericData;
+      newColumnNames = numericColumns;
       break;
     }
 
@@ -460,16 +450,8 @@ export const runStatisticalAnalysis = (
         );
       }
 
-      const logFoldChange = numericData[0].map((value) =>
-        Number.isFinite(value) ? value : 0,
-      );
-      const negLogPValue = numericData[1].map((value) => {
-        if (!Number.isFinite(value) || value <= 0) return 0;
-        return -Math.log10(Math.min(value, 1));
-      });
-
-      results = [logFoldChange, negLogPValue];
-      newColumnNames = ["log_fold_change", "negative_log10_p_value"];
+      results = numericData.slice(0, 2);
+      newColumnNames = numericColumns.slice(0, 2);
       break;
     }
 
