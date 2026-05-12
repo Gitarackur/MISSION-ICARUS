@@ -54,7 +54,9 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
           label:
             activeSavedVisualization.renderer === "recharts"
               ? "Native Renderer"
-              : `${(activeSavedVisualization.renderer ?? "saved").toUpperCase()} Renderer`,
+              : activeSavedVisualization.renderer === "r"
+                ? "R Renderer"
+                : "Python Renderer",
         },
         ...(canUseNativeView &&
         activeSavedVisualization.renderer !== "recharts"

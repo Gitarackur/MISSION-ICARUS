@@ -4,6 +4,7 @@ import path from "path";
 import fs from "fs";
 import CoreExec from "../core/Exec";
 import { resourcePath } from "../core/utils";
+import { app } from "electron";
 
 
 
@@ -33,6 +34,10 @@ export class PythonManager extends Manager {
 
   public runScript(scriptPath: string, args?: string[], data?: unknown): Promise<string> {
     console.log(`Running Python script: ${scriptPath} with args: ${args} and data: ${data ? 'provided' : 'none'}`);
+
+    if (!app.isPackaged && fs.existsSync(scriptPath)) {
+      return CoreExec.run("python3", [scriptPath, ...(args ?? [])], data);
+    }
 
     const binPath = this.getBin(scriptPath);
     return CoreExec.run(binPath, args, data);
