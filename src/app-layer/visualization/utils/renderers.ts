@@ -9,7 +9,7 @@ import {
 } from "@/domain/visualization/index.types";
 
 const toPngDataUrl = (base64: string) =>
-  `data:image/png;base64,${base64.trim()}`;
+  `data:image/png;base64,${base64.replace(/\s+/g, "").trim()}`;
 
 const toSvgDataUrl = (svg: string) =>
   `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;

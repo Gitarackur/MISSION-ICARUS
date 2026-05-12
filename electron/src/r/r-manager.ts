@@ -127,12 +127,21 @@ export default class EmbeddedRManager {
         proc.on('close', (code: number) => {
           if (code === 0) {
             const trimmedStdout = stdout.trim();
-            const base64Match = trimmedStdout.match(/([A-Za-z0-9+/=]+)\s*$/);
+            const markerMatch = trimmedStdout.match(
+              /ICARUS_BASE64_BEGIN\s*([A-Za-z0-9+/=\s]+?)\s*ICARUS_BASE64_END/
+            );
+
+            if (markerMatch) {
+              resolve(markerMatch[1].replace(/\s+/g, ''));
+              return;
+            }
+
+            const base64Match = trimmedStdout.match(/(iVBORw0KGgo[A-Za-z0-9+/=\s]+)$/);
             if (!base64Match) {
               reject(new Error('No valid base64 content found in R script output.'));
               return;
             }
-            const cleanBase64 = base64Match[1];
+            const cleanBase64 = base64Match[1].replace(/\s+/g, '');
             resolve(cleanBase64);
           } else {
             reject(new Error(`R script failed with exit code ${code}\nSTDERR:\n${stderr.trim()}\nSTDOUT:\n${stdout.trim()}`));
