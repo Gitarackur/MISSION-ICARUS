@@ -23,21 +23,22 @@ export function VisualizationViewer({
 }: {
   activeDisplayImage: string | null;
   activeVisualization?: VisualizationRecord;
-  displayMode: "saved" | "native";
+  displayMode: "saved" | "native" | "python" | "r";
   displayRendererOptions: Array<{
-    value: "saved" | "native";
+    value: "saved" | "native" | "python" | "r";
     label: string;
   }>;
   hasVisualizations: boolean;
   onDownload: () => void;
   onSelectVisualization: (visualizationId: string) => void;
-  onSetDisplayMode: (mode: "saved" | "native") => void;
+  onSetDisplayMode: (mode: "saved" | "native" | "python" | "r") => void;
   onToggleSettings: () => void;
   savedVisualizations: VisualizationRecord[];
 }) {
   const s = visualizationStyles();
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ active: boolean; startX: number; startY: number; originX: number; originY: number }>({
     active: false,
     startX: 0,
@@ -51,13 +52,32 @@ export function VisualizationViewer({
     setPan({ x: 0, y: 0 });
   }, [activeDisplayImage, activeVisualization?.id, displayMode]);
 
+  const clampPan = useMemo(
+    () => (nextPan: { x: number; y: number }, nextZoom = zoomLevel) => {
+      const frame = frameRef.current;
+      if (!frame) return nextPan;
+
+      const bounds = frame.getBoundingClientRect();
+      const maxOffsetX = Math.max(0, ((nextZoom - 1) * bounds.width) / 2);
+      const maxOffsetY = Math.max(0, ((nextZoom - 1) * bounds.height) / 2);
+
+      return {
+        x: Math.min(maxOffsetX, Math.max(-maxOffsetX, nextPan.x)),
+        y: Math.min(maxOffsetY, Math.max(-maxOffsetY, nextPan.y)),
+      };
+    },
+    [zoomLevel]
+  );
+
   useEffect(() => {
     const handlePointerMove = (event: MouseEvent) => {
-      if (!dragRef.current.active || zoomLevel <= 1) return;
-      setPan({
-        x: dragRef.current.originX + event.clientX - dragRef.current.startX,
-        y: dragRef.current.originY + event.clientY - dragRef.current.startY,
-      });
+      if (!dragRef.current.active) return;
+      setPan(
+        clampPan({
+          x: dragRef.current.originX + event.clientX - dragRef.current.startX,
+          y: dragRef.current.originY + event.clientY - dragRef.current.startY,
+        })
+      );
     };
 
     const handlePointerUp = () => {
@@ -70,7 +90,7 @@ export function VisualizationViewer({
       window.removeEventListener("mousemove", handlePointerMove);
       window.removeEventListener("mouseup", handlePointerUp);
     };
-  }, [zoomLevel]);
+  }, [clampPan]);
 
   const clampZoom = (value: number) => Math.min(3, Math.max(0.5, value));
   const resetViewport = () => {
@@ -133,7 +153,7 @@ export function VisualizationViewer({
                 options={displayRendererOptions}
                 value={displayMode}
                 onChange={(value) =>
-                  value && onSetDisplayMode(value as "saved" | "native")
+                  value && onSetDisplayMode(value as "saved" | "native" | "python" | "r")
                 }
                 placeholder="Select renderer"
                 searchable={false}
@@ -181,14 +201,18 @@ export function VisualizationViewer({
           >
             {activeDisplayImage ? (
               <div
+                ref={frameRef}
                 className="relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950"
                 onWheel={(event) => {
                   event.preventDefault();
-                  const delta = event.deltaY > 0 ? -0.1 : 0.1;
-                  setZoomLevel((value) => clampZoom(value + delta));
+                  const delta = event.deltaY > 0 ? -0.05 : 0.05;
+                  setZoomLevel((value) => {
+                    const nextZoom = clampZoom(value + delta);
+                    setPan((currentPan) => clampPan(currentPan, nextZoom));
+                    return nextZoom;
+                  });
                 }}
                 onMouseDown={(event) => {
-                  if (zoomLevel <= 1) return;
                   event.preventDefault();
                   dragRef.current = {
                     active: true,
@@ -207,7 +231,8 @@ export function VisualizationViewer({
                       ? dragRef.current.active
                         ? "grabbing"
                         : "grab"
-                      : "default",
+                      : "grab",
+                  touchAction: "none",
                 }}
               >
                 <img
@@ -221,7 +246,7 @@ export function VisualizationViewer({
                     transformOrigin: "center center",
                     userSelect: "none",
                     pointerEvents: "none",
-                    transition: dragRef.current.active ? "none" : "transform 160ms ease-out",
+                    transition: dragRef.current.active ? "none" : "transform 180ms ease-out",
                   }}
                 />
               </div>
