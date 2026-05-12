@@ -2,7 +2,10 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Download, Minus, Plus, RotateCcw, Settings2 } from "lucide-react";
 import { VisualizationRecord } from "@/domain/visualization/index.types";
 import { VisualizationDisplaySettings } from "@/domain/visualization/index.types";
-import { getVisualizationPayloadPointCount } from "@/domain/visualization/utils/main";
+import {
+  getVisualizationLabel,
+  getVisualizationPayloadPointCount,
+} from "@/domain/visualization/utils/main";
 import SingleSelect from "@/ui/design-system/Select/select";
 import { visualizationStyles } from "../variants/visualization.variants";
 
@@ -74,6 +77,10 @@ export function VisualizationViewer({
     setZoomLevel(1);
     setPan({ x: 0, y: 0 });
   };
+  const visualizationOptions = savedVisualizations.map((visualization, index) => ({
+    value: visualization.id,
+    label: getVisualizationLabel(visualization, index),
+  }));
 
   return (
     <section className={s.hero()}>
@@ -156,20 +163,15 @@ export function VisualizationViewer({
       </div>
 
       <div className={s.gallerySection()}>
-        <div className={s.chipRow()}>
-          {savedVisualizations.map((visualization, index) => (
-            <button
-              key={visualization.id}
-              type="button"
-              className={`${s.chip()} ${
-                visualization.id === activeVisualization?.id ? s.chipActive() : ""
-              }`}
-              onClick={() => onSelectVisualization(visualization.id)}
-            >
-              {visualization.title ??
-                `${visualization.visualizationType ?? "plot"} ${index + 1}`}
-            </button>
-          ))}
+        <div className="max-w-md">
+          <SingleSelect
+            options={visualizationOptions}
+            value={activeVisualization?.id ?? null}
+            onChange={(value) => value && onSelectVisualization(value)}
+            placeholder="Select visualization"
+            searchable={false}
+            clearable={false}
+          />
         </div>
 
         <div className={s.viewerFrame()}>
