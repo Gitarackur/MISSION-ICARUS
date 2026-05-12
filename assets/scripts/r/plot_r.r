@@ -188,4 +188,6 @@ invisible(dev.off())
 
 img_data <- readBin("plot.png", what = "raw", n = file.info("plot.png")$size)
 unlink("plot.png")
+cat("ICARUS_BASE64_BEGIN", sep = "")
 cat(jsonlite::base64_enc(img_data), sep = "")
+cat("ICARUS_BASE64_END", sep = "")
