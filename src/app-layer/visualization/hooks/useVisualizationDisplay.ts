@@ -136,13 +136,19 @@ export const useVisualizationDisplay = ({
   );
   const [pythonDisplayImage, setPythonDisplayImage] = useState<string | null>(null);
   const [rDisplayImage, setRDisplayImage] = useState<string | null>(null);
+  const preferredDisplayMode = useMemo<DisplayMode>(() => {
+    if (activeVisualization?.renderer === "r") return "r";
+    if (activeVisualization?.renderer === "python") return "python";
+    if (activeVisualization?.renderer === "recharts") return "native";
+    return "saved";
+  }, [activeVisualization?.renderer]);
 
   useEffect(() => {
     setSettings(getVisualizationDisplaySettings(activeVisualization));
-    setDisplayMode("saved");
+    setDisplayMode(preferredDisplayMode);
     setPythonDisplayImage(null);
     setRDisplayImage(null);
-  }, [activeVisualization]);
+  }, [activeVisualization, preferredDisplayMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -205,9 +211,9 @@ export const useVisualizationDisplay = ({
   ]);
 
   const displayRendererOptions = useMemo(() => {
-    const options: Array<{ value: DisplayMode; label: string }> = [];
+    const optionMap = new Map<DisplayMode, { value: DisplayMode; label: string }>();
     if (savedDisplayImage) {
-      options.push({
+      optionMap.set("saved", {
         value: "saved",
         label:
           activeVisualization?.renderer === "r"
@@ -220,18 +226,34 @@ export const useVisualizationDisplay = ({
       });
     }
     if (pythonDisplayImage) {
-      options.push({ value: "python", label: "Python Renderer" });
+      optionMap.set("python", { value: "python", label: "Python Renderer" });
     }
     if (rDisplayImage) {
-      options.push({ value: "r", label: "R Renderer" });
+      optionMap.set("r", { value: "r", label: "R Renderer" });
     }
     if (nativeDisplayImage) {
-      options.push({ value: "native", label: "Native Renderer" });
+      optionMap.set("native", { value: "native", label: "Native Renderer" });
     }
-    return options;
+
+    const order: DisplayMode[] = [
+      preferredDisplayMode,
+      "saved",
+      "python",
+      "r",
+      "native",
+    ];
+
+    return order
+      .map((mode) => optionMap.get(mode))
+      .filter(
+        (option, index, items): option is { value: DisplayMode; label: string } =>
+          Boolean(option) &&
+          items.findIndex((item) => item?.value === option?.value) === index
+      );
   }, [
     activeVisualization?.renderer,
     nativeDisplayImage,
+    preferredDisplayMode,
     pythonDisplayImage,
     rDisplayImage,
     savedDisplayImage,
