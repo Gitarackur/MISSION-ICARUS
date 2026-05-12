@@ -173,9 +173,24 @@ export const getVisualizationImage = (
   visualization?: VisualizationRecord
 ): string | null => {
   const data = visualization?.data as SavedImageVisualizationData | undefined;
-  return typeof data?.image === "string" && data.image.length > 0
-    ? data.image
-    : null;
+  if (typeof data?.image !== "string" || data.image.length === 0) {
+    return null;
+  }
+
+  const image = data.image.trim();
+  if (image.startsWith("data:image/")) {
+    return image;
+  }
+
+  if (image.startsWith("<svg")) {
+    return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(image)}`;
+  }
+
+  if (/^[A-Za-z0-9+/=\s]+$/.test(image)) {
+    return `data:image/png;base64,${image.replace(/\s+/g, "")}`;
+  }
+
+  return null;
 };
 
 export const getSavedVisualizationPayload = (
