@@ -7,6 +7,7 @@
   "scripts": {
     "prepare:python:scripts": "",
     "dev": "vite",
+    "prestart": "tsc && vite build",
     "start": "electron --trace-warnings .",
     "build": "tsc && vite build && electron-builder",
     "pipenv-install": "pipenv run prepare-all",
