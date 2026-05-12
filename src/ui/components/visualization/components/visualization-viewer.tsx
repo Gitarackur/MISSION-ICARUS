@@ -23,15 +23,15 @@ export function VisualizationViewer({
 }: {
   activeDisplayImage: string | null;
   activeVisualization?: VisualizationRecord;
-  displayMode: "saved" | "native";
+  displayMode: "saved" | "native" | "python" | "r";
   displayRendererOptions: Array<{
-    value: "saved" | "native";
+    value: "saved" | "native" | "python" | "r";
     label: string;
   }>;
   hasVisualizations: boolean;
   onDownload: () => void;
   onSelectVisualization: (visualizationId: string) => void;
-  onSetDisplayMode: (mode: "saved" | "native") => void;
+  onSetDisplayMode: (mode: "saved" | "native" | "python" | "r") => void;
   onToggleSettings: () => void;
   savedVisualizations: VisualizationRecord[];
 }) {
@@ -153,7 +153,7 @@ export function VisualizationViewer({
                 options={displayRendererOptions}
                 value={displayMode}
                 onChange={(value) =>
-                  value && onSetDisplayMode(value as "saved" | "native")
+                  value && onSetDisplayMode(value as "saved" | "native" | "python" | "r")
                 }
                 placeholder="Select renderer"
                 searchable={false}

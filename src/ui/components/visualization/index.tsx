@@ -34,8 +34,8 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   } = useVisualizationPanel(props);
   const {
     activeDisplayImage,
-    canUseNativeView,
     displayMode,
+    displayRendererOptions,
     downloadCurrentVisualization,
     hasVisualizations,
     setDisplayMode,
@@ -47,23 +47,6 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   });
 
   const isRendering = renderingJob !== null;
-  const displayRendererOptions = activeSavedVisualization
-    ? [
-        {
-          value: "saved" as const,
-          label:
-            activeSavedVisualization.renderer === "recharts"
-              ? "Native Renderer"
-              : activeSavedVisualization.renderer === "r"
-                ? "R Renderer"
-                : "Python Renderer",
-        },
-        ...(canUseNativeView &&
-        activeSavedVisualization.renderer !== "recharts"
-          ? [{ value: "native" as const, label: "Native Renderer" }]
-          : []),
-      ]
-    : [];
   const barColumns = [
     plotSelections.bar.xAxis ?? "",
     ...(plotSelections.bar.yAxes ?? []),

@@ -126,13 +126,13 @@ export default class EmbeddedRManager {
 
         proc.on('close', (code: number) => {
           if (code === 0) {
-            // Extract valid base64 only to clean out junk like "null device 1"
-            const base64Matches = stdout.match(/[A-Za-z0-9+/=]+/g);
-            if (!base64Matches) {
+            const trimmedStdout = stdout.trim();
+            const base64Match = trimmedStdout.match(/([A-Za-z0-9+/=]+)\s*$/);
+            if (!base64Match) {
               reject(new Error('No valid base64 content found in R script output.'));
               return;
             }
-            const cleanBase64 = base64Matches.join('');
+            const cleanBase64 = base64Match[1];
             resolve(cleanBase64);
           } else {
             reject(new Error(`R script failed with exit code ${code}\nSTDERR:\n${stderr.trim()}\nSTDOUT:\n${stdout.trim()}`));
