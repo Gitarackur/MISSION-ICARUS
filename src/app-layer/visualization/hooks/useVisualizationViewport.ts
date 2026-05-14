@@ -7,8 +7,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 3;
-const WHEEL_ZOOM_STEP = 0.035;
-const KEYBOARD_ZOOM_STEP = 0.08;
+const WHEEL_ZOOM_STEP = 0.015;
+const KEYBOARD_ZOOM_STEP = 0.03;
+const BUTTON_ZOOM_STEP = 0.05;
 const PAN_STEP = 36;
 const FAST_PAN_STEP = 72;
 
@@ -189,8 +190,8 @@ export const useVisualizationViewport = ({
     [pan.x, pan.y]
   );
 
-  const zoomOut = useCallback(() => updateZoom(-0.1), [updateZoom]);
-  const zoomIn = useCallback(() => updateZoom(0.1), [updateZoom]);
+  const zoomOut = useCallback(() => updateZoom(-BUTTON_ZOOM_STEP), [updateZoom]);
+  const zoomIn = useCallback(() => updateZoom(BUTTON_ZOOM_STEP), [updateZoom]);
 
   const cursor = useMemo(() => {
     if (zoomLevel > 1) {
