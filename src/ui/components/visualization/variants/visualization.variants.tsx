@@ -44,5 +44,10 @@ export const visualizationStyles = tv({
       "bg-gray-100 h-40 rounded-md flex items-center justify-center dark:bg-gray-950",
     placeholderText: "text-gray-500 dark:text-gray-400",
     subtleText: "text-sm text-gray-600 dark:text-gray-400",
+
+    zoomText: "min-w-14 text-center text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400",
+
+    displayActiveImageContainer: "relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950",
+    settingsPanelContainer: "pointer-events-auto max-h-[calc(100%-1rem)] w-full max-w-sm overflow-auto rounded-2xl border border-gray-200/80 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700/80 dark:bg-gray-900/95"
   },
 });

@@ -4,8 +4,9 @@ import {
   IcarusMatrixRecord,
 } from "@/app-layer/database/database.types";
 import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
-import { VisualizationDisplaySettings } from "@/domain/visualization/index.types";
+import { PlotAxisSelection, VisualizationDisplaySettings } from "@/domain/visualization/index.types";
 import { VisualizationRecord } from "@/domain/visualization/index.types";
+import { VisualizationRenderer } from "@/domain/workflow/main.types";
 
 export type VisualizationPanelProps = {
   volcanoData: {
@@ -44,4 +45,24 @@ export type VisualizationViewerProps = {
   savedVisualizations: VisualizationRecord[];
   setSettings: React.Dispatch<React.SetStateAction<VisualizationDisplaySettings>>;
   showSettings: boolean;
+};
+
+
+export type PlotLibraryCard = {
+  id: string;
+  eyebrow: string;
+  title: string;
+  description: string;
+  disabled: boolean;
+  disabledReason?: string;
+  isLoading: boolean;
+  renderer: VisualizationRenderer;
+  renderers: readonly VisualizationRenderer[];
+  selection: PlotAxisSelection;
+  xAxisOptions?: string[];
+  yAxisOptions?: string[];
+  labelAxisOptions?: string[];
+  onRendererChange: (renderer: VisualizationRenderer) => void;
+  onSelectionChange: (selection: Partial<PlotAxisSelection>) => void;
+  onRender: () => void | Promise<void>;
 };
