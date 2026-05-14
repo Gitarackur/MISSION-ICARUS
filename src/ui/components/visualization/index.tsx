@@ -5,7 +5,6 @@ import { VisualizationPanelProps } from "./types/index.types";
 import { PlotAxisSelection } from "@/domain/visualization/index.types";
 import { VisualizationRenderer } from "@/domain/workflow/main.types";
 import {
-  VisualizationSettingsPanel,
   VisualizationViewer,
 } from "./components/visualization-viewer";
 import { PlotLibrary } from "./components/plot-library";
@@ -265,15 +264,11 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         onSelectVisualization={setActiveVisualizationId}
         onSetDisplayMode={setDisplayMode}
         onToggleSettings={() => setShowSettings((value) => !value)}
+        settings={settings}
         savedVisualizations={savedVisualizations}
+        setSettings={setSettings}
+        showSettings={showSettings}
       />
-
-      {showSettings && activeSavedVisualization && (
-        <VisualizationSettingsPanel
-          settings={settings}
-          setSettings={setSettings}
-        />
-      )}
 
       <PlotLibrary isRendering={isRendering} plots={plotActions} />
 
