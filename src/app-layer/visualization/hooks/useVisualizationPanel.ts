@@ -20,7 +20,9 @@ import {
   buildConfiguredBarPayload,
   buildConfiguredBoxPayload,
   buildConfiguredHeatmapPayload,
+  buildConfiguredMissingValuesPayload,
   buildConfiguredPcaPayload,
+  buildConfiguredQcPayload,
   buildConfiguredScatterPayload,
   buildConfiguredVolcanoPayload,
   getDefaultPlotSelection,
@@ -51,7 +53,14 @@ import {
 } from "@/app-layer/visualization/types";
 
 type PlotSelectionState = Record<
-  "bar" | "box" | "scatter" | "heatmap" | "volcano" | "pca",
+  | "bar"
+  | "box"
+  | "scatter"
+  | "heatmap"
+  | "volcano"
+  | "pca"
+  | "qc"
+  | "missing-values",
   PlotAxisSelection
 >;
 
@@ -96,6 +105,8 @@ const createDefaultSelections = (
   scatter: getDefaultPlotSelection("scatter", activeMatrix),
   heatmap: getDefaultPlotSelection("heatmap", activeMatrix),
   volcano: getDefaultPlotSelection("volcano", activeMatrix),
+  qc: getDefaultPlotSelection("qc", activeMatrix),
+  "missing-values": getDefaultPlotSelection("missing-values", activeMatrix),
   pca: getDefaultPlotSelection("pca", activeMatrix),
 });
 
@@ -217,6 +228,11 @@ export const useVisualizationPanel = ({
       scatter: buildConfiguredScatterPayload(activeMatrix, plotSelections.scatter),
       heatmap: buildConfiguredHeatmapPayload(activeMatrix, plotSelections.heatmap),
       volcano: buildConfiguredVolcanoPayload(activeMatrix, plotSelections.volcano),
+      qc: buildConfiguredQcPayload(activeMatrix, plotSelections.qc),
+      "missing-values": buildConfiguredMissingValuesPayload(
+        activeMatrix,
+        plotSelections["missing-values"]
+      ),
       pca: buildConfiguredPcaPayload(activeMatrix, plotSelections.pca),
     }),
     [activeMatrix, plotSelections]
@@ -602,6 +618,91 @@ export const useVisualizationPanel = ({
     [plotReadiness.pca, plotSelections.pca.columns, runRenderer, saveRenderedVisualization]
   );
 
+  const renderQcPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness.qc;
+      if (!readiness.payload) {
+        setError(readiness.reason ?? "QC plot is unavailable for this matrix.");
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "qc",
+          nativeRenderer: () => renderBoxPlotSvg(readiness.payload!),
+          pythonRenderer: () => invokePythonBoxPlot(readiness.payload!),
+          rRenderer: () => invokeRBoxPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "qc",
+          title: readiness.payload.title ?? "QC Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.series.reduce(
+            (sum, entry) => sum + entry.values.length,
+            0
+          ),
+          inputColumnNames: plotSelections.qc.yAxes,
+        });
+      } catch (err) {
+        setError(`QC plot failed: ${(err as Error).message || err}`);
+      }
+    },
+    [plotReadiness.qc, plotSelections.qc.yAxes, runRenderer, saveRenderedVisualization]
+  );
+
+  const renderMissingValuesPlot = useCallback(
+    async (preferredRenderer: VisualizationRenderer = "python") => {
+      const readiness = plotReadiness["missing-values"];
+      if (!readiness.payload) {
+        setError(
+          readiness.reason ?? "Missing values plot is unavailable for this matrix."
+        );
+        return;
+      }
+      try {
+        const result = await runRenderer({
+          kind: "missing-values",
+          nativeRenderer: () =>
+            renderBarSvg(
+              readiness.payload!,
+              buildDefaultVisualizationDisplaySettings({
+                id: "preview-missing-values",
+                createdByActivityId: null,
+                data: readiness.payload,
+                visualizationType: "missing-values",
+              }),
+              readiness.payload!.title
+            ),
+          pythonRenderer: () => invokePythonBarPlot(readiness.payload!),
+          rRenderer: () => invokeRBarPlot(readiness.payload!),
+          payload: readiness.payload,
+          preferredRenderer,
+        });
+
+        await saveRenderedVisualization({
+          renderer: result.renderer,
+          image: result.image,
+          visualizationType: "missing-values",
+          title: readiness.payload.title ?? "Missing Values Plot",
+          data: readiness.payload,
+          pointCount: readiness.payload.categories.length,
+          inputColumnNames: plotSelections["missing-values"].columns,
+        });
+      } catch (err) {
+        setError(`Missing values plot failed: ${(err as Error).message || err}`);
+      }
+    },
+    [
+      plotReadiness,
+      plotSelections,
+      runRenderer,
+      saveRenderedVisualization,
+    ]
+  );
+
   return {
     activeSavedImage,
     activeSavedVisualization,
@@ -613,7 +714,9 @@ export const useVisualizationPanel = ({
     renderBarPlot,
     renderBoxPlot,
     renderHeatmap,
+    renderMissingValuesPlot,
     renderPcaPlot,
+    renderQcPlot,
     renderScatterPlot,
     renderVolcanoPlot,
     renderingJob,

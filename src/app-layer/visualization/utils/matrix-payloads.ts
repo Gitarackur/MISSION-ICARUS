@@ -136,7 +136,15 @@ export const getMatrixPlotColumnOptions = (matrix?: MatrixRecord) => {
 };
 
 export const getDefaultPlotSelection = (
-  kind: "bar" | "box" | "scatter" | "heatmap" | "volcano" | "pca",
+  kind:
+    | "bar"
+    | "box"
+    | "scatter"
+    | "heatmap"
+    | "volcano"
+    | "pca"
+    | "qc"
+    | "missing-values",
   matrix?: MatrixRecord
 ): PlotAxisSelection => {
   const { allColumns, numericColumns } = getMatrixPlotColumnOptions(matrix);
@@ -186,7 +194,97 @@ export const getDefaultPlotSelection = (
         labelAxis,
         nComponents: 2,
       };
+    case "qc":
+      return {
+        yAxes: numericColumns.slice(0, 6),
+      };
+    case "missing-values":
+      return {
+        columns: allColumns,
+      };
   }
+};
+
+export const buildConfiguredQcPayload = (
+  matrix: MatrixRecord | undefined,
+  selection: PlotAxisSelection
+): VisualizationReadiness<BoxPlotPayload> => {
+  if (!matrix) return { payload: null, reason: "No active matrix selected." };
+  const descriptors = getSelectedNumericDescriptors(matrix, selection.yAxes).slice(0, 12);
+
+  if (!descriptors.length) {
+    return {
+      payload: null,
+      reason: "QC plot requires at least one numeric column.",
+    };
+  }
+
+  const series = descriptors
+    .map((descriptor) => ({
+      name: descriptor.column,
+      values: getFiniteColumnValues(matrix, descriptor.index),
+    }))
+    .filter((entry) => entry.values.length > 0);
+
+  if (!series.length) {
+    return {
+      payload: null,
+      reason: "QC plot could not find numeric values for the selected columns.",
+    };
+  }
+
+  return {
+    payload: {
+      series,
+      title: "QC Plot",
+      yAxisLabel: "Observed values",
+    },
+  };
+};
+
+export const buildConfiguredMissingValuesPayload = (
+  matrix: MatrixRecord | undefined,
+  selection: PlotAxisSelection
+): VisualizationReadiness<BarChartPayload> => {
+  if (!matrix) return { payload: null, reason: "No active matrix selected." };
+
+  const descriptors = getColumnDescriptors(matrix).filter((descriptor) =>
+    (selection.columns?.length ? selection.columns : matrix.columns).includes(
+      descriptor.column
+    )
+  );
+
+  if (!descriptors.length) {
+    return {
+      payload: null,
+      reason: "Missing-values plot requires at least one column.",
+    };
+  }
+
+  const categories = descriptors.map((descriptor) => descriptor.column);
+  const values = descriptors.map((descriptor) =>
+    matrix.data.reduce((count, row) => {
+      const value = row[descriptor.index];
+      return value === null || value === undefined || String(value).trim() === ""
+        ? count + 1
+        : count;
+    }, 0)
+  );
+
+  return {
+    payload: {
+      categories,
+      series: [
+        {
+          name: "Missing values",
+          values,
+        },
+      ],
+      title: "Missing Values Plot",
+      xAxisLabel: "Columns",
+      yAxisLabel: "Missing count",
+    },
+  };
 };
 
 export const buildConfiguredBarPayload = (

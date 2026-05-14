@@ -111,7 +111,11 @@ export const renderVisualizationForDisplay = ({
 
   const payload = getSavedVisualizationPayload(visualization);
 
-  if (visualization.visualizationType === "bar" && isBarChartPayload(payload)) {
+  if (
+    (visualization.visualizationType === "bar" ||
+      visualization.visualizationType === "missing-values") &&
+    isBarChartPayload(payload)
+  ) {
     return renderBarSvg(payload, settings, visualization.title);
   }
 
@@ -135,7 +139,11 @@ export const renderVisualizationForDisplay = ({
     );
   }
 
-  if (visualization.visualizationType === "box" && isBoxPlotPayload(payload)) {
+  if (
+    (visualization.visualizationType === "box" ||
+      visualization.visualizationType === "qc") &&
+    isBoxPlotPayload(payload)
+  ) {
     return renderBoxPlotSvg(payload, settings, visualization.title);
   }
 

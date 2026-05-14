@@ -7,7 +7,6 @@ import {
   LineChart,
   FlaskConical,
   Split,
-  PieChart,
   LayoutList,
   GraduationCap,
   Palette,
@@ -17,7 +16,6 @@ import {
   ListCollapse,
   GitGraph,
   Scale,
-  Gauge,
   AlertTriangle,
   Network,
   MoreHorizontal,
@@ -110,12 +108,6 @@ const menuData = {
         label: "Pj",
         icon: <Sigma className={toolbarButtonIcon()} />,
       },
-      {
-        id: "visualization",
-        label: "Visualization",
-        hasDropdown: true,
-        icon: <PieChart className={toolbarButtonIcon()} />,
-      },
     ],
     [
       {
@@ -178,12 +170,6 @@ const menuData = {
         label: "Normalization",
         hasDropdown: true,
         icon: <Scale className={toolbarButtonIcon()} />,
-      },
-      {
-        id: "quality",
-        label: "Quality",
-        hasDropdown: true,
-        icon: <Gauge className={toolbarButtonIcon()} />,
       },
       {
         id: "tests",
@@ -282,13 +268,6 @@ const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
     { id: "normalize-reporter-ions", label: "Normalize Reporter Ions" },
     { id: "correct-for-purity", label: "Correct for Purity" },
   ],
-  visualization: [
-    { id: "box-plot", label: "Box Plot" },
-    { id: "scatter-plot", label: "Scatter Plot" },
-    { id: "heatmap", label: "Heatmap" },
-    { id: "volcano-plot", label: "Volcano Plot" },
-    { id: "pca-plot", label: "PCA Plot" },
-  ],
   rearrange: [
     { id: "sort-asc", label: "Sort Asc" },
     { id: "sort-desc", label: "Sort Desc" },
@@ -327,10 +306,6 @@ const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
     { id: "log-transform", label: "Log Transform" },
     { id: "quantile-normalization", label: "Quantile" },
     { id: "mean-centering", label: "Mean Centering" },
-  ],
-  quality: [
-    { id: "qc-plot", label: "QC Plot" },
-    { id: "missing-values-plot", label: "Missing Values Plot" },
   ],
   tests: [
     { id: "t-test-test", label: "T-Test" },

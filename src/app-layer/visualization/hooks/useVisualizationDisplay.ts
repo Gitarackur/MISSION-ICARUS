@@ -77,6 +77,7 @@ const buildRendererImage = async (
   const payload = getSavedVisualizationPayload(visualization);
   switch (visualization.visualizationType) {
     case "bar":
+    case "missing-values":
       if (isBarPayload(payload)) {
         return renderer === "python"
           ? invokePythonBarPlot(payload)
@@ -84,6 +85,7 @@ const buildRendererImage = async (
       }
       return null;
     case "box":
+    case "qc":
       if (isBoxPayload(payload)) {
         return renderer === "python"
           ? invokePythonBoxPlot(payload)
