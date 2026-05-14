@@ -77,6 +77,8 @@ export type VisualizationKind =
   | "heatmap"
   | "volcano"
   | "pca"
+  | "qc"
+  | "missing-values"
   | "custom"
   | "generic";
 

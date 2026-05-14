@@ -34,4 +34,6 @@ export type RenderJob =
   | "scatter"
   | "pca"
   | "heatmap"
-  | "volcano";
+  | "volcano"
+  | "qc"
+  | "missing-values";

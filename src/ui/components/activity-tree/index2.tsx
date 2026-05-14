@@ -18,6 +18,14 @@ import {
 import { Minus, Plus, RefreshCcw } from "lucide-react";
 import { wrapText } from "./utils/main";
 
+const getRendererLabel = (renderer?: IcarusVisualization["renderer"]) => {
+  if (renderer === "recharts") {
+    return "native";
+  }
+
+  return renderer ?? "saved";
+};
+
 const ActivityTree2 = ({
   sessionData,
   activeMatrixId,
@@ -278,9 +286,12 @@ const ActivityTree2 = ({
             getVisualizationMatrixId(visualization) ??
             d.data.activity.outputMatrixReference ??
             d.data.activity.inputMatrixReferences;
-          const label =
+          const visualizationLabel =
             visualization.visualizationType ??
             getVisualizationLabel(visualization, index);
+          const label = `${visualizationLabel} · ${getRendererLabel(
+            visualization.renderer
+          )}`;
           const button = plotGroup
             .append("g")
             .attr(

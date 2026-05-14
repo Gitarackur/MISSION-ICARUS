@@ -23,7 +23,9 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     renderBarPlot,
     renderBoxPlot,
     renderHeatmap,
+    renderMissingValuesPlot,
     renderPcaPlot,
+    renderQcPlot,
     renderScatterPlot,
     renderVolcanoPlot,
     renderingJob,
@@ -60,6 +62,8 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     plotSelections.volcano.xAxis ?? "",
     ...(plotSelections.volcano.yAxes ?? []),
   ].filter(Boolean);
+  const qcColumns = plotSelections.qc.yAxes ?? [];
+  const missingValueColumns = plotSelections["missing-values"].columns ?? [];
   const pcaColumns = plotSelections.pca.columns ?? [];
 
   const plotActions = [
@@ -221,6 +225,36 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         setPlotSelection("volcano", selection),
     },
     {
+      id: "qc",
+      eyebrow: "Quality",
+      title: "QC Plot",
+      description: plotReadiness.qc.payload
+        ? "Use box-plot style quality control across selected numeric columns."
+        : plotReadiness.qc.reason ?? "QC plot is unavailable for this matrix.",
+      disabled:
+        isRendering ||
+        !plotReadiness.qc.payload ||
+        hasSavedVisualization("qc", plotSelections.qc.renderer, qcColumns),
+      disabledReason: hasSavedVisualization(
+        "qc",
+        plotSelections.qc.renderer,
+        qcColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
+        : undefined,
+      onRender: () => renderQcPlot(plotSelections.qc.renderer ?? "python"),
+      isLoading: renderingJob === "qc",
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections.qc.renderer ?? "python",
+      selection: plotSelections.qc,
+      yAxisOptions: columnOptions.numericColumns,
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("qc", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("qc", selection),
+    },
+    {
       id: "pca",
       eyebrow: "Dimensionality",
       title: "PCA Plot",
@@ -249,6 +283,44 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         setPlotSelection("pca", { renderer }),
       onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
         setPlotSelection("pca", selection),
+    },
+    {
+      id: "missing-values",
+      eyebrow: "Quality",
+      title: "Missing Values Plot",
+      description: plotReadiness["missing-values"].payload
+        ? "Visualize missing-value counts across selected columns."
+        : plotReadiness["missing-values"].reason ??
+          "Missing values plot is unavailable for this matrix.",
+      disabled:
+        isRendering ||
+        !plotReadiness["missing-values"].payload ||
+        hasSavedVisualization(
+          "missing-values",
+          plotSelections["missing-values"].renderer,
+          missingValueColumns
+        ),
+      disabledReason: hasSavedVisualization(
+        "missing-values",
+        plotSelections["missing-values"].renderer,
+        missingValueColumns
+      )
+        ? "Already created for this matrix with this renderer and axis selection."
+        : undefined,
+      onRender: () =>
+        renderMissingValuesPlot(
+          plotSelections["missing-values"].renderer ?? "python"
+        ),
+      isLoading: renderingJob === "missing-values",
+      renderers: ["python", "r", "recharts"] as const,
+      renderer: plotSelections["missing-values"].renderer ?? "python",
+      selection: plotSelections["missing-values"],
+      yAxisOptions: columnOptions.allColumns,
+      labelAxisOptions: columnOptions.allColumns,
+      onRendererChange: (renderer: VisualizationRenderer) =>
+        setPlotSelection("missing-values", { renderer }),
+      onSelectionChange: (selection: Partial<PlotAxisSelection>) =>
+        setPlotSelection("missing-values", selection),
     },
   ];
 

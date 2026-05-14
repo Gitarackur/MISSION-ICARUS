@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React from 'react';
 import { usePagination } from './hooks/usePagination';
 import { Checkbox } from '@/ui/design-system/Checkbox';
 import { DataPreviewProps } from './types';
@@ -9,13 +9,7 @@ import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/uti
 import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
-import { StatisticalAnalysisResult } from '@/domain/statistics/index.types';
-import {
-  buildVisualizationActivityFromStatisticalResult,
-  getVisualizationKindForStatisticalAction,
-  isVisualizationStatisticalAction,
-} from '@/app-layer/statistics/utils/statistical-visualization';
-import { getVisualizationMatrixId } from '@/domain/visualization/utils/main';
+import { usePreviewMenuAction } from './hooks/usePreviewMenuAction';
 
 
 const ROWS_PER_PAGE = 20;
@@ -68,74 +62,13 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     toggleViewOfColumnOnPreviewTable(column, checked, ontoggle)
   };
 
-  const handleMenuAction = useCallback(async (result: StatisticalAnalysisResult) => {
-    try {
-      console.log("result", result)
-
-      const {
-        inputParameters,
-        newly_created_columns: outputColumns,
-        data: outputData,
-        outputParameters
-      } = result
-
-      if (result !== undefined) {
-        if (isVisualizationStatisticalAction(inputParameters.action)) {
-          const visualizationKind = getVisualizationKindForStatisticalAction(
-            inputParameters.action
-          );
-          const existingVisualization = visualizations.find(
-            (visualization) =>
-              visualization.visualizationType === visualizationKind &&
-              getVisualizationMatrixId(visualization) === sessionSourceMatrix?.id
-          );
-
-          if (existingVisualization) {
-            onVisualizationCreated?.(existingVisualization.id);
-            return;
-          }
-
-          const visualizationActivity =
-            await buildVisualizationActivityFromStatisticalResult({
-              result,
-              sourceMatrixId: sessionSourceMatrix?.id,
-            });
-          const saveResult = visualizationActivity
-            ? await saveVisualizationInWorkflow?.(visualizationActivity)
-            : undefined;
-
-          if (saveResult?.visualizationId) {
-            onVisualizationCreated?.(saveResult.visualizationId);
-          }
-          return;
-        }
-
-        saveActivityInWorkflow?.({
-          // input keys, values and references
-          inputColumnNames: inputParameters.columns,
-          // add sourceMatrixId to the input reference 
-          inputMatrixReferences: sessionSourceMatrix?.id,
-          inputParameters,
-          // output column names, parameters and references
-          outputColumnNames: outputColumns,
-          outputData,
-          // save the matrix and then add the output matrix id to the reference 
-          // outputMatrixReference: '',
-          outputMetrics: outputParameters,
-          // statistical action
-          action: inputParameters.action || outputParameters.calculationMethod
-        });
-      }
-    } catch (err) {
-      throw new Error(`unable to handle menu selection: ${err}`)
-    }
-  }, [
+  const handleMenuAction = usePreviewMenuAction({
     onVisualizationCreated,
     saveActivityInWorkflow,
     saveVisualizationInWorkflow,
     sessionSourceMatrix,
     visualizations,
-  ]);
+  });
 
 
   // account for empty state from raw data
