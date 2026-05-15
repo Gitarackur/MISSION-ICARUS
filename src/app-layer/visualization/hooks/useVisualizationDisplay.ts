@@ -164,6 +164,10 @@ export const useVisualizationDisplay = ({
   );
   const [pythonDisplayImage, setPythonDisplayImage] = useState<string | null>(null);
   const [rDisplayImage, setRDisplayImage] = useState<string | null>(null);
+  const [rendererAvailability, setRendererAvailability] = useState({
+    python: true,
+    r: false,
+  });
   const [rendererErrors, setRendererErrors] = useState<
     Partial<Record<DisplayMode, string>>
   >({});
@@ -171,11 +175,35 @@ export const useVisualizationDisplay = ({
     null
   );
   const preferredDisplayMode = useMemo<DisplayMode>(() => {
-    if (activeVisualization?.renderer === "r") return "r";
-    if (activeVisualization?.renderer === "python") return "python";
+    if (activeVisualization?.renderer === "r") return "saved";
+    if (activeVisualization?.renderer === "python") return "saved";
     if (activeVisualization?.renderer === "recharts") return "native";
     return "saved";
   }, [activeVisualization?.renderer]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadRendererAvailability = async () => {
+      const [python, r] = await Promise.allSettled([
+        window.electron.ipcRenderer.invoke("renderer:python-available"),
+        window.electron.ipcRenderer.invoke("renderer:r-available"),
+      ]);
+
+      if (cancelled) return;
+
+      setRendererAvailability({
+        python: python.status === "fulfilled" ? Boolean(python.value) : false,
+        r: r.status === "fulfilled" ? Boolean(r.value) : false,
+      });
+    };
+
+    void loadRendererAvailability();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     setSettings(getVisualizationDisplaySettings(activeVisualization));
@@ -187,41 +215,70 @@ export const useVisualizationDisplay = ({
   }, [activeVisualization, preferredDisplayMode]);
 
   useEffect(() => {
+    if (!activeVisualization) return;
+    if (displayMode !== "python" && displayMode !== "r") return;
+
+    const image = displayMode === "python" ? pythonDisplayImage : rDisplayImage;
+    if (image) return;
+
+    if (
+      (displayMode === "python" && !rendererAvailability.python) ||
+      (displayMode === "r" && !rendererAvailability.r)
+    ) {
+      setRendererErrors((previous) => ({
+        ...previous,
+        [displayMode]:
+          displayMode === "python"
+            ? "Python renderer is not available on this system."
+            : "R renderer is not available on this system.",
+      }));
+      return;
+    }
+
     let cancelled = false;
 
-    const hydrateRendererImages = async () => {
-      const [pythonImage, rImage] = await Promise.allSettled([
-        buildRendererImage(activeVisualization, "python"),
-        buildRendererImage(activeVisualization, "r"),
-      ]);
+    const loadRendererImage = async () => {
+      try {
+        const nextImage = await buildRendererImage(
+          activeVisualization,
+          displayMode
+        );
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      const nextErrors: Partial<Record<DisplayMode, string>> = {};
+        if (displayMode === "python") {
+          setPythonDisplayImage(nextImage);
+        } else {
+          setRDisplayImage(nextImage);
+        }
 
-      if (pythonImage.status === "rejected") {
-        nextErrors.python = getErrorMessage(pythonImage.reason);
+        setRendererErrors((previous) => {
+          const next = { ...previous };
+          delete next[displayMode];
+          return next;
+        });
+      } catch (error) {
+        if (cancelled) return;
+
+        setRendererErrors((previous) => ({
+          ...previous,
+          [displayMode]: getErrorMessage(error),
+        }));
       }
-
-      if (rImage.status === "rejected") {
-        nextErrors.r = getErrorMessage(rImage.reason);
-      }
-
-      setPythonDisplayImage(
-        pythonImage.status === "fulfilled" ? pythonImage.value : null
-      );
-      setRDisplayImage(rImage.status === "fulfilled" ? rImage.value : null);
-      setRendererErrors(nextErrors);
     };
 
-    if (activeVisualization) {
-      void hydrateRendererImages();
-    }
+    void loadRendererImage();
 
     return () => {
       cancelled = true;
     };
-  }, [activeVisualization]);
+  }, [
+    activeVisualization,
+    displayMode,
+    pythonDisplayImage,
+    rDisplayImage,
+    rendererAvailability,
+  ]);
 
   const nativeDisplayImage = useMemo(
     () =>
@@ -240,11 +297,23 @@ export const useVisualizationDisplay = ({
   const availableDisplayModes = useMemo(() => {
     const modes: DisplayMode[] = [];
     if (savedDisplayImage) modes.push("saved");
-    if (supportsRenderer(activeVisualization, "python")) modes.push("python");
-    if (supportsRenderer(activeVisualization, "r")) modes.push("r");
+    if (
+      rendererAvailability.python &&
+      supportsRenderer(activeVisualization, "python")
+    ) {
+      modes.push("python");
+    }
+    if (rendererAvailability.r && supportsRenderer(activeVisualization, "r")) {
+      modes.push("r");
+    }
     if (nativeDisplayImage) modes.push("native");
     return modes;
-  }, [activeVisualization, nativeDisplayImage, savedDisplayImage]);
+  }, [
+    activeVisualization,
+    nativeDisplayImage,
+    rendererAvailability,
+    savedDisplayImage,
+  ]);
 
   const fallbackMode = useMemo(() => {
     const order: DisplayMode[] = [

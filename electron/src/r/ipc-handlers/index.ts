@@ -17,6 +17,8 @@ const resolveRScriptPath = (scriptPath: string): string => {
 export function setupRHandlers() {
   const rManager = new EmbeddedRManager();
 
+  ipcMain.handle("renderer:r-available", async () => rManager.isRAvailable());
+
   ipcMain.handle(
     "run-r",
     async (

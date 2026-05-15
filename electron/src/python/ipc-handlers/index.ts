@@ -10,6 +10,10 @@ interface Data {
 }
 
 export function setupPythonHandlers() {
+  ipcMain.handle("renderer:python-available", async () =>
+    pythonManager.isPythonRendererAvailable()
+  );
+
   ipcMain.handle("run:python", async (_event, { method, args = [] }: Data) => {
     if (
       typeof pythonManager[method as keyof typeof pythonManager] !== "function"

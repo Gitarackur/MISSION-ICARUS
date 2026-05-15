@@ -9,6 +9,19 @@ import { app } from "electron";
 
 
 export class PythonManager extends Manager {
+  public isPythonRendererAvailable(): boolean {
+    const scriptPath = resourcePath("scripts", "python", "commander.py");
+    if (!app.isPackaged) {
+      return fs.existsSync(scriptPath);
+    }
+
+    try {
+      return fs.existsSync(this.getBin(scriptPath));
+    } catch {
+      return false;
+    }
+  }
+
   private checkIfPathIsPythonScript(scriptPath: string): void {
     const ext = path.extname(scriptPath).toLowerCase();
     if (ext !== ".py") {
