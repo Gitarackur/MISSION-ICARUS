@@ -68,6 +68,11 @@ assets/scripts/python/bin/commander.build/
 assets/scripts/python/bin/commander.dist/
 assets/scripts/python/bin/commander.onefile-build/
 
+# Hide Nuitka crash logs
+assets/scripts/python/nuitka-crash-*.log
+assets/scripts/python/nuitka-crash-*.xml
+# assets/scripts/python/nuitka-crash-report-*.xml
+
 
 # OS generated files
 .DS_Store
