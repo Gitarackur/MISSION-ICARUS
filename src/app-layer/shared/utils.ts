@@ -2,6 +2,11 @@ import {
   parse2DArray,
   parseCSVFromFile,
 } from "@/app-layer/shared/csv_tsc_parser";
+import {
+  formatNumericDisplayValue,
+  isMissingValue,
+  parseLocalizedNumber,
+} from "@/domain/shared/number-parsing";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { ColumnTypeInferenceOptions, DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
 import { TableColumns, TableMatrices, TableMatrix } from "@/domain/workflow/main.types";
@@ -9,18 +14,7 @@ import { TableColumns, TableMatrices, TableMatrix } from "@/domain/workflow/main
 /* calculation specific utils */
 export function isNumericString(s: string | undefined) {
   if (s == null) return false;
-  return /^[-+]?\d*(?:\.\d+)?(?:[eE][-+]?\d+)?$/.test(s.trim());
-}
-
-// Converts a string to a number if possible, otherwise returns the original string
-export function toNumberIfPossible(s: string | undefined): number | string {
-  // if (s == null) return 0;
-  if(s == null) return 'N/A'
-  const trimmed = s.trim();
-  // if (trimmed === "") return 0;
-  if (trimmed === "") return "N/A";
-  if (isNumericString(trimmed)) return Number(trimmed);
-  return trimmed;
+  return parseLocalizedNumber(s) !== null;
 }
 
 // Calculates the log2 ratio of two numbers, returning NaN for invalid inputs
@@ -260,8 +254,7 @@ export const getNumericColumns = (
         val !== null &&
         val !== undefined &&
         val !== "" &&
-        !isNaN(parseFloat(String(val))) &&
-        isFinite(parseFloat(String(val)))
+        parseLocalizedNumber(val) !== null
     );
     if (isNumeric) {
       numeric.add(column);
@@ -322,10 +315,10 @@ export const getNumericColumnsOptimized = (
       }
 
       // Try to parse as number
-      const numericValue = parseFloat(String(value));
+      const numericValue = parseLocalizedNumber(value);
       
       // Check if it's a valid finite number
-      if (isNaN(numericValue) || !isFinite(numericValue)) {
+      if (numericValue === null) {
         // Found invalid numeric value - column is not numeric
         isNumeric = false;
         break;
@@ -380,8 +373,7 @@ export const getNumericColumnsOptimized1 = (
         value === null ||
         value === undefined ||
         value === "" ||
-        isNaN(parseFloat(String(value))) ||
-        !isFinite(parseFloat(String(value)))
+        parseLocalizedNumber(value) === null
       ) {
         isNumeric = false;
         break; // Exit the inner loop early
@@ -407,12 +399,7 @@ export const formatColumnHeader = (str: string): string => {
 
 // Formats a table cell value for display, handling numbers and strings
 export const formatTableCellValue = (value: unknown): string | number => {
-  if (typeof value === "number") {
-    return value;
-  }
-  // Handle other types, including null/undefined
-  // return (value as string) || 0;
-  return (value as string) || 'N/A'
+  return formatNumericDisplayValue(value);
 };
 
 // export numeric data
@@ -476,21 +463,10 @@ export const transposedStatisticalResults = (results: number[][]) =>
 
 
 export const isMissing = (v: unknown): boolean =>
-  v === null ||
-  v === undefined ||
-  (typeof v === "string" && v.trim() === "") ||
-  v === "NA" ||
-  v === "NaN";
+  isMissingValue(v);
 
 export const toNumber = (v: unknown): number | null => {
-  if (isMissing(v)) return null;
-  const n =
-    typeof v === "number"
-      ? v
-      : typeof v === "string"
-      ? Number(v.replace(/,/g, ""))
-      : NaN;
-  return Number.isFinite(n) ? n : null;
+  return parseLocalizedNumber(v);
 };
 
 export const mean = (values: (number | null)[]): number | null => {
@@ -502,18 +478,5 @@ export const mean = (values: (number | null)[]): number | null => {
 
 /** Convert values to finite numbers; return NaN for null/undefined/""/"NA"/"NaN"/non-numeric. */
 export function toFinite(v: unknown): number {
-  if (
-    v === null ||
-    v === undefined ||
-    (typeof v === "string" && v.trim() === "") ||
-    v === "NA" ||
-    v === "NaN"
-  ) return NaN;
-
-  if (typeof v === "number") return Number.isFinite(v) ? v : NaN;
-  if (typeof v === "string") {
-    const n = Number(v.replace(/,/g, ""));
-    return Number.isFinite(n) ? n : NaN;
-  }
-  return NaN;
+  return parseLocalizedNumber(v) ?? NaN;
 }

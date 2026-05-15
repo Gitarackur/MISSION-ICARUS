@@ -119,6 +119,7 @@ export const useVisualizationPanel = ({
   shouldAutoSelectVisualization = true,
 }: VisualizationPanelStateParams) => {
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [internalActiveVisualizationId, setInternalActiveVisualizationId] =
     useState("");
   const [renderingJob, setRenderingJob] = useState<RenderJob | null>(null);
@@ -348,6 +349,7 @@ export const useVisualizationPanel = ({
       preferredRenderer: VisualizationRenderer;
     }) => {
       setError(null);
+      setWarning(null);
       setRenderingJob(kind);
       try {
         if (preferredRenderer === "recharts") {
@@ -372,6 +374,13 @@ export const useVisualizationPanel = ({
         if (preferredRenderer === "python") {
           const image = nativeRenderer();
           if (image) {
+            const message = `Python renderer failed and the plot was saved with the native renderer instead. ${
+              rendererError instanceof Error
+                ? rendererError.message
+                : String(rendererError)
+            }`;
+            console.warn(`[Visualization] ${kind} fallback: ${message}`);
+            setWarning(message);
             return { image, renderer: "recharts" as const, payload };
           }
         }
@@ -708,6 +717,7 @@ export const useVisualizationPanel = ({
     activeSavedVisualization,
     columnOptions,
     error,
+    warning,
     hasSavedVisualization,
     plotReadiness,
     plotSelections,

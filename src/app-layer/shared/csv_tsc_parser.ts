@@ -3,7 +3,10 @@ import {
   ParsedCSVResult,
   ColumnTypeInferenceOptions,
 } from "@/domain/shared/index.types";
-import { toNumberIfPossible } from "./utils";
+import {
+  parseLocalizedNumber,
+  toNumberIfPossible,
+} from "@/domain/shared/number-parsing";
 import Papa, { ParseResult } from "papaparse";
 
 type Delimiter = "," | "\t" | ";" | "|" | "whitespace";
@@ -230,8 +233,8 @@ const inferColumnTypesInternal = <T>(
       }
 
       if (isNumeric) {
-        const numericValue = Number(stringValue);
-        if (!Number.isFinite(numericValue)) {
+        const numericValue = parseLocalizedNumber(stringValue);
+        if (numericValue === null) {
           isNumeric = false;
         }
       }

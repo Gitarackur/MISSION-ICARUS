@@ -35,6 +35,32 @@ import {
 } from "@/app-layer/visualization/utils/renderers";
 
 type DisplayMode = "saved" | "native" | "python" | "r";
+type DisplayWarning = {
+  title: string;
+  message: string;
+};
+
+const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+const supportsRenderer = (
+  visualization: VisualizationRecord | undefined,
+  mode: DisplayMode
+) => {
+  if (!visualization) return false;
+  if (mode === "saved") return true;
+
+  return [
+    "bar",
+    "box",
+    "scatter",
+    "heatmap",
+    "volcano",
+    "pca",
+    "qc",
+    "missing-values",
+  ].includes(visualization.visualizationType ?? "");
+};
 
 const isBarPayload = (payload: unknown): payload is BarChartPayload =>
   Boolean(payload) &&
@@ -83,7 +109,7 @@ const buildRendererImage = async (
           ? invokePythonBarPlot(payload)
           : invokeRBarPlot(payload);
       }
-      return null;
+      throw new Error("Saved plot payload is not compatible with the bar renderer.");
     case "box":
     case "qc":
       if (isBoxPayload(payload)) {
@@ -91,35 +117,35 @@ const buildRendererImage = async (
           ? invokePythonBoxPlot(payload)
           : invokeRBoxPlot(payload);
       }
-      return null;
+      throw new Error("Saved plot payload is not compatible with the box renderer.");
     case "scatter":
       if (isScatterPayload(payload)) {
         return renderer === "python"
           ? invokePythonScatterPlot(payload)
           : invokeRScatterPlot(payload);
       }
-      return null;
+      throw new Error("Saved plot payload is not compatible with the scatter renderer.");
     case "heatmap":
       if (isHeatmapPayload(payload)) {
         return renderer === "python"
           ? invokePythonHeatmap(payload)
           : invokeRHeatmap(payload);
       }
-      return null;
+      throw new Error("Saved plot payload is not compatible with the heatmap renderer.");
     case "volcano":
       if (isVolcanoPayload(payload)) {
         return renderer === "python"
           ? invokePythonVolcanoPlot(payload)
           : invokeRVolcanoPlot(payload);
       }
-      return null;
+      throw new Error("Saved plot payload is not compatible with the volcano renderer.");
     case "pca":
       if (isPcaPayload(payload)) {
         return renderer === "python"
           ? invokePythonPcaPlot(payload)
           : invokeRPcaPlot(payload);
       }
-      return null;
+      throw new Error("Saved plot payload is not compatible with the PCA renderer.");
     default:
       return null;
   }
@@ -138,6 +164,12 @@ export const useVisualizationDisplay = ({
   );
   const [pythonDisplayImage, setPythonDisplayImage] = useState<string | null>(null);
   const [rDisplayImage, setRDisplayImage] = useState<string | null>(null);
+  const [rendererErrors, setRendererErrors] = useState<
+    Partial<Record<DisplayMode, string>>
+  >({});
+  const [displayWarning, setDisplayWarning] = useState<DisplayWarning | null>(
+    null
+  );
   const preferredDisplayMode = useMemo<DisplayMode>(() => {
     if (activeVisualization?.renderer === "r") return "r";
     if (activeVisualization?.renderer === "python") return "python";
@@ -150,6 +182,8 @@ export const useVisualizationDisplay = ({
     setDisplayMode(preferredDisplayMode);
     setPythonDisplayImage(null);
     setRDisplayImage(null);
+    setRendererErrors({});
+    setDisplayWarning(null);
   }, [activeVisualization, preferredDisplayMode]);
 
   useEffect(() => {
@@ -163,10 +197,21 @@ export const useVisualizationDisplay = ({
 
       if (cancelled) return;
 
+      const nextErrors: Partial<Record<DisplayMode, string>> = {};
+
+      if (pythonImage.status === "rejected") {
+        nextErrors.python = getErrorMessage(pythonImage.reason);
+      }
+
+      if (rImage.status === "rejected") {
+        nextErrors.r = getErrorMessage(rImage.reason);
+      }
+
       setPythonDisplayImage(
         pythonImage.status === "fulfilled" ? pythonImage.value : null
       );
       setRDisplayImage(rImage.status === "fulfilled" ? rImage.value : null);
+      setRendererErrors(nextErrors);
     };
 
     if (activeVisualization) {
@@ -192,6 +237,41 @@ export const useVisualizationDisplay = ({
     [activeVisualization]
   );
 
+  const availableDisplayModes = useMemo(() => {
+    const modes: DisplayMode[] = [];
+    if (savedDisplayImage) modes.push("saved");
+    if (supportsRenderer(activeVisualization, "python")) modes.push("python");
+    if (supportsRenderer(activeVisualization, "r")) modes.push("r");
+    if (nativeDisplayImage) modes.push("native");
+    return modes;
+  }, [activeVisualization, nativeDisplayImage, savedDisplayImage]);
+
+  const fallbackMode = useMemo(() => {
+    const order: DisplayMode[] = [
+      preferredDisplayMode,
+      "saved",
+      "native",
+      "python",
+      "r",
+    ];
+
+    return order.find((mode) => {
+      if (!availableDisplayModes.includes(mode)) return false;
+      if (mode === "saved") return Boolean(savedDisplayImage);
+      if (mode === "native") return Boolean(nativeDisplayImage);
+      if (mode === "python") return Boolean(pythonDisplayImage);
+      if (mode === "r") return Boolean(rDisplayImage);
+      return false;
+    });
+  }, [
+    availableDisplayModes,
+    nativeDisplayImage,
+    preferredDisplayMode,
+    pythonDisplayImage,
+    rDisplayImage,
+    savedDisplayImage,
+  ]);
+
   const activeDisplayImage = useMemo(() => {
     switch (displayMode) {
       case "python":
@@ -212,6 +292,55 @@ export const useVisualizationDisplay = ({
     savedDisplayImage,
   ]);
 
+  useEffect(() => {
+    if (!activeVisualization) return;
+    if (displayMode === "saved" || displayMode === "native") return;
+
+    const requestedImage =
+      displayMode === "python" ? pythonDisplayImage : rDisplayImage;
+    const requestedError = rendererErrors[displayMode];
+
+    if (requestedImage || !requestedError) return;
+
+    const fallbackLabel =
+      fallbackMode === "saved"
+        ? "saved renderer"
+        : fallbackMode === "native"
+          ? "native renderer"
+          : fallbackMode === "python"
+            ? "Python renderer"
+            : fallbackMode === "r"
+              ? "R renderer"
+              : null;
+
+    console.warn(
+      `[Visualization] ${displayMode} renderer failed for "${activeVisualization.title ?? activeVisualization.visualizationType ?? activeVisualization.id}": ${requestedError}`
+    );
+
+    setDisplayWarning({
+      title: `${
+        displayMode === "python" ? "Python" : "R"
+      } renderer unavailable`,
+      message: fallbackLabel
+        ? `${requestedError} The view has been switched to the ${fallbackLabel}.`
+        : requestedError,
+    });
+
+    if (fallbackMode && fallbackMode !== displayMode) {
+      setDisplayMode(fallbackMode);
+    }
+  }, [
+    activeVisualization,
+    displayMode,
+    pythonDisplayImage,
+    rDisplayImage,
+    rendererErrors,
+    savedDisplayImage,
+    nativeDisplayImage,
+    preferredDisplayMode,
+    fallbackMode,
+  ]);
+
   const displayRendererOptions = useMemo(() => {
     const optionMap = new Map<DisplayMode, { value: DisplayMode; label: string }>();
     if (savedDisplayImage) {
@@ -227,10 +356,10 @@ export const useVisualizationDisplay = ({
                 : "Saved Renderer",
       });
     }
-    if (pythonDisplayImage) {
+    if (supportsRenderer(activeVisualization, "python")) {
       optionMap.set("python", { value: "python", label: "Python Renderer" });
     }
-    if (rDisplayImage) {
+    if (supportsRenderer(activeVisualization, "r")) {
       optionMap.set("r", { value: "r", label: "R Renderer" });
     }
     if (nativeDisplayImage) {
@@ -253,11 +382,9 @@ export const useVisualizationDisplay = ({
           items.findIndex((item) => item?.value === option?.value) === index
       );
   }, [
-    activeVisualization?.renderer,
+    activeVisualization,
     nativeDisplayImage,
     preferredDisplayMode,
-    pythonDisplayImage,
-    rDisplayImage,
     savedDisplayImage,
   ]);
 
@@ -293,10 +420,12 @@ export const useVisualizationDisplay = ({
     activeDisplayImage,
     canUseNativeView: Boolean(nativeDisplayImage),
     currentFileName,
+    displayWarning,
     displayMode,
     displayRendererOptions,
     downloadCurrentVisualization,
     hasVisualizations: visualizations.length > 0,
+    clearDisplayWarning: () => setDisplayWarning(null),
     settings,
     setDisplayMode,
     setSettings,

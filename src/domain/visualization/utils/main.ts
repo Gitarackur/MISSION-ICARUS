@@ -13,6 +13,7 @@ import {
   VisualizationKind,
   VisualizationRenderer,
 } from "@/domain/workflow/main.types";
+import { parseLocalizedNumber } from "@/domain/shared/number-parsing";
 
 export const buildIntensityBarPayload = (
   intensityDist: IntensityDistribution
@@ -61,8 +62,8 @@ export const buildMatrixBarPayload = (
         name: "Mean value",
         values: matrix.columns.map((_, columnIndex) => {
           const values = matrix.data
-            .map((row) => Number(row[columnIndex]))
-            .filter((value) => Number.isFinite(value));
+            .map((row) => parseLocalizedNumber(row[columnIndex]))
+            .filter((value): value is number => Number.isFinite(value));
           return values.length > 0
             ? values.reduce((sum, value) => sum + value, 0) / values.length
             : 0;
@@ -77,8 +78,8 @@ export const buildMatrixBarPayload = (
 
 const getFiniteMatrixColumnValues = (matrix: MatrixRecord, columnIndex: number) =>
   matrix.data
-    .map((row) => Number(row[columnIndex]))
-    .filter((value) => Number.isFinite(value));
+    .map((row) => parseLocalizedNumber(row[columnIndex]))
+    .filter((value): value is number => Number.isFinite(value));
 
 const calculatePearsonCorrelation = (xValues: number[], yValues: number[]) => {
   const length = Math.min(xValues.length, yValues.length);
