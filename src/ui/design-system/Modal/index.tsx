@@ -48,7 +48,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
             <X className={styles.iconClose()} />
           </button>
         </div>
-        {children}
+        <div className={styles.modalDataContainer()}>{children}</div>
       </div>
     </div>
   );

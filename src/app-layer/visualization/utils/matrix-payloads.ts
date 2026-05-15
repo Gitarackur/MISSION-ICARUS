@@ -23,6 +23,13 @@ type ColumnDescriptor = {
   numeric: boolean;
 };
 
+const MAX_PROFILE_ROWS = 2000;
+const MAX_VISUALIZATION_ROWS = 5000;
+const MAX_SCATTER_POINTS = 4000;
+const MAX_PCA_ROWS = 2500;
+const MAX_HEATMAP_ROWS = 3000;
+const MAX_CATEGORY_COUNT = 120;
+
 const CONTROL_COLUMN_PATTERN = /(control|ctrl|ctr|vehicle|untreated|mock)/i;
 const LOG_FOLD_CHANGE_PATTERN = /(log2.*fold|logfc|log_fc|fold.*change|log2fc)/i;
 const P_VALUE_PATTERN = /(^p$|pvalue|p_value|p-value|adj.*p|qvalue|q_value)/i;
@@ -31,12 +38,23 @@ const toFinite = (value: unknown) => {
   return parseLocalizedNumber(value);
 };
 
+const sampleRows = <T>(rows: T[], maxRows: number) => {
+  if (rows.length <= maxRows) {
+    return rows;
+  }
+
+  const stride = Math.ceil(rows.length / maxRows);
+  return rows.filter((_, index) => index % stride === 0).slice(0, maxRows);
+};
+
 const getColumnDescriptors = (matrix?: MatrixRecord): ColumnDescriptor[] =>
   (matrix?.columns ?? []).map((column, index) => ({
     column,
     index,
     numeric: Boolean(
-      matrix?.data.some((row) => toFinite(row[index]) !== null)
+      sampleRows(matrix?.data ?? [], MAX_PROFILE_ROWS).some(
+        (row) => toFinite(row[index]) !== null
+      )
     ),
   }));
 
@@ -44,7 +62,7 @@ const getNumericColumnDescriptors = (matrix?: MatrixRecord) =>
   getColumnDescriptors(matrix).filter((descriptor) => descriptor.numeric);
 
 const getFiniteColumnValues = (matrix: MatrixRecord, columnIndex: number) =>
-  matrix.data
+  sampleRows(matrix.data, MAX_VISUALIZATION_ROWS)
     .map((row) => toFinite(row[columnIndex]))
     .filter((value): value is number => value !== null);
 
@@ -98,7 +116,7 @@ const buildScatterSeries = ({
 
   return yDescriptors
     .map((descriptor) => {
-      const rows = matrix.data
+      const rows = sampleRows(matrix.data, MAX_SCATTER_POINTS)
         .map((row, rowIndex) => ({
           x: toFinite(row[xDescriptor.index]),
           y: toFinite(row[descriptor.index]),
@@ -311,17 +329,17 @@ export const buildConfiguredBarPayload = (
 
   const categories = Array.from(
     new Set(
-      matrix.data.map((row, rowIndex) => {
+      sampleRows(matrix.data, MAX_VISUALIZATION_ROWS).map((row, rowIndex) => {
         const value = row[xDescriptor.index];
         return value === null || value === undefined || value === ""
           ? `row_${rowIndex + 1}`
           : String(value);
       })
     )
-  );
+  ).slice(0, MAX_CATEGORY_COUNT);
 
   const groupedRows = categories.map((category) =>
-    matrix.data.filter((row, rowIndex) => {
+    sampleRows(matrix.data, MAX_VISUALIZATION_ROWS).filter((row, rowIndex) => {
       const value = row[xDescriptor.index];
       const rowCategory =
         value === null || value === undefined || value === ""
@@ -454,7 +472,7 @@ export const buildConfiguredHeatmapPayload = (
 
   const correlations = descriptors.map(({ index: xIndex }) =>
     descriptors.map(({ index: yIndex }) => {
-      const pairs = matrix.data
+      const pairs = sampleRows(matrix.data, MAX_HEATMAP_ROWS)
         .map((row) => [toFinite(row[xIndex]), toFinite(row[yIndex])] as const)
         .filter((pair): pair is readonly [number, number] =>
           pair.every((value) => value !== null)
@@ -491,6 +509,7 @@ const buildVolcanoFromExistingColumns = (
   if (!xDescriptor || !yDescriptor) return null;
 
   const rows = matrix.data
+    .slice(0, MAX_VISUALIZATION_ROWS)
     .map((row, rowIndex) => ({
       x: toFinite(row[xDescriptor.index]),
       y: toFinite(row[yDescriptor.index]),
@@ -548,6 +567,7 @@ export const buildConfiguredVolcanoPayload = (
   }
 
   const rows = matrix.data
+    .slice(0, MAX_VISUALIZATION_ROWS)
     .map((row, rowIndex) => {
       const controlValues = control
         .map(({ index }) => toFinite(row[index]))
@@ -611,6 +631,7 @@ export const buildConfiguredPcaPayload = (
   }
 
   const rows = matrix.data
+    .slice(0, MAX_PCA_ROWS)
     .map((row, rowIndex) => {
       const values = descriptors.map(({ index }) => toFinite(row[index]));
       if (values.some((value) => value === null)) return null;

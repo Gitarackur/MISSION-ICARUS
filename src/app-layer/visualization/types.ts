@@ -2,7 +2,11 @@ import {
   IcarusMatrixRecord,
   IcarusSessionWithWorkflowRecord,
 } from "@/app-layer/database/database.types";
-import { IntensityDistribution, VolcanoPoint } from "@/domain/visualization/index.types";
+import {
+  IntensityDistribution,
+  PlotAxisSelection,
+  VolcanoPoint,
+} from "@/domain/visualization/index.types";
 import { SaveVisualizationActivity } from "@/domain/workflow/main.types";
 
 export type SaveVisualizationResult = {
@@ -37,3 +41,22 @@ export type RenderJob =
   | "volcano"
   | "qc"
   | "missing-values";
+
+export type PlotKind =
+  | "bar"
+  | "box"
+  | "scatter"
+  | "heatmap"
+  | "volcano"
+  | "pca"
+  | "qc"
+  | "missing-values";
+
+export type PlotSelectionState = Record<PlotKind, PlotAxisSelection>;
+
+export type PlotAvailabilityState = {
+  ready: boolean;
+  reason?: string;
+};
+
+export type PlotAvailabilityMap = Record<PlotKind, PlotAvailabilityState>;

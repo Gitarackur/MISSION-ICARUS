@@ -9,6 +9,19 @@ import { app } from "electron";
 
 
 export class PythonManager extends Manager {
+  public isPythonRendererAvailable(): boolean {
+    const scriptPath = resourcePath("scripts", "python", "commander.py");
+    if (!app.isPackaged) {
+      return fs.existsSync(scriptPath);
+    }
+
+    try {
+      return fs.existsSync(this.getBin(scriptPath));
+    } catch {
+      return false;
+    }
+  }
+
   private checkIfPathIsPythonScript(scriptPath: string): void {
     const ext = path.extname(scriptPath).toLowerCase();
     if (ext !== ".py") {
@@ -25,7 +38,9 @@ export class PythonManager extends Manager {
     const binPath = path.join(dirname, 'bin', basename + this.getBinExtension());
 
     if (!fs.existsSync(binPath)) {
-      throw new Error(`Compiled binary not found for script: ${scriptPath}. Expected at: ${binPath}`);
+      throw new Error(
+        `Compiled Python binary not found. Expected at: ${binPath}`
+      );
     }
 
     return binPath;
@@ -40,6 +55,7 @@ export class PythonManager extends Manager {
     }
 
     const binPath = this.getBin(scriptPath);
+    console.log(`Running packaged Python binary: ${binPath}`);
     return CoreExec.run(binPath, args, data);
   }
 

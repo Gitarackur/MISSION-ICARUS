@@ -9,10 +9,10 @@
     output: "release/${version}",
   },
   files: ["dist", "dist-electron"],
-  extraFiles: [
+  extraResources: [
     {
-      from: "assets", // $os => "mac/linux/win"
-      to: "Resources/assets", // for Linux => "resources/bin"
+      from: "assets",
+      to: "assets",
       filter: ["**/*"],
     },
   ],

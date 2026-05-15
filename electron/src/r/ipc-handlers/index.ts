@@ -2,6 +2,7 @@ import { ipcMain } from "electron";
 import EmbeddedRManager from "../../r/r-manager";
 import path from "node:path";
 import { resourcePath } from "../../core/utils";
+import fs from "node:fs";
 
 
 const resolveRScriptPath = (scriptPath: string): string => {
@@ -16,6 +17,8 @@ const resolveRScriptPath = (scriptPath: string): string => {
 export function setupRHandlers() {
   const rManager = new EmbeddedRManager();
 
+  ipcMain.handle("renderer:r-available", async () => rManager.isRAvailable());
+
   ipcMain.handle(
     "run-r",
     async (
@@ -27,13 +30,22 @@ export function setupRHandlers() {
       }
 
       if (!rManager.isRAvailable()) {
-        throw new Error("R is not available on this system.");
+        throw new Error(
+          "R is not available on this system. Install R/Rscript to use the R renderer in production."
+        );
       }
 
       rManager.ensurePackagesInstalled(["ggplot2", "jsonlite"]);
 
       try {
-        const output = await rManager.runRScript(resolveRScriptPath(scriptPath), args || []);
+        const resolvedScriptPath = resolveRScriptPath(scriptPath);
+        if (!fs.existsSync(resolvedScriptPath)) {
+          throw new Error(
+            `R renderer script not found at: ${resolvedScriptPath}`
+          );
+        }
+
+        const output = await rManager.runRScript(resolvedScriptPath, args || []);
         return output;
       } catch (err) {
         console.error("R error:", err);
