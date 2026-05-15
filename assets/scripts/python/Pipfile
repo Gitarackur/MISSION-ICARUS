@@ -4,16 +4,21 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
+scikit-learn = "*"
+pandas = "*"
+scipy = "*"
+numpy = "*"
 matplotlib = "*"
-sklearn="*"
-numpy="*"
-seaborn="*"
+seaborn = "*"
 
 [dev-packages]
 nuitka = "*"
+ordered-set = "*"
+zstandard = "*"
 
 [scripts]
-prepare = "python -m nuitka --standalone --onefile --follow-imports --enable-plugin=numpy --enable-plugin=matplotlib --output-dir=./bin ./commander.py"
+prepare = "python ./build_nuitka.py onefile"
+prepare-standalone = "python ./build_nuitka.py standalone"
 command = "python ./commander.py"
 
 [requires]

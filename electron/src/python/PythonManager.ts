@@ -9,6 +9,25 @@ import { app } from "electron";
 
 
 export class PythonManager extends Manager {
+  private getRuntimeEnv(): NodeJS.ProcessEnv {
+    const baseTempDir = path.join(app.getPath("temp"), "mission-icarus-python");
+    const mplConfigDir = path.join(baseTempDir, "matplotlib");
+    const xdgCacheDir = path.join(baseTempDir, "cache");
+    const fontConfigDir = path.join(baseTempDir, "fontconfig");
+
+    fs.mkdirSync(mplConfigDir, { recursive: true });
+    fs.mkdirSync(xdgCacheDir, { recursive: true });
+    fs.mkdirSync(fontConfigDir, { recursive: true });
+
+    return {
+      ...process.env,
+      TMPDIR: baseTempDir,
+      MPLCONFIGDIR: mplConfigDir,
+      XDG_CACHE_HOME: xdgCacheDir,
+      FONTCONFIG_PATH: fontConfigDir,
+    };
+  }
+
   public isPythonRendererAvailable(): boolean {
     const scriptPath = resourcePath("scripts", "python", "commander.py");
     if (!app.isPackaged) {
@@ -46,23 +65,25 @@ export class PythonManager extends Manager {
     return binPath;
   }
 
-
-  public runScript(scriptPath: string, args?: string[], data?: unknown): Promise<string> {
+  public runScript(
+    scriptPath: string,
+    args?: string[],
+    data?: unknown
+  ): Promise<string> {
     console.log(`Running Python script: ${scriptPath} with args: ${args} and data: ${data ? 'provided' : 'none'}`);
+    const env = this.getRuntimeEnv();
 
     if (!app.isPackaged && fs.existsSync(scriptPath)) {
-      return CoreExec.run("python3", [scriptPath, ...(args ?? [])], data);
+      return CoreExec.run("python3", [scriptPath, ...(args ?? [])], data, { env });
     }
 
     const binPath = this.getBin(scriptPath);
     console.log(`Running packaged Python binary: ${binPath}`);
-    return CoreExec.run(binPath, args, data);
+    return CoreExec.run(binPath, args, data, { env });
   }
 
   public async getPlot<T = Record<string, unknown>>(data: T): Promise<string> {
-    const scriptPath = resourcePath('scripts', 'python', 'commander.py');
-    const stringifiedData = typeof data == 'string' ? data : JSON.stringify(data);
-    return this.runScript(scriptPath, ['plot', stringifiedData, '--use-json']);
+    return this.runCommanderCommand('plot', data);
   }
 
   private async runCommanderCommand<T = Record<string, unknown>>(
