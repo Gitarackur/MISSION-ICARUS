@@ -5,7 +5,7 @@ import { DataPreviewProps } from './types';
 import { dataOutputStyles } from './variants/data-output.variant';
 import StatisticalAnalysisInstructions from '../statistics/components/analysis-instructions';
 import { useTableStylingAndInteraction } from './hooks/useTableStylingAndInteraction';
-import { formatColumnHeader, formatTableCellValue } from '@/app-layer/shared/utils';
+import { formatColumnHeader } from '@/app-layer/shared/utils';
 import StatisticsMenu from '../statistics/components/menu';
 import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
@@ -40,6 +40,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   // use table for styling and interacting with its rows and columns
   const {
     allColumnarData,
+    getCellDisplayValue,
     getCombinedCellStyle,
     toggleViewOfColumnOnPreviewTable,
   } = useTableStylingAndInteraction(
@@ -137,7 +138,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
                         key={column}
                         className={getCombinedCellStyle(actualRowIndex, row, column)}
                       >
-                        {formatTableCellValue(row[column])}
+                        {getCellDisplayValue(row, column)}
                       </td>
                     ))}
                   </tr>

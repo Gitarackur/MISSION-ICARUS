@@ -10,6 +10,7 @@ import {
   VolcanoPayload,
 } from "@/domain/visualization/index.types";
 import { mean, tTestTwoSample } from "@/app-layer/statistics/utils/statistical-engine";
+import { parseLocalizedNumber } from "@/domain/shared/number-parsing";
 
 export type VisualizationReadiness<TPayload> = {
   payload: TPayload | null;
@@ -27,8 +28,7 @@ const LOG_FOLD_CHANGE_PATTERN = /(log2.*fold|logfc|log_fc|fold.*change|log2fc)/i
 const P_VALUE_PATTERN = /(^p$|pvalue|p_value|p-value|adj.*p|qvalue|q_value)/i;
 
 const toFinite = (value: unknown) => {
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
+  return parseLocalizedNumber(value);
 };
 
 const getColumnDescriptors = (matrix?: MatrixRecord): ColumnDescriptor[] =>

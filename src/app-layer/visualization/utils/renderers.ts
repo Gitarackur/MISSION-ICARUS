@@ -64,6 +64,10 @@ const invokePythonCommand = async (method: string, payload: unknown) => {
     args: [payload],
   });
 
+  if (typeof base64 !== "string" || base64.trim().length === 0) {
+    throw new Error(`Python renderer returned an empty image for ${method}.`);
+  }
+
   return toPngDataUrl(base64);
 };
 
@@ -72,6 +76,10 @@ const invokeRPlot = async (plotType: string, payload: unknown) => {
     scriptPath: "plot_r.r",
     args: [JSON.stringify({ plotType, payload })],
   });
+
+  if (typeof base64 !== "string" || base64.trim().length === 0) {
+    throw new Error(`R renderer returned an empty image for ${plotType}.`);
+  }
 
   return toPngDataUrl(base64);
 };

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useVisualizationPanel } from "@/app-layer/visualization/hooks/useVisualizationPanel";
 import { useVisualizationDisplay } from "@/app-layer/visualization/hooks/useVisualizationDisplay";
 import { VisualizationPanelProps } from "./types/index.types";
@@ -9,14 +9,17 @@ import {
 } from "./components/visualization-viewer";
 import { PlotLibrary } from "./components/plot-library";
 import { visualizationStyles } from "./variants/visualization.variants";
+import { useModal } from "@/ui/design-system/Modal/context";
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const s = visualizationStyles();
   const [showSettings, setShowSettings] = useState(false);
+  const { openModal } = useModal();
   const {
     activeSavedVisualization,
     columnOptions,
     error,
+    warning,
     hasSavedVisualization,
     plotReadiness,
     plotSelections,
@@ -35,6 +38,8 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   } = useVisualizationPanel(props);
   const {
     activeDisplayImage,
+    clearDisplayWarning,
+    displayWarning,
     displayMode,
     displayRendererOptions,
     downloadCurrentVisualization,
@@ -46,6 +51,40 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     activeVisualization: activeSavedVisualization,
     visualizations: savedVisualizations,
   });
+
+  useEffect(() => {
+    if (!displayWarning) return;
+
+    openModal(
+      <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+        <p>{displayWarning.message}</p>
+      </div>,
+      displayWarning.title
+    );
+    clearDisplayWarning();
+  }, [clearDisplayWarning, displayWarning, openModal]);
+
+  useEffect(() => {
+    if (!warning) return;
+
+    openModal(
+      <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+        <p>{warning}</p>
+      </div>,
+      "Renderer fallback"
+    );
+  }, [openModal, warning]);
+
+  useEffect(() => {
+    if (!error) return;
+
+    openModal(
+      <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
+        <p>{error}</p>
+      </div>,
+      "Visualization rendering failed"
+    );
+  }, [error, openModal]);
 
   const isRendering = renderingJob !== null;
   const barColumns = [

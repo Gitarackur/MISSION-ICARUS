@@ -3,6 +3,10 @@ import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
+import {
+  formatNumericDisplayValue,
+  getNumericCellState,
+} from "@/domain/shared/number-parsing";
 
 
 export const useTableStylingAndInteraction = (
@@ -56,7 +60,17 @@ export const useTableStylingAndInteraction = (
       }
 
     } else if (isNumeric) {
-      className += ' bg-green-50 dark:bg-green-950/30';
+      const numericState = getNumericCellState(_row?.[columnName]);
+
+      if (numericState === "missing") {
+        className +=
+          " bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300";
+      } else if (numericState === "invalid") {
+        className +=
+          " bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
+      } else {
+        className += ' bg-green-50 dark:bg-green-950/30';
+      }
     } else if (isString) {
       className += ' bg-yellow-50 dark:bg-yellow-950/30';
     } else if (isBoolean) {
@@ -65,6 +79,18 @@ export const useTableStylingAndInteraction = (
 
     return className;
   }, [mapColumnType, styles]);
+
+  const getCellDisplayValue = useCallback(
+    (row: ProteinRow, columnName: string) => {
+      const rawValue = row[columnName];
+      if (mapColumnType[columnName] === "number") {
+        return formatNumericDisplayValue(rawValue);
+      }
+
+      return rawValue ?? "N/A";
+    },
+    [mapColumnType]
+  );
 
 
   // get cell style (based on which cells are numeric values and/or which are highlighted)
@@ -105,7 +131,9 @@ export const useTableStylingAndInteraction = (
 
   return {
     allColumnarData,
+    getCellDisplayValue,
     getCombinedCellStyle,
+    mapColumnType,
     toggleViewOfColumnOnPreviewTable
   };
 };
