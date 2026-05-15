@@ -17,8 +17,8 @@ ordered-set = "*"
 zstandard = "*"
 
 [scripts]
-prepare = "python ./build_nuitka.py onefile all"
-prepare-standalone = "python ./build_nuitka.py standalone all"
+prepare = "python ./build_nuitka.py onefile"
+prepare-standalone = "python ./build_nuitka.py standalone"
 command = "python ./commander.py"
 
 [requires]

@@ -13,36 +13,38 @@ CACHE_DIR = ROOT / ".nuitka-cache"
 MPL_CACHE_DIR = CACHE_DIR / "matplotlib"
 FONTCONFIG_CACHE_DIR = CACHE_DIR / "fontconfig"
 
-COMMON_NOFOLLOW = [
+INCLUDE_PACKAGES = [
+    "numpy",
+    "matplotlib",
+    "pandas",
+    "scipy",
+    "sklearn",
+    "seaborn",
+]
+
+INCLUDE_PACKAGE_DATA = [
+    "matplotlib",
+    "pandas",
+    "scipy",
+    "sklearn",
+    "seaborn",
+]
+
+INCLUDE_MODULES = [
+    "matplotlib.backends.backend_agg",
+    "pandas._libs._cyutility",
+]
+
+NOFOLLOW_IMPORTS = [
     "*.tests",
-    "*.testing",
     "test",
     "tests",
     "unittest",
     "doctest",
-    "pydoc",
     "setuptools",
     "IPython",
     "PIL.ImageQt",
 ]
-
-PROFILE_CONFIG = {
-    "plot-core": {
-        "output_name": "commander-plot-core",
-        "packages": ["numpy", "matplotlib"],
-        "package_data": ["matplotlib"],
-    },
-    "plot-heatmap": {
-        "output_name": "commander-plot-heatmap",
-        "packages": ["numpy", "matplotlib", "pandas", "seaborn"],
-        "package_data": ["matplotlib", "seaborn"],
-    },
-    "plot-ml": {
-        "output_name": "commander-plot-ml",
-        "packages": ["numpy", "matplotlib", "scipy", "sklearn"],
-        "package_data": ["matplotlib", "scipy", "sklearn"],
-    },
-}
 
 
 def get_env() -> dict[str, str]:
@@ -59,60 +61,46 @@ def get_env() -> dict[str, str]:
     return env
 
 
-def build_args(mode: str, profile: str) -> list[str]:
+def build_args(mode: str) -> list[str]:
     if mode not in {"onefile", "standalone"}:
         raise ValueError(f"Unsupported build mode: {mode}")
 
-    if profile not in PROFILE_CONFIG:
-        raise ValueError(f"Unsupported build profile: {profile}")
-
-    config = PROFILE_CONFIG[profile]
     args = [
         sys.executable,
         "-m",
         "nuitka",
         f"--mode={mode}",
         "--static-libpython=no",
+        "--disable-ccache",
         "--assume-yes-for-downloads",
-        "--output-dir={}".format(OUTPUT_DIR),
-        "--output-filename={}".format(config["output_name"]),
-        "--include-module=matplotlib.backends.backend_agg",
+        f"--output-dir={OUTPUT_DIR}",
+        "--output-filename=commander",
     ]
 
-    for package in config["packages"]:
+    for package in INCLUDE_PACKAGES:
         args.append(f"--include-package={package}")
 
-    for package in config["package_data"]:
+    for package in INCLUDE_PACKAGE_DATA:
         args.append(f"--include-package-data={package}")
 
-    for target in COMMON_NOFOLLOW:
+    for module in INCLUDE_MODULES:
+        args.append(f"--include-module={module}")
+
+    for target in NOFOLLOW_IMPORTS:
         args.append(f"--nofollow-import-to={target}")
 
     args.append(str(COMMANDER))
     return args
 
 
-def run_build(mode: str, profile: str) -> int:
-    command = build_args(mode, profile)
+def main() -> int:
+    mode = sys.argv[1] if len(sys.argv) > 1 else "onefile"
+    command = build_args(mode)
     env = get_env()
-    print(f"Running Nuitka build for profile '{profile}':")
+    print("Running Nuitka build:")
     print(" ".join(command))
     completed = subprocess.run(command, cwd=ROOT, env=env)
     return completed.returncode
-
-
-def main() -> int:
-    mode = sys.argv[1] if len(sys.argv) > 1 else "onefile"
-    target = sys.argv[2] if len(sys.argv) > 2 else "all"
-
-    profiles = list(PROFILE_CONFIG.keys()) if target == "all" else [target]
-
-    for profile in profiles:
-        exit_code = run_build(mode, profile)
-        if exit_code != 0:
-            return exit_code
-
-    return 0
 
 
 if __name__ == "__main__":
