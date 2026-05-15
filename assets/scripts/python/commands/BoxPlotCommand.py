@@ -1,8 +1,8 @@
-import json
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
 from core.Command import Command
+from commands.utils import load_payload, to_numeric_list
 
 
 
@@ -11,21 +11,25 @@ class BoxPlotCommand(Command):
         preview = "--preview" in self.args
         use_json = "--use-json" in self.args
         input_arg = self.args[0]
-
-        if use_json:
-            data = json.loads(input_arg)
-        else:
-            try:
-                with open(input_arg) as f:
-                    data = json.load(f)
-            except (FileNotFoundError, OSError):
-                data = json.loads(input_arg)
+        data = load_payload(input_arg, use_json)
 
         series = data.get('series', [])
         if not series:
             series = [{'name': key, 'values': values} for key, values in data.items()]
-        labels = [entry.get('name', 'Series') for entry in series]
-        values = [entry.get('values', []) for entry in series]
+        normalized_series = [
+            {
+                'name': entry.get('name', 'Series'),
+                'values': to_numeric_list(entry.get('values', [])),
+            }
+            for entry in series
+        ]
+        normalized_series = [entry for entry in normalized_series if len(entry['values']) > 0]
+
+        if not normalized_series:
+            raise ValueError("Box plot renderer could not build any numeric series from the payload.")
+
+        labels = [entry['name'] for entry in normalized_series]
+        values = [entry['values'] for entry in normalized_series]
 
         plt.figure(figsize=(8, 6))
         plt.boxplot(values, labels=labels)
@@ -41,4 +45,3 @@ class BoxPlotCommand(Command):
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             print(img_base64)
-
