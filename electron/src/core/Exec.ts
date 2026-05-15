@@ -1,4 +1,4 @@
-import { spawn } from 'child_process'
+import { ChildProcessWithoutNullStreams, SpawnOptionsWithoutStdio, spawn } from 'child_process'
 import { isMac, isWindows } from './utils';
 
 export default class CoreExec {
@@ -14,13 +14,16 @@ export default class CoreExec {
     return "";
   }
 
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  public static async run(command: string, args: string[] = [], _?: unknown): Promise<string> {
+  public static async run(
+    command: string,
+    args: string[] = [],
+    _data?: unknown,
+    options: SpawnOptionsWithoutStdio = {}
+  ): Promise<string> {
     return new Promise((resolve, reject) => {
       console.log(`Executing command: ${command} with args: ${args.join(' ')}`);
 
-      const proc = spawn(command, args);
+      const proc: ChildProcessWithoutNullStreams = spawn(command, args, options);
 
       let stdout = '';
       let stderr = '';

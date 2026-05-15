@@ -67,6 +67,7 @@ coverage/
 assets/scripts/python/bin/commander.build/
 assets/scripts/python/bin/commander.dist/
 assets/scripts/python/bin/commander.onefile-build/
+assets/scripts/python/.nuitka-cache/
 
 # Hide Nuitka crash logs
 assets/scripts/python/nuitka-crash-*.log

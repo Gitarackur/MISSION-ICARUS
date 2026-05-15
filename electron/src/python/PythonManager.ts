@@ -9,6 +9,44 @@ import { app } from "electron";
 
 
 export class PythonManager extends Manager {
+  private getBinaryNameForCommand(command: string): string {
+    switch (command) {
+      case "heatmap":
+        return "commander-plot-heatmap";
+      case "pca":
+        return "commander-plot-ml";
+      case "plot":
+      case "boxplot":
+      case "scatter":
+      case "volcano":
+      default:
+        return "commander-plot-core";
+    }
+  }
+
+  private getLegacyBinaryName(): string {
+    return "commander";
+  }
+
+  private getRuntimeEnv(): NodeJS.ProcessEnv {
+    const baseTempDir = path.join(app.getPath("temp"), "mission-icarus-python");
+    const mplConfigDir = path.join(baseTempDir, "matplotlib");
+    const xdgCacheDir = path.join(baseTempDir, "cache");
+    const fontConfigDir = path.join(baseTempDir, "fontconfig");
+
+    fs.mkdirSync(mplConfigDir, { recursive: true });
+    fs.mkdirSync(xdgCacheDir, { recursive: true });
+    fs.mkdirSync(fontConfigDir, { recursive: true });
+
+    return {
+      ...process.env,
+      TMPDIR: baseTempDir,
+      MPLCONFIGDIR: mplConfigDir,
+      XDG_CACHE_HOME: xdgCacheDir,
+      FONTCONFIG_PATH: fontConfigDir,
+    };
+  }
+
   public isPythonRendererAvailable(): boolean {
     const scriptPath = resourcePath("scripts", "python", "commander.py");
     if (!app.isPackaged) {
@@ -16,7 +54,10 @@ export class PythonManager extends Manager {
     }
 
     try {
-      return fs.existsSync(this.getBin(scriptPath));
+      return (
+        fs.existsSync(this.getBin(scriptPath, "commander-plot-core")) ||
+        fs.existsSync(this.getBin(scriptPath, this.getLegacyBinaryName()))
+      );
     } catch {
       return false;
     }
@@ -29,12 +70,12 @@ export class PythonManager extends Manager {
     }
   }
 
-  public getBin(scriptPath: string): string {
+  public getBin(scriptPath: string, binaryBaseName?: string): string {
     this.checkIfPathIsPythonScript(scriptPath);
 
     const dirname = path.dirname(scriptPath);
     const extname = path.extname(scriptPath);
-    const basename = path.basename(scriptPath, extname);
+    const basename = binaryBaseName ?? path.basename(scriptPath, extname);
     const binPath = path.join(dirname, 'bin', basename + this.getBinExtension());
 
     if (!fs.existsSync(binPath)) {
@@ -46,23 +87,45 @@ export class PythonManager extends Manager {
     return binPath;
   }
 
-
-  public runScript(scriptPath: string, args?: string[], data?: unknown): Promise<string> {
-    console.log(`Running Python script: ${scriptPath} with args: ${args} and data: ${data ? 'provided' : 'none'}`);
-
-    if (!app.isPackaged && fs.existsSync(scriptPath)) {
-      return CoreExec.run("python3", [scriptPath, ...(args ?? [])], data);
+  private resolveBinaryBaseName(scriptPath: string, requestedBinaryBaseName?: string): string {
+    if (!app.isPackaged) {
+      return requestedBinaryBaseName ?? path.basename(scriptPath, path.extname(scriptPath));
     }
 
-    const binPath = this.getBin(scriptPath);
+    if (requestedBinaryBaseName) {
+      try {
+        this.getBin(scriptPath, requestedBinaryBaseName);
+        return requestedBinaryBaseName;
+      } catch {
+        // Fall back to the legacy shipped binary until split binaries are built.
+      }
+    }
+
+    return this.getLegacyBinaryName();
+  }
+
+
+  public runScript(
+    scriptPath: string,
+    args?: string[],
+    data?: unknown,
+    binaryBaseName?: string
+  ): Promise<string> {
+    console.log(`Running Python script: ${scriptPath} with args: ${args} and data: ${data ? 'provided' : 'none'}`);
+    const env = this.getRuntimeEnv();
+
+    if (!app.isPackaged && fs.existsSync(scriptPath)) {
+      return CoreExec.run("python3", [scriptPath, ...(args ?? [])], data, { env });
+    }
+
+    const resolvedBinaryBaseName = this.resolveBinaryBaseName(scriptPath, binaryBaseName);
+    const binPath = this.getBin(scriptPath, resolvedBinaryBaseName);
     console.log(`Running packaged Python binary: ${binPath}`);
-    return CoreExec.run(binPath, args, data);
+    return CoreExec.run(binPath, args, data, { env });
   }
 
   public async getPlot<T = Record<string, unknown>>(data: T): Promise<string> {
-    const scriptPath = resourcePath('scripts', 'python', 'commander.py');
-    const stringifiedData = typeof data == 'string' ? data : JSON.stringify(data);
-    return this.runScript(scriptPath, ['plot', stringifiedData, '--use-json']);
+    return this.runCommanderCommand('plot', data);
   }
 
   private async runCommanderCommand<T = Record<string, unknown>>(
@@ -71,7 +134,8 @@ export class PythonManager extends Manager {
   ): Promise<string> {
     const scriptPath = resourcePath('scripts', 'python', 'commander.py');
     const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
-    return this.runScript(scriptPath, [command, stringifiedData, '--use-json']);
+    const binaryBaseName = this.getBinaryNameForCommand(command);
+    return this.runScript(scriptPath, [command, stringifiedData, '--use-json'], undefined, binaryBaseName);
   }
 
   public async getHeatmap<T = Record<string, unknown>>(data: T): Promise<string> {
