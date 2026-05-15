@@ -25,7 +25,9 @@ export class PythonManager extends Manager {
     const binPath = path.join(dirname, 'bin', basename + this.getBinExtension());
 
     if (!fs.existsSync(binPath)) {
-      throw new Error(`Compiled binary not found for script: ${scriptPath}. Expected at: ${binPath}`);
+      throw new Error(
+        `Compiled Python binary not found. Expected at: ${binPath}`
+      );
     }
 
     return binPath;
@@ -40,6 +42,7 @@ export class PythonManager extends Manager {
     }
 
     const binPath = this.getBin(scriptPath);
+    console.log(`Running packaged Python binary: ${binPath}`);
     return CoreExec.run(binPath, args, data);
   }
 

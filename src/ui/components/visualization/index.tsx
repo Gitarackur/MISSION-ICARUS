@@ -10,6 +10,9 @@ import {
 import { PlotLibrary } from "./components/plot-library";
 import { visualizationStyles } from "./variants/visualization.variants";
 import { useModal } from "@/ui/design-system/Modal/context";
+import RendererErrorContent from "./components/error-modal-content";
+
+
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const s = visualizationStyles();
@@ -56,9 +59,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     if (!displayWarning) return;
 
     openModal(
-      <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
-        <p>{displayWarning.message}</p>
-      </div>,
+      <RendererErrorContent message={displayWarning.message} />,
       displayWarning.title
     );
     clearDisplayWarning();
@@ -68,9 +69,10 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     if (!warning) return;
 
     openModal(
-      <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
-        <p>{warning}</p>
-      </div>,
+      <RendererErrorContent
+        message={warning}
+        fallbackNote="The requested renderer could not complete successfully, so the visualization was saved with a fallback renderer."
+      />,
       "Renderer fallback"
     );
   }, [openModal, warning]);
@@ -79,9 +81,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     if (!error) return;
 
     openModal(
-      <div className="space-y-3 text-sm text-slate-700 dark:text-slate-200">
-        <p>{error}</p>
-      </div>,
+      <RendererErrorContent message={error} />,
       "Visualization rendering failed"
     );
   }, [error, openModal]);
