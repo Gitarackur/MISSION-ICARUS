@@ -74,6 +74,15 @@ assets/scripts/python/nuitka-crash-*.log
 assets/scripts/python/nuitka-crash-*.xml
 # assets/scripts/python/nuitka-crash-report-*.xml
 
+# Vendored R runtimes are generated platform artifacts.
+assets/runtime/r/macos*/
+assets/runtime/r/linux*/
+assets/runtime/r/windows*/
+!assets/runtime/r/macos-arm64/.gitkeep
+!assets/runtime/r/macos-x64/.gitkeep
+!assets/runtime/r/linux-x64/.gitkeep
+!assets/runtime/r/windows-x64/.gitkeep
+
 
 # OS generated files
 .DS_Store
