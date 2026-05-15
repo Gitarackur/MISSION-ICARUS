@@ -13,7 +13,7 @@ seaborn="*"
 nuitka = "*"
 
 [scripts]
-prepare = "nuitka --onefile --standalone --output-dir=./bin ./commander.py"
+prepare = "python -m nuitka --standalone --onefile --follow-imports --enable-plugin=numpy --enable-plugin=matplotlib --output-dir=./bin ./commander.py"
 command = "python ./commander.py"
 
 [requires]

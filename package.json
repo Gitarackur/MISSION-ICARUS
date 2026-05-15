@@ -6,11 +6,11 @@
   "type": "module",
   "scripts": {
     "prepare:python:scripts": "cd assets/scripts/python && pipenv install --dev && pipenv run prepare",
+    "pipenv-install": "cd assets/scripts/python && pipenv run prepare",
     "dev": "vite",
     "prestart": "tsc && vite build",
     "start": "electron --trace-warnings .",
     "build": "tsc && vite build && electron-builder",
-    "pipenv-install": "pipenv run prepare-all",
     "build:linux": "tsc && vite build && electron-builder --linux",
     "build:windows": "tsc && vite build && electron-builder --win",
     "build:windows1": "tsc && vite build && electron-builder --win",
