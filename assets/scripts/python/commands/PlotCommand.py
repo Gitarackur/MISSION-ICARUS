@@ -1,8 +1,8 @@
-import json
 import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
 from core.Command import Command
+from commands.utils import load_payload, normalize_categories, to_numeric_list
 
 
 
@@ -10,18 +10,10 @@ class PlotCommand(Command):
     def execute(self):
         preview = "--preview" in self.args
         use_json = "--use-json" in self.args
-        input_arg = self.args[0];
+        input_arg = self.args[0]
+        data = load_payload(input_arg, use_json)
 
-        if use_json:
-            data = json.loads(input_arg)
-        else:
-            try:
-                with open(input_arg) as f:
-                    data = json.load(f)
-            except (FileNotFoundError, OSError):
-                data = json.loads(input_arg)
-
-        categories = data.get('categories', [])
+        categories = normalize_categories(data.get('categories', []))
         series = data.get('series', [])
         if not categories and not series:
             categories = list(data.keys())
@@ -31,16 +23,30 @@ class PlotCommand(Command):
             }]
 
         plt.figure(figsize=(10, 8))
-        x = range(len(categories))
-        total_series = max(1, len(series))
-        width = 0.8 / total_series
+        x = list(range(len(categories)))
+        normalized_series = []
 
         for index, entry in enumerate(series):
+            values = to_numeric_list(entry.get('values', []), len(categories))
+            if not len(values):
+                continue
+            normalized_series.append({
+                'name': entry.get('name', f'Series {index + 1}'),
+                'values': values,
+            })
+
+        if not normalized_series:
+            raise ValueError("Bar plot renderer could not build any numeric series from the payload.")
+
+        total_series = max(1, len(normalized_series))
+        width = 0.8 / total_series
+
+        for index, entry in enumerate(normalized_series):
             offsets = [item + (index - (total_series - 1) / 2) * width for item in x]
-            plt.bar(offsets, entry.get('values', []), width=width, label=entry.get('name', f'Series {index + 1}'))
+            plt.bar(offsets, entry['values'], width=width, label=entry['name'])
 
         plt.xticks(list(x), categories, rotation=35, ha='right')
-        if len(series) > 1:
+        if len(normalized_series) > 1:
             plt.legend()
         plt.xlabel(data.get('xAxisLabel', 'X Axis'))
         plt.ylabel(data.get('yAxisLabel', 'Y Axis'))
