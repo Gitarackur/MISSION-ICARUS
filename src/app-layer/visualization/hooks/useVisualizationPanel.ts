@@ -8,9 +8,7 @@ import {
 import { renderBarSvg } from "@/app-layer/visualization/utils/display";
 import {
   PlotAxisSelection,
-  PcaPlotPayload,
   SavedImageVisualizationData,
-  ScatterPlotPayload,
 } from "@/domain/visualization/index.types";
 import {
   VisualizationKind,
@@ -25,9 +23,9 @@ import {
   buildConfiguredQcPayload,
   buildConfiguredScatterPayload,
   buildConfiguredVolcanoPayload,
-  getDefaultPlotSelection,
   getMatrixPlotColumnOptions,
 } from "@/app-layer/visualization/utils/matrix-payloads";
+import { getPlotAvailability } from "@/app-layer/visualization/utils/plot-availability";
 import {
   invokePythonBarPlot,
   invokePythonBoxPlot,
@@ -49,66 +47,14 @@ import {
 } from "@/app-layer/visualization/utils/renderers";
 import {
   RenderJob,
+  PlotSelectionState,
   VisualizationPanelStateParams,
 } from "@/app-layer/visualization/types";
-
-type PlotSelectionState = Record<
-  | "bar"
-  | "box"
-  | "scatter"
-  | "heatmap"
-  | "volcano"
-  | "pca"
-  | "qc"
-  | "missing-values",
-  PlotAxisSelection
->;
-
-const normalizeColumns = (columns?: string[]) =>
-  [...(columns ?? [])].filter(Boolean).sort();
-
-const sameColumns = (left?: string[], right?: string[]) => {
-  const leftNormalized = normalizeColumns(left);
-  const rightNormalized = normalizeColumns(right);
-  return (
-    leftNormalized.length === rightNormalized.length &&
-    leftNormalized.every((value, index) => value === rightNormalized[index])
-  );
-};
-
-const isScatterPayload = (payload: unknown): payload is ScatterPlotPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<ScatterPlotPayload>).series);
-
-const isLegacyScatterPayload = (
-  payload: unknown
-): payload is { x: number[]; y: number[]; labels?: string[] } =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as { x?: unknown }).x) &&
-  Array.isArray((payload as { y?: unknown }).y);
-
-const isPcaPayload = (payload: unknown): payload is PcaPlotPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<PcaPlotPayload>).data);
-
-const getSavedPayload = (visualization?: { data: unknown }) =>
-  (visualization?.data as SavedImageVisualizationData | undefined)?.payload;
-
-const createDefaultSelections = (
-  activeMatrix?: VisualizationPanelStateParams["activeMatrix"]
-): PlotSelectionState => ({
-  bar: getDefaultPlotSelection("bar", activeMatrix),
-  box: getDefaultPlotSelection("box", activeMatrix),
-  scatter: getDefaultPlotSelection("scatter", activeMatrix),
-  heatmap: getDefaultPlotSelection("heatmap", activeMatrix),
-  volcano: getDefaultPlotSelection("volcano", activeMatrix),
-  qc: getDefaultPlotSelection("qc", activeMatrix),
-  "missing-values": getDefaultPlotSelection("missing-values", activeMatrix),
-  pca: getDefaultPlotSelection("pca", activeMatrix),
-});
+import {
+  createDefaultSelections,
+  getActiveSavedImage,
+  sameColumns,
+} from "@/app-layer/visualization/utils/panel-state";
 
 export const useVisualizationPanel = ({
   activeMatrix,
@@ -178,65 +124,25 @@ export const useVisualizationPanel = ({
     shouldAutoSelectVisualization,
   ]);
 
-  const activeSavedImage = useMemo(() => {
-    const payload = getSavedPayload(activeSavedVisualization);
-    if (
-      activeSavedVisualization?.visualizationType === "scatter" &&
-      isScatterPayload(payload)
-    ) {
-      return renderScatterSvg(payload);
-    }
-
-    if (
-      activeSavedVisualization?.visualizationType === "scatter" &&
-      isLegacyScatterPayload(payload)
-    ) {
-      return renderScatterSvg({
-        series: [
-          {
-            name: activeSavedVisualization.title ?? "Scatter",
-            x: payload.x,
-            y: payload.y,
-            labels: payload.labels,
-          },
-        ],
-        title: activeSavedVisualization.title ?? "Scatter Plot",
-      });
-    }
-
-    if (
-      activeSavedVisualization?.visualizationType === "pca" &&
-      isPcaPayload(payload)
-    ) {
-      return renderPcaSvg(payload);
-    }
-
-    return (
-      (activeSavedVisualization?.data as SavedImageVisualizationData | undefined)
-        ?.image as string | undefined
-    );
-  }, [activeSavedVisualization]);
+  const activeSavedImage = useMemo(
+    () => getActiveSavedImage(activeSavedVisualization),
+    [activeSavedVisualization]
+  );
 
   const columnOptions = useMemo(
     () => getMatrixPlotColumnOptions(activeMatrix),
     [activeMatrix]
   );
 
-  const plotReadiness = useMemo(
-    () => ({
-      bar: buildConfiguredBarPayload(activeMatrix, plotSelections.bar),
-      box: buildConfiguredBoxPayload(activeMatrix, plotSelections.box),
-      scatter: buildConfiguredScatterPayload(activeMatrix, plotSelections.scatter),
-      heatmap: buildConfiguredHeatmapPayload(activeMatrix, plotSelections.heatmap),
-      volcano: buildConfiguredVolcanoPayload(activeMatrix, plotSelections.volcano),
-      qc: buildConfiguredQcPayload(activeMatrix, plotSelections.qc),
-      "missing-values": buildConfiguredMissingValuesPayload(
-        activeMatrix,
-        plotSelections["missing-values"]
-      ),
-      pca: buildConfiguredPcaPayload(activeMatrix, plotSelections.pca),
-    }),
-    [activeMatrix, plotSelections]
+  const plotAvailability = useMemo(
+    () =>
+      getPlotAvailability({
+        activeMatrixId: activeMatrix?.id,
+        allColumns: columnOptions.allColumns,
+        numericColumns: columnOptions.numericColumns,
+        plotSelections,
+      }),
+    [activeMatrix?.id, columnOptions, plotSelections]
   );
 
   const hasSavedVisualization = useCallback(
@@ -394,7 +300,7 @@ export const useVisualizationPanel = ({
 
   const renderBarPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.bar;
+      const readiness = buildConfiguredBarPayload(activeMatrix, plotSelections.bar);
       if (!readiness.payload) {
         setError(readiness.reason ?? "Bar plot is unavailable for this matrix.");
         return;
@@ -436,12 +342,12 @@ export const useVisualizationPanel = ({
         setError(`Bar plot failed: ${(err as Error).message || err}`);
       }
     },
-    [plotReadiness.bar, plotSelections.bar, runRenderer, saveRenderedVisualization]
+    [activeMatrix, plotSelections.bar, runRenderer, saveRenderedVisualization]
   );
 
   const renderBoxPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.box;
+      const readiness = buildConfiguredBoxPayload(activeMatrix, plotSelections.box);
       if (!readiness.payload) {
         setError(readiness.reason ?? "Box plot is unavailable for this matrix.");
         return;
@@ -471,12 +377,12 @@ export const useVisualizationPanel = ({
         setError(`Box plot failed: ${(err as Error).message || err}`);
       }
     },
-    [plotReadiness.box, plotSelections.box.yAxes, runRenderer, saveRenderedVisualization]
+    [activeMatrix, plotSelections.box, runRenderer, saveRenderedVisualization]
   );
 
   const renderScatterPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.scatter;
+      const readiness = buildConfiguredScatterPayload(activeMatrix, plotSelections.scatter);
       if (!readiness.payload) {
         setError(readiness.reason ?? "Scatter plot is unavailable for this matrix.");
         return;
@@ -510,7 +416,7 @@ export const useVisualizationPanel = ({
       }
     },
     [
-      plotReadiness.scatter,
+      activeMatrix,
       plotSelections.scatter,
       runRenderer,
       saveRenderedVisualization,
@@ -519,7 +425,7 @@ export const useVisualizationPanel = ({
 
   const renderHeatmap = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.heatmap;
+      const readiness = buildConfiguredHeatmapPayload(activeMatrix, plotSelections.heatmap);
       if (!readiness.payload) {
         setError(readiness.reason ?? "Heatmap is unavailable for this matrix.");
         return;
@@ -548,8 +454,8 @@ export const useVisualizationPanel = ({
       }
     },
     [
-      plotReadiness.heatmap,
-      plotSelections.heatmap.columns,
+      activeMatrix,
+      plotSelections.heatmap,
       runRenderer,
       saveRenderedVisualization,
     ]
@@ -557,7 +463,7 @@ export const useVisualizationPanel = ({
 
   const renderVolcanoPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.volcano;
+      const readiness = buildConfiguredVolcanoPayload(activeMatrix, plotSelections.volcano);
       if (!readiness.payload) {
         setError(readiness.reason ?? "Volcano plot is unavailable for this matrix.");
         return;
@@ -588,7 +494,7 @@ export const useVisualizationPanel = ({
       }
     },
     [
-      plotReadiness.volcano,
+      activeMatrix,
       plotSelections.volcano,
       runRenderer,
       saveRenderedVisualization,
@@ -597,7 +503,7 @@ export const useVisualizationPanel = ({
 
   const renderPcaPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.pca;
+      const readiness = buildConfiguredPcaPayload(activeMatrix, plotSelections.pca);
       if (!readiness.payload) {
         setError(readiness.reason ?? "PCA plot is unavailable for this matrix.");
         return;
@@ -624,12 +530,12 @@ export const useVisualizationPanel = ({
         setError(`PCA plot failed: ${(err as Error).message || err}`);
       }
     },
-    [plotReadiness.pca, plotSelections.pca.columns, runRenderer, saveRenderedVisualization]
+    [activeMatrix, plotSelections.pca, runRenderer, saveRenderedVisualization]
   );
 
   const renderQcPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness.qc;
+      const readiness = buildConfiguredQcPayload(activeMatrix, plotSelections.qc);
       if (!readiness.payload) {
         setError(readiness.reason ?? "QC plot is unavailable for this matrix.");
         return;
@@ -659,12 +565,15 @@ export const useVisualizationPanel = ({
         setError(`QC plot failed: ${(err as Error).message || err}`);
       }
     },
-    [plotReadiness.qc, plotSelections.qc.yAxes, runRenderer, saveRenderedVisualization]
+    [activeMatrix, plotSelections.qc, runRenderer, saveRenderedVisualization]
   );
 
   const renderMissingValuesPlot = useCallback(
     async (preferredRenderer: VisualizationRenderer = "python") => {
-      const readiness = plotReadiness["missing-values"];
+      const readiness = buildConfiguredMissingValuesPayload(
+        activeMatrix,
+        plotSelections["missing-values"]
+      );
       if (!readiness.payload) {
         setError(
           readiness.reason ?? "Missing values plot is unavailable for this matrix."
@@ -705,7 +614,7 @@ export const useVisualizationPanel = ({
       }
     },
     [
-      plotReadiness,
+      activeMatrix,
       plotSelections,
       runRenderer,
       saveRenderedVisualization,
@@ -719,7 +628,7 @@ export const useVisualizationPanel = ({
     error,
     warning,
     hasSavedVisualization,
-    plotReadiness,
+    plotAvailability,
     plotSelections,
     renderBarPlot,
     renderBoxPlot,
