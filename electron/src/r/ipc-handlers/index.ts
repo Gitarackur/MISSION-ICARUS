@@ -35,7 +35,7 @@ export function setupRHandlers() {
         );
       }
 
-      rManager.ensurePackagesInstalled(["ggplot2", "jsonlite"]);
+      rManager.ensurePackagesInstalled(["ggplot2", "jsonlite", "ragg"]);
 
       try {
         const resolvedScriptPath = resolveRScriptPath(scriptPath);

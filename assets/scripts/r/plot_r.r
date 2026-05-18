@@ -215,6 +215,35 @@ plot_obj <- switch(
   stop(sprintf("Unsupported R plot type: %s", plot_type))
 )
 
+open_plot_device <- function(filename, width = 1000, height = 800) {
+  if (requireNamespace("ragg", quietly = TRUE)) {
+    ragg::agg_png(
+      filename = filename,
+      width = width,
+      height = height,
+      units = "px",
+      res = 144,
+      scaling = 1
+    )
+    return("ragg")
+  }
+
+  png_type <- "cairo"
+
+  if (.Platform$OS.type == "unix" && Sys.info()[["sysname"]] == "Darwin") {
+    png_type <- "quartz"
+  }
+
+  grDevices::png(
+    filename = filename,
+    width = width,
+    height = height,
+    type = png_type
+  )
+
+  png_type
+}
+
 output_file <- tempfile(pattern = "icarus-plot-", fileext = ".png")
 output_dir <- dirname(output_file)
 
@@ -228,11 +257,10 @@ if (file.access(output_dir, 2) != 0) {
   stop(sprintf("Output directory is not writable: %s", output_dir))
 }
 
-png(
+device_used <- open_plot_device(
   filename = output_file,
   width = 1000,
-  height = 800,
-  type = "cairo"
+  height = 800
 )
 
 print(plot_obj)
@@ -243,7 +271,14 @@ dev_result <- tryCatch(
     TRUE
   },
   error = function(e) {
-    stop(sprintf("Failed to close PNG device: %s", conditionMessage(e)), call. = FALSE)
+    stop(
+      sprintf(
+        "Failed to close %s plot device: %s",
+        device_used,
+        conditionMessage(e)
+      ),
+      call. = FALSE
+    )
   }
 )
 

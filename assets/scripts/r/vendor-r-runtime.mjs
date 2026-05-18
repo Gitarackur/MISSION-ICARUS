@@ -26,7 +26,7 @@ class RRuntimeVendor {
      */
     this.rootDir = options.rootDir ?? path.resolve(this.__dirname, "../../..");
 
-    this.requiredPackages = options.requiredPackages ?? ["jsonlite", "ggplot2"];
+    this.requiredPackages = options.requiredPackages ?? ["jsonlite", "ggplot2", "ragg"];
 
     this.shouldClean =
       options.shouldClean ?? process.argv.includes("--clean");
