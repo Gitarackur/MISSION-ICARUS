@@ -40,6 +40,51 @@ class RRuntimeVendor {
         "r",
         `${this.platformName()}-${this.archName()}`
       );
+
+    this.runtimePrunePaths = [
+      "doc",
+      "tests",
+      "testthat",
+      path.join("share", "texmf"),
+      path.join("share", "doc"),
+      path.join("share", "examples"),
+      path.join("share", "tests"),
+    ];
+
+    this.packagePruneDirs = [
+      "doc",
+      "docs",
+      "html",
+      "help",
+      "tests",
+      "testthat",
+      "examples",
+      "example",
+      "demo",
+      "demos",
+      "po",
+    ];
+
+    this.packagePruneExtensions = new Set([
+      ".html",
+      ".htm",
+      ".pdf",
+      ".Rmd",
+      ".qmd",
+      ".md",
+    ]);
+
+    this.packagePruneNames = new Set([
+      "NEWS",
+      "NEWS.md",
+      "NEWS.txt",
+      "ChangeLog",
+      "CHANGES",
+      "README",
+      "README.md",
+      "README.txt",
+      "CITATION",
+    ]);
   }
 
   platformName() {
@@ -157,6 +202,29 @@ class RRuntimeVendor {
     }
 
     return files;
+  }
+
+  walkDirectories(dir) {
+    const entries = readdirSync(dir, { withFileTypes: true });
+    const directories = [];
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+
+      const fullPath = path.join(dir, entry.name);
+      directories.push(fullPath, ...this.walkDirectories(fullPath));
+    }
+
+    return directories;
+  }
+
+  safeRemove(targetPath) {
+    if (!existsSync(targetPath)) return;
+
+    rmSync(targetPath, {
+      recursive: true,
+      force: true,
+    });
   }
 
   isMachO(filePath) {
@@ -370,6 +438,31 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
     return this.runR(rscript, expression);
   }
 
+  prunePackageContents(packageDir) {
+    for (const relativeDir of this.packagePruneDirs) {
+      this.safeRemove(path.join(packageDir, relativeDir));
+    }
+
+    for (const dirPath of this.walkDirectories(packageDir)) {
+      const baseName = path.basename(dirPath);
+      if (this.packagePruneDirs.includes(baseName)) {
+        this.safeRemove(dirPath);
+      }
+    }
+
+    for (const filePath of this.walkFiles(packageDir)) {
+      const baseName = path.basename(filePath);
+      const extension = path.extname(filePath);
+
+      if (
+        this.packagePruneNames.has(baseName) ||
+        this.packagePruneExtensions.has(extension)
+      ) {
+        this.safeRemove(filePath);
+      }
+    }
+  }
+
   copyRequiredPackagesIntoRuntime(rscript, runtimeRoot) {
     const runtimeLibraryDir = path.join(runtimeRoot, "library");
     mkdirSync(runtimeLibraryDir, { recursive: true });
@@ -397,6 +490,8 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
         dereference: true,
         force: true,
       });
+
+      this.prunePackageContents(targetPackagePath);
 
       console.log(
         `Copied R package ${packageName}: ${sourcePackagePath} -> ${targetPackagePath}`
@@ -461,6 +556,19 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
     }
   }
 
+  pruneRuntime(runtimeRoot) {
+    for (const relativePath of this.runtimePrunePaths) {
+      this.safeRemove(path.join(runtimeRoot, relativePath));
+    }
+
+    for (const filePath of this.walkFiles(runtimeRoot)) {
+      const extension = path.extname(filePath);
+      if (extension === ".pdf" || extension === ".html" || extension === ".htm") {
+        this.safeRemove(filePath);
+      }
+    }
+  }
+
   run() {
     const rscript = this.resolveRscript();
 
@@ -478,6 +586,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
     this.cleanTargetRuntime();
 
     this.copyRHomeToRuntime(rHome);
+    this.pruneRuntime(this.targetRuntimeDir);
 
     const copiedPackages = this.copyRequiredPackagesIntoRuntime(
       rscript,
