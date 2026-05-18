@@ -13,6 +13,7 @@
     "prestart": "tsc && vite build",
     "start": "electron --trace-warnings .",
     "build": "tsc && vite build && electron-builder",
+    "build:mac:dmg": "tsc && vite build && electron-builder --mac dmg",
     "build:linux": "tsc && vite build && electron-builder --linux",
     "build:windows": "tsc && vite build && electron-builder --win",
     "build:windows1": "tsc && vite build && electron-builder --win",

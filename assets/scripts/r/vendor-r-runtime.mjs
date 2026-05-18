@@ -341,6 +341,21 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       .filter(Boolean);
   }
 
+  getCoreRuntimePackages(rscript) {
+    const expression = `
+      installed <- installed.packages(priority = c("base", "recommended"));
+      pkgs <- rownames(installed);
+      pkgs <- pkgs[!is.na(pkgs)];
+      pkgs <- pkgs[nzchar(pkgs)];
+      cat(paste(pkgs, collapse = "\\n"));
+    `;
+
+    return this.runR(rscript, expression)
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
   getPackagePath(rscript, packageName) {
     const expression = `
       path <- system.file(package = "${packageName}");
@@ -359,7 +374,12 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
     const runtimeLibraryDir = path.join(runtimeRoot, "library");
     mkdirSync(runtimeLibraryDir, { recursive: true });
 
-    const packageList = this.getRequiredPackagesWithDependencies(rscript);
+    const packageList = Array.from(
+      new Set([
+        ...this.getCoreRuntimePackages(rscript),
+        ...this.getRequiredPackagesWithDependencies(rscript),
+      ])
+    );
 
     for (const packageName of packageList) {
       const sourcePackagePath = this.getPackagePath(rscript, packageName);
@@ -426,11 +446,19 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       recursive: true,
     });
 
-    cpSync(rHome, this.targetRuntimeDir, {
-      recursive: true,
-      dereference: true,
-      force: true,
-    });
+    mkdirSync(this.targetRuntimeDir, { recursive: true });
+
+    const entries = readdirSync(rHome, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (entry.name === "library") continue;
+
+      cpSync(path.join(rHome, entry.name), path.join(this.targetRuntimeDir, entry.name), {
+        recursive: true,
+        dereference: true,
+        force: true,
+      });
+    }
   }
 
   run() {
