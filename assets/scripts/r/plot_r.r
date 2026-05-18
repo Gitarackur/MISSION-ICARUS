@@ -16,6 +16,7 @@ suppressPackageStartupMessages({
 }
 
 input_arg <- args[1]
+
 if (file.exists(input_arg)) {
   input <- fromJSON(input_arg, simplifyVector = FALSE)
 } else {
@@ -35,8 +36,10 @@ if (is.null(plot_type)) {
 
 build_bar_plot <- function(data) {
   categories <- as.character(unlist(data$categories))
+
   frames <- lapply(data$series, function(series_item) {
     values <- as.numeric(unlist(series_item$values))
+
     data.frame(
       category = factor(categories, levels = categories),
       value = values,
@@ -44,6 +47,7 @@ build_bar_plot <- function(data) {
       stringsAsFactors = FALSE
     )
   })
+
   df <- do.call(rbind, frames)
 
   ggplot(df, aes(x = category, y = value, fill = series)) +
@@ -60,12 +64,14 @@ build_bar_plot <- function(data) {
 build_box_plot <- function(data) {
   frames <- lapply(data$series, function(series_item) {
     values <- as.numeric(unlist(series_item$values))
+
     data.frame(
       series = rep(series_item$name %||% "Series", length(values)),
       value = values,
       stringsAsFactors = FALSE
     )
   })
+
   df <- do.call(rbind, frames)
 
   ggplot(df, aes(x = series, y = value, fill = series)) +
@@ -81,13 +87,17 @@ build_box_plot <- function(data) {
 
 build_scatter_plot <- function(data) {
   frames <- lapply(data$series, function(series_item) {
+    x_values <- as.numeric(unlist(series_item$x))
+    y_values <- as.numeric(unlist(series_item$y))
+
     data.frame(
-      x = as.numeric(unlist(series_item$x)),
-      y = as.numeric(unlist(series_item$y)),
-      series = rep(series_item$name %||% "Series", length(unlist(series_item$x))),
+      x = x_values,
+      y = y_values,
+      series = rep(series_item$name %||% "Series", length(x_values)),
       stringsAsFactors = FALSE
     )
   })
+
   df <- do.call(rbind, frames)
 
   ggplot(df, aes(x = x, y = y, color = series)) +
@@ -104,19 +114,30 @@ build_heatmap_plot <- function(data) {
   rows <- as.character(unlist(data$row_labels))
   cols <- as.character(unlist(data$col_labels))
   values <- do.call(rbind, lapply(data$matrix, function(row) as.numeric(unlist(row))))
+
   df <- expand.grid(row = rows, col = cols, stringsAsFactors = FALSE)
   df$value <- as.vector(values)
 
   ggplot(df, aes(x = col, y = row, fill = value)) +
     geom_tile() +
-    scale_fill_gradient2(low = "#2563eb", mid = "#f8fafc", high = "#dc2626", midpoint = 0) +
-    labs(title = data$title %||% "Heatmap", x = "", y = "") +
+    scale_fill_gradient2(
+      low = "#2563eb",
+      mid = "#f8fafc",
+      high = "#dc2626",
+      midpoint = 0
+    ) +
+    labs(
+      title = data$title %||% "Heatmap",
+      x = "",
+      y = ""
+    ) +
     theme_minimal(base_size = 12) +
     theme(axis.text.x = element_text(angle = 45, hjust = 1))
 }
 
 build_volcano_plot <- function(data) {
   y <- as.numeric(unlist(data$y))
+
   if (!is.null(data$yTransform) && identical(data$yTransform, "negative-log10")) {
     y <- -log10(pmax(y, 1e-300))
   }
@@ -138,16 +159,28 @@ build_volcano_plot <- function(data) {
 
   if (!is.null(data$xThreshold)) {
     plot_obj <- plot_obj +
-      geom_vline(xintercept = c(-as.numeric(data$xThreshold), as.numeric(data$xThreshold)), linetype = "dashed", color = "black", alpha = 0.5)
+      geom_vline(
+        xintercept = c(-as.numeric(data$xThreshold), as.numeric(data$xThreshold)),
+        linetype = "dashed",
+        color = "black",
+        alpha = 0.5
+      )
   }
 
   if (!is.null(data$yThreshold)) {
     threshold_y <- as.numeric(data$yThreshold)
+
     if (!is.null(data$yTransform) && identical(data$yTransform, "negative-log10")) {
       threshold_y <- -log10(max(threshold_y, 1e-300))
     }
+
     plot_obj <- plot_obj +
-      geom_hline(yintercept = threshold_y, linetype = "dashed", color = "black", alpha = 0.5)
+      geom_hline(
+        yintercept = threshold_y,
+        linetype = "dashed",
+        color = "black",
+        alpha = 0.5
+      )
   }
 
   plot_obj
@@ -182,12 +215,87 @@ plot_obj <- switch(
   stop(sprintf("Unsupported R plot type: %s", plot_type))
 )
 
-png(filename = "plot.png", width = 1000, height = 800)
-print(plot_obj)
-invisible(dev.off())
+open_plot_device <- function(filename, width = 1000, height = 800) {
+  if (requireNamespace("ragg", quietly = TRUE)) {
+    ragg::agg_png(
+      filename = filename,
+      width = width,
+      height = height,
+      units = "px",
+      res = 144,
+      scaling = 1
+    )
+    return("ragg")
+  }
 
-img_data <- readBin("plot.png", what = "raw", n = file.info("plot.png")$size)
-unlink("plot.png")
+  png_type <- "cairo"
+
+  if (.Platform$OS.type == "unix" && Sys.info()[["sysname"]] == "Darwin") {
+    png_type <- "quartz"
+  }
+
+  grDevices::png(
+    filename = filename,
+    width = width,
+    height = height,
+    type = png_type
+  )
+
+  png_type
+}
+
+output_file <- tempfile(pattern = "icarus-plot-", fileext = ".png")
+output_dir <- dirname(output_file)
+
+dir.create(output_dir, recursive = TRUE, showWarnings = FALSE)
+
+if (!dir.exists(output_dir)) {
+  stop(sprintf("Output directory does not exist: %s", output_dir))
+}
+
+if (file.access(output_dir, 2) != 0) {
+  stop(sprintf("Output directory is not writable: %s", output_dir))
+}
+
+device_used <- open_plot_device(
+  filename = output_file,
+  width = 1000,
+  height = 800
+)
+
+print(plot_obj)
+
+dev_result <- tryCatch(
+  {
+    invisible(dev.off())
+    TRUE
+  },
+  error = function(e) {
+    stop(
+      sprintf(
+        "Failed to close %s plot device: %s",
+        device_used,
+        conditionMessage(e)
+      ),
+      call. = FALSE
+    )
+  }
+)
+
+if (!file.exists(output_file)) {
+  stop(sprintf("Plot file was not created: %s", output_file))
+}
+
+file_size <- file.info(output_file)$size
+
+if (is.na(file_size) || file_size <= 0) {
+  stop(sprintf("Plot file is empty: %s", output_file))
+}
+
+img_data <- readBin(output_file, what = "raw", n = file_size)
+
+unlink(output_file, force = TRUE)
+
 cat("ICARUS_BASE64_BEGIN", sep = "")
 cat(jsonlite::base64_enc(img_data), sep = "")
 cat("ICARUS_BASE64_END", sep = "")
