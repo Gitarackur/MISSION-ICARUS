@@ -18,12 +18,12 @@
   ],
   mac: {
     icon: "public/assets/icarus-compressed.png",
-    target: ["dmg"],
+    target: ["zip"],
     hardenedRuntime: true,
     gatekeeperAssess: false,
     entitlements: "build/entitlements.mac.plist",
     entitlementsInherit: "build/entitlements.mac.inherit.plist",
-    artifactName: "${productName}-Mac-${version}-Installer.${ext}",
+    artifactName: "${productName}-Mac-${version}.${ext}",
   },
   win: {
     icon: "public/assets/icarus-compressed.png",
