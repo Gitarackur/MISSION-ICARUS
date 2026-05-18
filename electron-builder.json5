@@ -13,7 +13,17 @@
     {
       from: "assets",
       to: "assets",
-      filter: ["**/*"],
+      filter: [
+        "**/*",
+        "!scripts/python/bin/commander.build/**/*",
+        "!scripts/python/bin/commander.build",
+        "!scripts/python/bin/commander.dist/**/*",
+        "!scripts/python/bin/commander.dist",
+        "!scripts/python/bin/commander.onefile-build/**/*",
+        "!scripts/python/bin/commander.onefile-build",
+        "!scripts/python/.nuitka-cache/**/*",
+        "!scripts/python/.nuitka-cache",
+      ],
     },
   ],
   mac: {
