@@ -7,7 +7,7 @@ export const singleSelect = tv({
     label: "block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-200",
     trigger:
       "min-h-[42px] w-full px-3 py-2 border rounded-lg shadow-sm bg-white text-gray-900 cursor-pointer transition-all duration-200 flex items-center justify-between border-gray-300 hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-gray-600",
-    content: "flex-1 flex items-center gap-2",
+    content: "flex-1 flex items-center gap-2 overflow-scroll",
     placeholder: "text-gray-500 select-none dark:text-gray-500",
     selectedText: "text-gray-900 select-none dark:text-gray-100",
     selectedDescription: "text-sm text-gray-500 select-none dark:text-gray-400",
@@ -130,7 +130,7 @@ export const multiSelect = tv({
     label: "block text-sm font-medium mb-2 transition-colors text-gray-700 dark:text-gray-200",
     trigger:
       "min-h-[42px] w-full px-3 py-2 border rounded-lg shadow-sm bg-white text-gray-900 cursor-pointer transition-all duration-200 flex items-center justify-between border-gray-300 hover:border-gray-400 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:border-gray-600",
-    content: "flex-1 flex flex-wrap gap-1",
+    content: "flex-1 flex flex-wrap gap-1 overflow-scroll",
     placeholder: "text-gray-500 py-1 select-none dark:text-gray-500",
     dropdown:
       "absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden dark:border-gray-700 dark:bg-gray-900",
