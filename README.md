@@ -122,9 +122,9 @@ Alongside the Recharts bar plot shown above, these captures show the same groupe
 
 <img width="1280" alt="Icarus visualization viewer displaying a grouped bar plot with the saved R and ggplot2 renderer" src="./docs/images/r-ggplot2-app.jpg" />
 
-### Dark mode renderer-aware visualization
+##### Native - Recharts
 
-<img width="1600" alt="Icarus dark-mode visualization workspace with renderer controls" src="./docs/images/visualization-dark.png" />
+<img width="1600" alt="Icarus visualization viewer displaying a grouped bar plot with the saved native renderer" src="./docs/images/visualization-dark.png" />
 
 ### Analysis workflow
 
@@ -132,15 +132,15 @@ Alongside the Recharts bar plot shown above, these captures show the same groupe
 
 ### Dark mode
 
-Dark mode is supported across the table view, statistics menu, activity tree, and visualization workspace, with persistent `light`, `dark`, and `system` theme selection.
+#### Dark mode import workspace
+
+<img width="1600" alt="Icarus dark-mode import workspace captured from the Electron app" src="./docs/images/dark-mode-home.png" />
+
+#### Dark mode is supported across the table view, statistics menu, activity tree, and visualization workspace, with persistent `light`, `dark`, and `system` theme selection.
 
 <img width="1439" height="897" alt="Icarus dark-mode data and activity workflow view" src="https://github.com/user-attachments/assets/62299539-5fb1-4b88-a9b5-0524f8d3c603" />
 
 <img width="1435" height="896" alt="Icarus dark-mode visualization workflow view" src="https://github.com/user-attachments/assets/bf0e8f2d-3d60-4a17-9de0-07479d486fe6" />
-
-### Dark mode import workspace
-
-<img width="1600" alt="Icarus dark-mode import workspace captured from the Electron app" src="./docs/images/dark-mode-home.png" />
 
 ---
 
