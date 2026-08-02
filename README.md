@@ -15,7 +15,7 @@ The current app is built around a few core ideas:
 
 - matrix-first workflows
 - persistent activities and visualizations
-- renderer-aware plots (`Python`, `R`, and native)
+- renderer-aware plots (`Python` with Matplotlib, `R` with ggplot2, and native)
 - a dark-mode capable desktop UI
 - a workflow/activity tree that lets users navigate analysis history and linked outputs
 
@@ -48,8 +48,8 @@ The current app is built around a few core ideas:
 
 - Plot library lives in the visualization area, separate from raw statistical calculations
 - Supported plot types include bar, box, scatter, heatmap, volcano, and PCA
-- Renderer selection for plot creation: `Python`, `R`, or native
-- Renderer selection for plot viewing: saved renderer, `Python`, `R`, or native when available
+- Renderer selection for plot creation: Python (Matplotlib), R (ggplot2), or native
+- Renderer selection for plot viewing: saved renderer, Python (Matplotlib), R (ggplot2), or native when available
 - Matrix-linked saved visualizations
 - Plot-focused viewer instead of a cluttered multi-plot canvas
 - Download support for rendered visualizations
@@ -106,9 +106,21 @@ The current app is built around a few core ideas:
 
 ### Visualization and renderer options
 
-The visualization workspace supports plot-library driven creation and renderer-aware viewing across `Python`, `R`, saved output, and native rendering.
+The visualization workspace supports plot-library driven creation and renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
 
 <img width="1435" height="896" alt="Icarus visualization workspace with renderer-aware plot workflow" src="https://github.com/user-attachments/assets/bf0e8f2d-3d60-4a17-9de0-07479d486fe6" />
+
+#### Python and R renderer samples
+
+Alongside the Recharts bar plot shown above, these captures show the same grouped-bar payload rendered inside the Icarus visualization viewer through its Python and R chart engines.
+
+##### Python — Matplotlib
+
+<img width="1280" alt="Icarus visualization viewer displaying a grouped bar plot with the saved Python and Matplotlib renderer" src="./docs/images/python-matplotlib-app.jpg" />
+
+##### R — ggplot2
+
+<img width="1280" alt="Icarus visualization viewer displaying a grouped bar plot with the saved R and ggplot2 renderer" src="./docs/images/r-ggplot2-app.jpg" />
 
 ### Dark mode renderer-aware visualization
 
@@ -139,7 +151,7 @@ Dark mode is supported across the table view, statistics menu, activity tree, an
 | Desktop app | Electron |
 | Frontend | React, TypeScript |
 | Styling | Tailwind CSS, tailwind-variants |
-| Charts and visuals | Recharts, D3 |
+| Charts and visuals | Python (Matplotlib, Seaborn), R (ggplot2), Recharts, D3 |
 | Statistics | jStat, simple-statistics |
 | Data handling | Papa Parse plus custom resilient parser pipeline |
 | Local storage / persistence | SQLite workflow storage |
