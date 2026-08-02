@@ -100,40 +100,33 @@ The current app is built around a few core ideas:
 
 <img width="1439" height="897" alt="Icarus data workflow view" src="https://github.com/user-attachments/assets/62299539-5fb1-4b88-a9b5-0524f8d3c603" />
 
-### Visualization workflow
-
 <img width="1435" height="896" alt="Icarus visualization workflow view" src="https://github.com/user-attachments/assets/bf0e8f2d-3d60-4a17-9de0-07479d486fe6" />
 
 <img width="1439" height="897" alt="Icarus dark-mode data and activity workflow view" src="https://github.com/user-attachments/assets/62299539-5fb1-4b88-a9b5-0524f8d3c603" />
 
 <img width="1435" height="896" alt="Icarus dark-mode visualization workflow view" src="https://github.com/user-attachments/assets/bf0e8f2d-3d60-4a17-9de0-07479d486fe6" />
 
-### Visualization and renderer options
-
-The visualization workspace supports plot-library driven creation and renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
-
 <img width="1435" height="896" alt="Icarus visualization workspace with renderer-aware plot workflow" src="https://github.com/user-attachments/assets/bf0e8f2d-3d60-4a17-9de0-07479d486fe6" />
 
+
+### Visualization and renderer options
+The visualization workspace supports plot-library driven creation and renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
+##### Native - Recharts
+<img width="1600" alt="Icarus visualization viewer displaying a grouped bar plot with the saved native renderer" src="./docs/images/visualization-dark.png" />
+
+
 #### Python and R renderer samples
-
 Alongside the Recharts bar plot shown above, these captures show the same grouped-bar payload rendered inside the Icarus visualization viewer through its Python and R chart engines.
-
 ##### Python — Matplotlib
-
 <img width="1280" alt="Icarus visualization viewer displaying a grouped bar plot with the saved Python and Matplotlib renderer" src="./docs/images/python-matplotlib-app.jpg" />
 
 ##### R — ggplot2
-
 <img width="1280" alt="Icarus visualization viewer displaying a grouped bar plot with the saved R and ggplot2 renderer" src="./docs/images/r-ggplot2-app.jpg" />
 
-##### Native - Recharts
 
-<img width="1600" alt="Icarus visualization viewer displaying a grouped bar plot with the saved native renderer" src="./docs/images/visualization-dark.png" />
 
 ### Analysis workflow
-
 <img width="1429" height="889" alt="Icarus analysis workflow view" src="https://github.com/user-attachments/assets/3f2a7bdc-c59c-47b9-b1d0-b34af993a5dc" />
-
 
 
 ### Dark mode
