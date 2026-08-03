@@ -35,17 +35,38 @@ const defaultSettings: VisualizationDisplaySettings = {
   xAxisLabel: "X Axis",
   yAxisLabel: "Y Axis",
   xTickAngle: -35,
+  yTickAngle: 0,
   xMaxLabelLength: 16,
   yMaxLabelLength: 12,
   maxXTicks: 10,
   maxYTicks: 8,
+  tickFontSize: 11,
+  axisLabelFontSize: 14,
+  pointSize: 4,
+  plotWidth: 960,
+  plotHeight: 620,
+  plotColors: [
+    "#2563eb",
+    "#7c3aed",
+    "#db2777",
+    "#059669",
+    "#ea580c",
+    "#0891b2",
+  ],
   showGrid: true,
 };
 
-const axisSettings = (settings?: Partial<VisualizationDisplaySettings>) => ({
-  ...defaultSettings,
-  ...settings,
-});
+const axisSettings = (settings?: Partial<VisualizationDisplaySettings>) => {
+  const merged = { ...defaultSettings, ...settings };
+  return {
+    ...merged,
+    plotWidth: Math.min(2400, Math.max(640, merged.plotWidth)),
+    plotHeight: Math.min(1800, Math.max(400, merged.plotHeight)),
+    plotColors: merged.plotColors.length
+      ? merged.plotColors
+      : defaultSettings.plotColors,
+  };
+};
 
 const buildTicks = (min: number, max: number, count: number) => {
   const tickCount = Math.max(2, count);
@@ -57,6 +78,69 @@ const buildTicks = (min: number, max: number, count: number) => {
 
 const formatLabel = (label: string, maxLength: number) =>
   label.length > maxLength ? `${label.slice(0, Math.max(3, maxLength - 1))}…` : label;
+
+const shouldRenderTick = (index: number, count: number, maxTicks: number) => {
+  if (count <= maxTicks) return true;
+  const interval = Math.ceil(count / Math.max(1, maxTicks));
+  return index === 0 || index === count - 1 || index % interval === 0;
+};
+
+const formatNumericTick = (value: number, maxLength: number) => {
+  const absolute = Math.abs(value);
+  const decimalPlaces = absolute >= 100 ? 0 : absolute >= 10 ? 1 : 2;
+  const fixed = value
+    .toFixed(decimalPlaces)
+    .replace(/\.0+$/, "")
+    .replace(/(\.\d*?)0+$/, "$1");
+  if (fixed.length <= maxLength) return fixed;
+  return value.toExponential(Math.max(0, Math.min(3, maxLength - 5)));
+};
+
+const renderLegend = ({
+  labels,
+  palette,
+  width,
+  startX,
+  startY,
+  fontSize,
+}: {
+  labels: string[];
+  palette: string[];
+  width: number;
+  startX: number;
+  startY: number;
+  fontSize: number;
+}) => {
+  const itemWidth = Math.max(120, Math.min(220, (width - startX * 2) / 3));
+  const perRow = Math.max(1, Math.floor((width - startX * 2) / itemWidth));
+  return labels
+    .map((label, index) => {
+      const x = startX + (index % perRow) * itemWidth;
+      const y = startY + Math.floor(index / perRow) * (fontSize + 10);
+      return `<g transform="translate(${x}, ${y})"><rect width="12" height="12" rx="3" fill="${palette[index % palette.length]}"/><text x="18" y="11" font-size="${fontSize}" fill="#374151">${escapeXml(formatLabel(label, 24))}</text><title>${escapeXml(label)}</title></g>`;
+    })
+    .join("");
+};
+
+const hexToRgb = (color: string) => {
+  const match = /^#([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(color);
+  return match
+    ? [
+        Number.parseInt(match[1], 16),
+        Number.parseInt(match[2], 16),
+        Number.parseInt(match[3], 16),
+      ]
+    : [37, 99, 235];
+};
+
+const mixColor = (start: string, end: string, amount: number) => {
+  const startRgb = hexToRgb(start);
+  const endRgb = hexToRgb(end);
+  const components = startRgb.map((value, index) =>
+    Math.round(value + (endRgb[index] - value) * amount)
+  );
+  return `rgb(${components.join(",")})`;
+};
 
 const invokePythonCommand = async (method: string, payload: unknown) => {
   const base64 = await window.electron.ipcRenderer.invoke("run:python", {
@@ -84,32 +168,65 @@ const invokeRPlot = async (plotType: string, payload: unknown) => {
   return toPngDataUrl(base64);
 };
 
-export const invokePythonBarPlot = (payload: BarChartPayload) =>
-  invokePythonCommand("getPlot", payload);
+const withDisplaySettings = <TPayload extends object>(
+  payload: TPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => (settings ? { ...payload, displaySettings: settings } : payload);
 
-export const invokePythonHeatmap = (payload: HeatmapPayload) =>
-  invokePythonCommand("getHeatmap", payload);
+export const invokePythonBarPlot = (
+  payload: BarChartPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokePythonCommand("getPlot", withDisplaySettings(payload, settings));
 
-export const invokePythonVolcanoPlot = (payload: VolcanoPayload) =>
-  invokePythonCommand("getVolcanoPlot", payload);
+export const invokePythonHeatmap = (
+  payload: HeatmapPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokePythonCommand("getHeatmap", withDisplaySettings(payload, settings));
 
-export const invokePythonBoxPlot = (payload: BoxPlotPayload) =>
-  invokePythonCommand("getBoxPlot", payload);
+export const invokePythonVolcanoPlot = (
+  payload: VolcanoPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokePythonCommand("getVolcanoPlot", withDisplaySettings(payload, settings));
 
-export const invokePythonScatterPlot = (payload: ScatterPlotPayload) =>
-  invokePythonCommand("getScatterPlot", payload);
+export const invokePythonBoxPlot = (
+  payload: BoxPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokePythonCommand("getBoxPlot", withDisplaySettings(payload, settings));
 
-export const invokePythonPcaPlot = (payload: PcaPlotPayload) =>
-  invokePythonCommand("getPcaPlot", payload);
+export const invokePythonScatterPlot = (
+  payload: ScatterPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokePythonCommand("getScatterPlot", withDisplaySettings(payload, settings));
 
-export const invokeRBarPlot = (payload: BarChartPayload) => invokeRPlot("bar", payload);
-export const invokeRBoxPlot = (payload: BoxPlotPayload) => invokeRPlot("box", payload);
-export const invokeRScatterPlot = (payload: ScatterPlotPayload) =>
-  invokeRPlot("scatter", payload);
-export const invokeRHeatmap = (payload: HeatmapPayload) => invokeRPlot("heatmap", payload);
-export const invokeRVolcanoPlot = (payload: VolcanoPayload) =>
-  invokeRPlot("volcano", payload);
-export const invokeRPcaPlot = (payload: PcaPlotPayload) => invokeRPlot("pca", payload);
+export const invokePythonPcaPlot = (
+  payload: PcaPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokePythonCommand("getPcaPlot", withDisplaySettings(payload, settings));
+
+export const invokeRBarPlot = (
+  payload: BarChartPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeRPlot("bar", withDisplaySettings(payload, settings));
+export const invokeRBoxPlot = (
+  payload: BoxPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeRPlot("box", withDisplaySettings(payload, settings));
+export const invokeRScatterPlot = (
+  payload: ScatterPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeRPlot("scatter", withDisplaySettings(payload, settings));
+export const invokeRHeatmap = (
+  payload: HeatmapPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeRPlot("heatmap", withDisplaySettings(payload, settings));
+export const invokeRVolcanoPlot = (
+  payload: VolcanoPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeRPlot("volcano", withDisplaySettings(payload, settings));
+export const invokeRPcaPlot = (
+  payload: PcaPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeRPlot("pca", withDisplaySettings(payload, settings));
 
 export const renderBarSvg = (
   payload: BarChartPayload,
@@ -122,19 +239,33 @@ export const renderBarSvg = (
   );
   if (!payload.categories.length || !series.length) return null;
 
-  const width = Math.max(960, payload.categories.length * Math.max(80, series.length * 34) + 180);
-  const height = 620;
-  const margin = { top: 56, right: 36, bottom: 160, left: 88 };
+  const width = s.plotWidth;
+  const height = s.plotHeight;
+  const legendRows = Math.max(1, Math.ceil(series.length / 3));
+  const margin = {
+    top: 56,
+    right: 36,
+    bottom: Math.min(height * 0.46, 136 + legendRows * (s.tickFontSize + 10)),
+    left: Math.max(88, s.tickFontSize * 6),
+  };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
-  const maxValue = Math.max(...series.flatMap((entry) => entry.values), 0);
+  const finiteValues = series
+    .flatMap((entry) => entry.values)
+    .filter((value) => Number.isFinite(value));
+  const minValue = Math.min(...finiteValues, 0);
+  const maxValue = Math.max(...finiteValues, 0);
   const step = plotWidth / payload.categories.length;
-  const groupWidth = Math.min(72, step * 0.82);
-  const barWidth = Math.max(10, groupWidth / Math.max(1, series.length));
-  const yTicks = buildTicks(0, maxValue || 1, s.maxYTicks);
+  const groupWidth = Math.max(1, step * 0.82);
+  const barWidth = groupWidth / Math.max(1, series.length);
+  const yDomainMax = minValue === maxValue ? maxValue + 1 : maxValue;
+  const yTicks = buildTicks(minValue, yDomainMax, s.maxYTicks);
   const scaleY = (value: number) =>
-    margin.top + plotHeight - (value / (maxValue || 1)) * plotHeight;
-  const palette = ["#2563eb", "#7c3aed", "#db2777", "#059669", "#ea580c"];
+    margin.top +
+    plotHeight -
+    ((value - minValue) / (maxValue - minValue || 1)) * plotHeight;
+  const baselineY = scaleY(0);
+  const palette = s.plotColors;
 
   const bars = payload.categories
     .map((category, index) =>
@@ -146,8 +277,9 @@ export const renderBarSvg = (
             (step - groupWidth) / 2 +
             barWidth * seriesIndex;
           const value = Number(entry.values[index] ?? 0);
-          const y = scaleY(value);
-          return `<rect x="${x}" y="${y}" width="${Math.max(8, barWidth - 4)}" height="${plotHeight - (y - margin.top)}" rx="6" fill="${palette[seriesIndex % palette.length]}" opacity="0.88"><title>${escapeXml(entry.name)} / ${escapeXml(category)}: ${value.toFixed(3)}</title></rect>`;
+          const valueY = scaleY(value);
+          const y = Math.min(valueY, baselineY);
+          return `<rect x="${x}" y="${y}" width="${Math.max(1, barWidth - 2)}" height="${Math.max(1, Math.abs(baselineY - valueY))}" rx="${Math.min(4, barWidth / 3)}" fill="${palette[seriesIndex % palette.length]}" opacity="0.88"><title>${escapeXml(entry.name)} / ${escapeXml(category)}: ${value.toFixed(3)}</title></rect>`;
         })
         .join("")
     )
@@ -155,37 +287,52 @@ export const renderBarSvg = (
 
   const labels = payload.categories
     .map((category, index) => {
+      if (!shouldRenderTick(index, payload.categories.length, s.maxXTicks)) {
+        return "";
+      }
       const x = margin.left + step * index + step / 2;
-      return `<text transform="translate(${x} ${height - margin.bottom + 36}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="11" fill="#374151">${escapeXml(formatLabel(category, s.xMaxLabelLength))}</text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 26}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(category, s.xMaxLabelLength))}<title>${escapeXml(category)}</title></text>`;
     })
     .join("");
+
+  const grid = s.showGrid
+    ? yTicks
+        .map((tick) => {
+          const y = scaleY(tick);
+          return `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotWidth}" y2="${y}" stroke="#e5e7eb" stroke-width="1"/>`;
+        })
+        .join("")
+    : "";
 
   const yAxis = yTicks
     .map((tick) => {
       const y = scaleY(tick);
-      return `<text x="${margin.left - 12}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6b7280">${tick.toFixed(2)}</text>`;
+      return `<text transform="translate(${margin.left - 12} ${y + 4}) rotate(${s.yTickAngle})" text-anchor="end" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.yMaxLabelLength))}</text>`;
     })
     .join("");
 
-  const legend = series
-    .map(
-      (entry, index) =>
-        `<g transform="translate(${margin.left + index * 150}, ${height - 28})"><rect width="12" height="12" rx="3" fill="${palette[index % palette.length]}"/><text x="18" y="10" font-size="12" fill="#374151">${escapeXml(entry.name)}</text></g>`
-    )
-    .join("");
+  const legend = renderLegend({
+    labels: series.map((entry) => entry.name),
+    palette,
+    width,
+    startX: margin.left,
+    startY: height - legendRows * (s.tickFontSize + 10),
+    fontSize: s.tickFontSize,
+  });
 
   return toSvgDataUrl(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" fill="#ffffff"/>
       <text x="${margin.left}" y="30" font-size="22" font-weight="700" fill="#111827">${escapeXml(title)}</text>
+      ${grid}
       <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       ${bars}
       ${labels}
       ${yAxis}
       ${legend}
-      <text x="${margin.left + plotWidth / 2}" y="${height - 74}" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.xAxisLabel ?? s.xAxisLabel)}</text>
-      <text transform="translate(24 ${margin.top + plotHeight / 2}) rotate(-90)" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.yAxisLabel ?? s.yAxisLabel)}</text>
+      <text x="${margin.left + plotWidth / 2}" y="${height - legendRows * (s.tickFontSize + 10) - 24}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
+      <text transform="translate(${s.axisLabelFontSize + 8} ${margin.top + plotHeight / 2}) rotate(-90)" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.yAxisLabel)}</text>
     </svg>
   `);
 };
@@ -199,9 +346,14 @@ export const renderBoxPlotSvg = (
   const entries = payload.series.filter((entry) => entry.values.length >= 2).slice(0, 24);
   if (!entries.length) return null;
 
-  const width = Math.max(760, entries.length * 72 + 160);
-  const height = 460;
-  const margin = { top: 56, right: 32, bottom: 120, left: 76 };
+  const width = s.plotWidth;
+  const height = s.plotHeight;
+  const margin = {
+    top: 56,
+    right: 32,
+    bottom: Math.min(height * 0.4, 140),
+    left: Math.max(76, s.tickFontSize * 6),
+  };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const stats = entries.map(({ name, values }) => {
@@ -225,12 +377,16 @@ export const renderBoxPlotSvg = (
   const yMin = Math.min(...stats.map((item) => item.low));
   const yMax = Math.max(...stats.map((item) => item.high));
   const yPadding = (yMax - yMin || 1) * 0.08;
+  const domainMin = yMin - yPadding;
+  const domainMax = yMax + yPadding;
   const scaleY = (value: number) =>
     margin.top +
     plotHeight -
-    ((value - (yMin - yPadding)) / (yMax - yMin + yPadding * 2 || 1)) * plotHeight;
+    ((value - domainMin) / (domainMax - domainMin || 1)) * plotHeight;
   const step = plotWidth / entries.length;
   const boxWidth = Math.min(42, step * 0.5);
+  const yTicks = buildTicks(domainMin, domainMax, s.maxYTicks);
+  const palette = s.plotColors;
 
   const boxes = stats
     .map((item, index) => {
@@ -240,13 +396,32 @@ export const renderBoxPlotSvg = (
       const medianY = scaleY(item.median);
       const lowY = scaleY(item.low);
       const highY = scaleY(item.high);
+      const color = palette[index % palette.length];
+      const label = shouldRenderTick(index, entries.length, s.maxXTicks)
+        ? `<text transform="translate(${centerX} ${margin.top + plotHeight + 26}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(item.name, s.xMaxLabelLength))}<title>${escapeXml(item.name)}</title></text>`
+        : "";
       return `
         <line x1="${centerX}" y1="${highY}" x2="${centerX}" y2="${q3Y}" stroke="#1f2937" stroke-width="1.5"/>
         <line x1="${centerX}" y1="${q1Y}" x2="${centerX}" y2="${lowY}" stroke="#1f2937" stroke-width="1.5"/>
-        <rect x="${centerX - boxWidth / 2}" y="${q3Y}" width="${boxWidth}" height="${Math.max(1, q1Y - q3Y)}" fill="#bfdbfe" stroke="#2563eb" stroke-width="1.5"/>
-        <line x1="${centerX - boxWidth / 2}" y1="${medianY}" x2="${centerX + boxWidth / 2}" y2="${medianY}" stroke="#1d4ed8" stroke-width="2"/>
-        <text transform="translate(${centerX} ${height - margin.bottom + 30}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="11" fill="#374151">${escapeXml(formatLabel(item.name, s.xMaxLabelLength))}</text>
+        <rect x="${centerX - boxWidth / 2}" y="${q3Y}" width="${boxWidth}" height="${Math.max(1, q1Y - q3Y)}" fill="${color}" fill-opacity="0.22" stroke="${color}" stroke-width="1.5"><title>${escapeXml(item.name)}: median ${item.median.toFixed(3)}</title></rect>
+        <line x1="${centerX - boxWidth / 2}" y1="${medianY}" x2="${centerX + boxWidth / 2}" y2="${medianY}" stroke="${color}" stroke-width="2"/>
+        ${label}
       `;
+    })
+    .join("");
+
+  const grid = s.showGrid
+    ? yTicks
+        .map((tick) => {
+          const y = scaleY(tick);
+          return `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotWidth}" y2="${y}" stroke="#e5e7eb"/>`;
+        })
+        .join("")
+    : "";
+  const yAxis = yTicks
+    .map((tick) => {
+      const y = scaleY(tick);
+      return `<text transform="translate(${margin.left - 12} ${y + 4}) rotate(${s.yTickAngle})" text-anchor="end" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.yMaxLabelLength))}</text>`;
     })
     .join("");
 
@@ -254,11 +429,13 @@ export const renderBoxPlotSvg = (
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" fill="#ffffff"/>
       <text x="${margin.left}" y="30" font-size="22" font-weight="700" fill="#111827">${escapeXml(title)}</text>
+      ${grid}
       <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       ${boxes}
-      <text x="${margin.left + plotWidth / 2}" y="${height - 24}" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
-      <text transform="translate(24 ${margin.top + plotHeight / 2}) rotate(-90)" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.yAxisLabel ?? s.yAxisLabel)}</text>
+      ${yAxis}
+      <text x="${margin.left + plotWidth / 2}" y="${height - 24}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
+      <text transform="translate(${s.axisLabelFontSize + 8} ${margin.top + plotHeight / 2}) rotate(-90)" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.yAxisLabel)}</text>
     </svg>
   `);
 };
@@ -287,9 +464,15 @@ export const renderScatterSvg = (
   );
   if (!finitePoints.length) return null;
 
-  const width = 860;
-  const height = 520;
-  const margin = { top: 52, right: 34, bottom: 84, left: 80 };
+  const width = s.plotWidth;
+  const height = s.plotHeight;
+  const legendRows = Math.max(1, Math.ceil(series.length / 3));
+  const margin = {
+    top: 52,
+    right: 34,
+    bottom: Math.min(height * 0.38, 86 + legendRows * (s.tickFontSize + 10)),
+    left: Math.max(80, s.tickFontSize * 6),
+  };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const xMin = Math.min(...finitePoints.map((point) => point.x));
@@ -302,32 +485,64 @@ export const renderScatterSvg = (
     margin.left + ((value - (xMin - xPadding)) / (xMax - xMin + xPadding * 2 || 1)) * plotWidth;
   const scaleY = (value: number) =>
     margin.top + plotHeight - ((value - (yMin - yPadding)) / (yMax - yMin + yPadding * 2 || 1)) * plotHeight;
-  const palette = ["#2563eb", "#7c3aed", "#db2777", "#059669", "#ea580c"];
+  const palette = s.plotColors;
+  const xTicks = buildTicks(xMin - xPadding, xMax + xPadding, s.maxXTicks);
+  const yTicks = buildTicks(yMin - yPadding, yMax + yPadding, s.maxYTicks);
 
   const circles = finitePoints
     .map((point) => {
       const color = palette[series.findIndex((entry) => entry.name === point.series) % palette.length];
-      return `<circle cx="${scaleX(point.x)}" cy="${scaleY(point.y)}" r="4.5" fill="${color}" opacity="0.72"><title>${escapeXml(point.series)} / ${escapeXml(point.label)}: ${point.x.toFixed(3)}, ${point.y.toFixed(3)}</title></circle>`;
+      return `<circle cx="${scaleX(point.x)}" cy="${scaleY(point.y)}" r="${s.pointSize}" fill="${color}" opacity="0.72"><title>${escapeXml(point.series)} / ${escapeXml(point.label)}: ${point.x.toFixed(3)}, ${point.y.toFixed(3)}</title></circle>`;
     })
     .join("");
 
-  const legend = series
-    .map(
-      (entry, index) =>
-        `<g transform="translate(${margin.left + index * 150}, ${height - 28})"><rect width="12" height="12" rx="3" fill="${palette[index % palette.length]}"/><text x="18" y="10" font-size="12" fill="#374151">${escapeXml(entry.name)}</text></g>`
-    )
+  const xAxis = xTicks
+    .map((tick) => {
+      const x = scaleX(tick);
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
+    })
     .join("");
+  const yAxis = yTicks
+    .map((tick) => {
+      const y = scaleY(tick);
+      return `<text transform="translate(${margin.left - 12} ${y + 4}) rotate(${s.yTickAngle})" text-anchor="end" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.yMaxLabelLength))}</text>`;
+    })
+    .join("");
+  const grid = s.showGrid
+    ? `${xTicks
+        .map((tick) => {
+          const x = scaleX(tick);
+          return `<line x1="${x}" y1="${margin.top}" x2="${x}" y2="${margin.top + plotHeight}" stroke="#e5e7eb"/>`;
+        })
+        .join("")}${yTicks
+        .map((tick) => {
+          const y = scaleY(tick);
+          return `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotWidth}" y2="${y}" stroke="#e5e7eb"/>`;
+        })
+        .join("")}`
+    : "";
+  const legend = renderLegend({
+    labels: series.map((entry) => entry.name),
+    palette,
+    width,
+    startX: margin.left,
+    startY: height - legendRows * (s.tickFontSize + 10),
+    fontSize: s.tickFontSize,
+  });
 
   return toSvgDataUrl(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" fill="#ffffff"/>
       <text x="${margin.left}" y="30" font-size="22" font-weight="700" fill="#111827">${escapeXml(title)}</text>
+      ${grid}
       <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       ${circles}
+      ${xAxis}
+      ${yAxis}
       ${legend}
-      <text x="${margin.left + plotWidth / 2}" y="${height - 58}" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.xAxisLabel ?? s.xAxisLabel)}</text>
-      <text transform="translate(24 ${margin.top + plotHeight / 2}) rotate(-90)" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.yAxisLabel ?? s.yAxisLabel)}</text>
+      <text x="${margin.left + plotWidth / 2}" y="${height - legendRows * (s.tickFontSize + 10) - 18}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
+      <text transform="translate(${s.axisLabelFontSize + 8} ${margin.top + plotHeight / 2}) rotate(-90)" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.yAxisLabel)}</text>
     </svg>
   `);
 };
@@ -355,28 +570,37 @@ export const renderPcaSvg = (
 
 export const renderHeatmapSvg = (
   payload: HeatmapPayload,
-  _settings?: Partial<VisualizationDisplaySettings>,
+  settings?: Partial<VisualizationDisplaySettings>,
   title = payload.title ?? "Heatmap"
 ) => {
-  const cellSize = 28;
-  const labelOffset = 210;
-  const width = labelOffset + payload.col_labels.length * cellSize + 24;
-  const height = labelOffset + payload.row_labels.length * cellSize + 40;
+  const s = axisSettings(settings);
+  if (!payload.matrix.length || !payload.col_labels.length) return null;
+  const width = s.plotWidth;
+  const height = s.plotHeight;
+  const margin = {
+    top: 56,
+    right: 32,
+    bottom: Math.min(height * 0.35, 132),
+    left: Math.min(width * 0.3, Math.max(104, s.tickFontSize * 13)),
+  };
+  const plotWidth = width - margin.left - margin.right;
+  const plotHeight = height - margin.top - margin.bottom;
+  const cellWidth = plotWidth / payload.col_labels.length;
+  const cellHeight = plotHeight / payload.row_labels.length;
   const colorForValue = (value: number) => {
     const normalized = Math.max(0, Math.min(1, (value + 1) / 2));
-    const red = Math.round(37 + normalized * 190);
-    const green = Math.round(99 + (1 - Math.abs(normalized - 0.5) * 2) * 80);
-    const blue = Math.round(235 - normalized * 190);
-    return `rgb(${red},${green},${blue})`;
+    return normalized <= 0.5
+      ? mixColor(s.plotColors[0], "#f8fafc", normalized * 2)
+      : mixColor("#f8fafc", s.plotColors[2 % s.plotColors.length], (normalized - 0.5) * 2);
   };
 
   const cells = payload.matrix
     .map((row, rowIndex) =>
       row
         .map((value, colIndex) => {
-          const x = labelOffset + colIndex * cellSize;
-          const y = labelOffset + rowIndex * cellSize;
-          return `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${colorForValue(value)}"><title>${escapeXml(payload.row_labels[rowIndex])} x ${escapeXml(payload.col_labels[colIndex])}: ${value.toFixed(3)}</title></rect>`;
+          const x = margin.left + colIndex * cellWidth;
+          const y = margin.top + rowIndex * cellHeight;
+          return `<rect x="${x}" y="${y}" width="${cellWidth + 0.2}" height="${cellHeight + 0.2}" fill="${colorForValue(value)}"><title>${escapeXml(payload.row_labels[rowIndex])} x ${escapeXml(payload.col_labels[colIndex])}: ${value.toFixed(3)}</title></rect>`;
         })
         .join("")
     )
@@ -385,20 +609,26 @@ export const renderHeatmapSvg = (
   return toSvgDataUrl(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" fill="#ffffff"/>
-      <text x="24" y="32" font-size="18" font-weight="700" fill="#111827">${escapeXml(title)}</text>
+      <text x="${margin.left}" y="30" font-size="20" font-weight="700" fill="#111827">${escapeXml(title)}</text>
       ${payload.row_labels
-        .map(
-          (label, index) =>
-            `<text x="${labelOffset - 8}" y="${labelOffset + index * cellSize + 18}" text-anchor="end" font-size="10" fill="#374151">${escapeXml(label)}</text>`
+        .map((label, index) =>
+          shouldRenderTick(index, payload.row_labels.length, s.maxYTicks)
+            ? `<text transform="translate(${margin.left - 8} ${margin.top + index * cellHeight + cellHeight / 2 + 4}) rotate(${s.yTickAngle})" text-anchor="end" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(label, s.yMaxLabelLength))}<title>${escapeXml(label)}</title></text>`
+            : ""
         )
         .join("")}
       ${payload.col_labels
         .map((label, index) => {
-          const x = labelOffset + index * cellSize + 15;
-          return `<text transform="translate(${x} ${labelOffset - 8}) rotate(-55)" text-anchor="start" font-size="10" fill="#374151">${escapeXml(label)}</text>`;
+          if (!shouldRenderTick(index, payload.col_labels.length, s.maxXTicks)) {
+            return "";
+          }
+          const x = margin.left + index * cellWidth + cellWidth / 2;
+          return `<text transform="translate(${x} ${margin.top + plotHeight + 22}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(label, s.xMaxLabelLength))}<title>${escapeXml(label)}</title></text>`;
         })
         .join("")}
-      <g stroke="#ffffff" stroke-width="1">${cells}</g>
+      <g ${s.showGrid ? 'stroke="#ffffff" stroke-width="1"' : ""}>${cells}</g>
+      <text x="${margin.left + plotWidth / 2}" y="${height - 20}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
+      <text transform="translate(${s.axisLabelFontSize + 8} ${margin.top + plotHeight / 2}) rotate(-90)" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.yAxisLabel)}</text>
     </svg>
   `);
 };
@@ -413,9 +643,14 @@ export const renderVolcanoSvg = (
     payload.yTransform === "negative-log10"
       ? payload.y.map((value) => -Math.log10(Math.max(value, 1e-300)))
       : payload.y;
-  const width = 900;
-  const height = 620;
-  const margin = { top: 48, right: 32, bottom: 80, left: 76 };
+  const width = s.plotWidth;
+  const height = s.plotHeight;
+  const margin = {
+    top: 48,
+    right: 32,
+    bottom: 92,
+    left: Math.max(76, s.tickFontSize * 6),
+  };
   const plotWidth = width - margin.left - margin.right;
   const plotHeight = height - margin.top - margin.bottom;
   const xMin = Math.min(...payload.x) - 0.5;
@@ -425,6 +660,8 @@ export const renderVolcanoSvg = (
     margin.left + ((value - xMin) / (xMax - xMin || 1)) * plotWidth;
   const scaleY = (value: number) =>
     margin.top + plotHeight - (value / (yMax || 1)) * plotHeight;
+  const xTicks = buildTicks(xMin, xMax, s.maxXTicks);
+  const yTicks = buildTicks(0, yMax, s.maxYTicks);
 
   const thresholdY =
     payload.yTransform === "negative-log10" && payload.yThreshold
@@ -439,8 +676,38 @@ export const renderVolcanoSvg = (
       const isYSignificant =
         typeof thresholdY === "number" ? yValue >= thresholdY : false;
       const significant = isXSignificant && isYSignificant;
-      const fill = significant ? (xValue >= 0 ? "#dc2626" : "#2563eb") : "#6b7280";
-      return `<circle cx="${scaleX(xValue)}" cy="${scaleY(yValue)}" r="3.5" fill="${fill}" opacity="0.72"><title>${escapeXml(payload.labels[index] ?? `row_${index + 1}`)}: ${xValue.toFixed(3)}, ${yValue.toFixed(3)}</title></circle>`;
+      const fill = significant
+        ? xValue >= 0
+          ? s.plotColors[2 % s.plotColors.length]
+          : s.plotColors[0]
+        : s.plotColors[4 % s.plotColors.length];
+      return `<circle cx="${scaleX(xValue)}" cy="${scaleY(yValue)}" r="${s.pointSize}" fill="${fill}" opacity="0.72"><title>${escapeXml(payload.labels[index] ?? `row_${index + 1}`)}: ${xValue.toFixed(3)}, ${yValue.toFixed(3)}</title></circle>`;
+    })
+    .join("");
+
+  const grid = s.showGrid
+    ? `${xTicks
+        .map((tick) => {
+          const x = scaleX(tick);
+          return `<line x1="${x}" y1="${margin.top}" x2="${x}" y2="${margin.top + plotHeight}" stroke="#e5e7eb"/>`;
+        })
+        .join("")}${yTicks
+        .map((tick) => {
+          const y = scaleY(tick);
+          return `<line x1="${margin.left}" y1="${y}" x2="${margin.left + plotWidth}" y2="${y}" stroke="#e5e7eb"/>`;
+        })
+        .join("")}`
+    : "";
+  const xAxis = xTicks
+    .map((tick) => {
+      const x = scaleX(tick);
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
+    })
+    .join("");
+  const yAxis = yTicks
+    .map((tick) => {
+      const y = scaleY(tick);
+      return `<text transform="translate(${margin.left - 12} ${y + 4}) rotate(${s.yTickAngle})" text-anchor="end" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.yMaxLabelLength))}</text>`;
     })
     .join("");
 
@@ -448,6 +715,7 @@ export const renderVolcanoSvg = (
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
       <rect width="100%" height="100%" fill="#ffffff"/>
       <text x="${margin.left}" y="30" font-size="20" font-weight="700" fill="#111827">${escapeXml(title)}</text>
+      ${grid}
       <line x1="${margin.left}" y1="${margin.top + plotHeight}" x2="${margin.left + plotWidth}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       <line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${margin.top + plotHeight}" stroke="#374151"/>
       ${
@@ -461,8 +729,10 @@ export const renderVolcanoSvg = (
           : ""
       }
       ${points}
-      <text x="${margin.left + plotWidth / 2}" y="${height - 24}" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.xAxisLabel ?? s.xAxisLabel)}</text>
-      <text transform="translate(24 ${margin.top + plotHeight / 2}) rotate(-90)" font-size="14" text-anchor="middle" fill="#374151">${escapeXml(payload.yAxisLabel ?? s.yAxisLabel)}</text>
+      ${xAxis}
+      ${yAxis}
+      <text x="${margin.left + plotWidth / 2}" y="${height - 24}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
+      <text transform="translate(${s.axisLabelFontSize + 8} ${margin.top + plotHeight / 2}) rotate(-90)" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.yAxisLabel)}</text>
     </svg>
   `);
 };

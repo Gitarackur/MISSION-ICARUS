@@ -18,10 +18,10 @@ function VisualizationSettingsPanel({
       {compact ? (
         <div className="space-y-1">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
-            Axis Settings
+            Plot Settings
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Tune labels and tick density without leaving the pane.
+            Tick limits automatically hide overlapping labels without removing data.
           </p>
         </div>
       ) : null}
@@ -54,6 +54,128 @@ function VisualizationSettingsPanel({
         </label>
         <label className={s.configField()}>
           <span className={s.configLabel()}>
+            Tick Label Size: {settings.tickFontSize}px
+          </span>
+          <input
+            type="range"
+            min="8"
+            max="18"
+            step="1"
+            className={s.configRange()}
+            value={settings.tickFontSize}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                tickFontSize: Number(event.target.value),
+              }))
+            }
+          />
+        </label>
+        <label className={s.configField()}>
+          <span className={s.configLabel()}>
+            Axis Label Size: {settings.axisLabelFontSize}px
+          </span>
+          <input
+            type="range"
+            min="10"
+            max="24"
+            step="1"
+            className={s.configRange()}
+            value={settings.axisLabelFontSize}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                axisLabelFontSize: Number(event.target.value),
+              }))
+            }
+          />
+        </label>
+        <label className={s.configField()}>
+          <span className={s.configLabel()}>
+            Mark Size: {settings.pointSize}px
+          </span>
+          <input
+            type="range"
+            min="2"
+            max="10"
+            step="0.5"
+            className={s.configRange()}
+            value={settings.pointSize}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                pointSize: Number(event.target.value),
+              }))
+            }
+          />
+        </label>
+        <label className={s.configField()}>
+          <span className={s.configLabel()}>
+            Plot Width: {settings.plotWidth}px
+          </span>
+          <input
+            type="range"
+            min="640"
+            max="2400"
+            step="40"
+            className={s.configRange()}
+            value={settings.plotWidth}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                plotWidth: Math.min(2400, Math.max(640, Number(event.target.value) || 960)),
+              }))
+            }
+          />
+        </label>
+        <label className={s.configField()}>
+          <span className={s.configLabel()}>
+            Plot Height: {settings.plotHeight}px
+          </span>
+          <input
+            type="range"
+            min="400"
+            max="1800"
+            step="40"
+            className={s.configRange()}
+            value={settings.plotHeight}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                plotHeight: Math.min(1800, Math.max(400, Number(event.target.value) || 620)),
+              }))
+            }
+          />
+        </label>
+        <div className={s.configField()}>
+          <span className={s.configLabel()}>Series Colors</span>
+          <div className="flex flex-wrap gap-2">
+            {settings.plotColors.map((color, index) => (
+              <label
+                key={index}
+                className="relative h-8 w-8 overflow-hidden rounded-full border border-gray-300 shadow-sm dark:border-gray-700"
+                title={`Series ${index + 1}: ${color}`}
+              >
+                <input
+                  type="color"
+                  className="absolute -inset-2 h-12 w-12 cursor-pointer border-0 bg-transparent p-0"
+                  value={color}
+                  aria-label={`Series ${index + 1} color`}
+                  onChange={(event) =>
+                    setSettings((current) => ({
+                      ...current,
+                      plotColors: current.plotColors.map((item, colorIndex) =>
+                        colorIndex === index ? event.target.value : item
+                      ),
+                    }))
+                  }
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+        <label className={s.configField()}>
+          <span className={s.configLabel()}>
             X Label Angle: {settings.xTickAngle}°
           </span>
           <input
@@ -67,6 +189,25 @@ function VisualizationSettingsPanel({
               setSettings((current) => ({
                 ...current,
                 xTickAngle: Number(event.target.value),
+              }))
+            }
+          />
+        </label>
+        <label className={s.configField()}>
+          <span className={s.configLabel()}>
+            Y Label Angle: {settings.yTickAngle}°
+          </span>
+          <input
+            type="range"
+            min="-45"
+            max="45"
+            step="5"
+            className={s.configRange()}
+            value={settings.yTickAngle}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                yTickAngle: Number(event.target.value),
               }))
             }
           />

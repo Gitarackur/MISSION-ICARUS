@@ -334,7 +334,9 @@ export const useVisualizationPanel = ({
           data: readiness.payload,
           pointCount: readiness.payload.categories.length,
           inputColumnNames: [
-            plotSelections.bar.xAxis ?? "",
+            ...(plotSelections.bar.xAxes?.length
+              ? plotSelections.bar.xAxes
+              : [plotSelections.bar.xAxis ?? ""]),
             ...(plotSelections.bar.yAxes ?? []),
           ].filter(Boolean),
         });
@@ -407,8 +409,13 @@ export const useVisualizationPanel = ({
             0
           ),
           inputColumnNames: [
-            plotSelections.scatter.xAxis ?? "",
+            ...(plotSelections.scatter.xAxes?.length
+              ? plotSelections.scatter.xAxes
+              : [plotSelections.scatter.xAxis ?? ""]),
             ...(plotSelections.scatter.yAxes ?? []),
+            ...(plotSelections.scatter.labelAxes?.length
+              ? plotSelections.scatter.labelAxes
+              : [plotSelections.scatter.labelAxis ?? ""]),
           ].filter(Boolean),
         });
       } catch (err) {
@@ -485,8 +492,13 @@ export const useVisualizationPanel = ({
           data: readiness.payload,
           pointCount: readiness.payload.x.length,
           inputColumnNames: [
-            plotSelections.volcano.xAxis ?? "",
+            ...(plotSelections.volcano.xAxes?.length
+              ? plotSelections.volcano.xAxes
+              : [plotSelections.volcano.xAxis ?? ""]),
             ...(plotSelections.volcano.yAxes ?? []),
+            ...(plotSelections.volcano.labelAxes?.length
+              ? plotSelections.volcano.labelAxes
+              : [plotSelections.volcano.labelAxis ?? ""]),
           ].filter(Boolean),
         });
       } catch (err) {
@@ -524,7 +536,12 @@ export const useVisualizationPanel = ({
           title: readiness.payload.title ?? "PCA Plot",
           data: readiness.payload,
           pointCount: readiness.payload.data.length,
-          inputColumnNames: plotSelections.pca.columns,
+          inputColumnNames: [
+            ...(plotSelections.pca.columns ?? []),
+            ...(plotSelections.pca.labelAxes?.length
+              ? plotSelections.pca.labelAxes
+              : [plotSelections.pca.labelAxis ?? ""]),
+          ].filter(Boolean),
         });
       } catch (err) {
         setError(`PCA plot failed: ${(err as Error).message || err}`);

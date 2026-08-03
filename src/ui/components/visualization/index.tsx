@@ -87,7 +87,13 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         onDownload={downloadCurrentVisualization}
         onSelectVisualization={setActiveVisualizationId}
         onSetDisplayMode={setDisplayMode}
-        onToggleSettings={() => setShowSettings((value) => !value)}
+        onToggleSettings={() =>
+          setShowSettings((value) => {
+            const nextValue = !value;
+            if (nextValue) setDisplayMode("native");
+            return nextValue;
+          })
+        }
         settings={settings}
         savedVisualizations={savedVisualizations}
         setSettings={setSettings}

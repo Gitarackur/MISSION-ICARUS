@@ -65,6 +65,12 @@ def build_args(mode: str) -> list[str]:
     if mode not in {"onefile", "standalone"}:
         raise ValueError(f"Unsupported build mode: {mode}")
 
+    output_filename = "commander"
+    if sys.platform == "darwin":
+        output_filename += ".bin"
+    elif os.name == "nt":
+        output_filename += ".exe"
+
     args = [
         sys.executable,
         "-m",
@@ -74,7 +80,7 @@ def build_args(mode: str) -> list[str]:
         "--disable-ccache",
         "--assume-yes-for-downloads",
         f"--output-dir={OUTPUT_DIR}",
-        "--output-filename=commander",
+        f"--output-filename={output_filename}",
     ]
 
     for package in INCLUDE_PACKAGES:

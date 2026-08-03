@@ -2,7 +2,13 @@ import matplotlib.pyplot as plt
 import base64
 from io import BytesIO
 from core.Command import Command
-from commands.utils import load_payload, normalize_categories, to_numeric_list
+from commands.utils import (
+    get_display_settings,
+    load_payload,
+    normalize_categories,
+    sample_axis_labels,
+    to_numeric_list,
+)
 
 
 
@@ -22,7 +28,12 @@ class PlotCommand(Command):
                 'values': list(data.values())
             }]
 
-        plt.figure(figsize=(10, 8))
+        settings = get_display_settings(data)
+        dpi = 100
+        figure, axis = plt.subplots(
+            figsize=(settings['width'] / dpi, settings['height'] / dpi),
+            dpi=dpi,
+        )
         x = list(range(len(categories)))
         normalized_series = []
 
@@ -43,22 +54,58 @@ class PlotCommand(Command):
 
         for index, entry in enumerate(normalized_series):
             offsets = [item + (index - (total_series - 1) / 2) * width for item in x]
-            plt.bar(offsets, entry['values'], width=width, label=entry['name'])
+            axis.bar(
+                offsets,
+                entry['values'],
+                width=width,
+                label=entry['name'],
+                color=settings['colors'][index % len(settings['colors'])],
+                alpha=0.88,
+            )
 
-        plt.xticks(list(x), categories, rotation=35, ha='right')
+        tick_positions, tick_labels = sample_axis_labels(
+            categories,
+            settings['max_x_ticks'],
+            settings['x_label_length'],
+        )
+        axis.set_xticks(tick_positions, tick_labels)
+        axis.tick_params(axis='both', labelsize=settings['tick_font_size'])
+        plt.setp(
+            axis.get_xticklabels(),
+            rotation=settings['x_tick_angle'],
+            ha='right' if settings['x_tick_angle'] else 'center',
+            rotation_mode='anchor',
+        )
         if len(normalized_series) > 1:
-            plt.legend()
-        plt.xlabel(data.get('xAxisLabel', 'X Axis'))
-        plt.ylabel(data.get('yAxisLabel', 'Y Axis'))
-        plt.title(data.get('title', 'Bar Plot'))
-        plt.tight_layout()
+            axis.legend(
+                ncols=min(3, len(normalized_series)),
+                fontsize=settings['tick_font_size'],
+                frameon=False,
+            )
+        axis.set_xlabel(
+            settings['x_axis_label'] or data.get('xAxisLabel', 'X Axis'),
+            fontsize=settings['axis_label_font_size'],
+            labelpad=10,
+            loc='center',
+        )
+        axis.set_ylabel(
+            settings['y_axis_label'] or data.get('yAxisLabel', 'Y Axis'),
+            fontsize=settings['axis_label_font_size'],
+            labelpad=10,
+            loc='center',
+        )
+        axis.set_title(data.get('title', 'Bar Plot'), pad=12)
+        axis.grid(settings['show_grid'], axis='y', alpha=0.22, linewidth=0.8)
+        axis.set_axisbelow(True)
+        figure.tight_layout(pad=1.4)
 
         if preview:
             # Show the chart in a window
             plt.show()
         else:
             buf = BytesIO()
-            plt.savefig(buf, format='png')
+            figure.savefig(buf, format='png', dpi=dpi)
+            plt.close(figure)
             buf.seek(0)
 
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
