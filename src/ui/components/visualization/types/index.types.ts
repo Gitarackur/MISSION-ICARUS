@@ -60,8 +60,10 @@ export type PlotLibraryCard = {
   renderers: readonly VisualizationRenderer[];
   selection: PlotAxisSelection;
   xAxisOptions?: string[];
+  multipleXAxis?: boolean;
   yAxisOptions?: string[];
   labelAxisOptions?: string[];
+  multipleLabelAxis?: boolean;
   onRendererChange: (renderer: VisualizationRenderer) => void;
   onSelectionChange: (selection: Partial<PlotAxisSelection>) => void;
   onRender: () => void | Promise<void>;

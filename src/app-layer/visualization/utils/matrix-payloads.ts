@@ -47,6 +47,14 @@ const sampleRows = <T>(rows: T[], maxRows: number) => {
   return rows.filter((_, index) => index % stride === 0).slice(0, maxRows);
 };
 
+const sampleRowsWithIndex = <T>(rows: T[], maxRows: number) => {
+  const stride = rows.length <= maxRows ? 1 : Math.ceil(rows.length / maxRows);
+  return rows
+    .map((row, rowIndex) => ({ row, rowIndex }))
+    .filter(({ rowIndex }) => rowIndex % stride === 0)
+    .slice(0, maxRows);
+};
+
 const getColumnDescriptors = (matrix?: MatrixRecord): ColumnDescriptor[] =>
   (matrix?.columns ?? []).map((column, index) => ({
     column,
@@ -69,11 +77,32 @@ const getFiniteColumnValues = (matrix: MatrixRecord, columnIndex: number) =>
 const getRowLabel = (
   matrix: MatrixRecord,
   rowIndex: number,
-  preferredColumn?: string
+  preferredColumns?: string[] | string
 ) => {
-  const descriptor = preferredColumn
-    ? getColumnDescriptors(matrix).find((item) => item.column === preferredColumn)
-    : getColumnDescriptors(matrix).find((item) =>
+  const descriptors = getColumnDescriptors(matrix);
+  const requestedColumns = Array.isArray(preferredColumns)
+    ? preferredColumns
+    : preferredColumns
+      ? [preferredColumns]
+      : [];
+  const selectedDescriptors = requestedColumns
+    .map((column) => descriptors.find((item) => item.column === column))
+    .filter((item): item is ColumnDescriptor => Boolean(item));
+
+  if (selectedDescriptors.length) {
+    const parts = selectedDescriptors
+      .map((descriptor) => {
+        const value = matrix.data[rowIndex]?.[descriptor.index];
+        return value === null || value === undefined || value === ""
+          ? null
+          : `${descriptor.column}: ${String(value)}`;
+      })
+      .filter((value): value is string => Boolean(value));
+
+    if (parts.length) return parts.join(" · ");
+  }
+
+  const descriptor = descriptors.find((item) =>
         /(protein|gene|id|name|label|feature|sample|group)/i.test(item.column)
       );
 
@@ -82,6 +111,17 @@ const getRowLabel = (
     ? `row_${rowIndex + 1}`
     : String(value);
 };
+
+const getSelectionValues = (multiple?: string[], legacy?: string) => {
+  const values = multiple?.filter(Boolean) ?? [];
+  return Array.from(new Set(values.length ? values : legacy ? [legacy] : []));
+};
+
+const getSelectedXAxes = (selection: PlotAxisSelection) =>
+  getSelectionValues(selection.xAxes, selection.xAxis);
+
+const getSelectedLabelAxes = (selection: PlotAxisSelection) =>
+  getSelectionValues(selection.labelAxes, selection.labelAxis);
 
 const getSelectedNumericDescriptors = (
   matrix: MatrixRecord,
@@ -97,30 +137,32 @@ const getSelectedNumericDescriptors = (
 
 const buildScatterSeries = ({
   matrix,
-  xAxis,
+  xAxes,
   yAxes,
-  labelAxis,
+  labelAxes,
 }: {
   matrix: MatrixRecord;
-  xAxis: string;
+  xAxes: string[];
   yAxes: string[];
-  labelAxis?: string;
+  labelAxes?: string[];
 }) => {
   const descriptors = getColumnDescriptors(matrix);
-  const xDescriptor = descriptors.find((item) => item.column === xAxis && item.numeric);
+  const xDescriptors = descriptors.filter(
+    (item) => xAxes.includes(item.column) && item.numeric
+  );
   const yDescriptors = descriptors.filter(
     (item) => yAxes.includes(item.column) && item.numeric
   );
 
-  if (!xDescriptor || !yDescriptors.length) return [];
+  if (!xDescriptors.length || !yDescriptors.length) return [];
 
-  return yDescriptors
-    .map((descriptor) => {
-      const rows = sampleRows(matrix.data, MAX_SCATTER_POINTS)
-        .map((row, rowIndex) => ({
+  return xDescriptors.flatMap((xDescriptor) =>
+    yDescriptors.map((yDescriptor) => {
+      const rows = sampleRowsWithIndex(matrix.data, MAX_SCATTER_POINTS)
+        .map(({ row, rowIndex }) => ({
           x: toFinite(row[xDescriptor.index]),
-          y: toFinite(row[descriptor.index]),
-          label: getRowLabel(matrix, rowIndex, labelAxis),
+          y: toFinite(row[yDescriptor.index]),
+          label: getRowLabel(matrix, rowIndex, labelAxes),
         }))
         .filter(
           (row): row is { x: number; y: number; label: string } =>
@@ -130,12 +172,16 @@ const buildScatterSeries = ({
       if (!rows.length) return null;
 
       return {
-        name: descriptor.column,
+        name:
+          xDescriptors.length > 1
+            ? `${yDescriptor.column} vs ${xDescriptor.column}`
+            : yDescriptor.column,
         x: rows.map((row) => row.x),
         y: rows.map((row) => row.y),
         labels: rows.map((row) => row.label),
       };
     })
+  )
     .filter(
       (
         series
@@ -170,19 +216,26 @@ export const getDefaultPlotSelection = (
 
   switch (kind) {
     case "bar":
-      return {
-        xAxis: labelAxis ?? allColumns[0] ?? "",
-        yAxes: numericColumns.slice(0, 2),
-        labelAxis,
-      };
+      {
+        const xAxes = labelAxis ? [labelAxis] : allColumns[0] ? [allColumns[0]] : [];
+        return {
+          xAxes,
+          xAxis: xAxes[0] ?? "",
+          yAxes: numericColumns.slice(0, 2),
+          labelAxes: labelAxis ? [labelAxis] : [],
+          labelAxis,
+        };
+      }
     case "box":
       return {
         yAxes: numericColumns.slice(0, 6),
       };
     case "scatter":
       return {
+        xAxes: numericColumns[0] ? [numericColumns[0]] : [],
         xAxis: numericColumns[0] ?? "",
         yAxes: numericColumns.slice(1, 3),
+        labelAxes: labelAxis ? [labelAxis] : [],
         labelAxis,
       };
     case "heatmap":
@@ -200,8 +253,10 @@ export const getDefaultPlotSelection = (
         numericColumns[0] ??
         "";
       return {
+        xAxes: defaultX ? [defaultX] : [],
         xAxis: defaultX,
         yAxes: defaultY ? [defaultY] : [],
+        labelAxes: labelAxis ? [labelAxis] : [],
         labelAxis,
         applyNegativeLog10ToY: true,
       };
@@ -209,6 +264,7 @@ export const getDefaultPlotSelection = (
     case "pca":
       return {
         columns: numericColumns.slice(0, 12),
+        labelAxes: labelAxis ? [labelAxis] : [],
         labelAxis,
         nComponents: 2,
       };
@@ -310,43 +366,45 @@ export const buildConfiguredBarPayload = (
   selection: PlotAxisSelection
 ): VisualizationReadiness<BarChartPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
-  if (!selection.xAxis) {
-    return { payload: null, reason: "Choose an x-axis column for the bar plot." };
+  const selectedXAxes = getSelectedXAxes(selection);
+  if (!selectedXAxes.length) {
+    return { payload: null, reason: "Choose at least one x-axis column for the bar plot." };
   }
 
   const descriptors = getColumnDescriptors(matrix);
-  const xDescriptor = descriptors.find((item) => item.column === selection.xAxis);
+  const xDescriptors = descriptors.filter((item) =>
+    selectedXAxes.includes(item.column)
+  );
   const yDescriptors = descriptors.filter(
     (item) => selection.yAxes?.includes(item.column) && item.numeric
   );
 
-  if (!xDescriptor) {
+  if (!xDescriptors.length) {
     return {
       payload: null,
-      reason: "Bar plot needs an x-axis column.",
+      reason: "Bar plot needs at least one x-axis column.",
     };
   }
 
-  const categories = Array.from(
-    new Set(
-      sampleRows(matrix.data, MAX_VISUALIZATION_ROWS).map((row, rowIndex) => {
-        const value = row[xDescriptor.index];
+  const sampledRows = sampleRows(matrix.data, MAX_VISUALIZATION_ROWS);
+  const getCategory = (row: MatrixRecord["data"][number], rowIndex: number) =>
+    xDescriptors
+      .map((descriptor) => {
+        const value = row[descriptor.index];
         return value === null || value === undefined || value === ""
           ? `row_${rowIndex + 1}`
           : String(value);
       })
+      .join(" · ");
+
+  const categories = Array.from(
+    new Set(
+      sampledRows.map((row, rowIndex) => getCategory(row, rowIndex))
     )
   ).slice(0, MAX_CATEGORY_COUNT);
 
   const groupedRows = categories.map((category) =>
-    sampleRows(matrix.data, MAX_VISUALIZATION_ROWS).filter((row, rowIndex) => {
-      const value = row[xDescriptor.index];
-      const rowCategory =
-        value === null || value === undefined || value === ""
-          ? `row_${rowIndex + 1}`
-          : String(value);
-      return rowCategory === category;
-    })
+    sampledRows.filter((row, rowIndex) => getCategory(row, rowIndex) === category)
   );
 
   const series = yDescriptors.length
@@ -377,7 +435,7 @@ export const buildConfiguredBarPayload = (
       categories,
       series,
       title: "Bar Plot",
-      xAxisLabel: selection.xAxis,
+      xAxisLabel: selectedXAxes.join(" · "),
       yAxisLabel: yDescriptors.length
         ? yDescriptors.length === 1
           ? `${yDescriptors[0].column} (mean)`
@@ -424,18 +482,19 @@ export const buildConfiguredScatterPayload = (
   selection: PlotAxisSelection
 ): VisualizationReadiness<ScatterPlotPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
-  if (!selection.xAxis || !selection.yAxes?.length) {
+  const selectedXAxes = getSelectedXAxes(selection);
+  if (!selectedXAxes.length || !selection.yAxes?.length) {
     return {
       payload: null,
-      reason: "Scatter plot needs one x-axis and at least one y-axis column.",
+      reason: "Scatter plot needs at least one x-axis and one y-axis column.",
     };
   }
 
   const series = buildScatterSeries({
     matrix,
-    xAxis: selection.xAxis,
+    xAxes: selectedXAxes,
     yAxes: selection.yAxes,
-    labelAxis: selection.labelAxis,
+    labelAxes: getSelectedLabelAxes(selection),
   });
 
   if (!series.length) {
@@ -446,7 +505,7 @@ export const buildConfiguredScatterPayload = (
     payload: {
       series,
       title: "Scatter Plot",
-      xAxisLabel: selection.xAxis,
+      xAxisLabel: selectedXAxes.join(", "),
       yAxisLabel:
         selection.yAxes.length === 1 ? selection.yAxes[0] : "Selected values",
     },
@@ -513,7 +572,7 @@ const buildVolcanoFromExistingColumns = (
     .map((row, rowIndex) => ({
       x: toFinite(row[xDescriptor.index]),
       y: toFinite(row[yDescriptor.index]),
-      label: getRowLabel(matrix, rowIndex, selection.labelAxis),
+      label: getRowLabel(matrix, rowIndex, getSelectedLabelAxes(selection)),
     }))
     .filter(
       (row): row is { x: number; y: number; label: string } =>
@@ -543,7 +602,7 @@ export const buildConfiguredVolcanoPayload = (
 ): VisualizationReadiness<VolcanoPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
 
-  const xAxis = selection.xAxis;
+  const xAxis = getSelectedXAxes(selection)[0];
   const yAxis = selection.yAxes?.[0];
   if (!xAxis || !yAxis) {
     return { payload: null, reason: "Volcano plot needs one x-axis and one y-axis column." };
@@ -583,7 +642,7 @@ export const buildConfiguredVolcanoPayload = (
         return {
           x: Math.log2(mean(treatmentValues) / mean(controlValues)),
           y: Math.min(Math.max(test.pValue, 1e-300), 1),
-          label: getRowLabel(matrix, rowIndex, selection.labelAxis),
+          label: getRowLabel(matrix, rowIndex, getSelectedLabelAxes(selection)),
         };
       } catch {
         return null;
@@ -637,7 +696,7 @@ export const buildConfiguredPcaPayload = (
       if (values.some((value) => value === null)) return null;
       return {
         values: values as number[],
-        label: getRowLabel(matrix, rowIndex, selection.labelAxis),
+        label: getRowLabel(matrix, rowIndex, getSelectedLabelAxes(selection)),
       };
     })
     .filter((row): row is { values: number[]; label: string } => row !== null);

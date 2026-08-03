@@ -96,7 +96,8 @@ const isPcaPayload = (payload: unknown): payload is PcaPlotPayload =>
 
 const buildRendererImage = async (
   visualization: VisualizationRecord | undefined,
-  renderer: "python" | "r"
+  renderer: "python" | "r",
+  settings: VisualizationDisplaySettings
 ) => {
   if (!visualization) return null;
 
@@ -106,44 +107,44 @@ const buildRendererImage = async (
     case "missing-values":
       if (isBarPayload(payload)) {
         return renderer === "python"
-          ? invokePythonBarPlot(payload)
-          : invokeRBarPlot(payload);
+          ? invokePythonBarPlot(payload, settings)
+          : invokeRBarPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the bar renderer.");
     case "box":
     case "qc":
       if (isBoxPayload(payload)) {
         return renderer === "python"
-          ? invokePythonBoxPlot(payload)
-          : invokeRBoxPlot(payload);
+          ? invokePythonBoxPlot(payload, settings)
+          : invokeRBoxPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the box renderer.");
     case "scatter":
       if (isScatterPayload(payload)) {
         return renderer === "python"
-          ? invokePythonScatterPlot(payload)
-          : invokeRScatterPlot(payload);
+          ? invokePythonScatterPlot(payload, settings)
+          : invokeRScatterPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the scatter renderer.");
     case "heatmap":
       if (isHeatmapPayload(payload)) {
         return renderer === "python"
-          ? invokePythonHeatmap(payload)
-          : invokeRHeatmap(payload);
+          ? invokePythonHeatmap(payload, settings)
+          : invokeRHeatmap(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the heatmap renderer.");
     case "volcano":
       if (isVolcanoPayload(payload)) {
         return renderer === "python"
-          ? invokePythonVolcanoPlot(payload)
-          : invokeRVolcanoPlot(payload);
+          ? invokePythonVolcanoPlot(payload, settings)
+          : invokeRVolcanoPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the volcano renderer.");
     case "pca":
       if (isPcaPayload(payload)) {
         return renderer === "python"
-          ? invokePythonPcaPlot(payload)
-          : invokeRPcaPlot(payload);
+          ? invokePythonPcaPlot(payload, settings)
+          : invokeRPcaPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the PCA renderer.");
     default:
@@ -215,6 +216,12 @@ export const useVisualizationDisplay = ({
   }, [activeVisualization, preferredDisplayMode]);
 
   useEffect(() => {
+    setPythonDisplayImage(null);
+    setRDisplayImage(null);
+    setRendererErrors({});
+  }, [settings]);
+
+  useEffect(() => {
     if (!activeVisualization) return;
     if (displayMode !== "python" && displayMode !== "r") return;
 
@@ -241,7 +248,8 @@ export const useVisualizationDisplay = ({
       try {
         const nextImage = await buildRendererImage(
           activeVisualization,
-          displayMode
+          displayMode,
+          settings
         );
 
         if (cancelled) return;
@@ -278,6 +286,7 @@ export const useVisualizationDisplay = ({
     pythonDisplayImage,
     rDisplayImage,
     rendererAvailability,
+    settings,
   ]);
 
   const nativeDisplayImage = useMemo(

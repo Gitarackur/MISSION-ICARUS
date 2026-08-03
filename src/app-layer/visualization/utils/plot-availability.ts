@@ -16,8 +16,8 @@ export const getPlotAvailability = ({
 }): PlotAvailabilityMap => ({
   bar: !activeMatrixId
     ? { ready: false, reason: "No active matrix selected." }
-    : !plotSelections.bar.xAxis
-      ? { ready: false, reason: "Choose an x-axis column for the bar plot." }
+    : !(plotSelections.bar.xAxes?.length || plotSelections.bar.xAxis)
+      ? { ready: false, reason: "Choose at least one x-axis column for the bar plot." }
       : { ready: true },
   box: !activeMatrixId
     ? { ready: false, reason: "No active matrix selected." }
@@ -26,10 +26,10 @@ export const getPlotAvailability = ({
       : { ready: true },
   scatter: !activeMatrixId
     ? { ready: false, reason: "No active matrix selected." }
-    : !plotSelections.scatter.xAxis || !plotSelections.scatter.yAxes?.length
+    : !(plotSelections.scatter.xAxes?.length || plotSelections.scatter.xAxis) || !plotSelections.scatter.yAxes?.length
       ? {
           ready: false,
-          reason: "Scatter plot needs one x-axis and at least one y-axis column.",
+          reason: "Scatter plot needs at least one x-axis and one y-axis column.",
         }
       : { ready: true },
   heatmap: !activeMatrixId
@@ -39,7 +39,7 @@ export const getPlotAvailability = ({
       : { ready: true },
   volcano: !activeMatrixId
     ? { ready: false, reason: "No active matrix selected." }
-    : !plotSelections.volcano.xAxis || !plotSelections.volcano.yAxes?.[0]
+    : !(plotSelections.volcano.xAxes?.length || plotSelections.volcano.xAxis) || !plotSelections.volcano.yAxes?.[0]
       ? {
           ready: false,
           reason: "Volcano plot needs one x-axis and one y-axis column.",

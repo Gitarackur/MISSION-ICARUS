@@ -60,23 +60,40 @@ export const usePlotLibraryCards = ({
     selection: Partial<PlotAxisSelection>
   ) => void;
 }) => {
+  const selectedXAxes = (selection: PlotAxisSelection) =>
+    selection.xAxes?.length
+      ? selection.xAxes
+      : selection.xAxis
+        ? [selection.xAxis]
+        : [];
+  const selectedLabelAxes = (selection: PlotAxisSelection) =>
+    selection.labelAxes?.length
+      ? selection.labelAxes
+      : selection.labelAxis
+        ? [selection.labelAxis]
+        : [];
   const barColumns = [
-    plotSelections.bar.xAxis ?? "",
+    ...selectedXAxes(plotSelections.bar),
     ...(plotSelections.bar.yAxes ?? []),
   ].filter(Boolean);
   const boxColumns = plotSelections.box.yAxes ?? [];
   const scatterColumns = [
-    plotSelections.scatter.xAxis ?? "",
+    ...selectedXAxes(plotSelections.scatter),
     ...(plotSelections.scatter.yAxes ?? []),
+    ...selectedLabelAxes(plotSelections.scatter),
   ].filter(Boolean);
   const heatmapColumns = plotSelections.heatmap.columns ?? [];
   const volcanoColumns = [
-    plotSelections.volcano.xAxis ?? "",
+    ...selectedXAxes(plotSelections.volcano),
     ...(plotSelections.volcano.yAxes ?? []),
+    ...selectedLabelAxes(plotSelections.volcano),
   ].filter(Boolean);
   const qcColumns = plotSelections.qc.yAxes ?? [];
   const missingValueColumns = plotSelections["missing-values"].columns ?? [];
-  const pcaColumns = plotSelections.pca.columns ?? [];
+  const pcaColumns = [
+    ...(plotSelections.pca.columns ?? []),
+    ...selectedLabelAxes(plotSelections.pca),
+  ];
 
   const buildDuplicateState = (
     kind: VisualizationKind,
@@ -89,7 +106,7 @@ export const usePlotLibraryCards = ({
       id: "bar",
       eyebrow: "Summary",
       title: "Bar Plot",
-      description: "Plot one x-axis against one or more numeric series.",
+      description: "Group by one or more x-axis columns and compare numeric series.",
       disabled:
         isRendering ||
         !plotAvailability.bar.ready ||
@@ -105,7 +122,6 @@ export const usePlotLibraryCards = ({
       selection: plotSelections.bar,
       xAxisOptions: columnOptions.allColumns,
       yAxisOptions: columnOptions.numericColumns,
-      labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("bar", { renderer }),
       onSelectionChange: (selection) => setPlotSelection("bar", selection),
     },
@@ -128,7 +144,6 @@ export const usePlotLibraryCards = ({
       renderer: plotSelections.box.renderer ?? "python",
       selection: plotSelections.box,
       yAxisOptions: columnOptions.numericColumns,
-      labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("box", { renderer }),
       onSelectionChange: (selection) => setPlotSelection("box", selection),
     },
@@ -136,7 +151,7 @@ export const usePlotLibraryCards = ({
       id: "scatter",
       eyebrow: "Relationship",
       title: "Scatter Plot",
-      description: "Plot paired numeric values from the active matrix.",
+      description: "Plot every selected x/y column combination as a series.",
       disabled:
         isRendering ||
         !plotAvailability.scatter.ready ||
@@ -151,9 +166,11 @@ export const usePlotLibraryCards = ({
       renderers: ["python", "r", "recharts"] as const,
       renderer: plotSelections.scatter.renderer ?? "python",
       selection: plotSelections.scatter,
-      xAxisOptions: columnOptions.numericColumns,
+      xAxisOptions: columnOptions.numericColumns.filter(
+        (column) => !(plotSelections.scatter.yAxes ?? []).includes(column)
+      ),
       yAxisOptions: columnOptions.numericColumns.filter(
-        (column) => column !== plotSelections.scatter.xAxis
+        (column) => !selectedXAxes(plotSelections.scatter).includes(column)
       ),
       labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("scatter", { renderer }),
@@ -178,7 +195,6 @@ export const usePlotLibraryCards = ({
       renderer: plotSelections.heatmap.renderer ?? "python",
       selection: plotSelections.heatmap,
       yAxisOptions: columnOptions.numericColumns,
-      labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("heatmap", { renderer }),
       onSelectionChange: (selection) => setPlotSelection("heatmap", selection),
     },
@@ -201,9 +217,12 @@ export const usePlotLibraryCards = ({
       renderers: ["python", "r", "recharts"] as const,
       renderer: plotSelections.volcano.renderer ?? "python",
       selection: plotSelections.volcano,
-      xAxisOptions: columnOptions.numericColumns,
+      multipleXAxis: false,
+      xAxisOptions: columnOptions.numericColumns.filter(
+        (column) => !(plotSelections.volcano.yAxes ?? []).includes(column)
+      ),
       yAxisOptions: columnOptions.numericColumns.filter(
-        (column) => column !== plotSelections.volcano.xAxis
+        (column) => !selectedXAxes(plotSelections.volcano).includes(column)
       ),
       labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("volcano", { renderer }),
@@ -228,7 +247,6 @@ export const usePlotLibraryCards = ({
       renderer: plotSelections.qc.renderer ?? "python",
       selection: plotSelections.qc,
       yAxisOptions: columnOptions.numericColumns,
-      labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("qc", { renderer }),
       onSelectionChange: (selection) => setPlotSelection("qc", selection),
     },
@@ -285,7 +303,6 @@ export const usePlotLibraryCards = ({
       renderer: plotSelections["missing-values"].renderer ?? "python",
       selection: plotSelections["missing-values"],
       yAxisOptions: columnOptions.allColumns,
-      labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) =>
         setPlotSelection("missing-values", { renderer }),
       onSelectionChange: (selection) =>

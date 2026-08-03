@@ -1,9 +1,9 @@
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import base64
 from io import BytesIO
 from core.Command import Command
+from commands.utils import get_display_settings, load_payload
 
 
 
@@ -13,14 +13,7 @@ class VolcanoPlotCommand(Command):
         use_json = "--use-json" in self.args
         input_arg = self.args[0]
 
-        if use_json:
-            data = json.loads(input_arg)
-        else:
-            try:
-                with open(input_arg) as f:
-                    data = json.load(f)
-            except (FileNotFoundError, OSError):
-                data = json.loads(input_arg)
+        data = load_payload(input_arg, use_json)
 
         if 'x' in data and 'y' in data:
             x_values = np.array(data['x'])
@@ -41,7 +34,12 @@ class VolcanoPlotCommand(Command):
 
         x_threshold = data.get('xThreshold', 1.0)
 
-        plt.figure(figsize=(10, 8))
+        settings = get_display_settings(data)
+        dpi = 100
+        figure, axis = plt.subplots(
+            figsize=(settings['width'] / dpi, settings['height'] / dpi),
+            dpi=dpi,
+        )
         
         # Color points based on significance
         if plotted_y_threshold is not None:
@@ -52,30 +50,46 @@ class VolcanoPlotCommand(Command):
             significant_down = x_values < -x_threshold
         not_significant = ~(significant_up | significant_down)
         
-        plt.scatter(x_values[not_significant], plotted_y[not_significant], 
-                   c='gray', alpha=0.5, label='Not significant')
-        plt.scatter(x_values[significant_up], plotted_y[significant_up], 
-                   c='red', alpha=0.6, label='Upregulated')
-        plt.scatter(x_values[significant_down], plotted_y[significant_down], 
-                   c='blue', alpha=0.6, label='Downregulated')
+        marker_size = settings['point_size'] ** 2
+        axis.scatter(x_values[not_significant], plotted_y[not_significant],
+                     c=settings['colors'][4 % len(settings['colors'])], s=marker_size,
+                     alpha=0.5, label='Not significant', edgecolors='none')
+        axis.scatter(x_values[significant_up], plotted_y[significant_up],
+                     c=settings['colors'][2 % len(settings['colors'])], s=marker_size,
+                     alpha=0.65, label='Upregulated', edgecolors='none')
+        axis.scatter(x_values[significant_down], plotted_y[significant_down],
+                     c=settings['colors'][0], s=marker_size,
+                     alpha=0.65, label='Downregulated', edgecolors='none')
         
         # Add threshold lines
         if plotted_y_threshold is not None:
-            plt.axhline(y=plotted_y_threshold, color='black', linestyle='--', linewidth=0.8)
-        plt.axvline(x=x_threshold, color='black', linestyle='--', linewidth=0.8)
-        plt.axvline(x=-x_threshold, color='black', linestyle='--', linewidth=0.8)
+            axis.axhline(y=plotted_y_threshold, color='black', linestyle='--', linewidth=0.8)
+        axis.axvline(x=x_threshold, color='black', linestyle='--', linewidth=0.8)
+        axis.axvline(x=-x_threshold, color='black', linestyle='--', linewidth=0.8)
         
-        plt.xlabel(data.get('xAxisLabel', 'X Axis'))
-        plt.ylabel(data.get('yAxisLabel', 'Y Axis'))
-        plt.title(data.get('title', 'Volcano Plot'))
-        plt.legend()
-        plt.tight_layout()
+        axis.set_xlabel(
+            settings['x_axis_label'] or data.get('xAxisLabel', 'X Axis'),
+            fontsize=settings['axis_label_font_size'],
+            loc='center',
+        )
+        axis.set_ylabel(
+            settings['y_axis_label'] or data.get('yAxisLabel', 'Y Axis'),
+            fontsize=settings['axis_label_font_size'],
+            loc='center',
+        )
+        axis.set_title(data.get('title', 'Volcano Plot'), pad=12)
+        axis.tick_params(axis='both', labelsize=settings['tick_font_size'])
+        axis.grid(settings['show_grid'], alpha=0.22, linewidth=0.8)
+        axis.set_axisbelow(True)
+        axis.legend(fontsize=settings['tick_font_size'], frameon=False)
+        figure.tight_layout(pad=1.4)
 
         if preview:
             plt.show()
         else:
             buf = BytesIO()
-            plt.savefig(buf, format='png')
+            figure.savefig(buf, format='png', dpi=dpi)
+            plt.close(figure)
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             print(img_base64)

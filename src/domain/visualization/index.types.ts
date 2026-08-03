@@ -10,8 +10,12 @@ export type PlotSeries = {
 
 export type PlotAxisSelection = {
   renderer?: "python" | "r" | "recharts";
+  xAxes?: string[];
+  /** @deprecated Kept for saved selections created before multi-axis support. */
   xAxis?: string;
   yAxes?: string[];
+  labelAxes?: string[];
+  /** @deprecated Kept for saved selections created before multi-label support. */
   labelAxis?: string;
   columns?: string[];
   applyNegativeLog10ToY?: boolean;
@@ -85,10 +89,17 @@ export type VisualizationDisplaySettings = {
   xAxisLabel: string;
   yAxisLabel: string;
   xTickAngle: number;
+  yTickAngle: number;
   xMaxLabelLength: number;
   yMaxLabelLength: number;
   maxXTicks: number;
   maxYTicks: number;
+  tickFontSize: number;
+  axisLabelFontSize: number;
+  pointSize: number;
+  plotWidth: number;
+  plotHeight: number;
+  plotColors: string[];
   showGrid: boolean;
 };
 

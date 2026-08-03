@@ -225,9 +225,38 @@ export const getVisualizationPayloadPointCount = (
   visualization?: VisualizationRecord
 ): number => {
   const data = visualization?.data as SavedImageVisualizationData | undefined;
-  return data?.payload && typeof data.payload === "object"
-    ? Object.keys(data.payload).length
-    : 0;
+  const payload = data?.payload;
+  if (!payload || typeof payload !== "object") return 0;
+
+  const candidate = payload as {
+    categories?: unknown[];
+    data?: unknown[];
+    matrix?: unknown[][];
+    series?: Array<{ values?: unknown[]; x?: unknown[] }>;
+    x?: unknown[];
+  };
+
+  if (Array.isArray(candidate.categories) && Array.isArray(candidate.series)) {
+    return candidate.categories.length * Math.max(1, candidate.series.length);
+  }
+  if (Array.isArray(candidate.series)) {
+    return candidate.series.reduce(
+      (count, series) =>
+        count +
+        (Array.isArray(series.x)
+          ? series.x.length
+          : Array.isArray(series.values)
+            ? series.values.length
+            : 0),
+      0
+    );
+  }
+  if (Array.isArray(candidate.x)) return candidate.x.length;
+  if (Array.isArray(candidate.matrix)) {
+    return candidate.matrix.reduce((count, row) => count + row.length, 0);
+  }
+  if (Array.isArray(candidate.data)) return candidate.data.length;
+  return Object.keys(payload).length;
 };
 
 export const getVisualizationLabel = (
@@ -253,10 +282,27 @@ export const buildDefaultVisualizationDisplaySettings = (
     | undefined;
   const xAxisLabel = payload?.xAxisLabel;
   const yAxisLabel = payload?.yAxisLabel;
+  const baseSettings = {
+    yTickAngle: 0,
+    tickFontSize: 11,
+    axisLabelFontSize: 14,
+    pointSize: 4,
+    plotWidth: 960,
+    plotHeight: 620,
+    plotColors: [
+      "#2563eb",
+      "#7c3aed",
+      "#db2777",
+      "#059669",
+      "#ea580c",
+      "#0891b2",
+    ],
+  };
 
   switch (visualizationType) {
     case "heatmap":
       return {
+        ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Columns",
         yAxisLabel: yAxisLabel ?? "Rows",
         xTickAngle: -45,
@@ -268,6 +314,7 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "volcano":
       return {
+        ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Log2 Fold Change",
         yAxisLabel: yAxisLabel ?? "-Log10 p-value",
         xTickAngle: 0,
@@ -279,6 +326,7 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "scatter":
       return {
+        ...baseSettings,
         xAxisLabel: xAxisLabel ?? "X Axis",
         yAxisLabel: yAxisLabel ?? "Y Axis",
         xTickAngle: 0,
@@ -290,6 +338,7 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "pca":
       return {
+        ...baseSettings,
         xAxisLabel: xAxisLabel ?? "PC1",
         yAxisLabel: yAxisLabel ?? "PC2",
         xTickAngle: 0,
@@ -301,6 +350,7 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "box":
       return {
+        ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Columns",
         yAxisLabel: yAxisLabel ?? "Value",
         xTickAngle: -35,
@@ -312,6 +362,7 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     case "bar":
       return {
+        ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Columns",
         yAxisLabel: yAxisLabel ?? "Value",
         xTickAngle: -35,
@@ -323,6 +374,7 @@ export const buildDefaultVisualizationDisplaySettings = (
       };
     default:
       return {
+        ...baseSettings,
         xAxisLabel: "X Axis",
         yAxisLabel: "Y Axis",
         xTickAngle: -20,

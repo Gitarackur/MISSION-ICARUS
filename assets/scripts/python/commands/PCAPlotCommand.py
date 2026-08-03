@@ -1,10 +1,10 @@
-import json
 import matplotlib.pyplot as plt
 import numpy as np
 import base64
 from io import BytesIO
 from sklearn.decomposition import PCA
 from core.Command import Command
+from commands.utils import get_display_settings, load_payload
 
 
 
@@ -14,14 +14,7 @@ class PCAPlotCommand(Command):
         use_json = "--use-json" in self.args
         input_arg = self.args[0]
 
-        if use_json:
-            data = json.loads(input_arg)
-        else:
-            try:
-                with open(input_arg) as f:
-                    data = json.load(f)
-            except (FileNotFoundError, OSError):
-                data = json.loads(input_arg)
+        data = load_payload(input_arg, use_json)
 
         # Expected format: {"data": [[sample_features]], "labels": [optional]}
         features = np.array(data['data'])
@@ -33,33 +26,57 @@ class PCAPlotCommand(Command):
         pca = PCA(n_components=n_components)
         principal_components = pca.fit_transform(features)
 
-        plt.figure(figsize=(10, 8))
+        settings = get_display_settings(data)
+        dpi = 100
+        figure, axis = plt.subplots(
+            figsize=(settings['width'] / dpi, settings['height'] / dpi),
+            dpi=dpi,
+        )
         
         if groups:
-            unique_labels = list(set(groups))
-            for label in unique_labels:
+            unique_labels = list(dict.fromkeys(groups))
+            for group_index, label in enumerate(unique_labels):
                 indices = [i for i, l in enumerate(groups) if l == label]
-                plt.scatter(principal_components[indices, 0], 
-                           principal_components[indices, 1], 
-                           label=label, alpha=0.6, s=50)
-            plt.legend()
+                axis.scatter(principal_components[indices, 0],
+                             principal_components[indices, 1],
+                             label=label, alpha=0.65,
+                             s=settings['point_size'] ** 2,
+                             color=settings['colors'][group_index % len(settings['colors'])],
+                             edgecolors='none')
+            axis.legend(
+                ncols=min(3, len(unique_labels)),
+                fontsize=settings['tick_font_size'],
+                frameon=False,
+            )
         else:
-            plt.scatter(principal_components[:, 0], 
-                       principal_components[:, 1], 
-                       alpha=0.6, s=50)
+            axis.scatter(principal_components[:, 0],
+                         principal_components[:, 1],
+                         alpha=0.65, s=settings['point_size'] ** 2,
+                         color=settings['colors'][0], edgecolors='none')
         
         variance = pca.explained_variance_ratio_
-        plt.xlabel(f'PC1 ({variance[0]:.2%} variance)')
-        plt.ylabel(f'PC2 ({variance[1]:.2%} variance)')
-        plt.title(data.get('title', 'PCA Plot'))
-        plt.grid(True, alpha=0.3)
-        plt.tight_layout()
+        axis.set_xlabel(
+            settings['x_axis_label'] or f'PC1 ({variance[0]:.2%} variance)',
+            fontsize=settings['axis_label_font_size'],
+            loc='center',
+        )
+        axis.set_ylabel(
+            settings['y_axis_label'] or f'PC2 ({variance[1]:.2%} variance)',
+            fontsize=settings['axis_label_font_size'],
+            loc='center',
+        )
+        axis.set_title(data.get('title', 'PCA Plot'), pad=12)
+        axis.tick_params(axis='both', labelsize=settings['tick_font_size'])
+        axis.grid(settings['show_grid'], alpha=0.22, linewidth=0.8)
+        axis.set_axisbelow(True)
+        figure.tight_layout(pad=1.4)
 
         if preview:
             plt.show()
         else:
             buf = BytesIO()
-            plt.savefig(buf, format='png')
+            figure.savefig(buf, format='png', dpi=dpi)
+            plt.close(figure)
             buf.seek(0)
             img_base64 = base64.b64encode(buf.read()).decode('utf-8')
             print(img_base64)

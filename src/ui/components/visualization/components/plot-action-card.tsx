@@ -14,6 +14,8 @@ function PlotActionCard({
   isLoading,
   isRendering,
   labelAxisOptions,
+  multipleLabelAxis = true,
+  multipleXAxis = true,
   onRender,
   onRendererChange,
   onSelectionChange,
@@ -67,27 +69,70 @@ function PlotActionCard({
         />
 
         {labelAxisOptions?.length ? (
-          <SingleSelect
-            label="Label Column"
-            options={axisOptions(labelAxisOptions)}
-            value={selection.labelAxis ?? null}
-            onChange={(value) => onSelectionChange({ labelAxis: value ?? undefined })}
-            placeholder="Optional label column"
-            clearable
-          />
+          multipleLabelAxis ? (
+            <MultiSelect
+              label="Point Label Columns"
+              options={axisOptions(labelAxisOptions)}
+              value={selection.labelAxes ?? (selection.labelAxis ? [selection.labelAxis] : [])}
+              onChange={(values) =>
+                onSelectionChange({
+                  labelAxes: values,
+                  labelAxis: values[0],
+                })
+              }
+              placeholder="Optional label columns"
+              maxDisplayed={2}
+            />
+          ) : (
+            <SingleSelect
+              label="Point Label Column"
+              options={axisOptions(labelAxisOptions)}
+              value={selection.labelAxis ?? selection.labelAxes?.[0] ?? null}
+              onChange={(value) =>
+                onSelectionChange({
+                  labelAxes: value ? [value] : [],
+                  labelAxis: value ?? undefined,
+                })
+              }
+              placeholder="Optional label column"
+              clearable
+            />
+          )
         ) : (
           <div />
         )}
 
         {xAxisOptions?.length ? (
-          <SingleSelect
-            label="X Axis"
-            options={axisOptions(xAxisOptions)}
-            value={selection.xAxis ?? null}
-            onChange={(value) => onSelectionChange({ xAxis: value ?? undefined })}
-            placeholder="Select x-axis"
-            clearable={false}
-          />
+          multipleXAxis ? (
+            <MultiSelect
+              label="X Axes"
+              options={axisOptions(xAxisOptions)}
+              value={selection.xAxes ?? (selection.xAxis ? [selection.xAxis] : [])}
+              onChange={(values) =>
+                onSelectionChange({
+                  xAxes: values,
+                  xAxis: values[0],
+                })
+              }
+              placeholder="Select x-axis columns"
+              clearable={false}
+              maxDisplayed={2}
+            />
+          ) : (
+            <SingleSelect
+              label="X Axis"
+              options={axisOptions(xAxisOptions)}
+              value={selection.xAxis ?? selection.xAxes?.[0] ?? null}
+              onChange={(value) =>
+                onSelectionChange({
+                  xAxes: value ? [value] : [],
+                  xAxis: value ?? undefined,
+                })
+              }
+              placeholder="Select x-axis"
+              clearable={false}
+            />
+          )
         ) : null}
 
         {yAxisOptions?.length ? (

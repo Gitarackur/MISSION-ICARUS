@@ -120,7 +120,7 @@ export function VisualizationViewer({
             disabled={!activeVisualization}
           >
             <Settings2 className="h-4 w-4" />
-            Axis Settings
+            Plot Settings
           </button>
           <button
             type="button"
