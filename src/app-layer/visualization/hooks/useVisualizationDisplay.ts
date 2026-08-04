@@ -440,22 +440,10 @@ export const useVisualizationDisplay = ({
 
   const activeDisplayImage = useMemo(() => {
     switch (displayMode) {
-      case "python": {
-        const requestedRenderKey = activeVisualization
-          ? `${activeVisualization.id}:${settingsSignature}`
-          : null;
-        return pythonRenderKey === requestedRenderKey
-          ? pythonDisplayImage ?? nativeDisplayImage ?? savedDisplayImage
-          : nativeDisplayImage ?? pythonDisplayImage ?? savedDisplayImage;
-      }
-      case "r": {
-        const requestedRenderKey = activeVisualization
-          ? `${activeVisualization.id}:${settingsSignature}`
-          : null;
-        return rRenderKey === requestedRenderKey
-          ? rDisplayImage ?? nativeDisplayImage ?? savedDisplayImage
-          : nativeDisplayImage ?? rDisplayImage ?? savedDisplayImage;
-      }
+      case "python":
+        return pythonDisplayImage ?? savedDisplayImage ?? nativeDisplayImage;
+      case "r":
+        return rDisplayImage ?? savedDisplayImage ?? nativeDisplayImage;
       case "native":
         return nativeDisplayImage ?? savedDisplayImage ?? pythonDisplayImage ?? rDisplayImage;
       case "saved":
@@ -463,15 +451,11 @@ export const useVisualizationDisplay = ({
         return savedDisplayImage ?? pythonDisplayImage ?? rDisplayImage ?? nativeDisplayImage;
     }
   }, [
-    activeVisualization,
     displayMode,
     nativeDisplayImage,
     pythonDisplayImage,
-    pythonRenderKey,
     rDisplayImage,
-    rRenderKey,
     savedDisplayImage,
-    settingsSignature,
   ]);
 
   useEffect(() => {
