@@ -111,6 +111,10 @@ The current app is built around a few core ideas:
 
 ### Visualization and renderer options
 The visualization workspace supports plot-library driven creation and renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
+
+#### Plot settings
+<img width="1600" alt="Icarus visualization viewer with the plot settings panel open" src="./docs/images/plot-settings.png" />
+
 ##### Native - Recharts
 <img width="1600" alt="Icarus visualization viewer displaying a grouped bar plot with the saved native renderer" src="./docs/images/visualization-dark.png" />
 
