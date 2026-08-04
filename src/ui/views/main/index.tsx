@@ -7,13 +7,25 @@ import CreateSession from "@/ui/components/session/create-session";
 import { useIcarusAppSession } from "@/app-layer/session/hooks/useIcarusAppSession";
 import { tabTypes } from "@/ui/views/proteomics/types/index.types";
 import { ActivitySheet } from "./components/activity-sheet";
+import { useModal } from "@/ui/design-system/Modal/context";
+import { DeletionConfirmation } from "@/ui/components/deletion/deletion-confirmation";
+import type {
+  DeletionPlan,
+  SessionDeletionResult,
+} from "@/app-layer/database/deletion";
 
 const IcarusApp: React.FC = () => {
   const {
     activeMatrix,
     activeMatrixId,
     activeSession,
+    getActivityDeletionPlan,
+    getMatrixDeletionPlan,
+    getVisualizationDeletionPlan,
+    handleDeleteActivity,
+    handleDeleteMatrix,
     handleDeleteSession,
+    handleDeleteVisualization,
     handleSessionClick,
     handleSessionCreate,
     isProcessing,
@@ -37,6 +49,7 @@ const IcarusApp: React.FC = () => {
   const [activeProteomicsTab, setActiveProteomicsTab] =
     useState<tabTypes>("import");
   const [activeVisualizationId, setActiveVisualizationId] = useState("");
+  const { openModal, closeModal } = useModal();
 
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
@@ -70,6 +83,70 @@ const IcarusApp: React.FC = () => {
     await handleSessionCreate(sessionData);
   };
 
+  const requestDeletion = async (
+    loadPlan: () => Promise<DeletionPlan>,
+    execute: (confirmedPlan: DeletionPlan) => Promise<SessionDeletionResult>
+  ) => {
+    try {
+      const plan = await loadPlan();
+      const title = `Delete ${plan.targetType}`;
+
+      openModal(
+        <DeletionConfirmation
+          plan={plan}
+          onCancel={() => closeModal()}
+          onConfirm={async () => {
+            const result = await execute(plan);
+            const removedActiveMatrix = result.plan.matrixIds.includes(
+              activeMatrixId ?? ""
+            );
+            const removedActiveVisualization =
+              result.plan.visualizationIds.includes(activeVisualizationId);
+
+            if (removedActiveMatrix || removedActiveVisualization) {
+              setActiveVisualizationId("");
+              setActiveProteomicsTab("import");
+            }
+            closeModal();
+          }}
+        />,
+        title
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "The deletion details could not be loaded.";
+      openModal(
+        <div
+          role="alert"
+          className="rounded-md border border-red-300 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+        >
+          {message}
+        </div>,
+        "Unable to delete"
+      );
+    }
+  };
+
+  const requestMatrixDeletion = (matrixId: string) =>
+    requestDeletion(
+      () => getMatrixDeletionPlan(matrixId),
+      (plan) => handleDeleteMatrix(matrixId, plan)
+    );
+
+  const requestActivityDeletion = (activityId: string) =>
+    requestDeletion(
+      () => getActivityDeletionPlan(activityId),
+      (plan) => handleDeleteActivity(activityId, plan)
+    );
+
+  const requestVisualizationDeletion = (visualizationId: string) =>
+    requestDeletion(
+      () => getVisualizationDeletionPlan(visualizationId),
+      (plan) => handleDeleteVisualization(visualizationId, plan)
+    );
+
   return (
     <div className="flex h-screen flex-col bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100">
       <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
@@ -82,6 +159,8 @@ const IcarusApp: React.FC = () => {
           visualizations={activeSession?.visualizations ?? []}
           activeVisualizationId={activeVisualizationId}
           onVisualizationSelect={selectVisualization}
+          onMatrixDelete={requestMatrixDeletion}
+          onVisualizationDelete={requestVisualizationDeletion}
         />
 
         {activeMatrix ? (
@@ -109,6 +188,9 @@ const IcarusApp: React.FC = () => {
               onClose={closeActivitySheet}
               onMatrixSelect={selectActivityMatrix}
               onVisualizationSelect={selectVisualization}
+              onMatrixDelete={requestMatrixDeletion}
+              onActivityDelete={requestActivityDeletion}
+              onVisualizationDelete={requestVisualizationDeletion}
             />
           </>
         ) : (

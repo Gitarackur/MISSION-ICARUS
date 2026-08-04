@@ -2,6 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
+import type {
+  DeletionPlan,
+  SessionDeletionResult,
+} from "@/app-layer/database/deletion";
 import {
   IcarusSessionRecord,
   IcarusSessionWithWorkflowRecord,
@@ -128,6 +132,99 @@ export const useIcarusAppSession = () => {
     }
   };
 
+  const requireActiveSessionId = () => {
+    if (!activeSession) throw new Error("No active session is available");
+    return activeSession.id;
+  };
+
+  const applyDeletionResult = (result: SessionDeletionResult) => {
+    setActiveSession(result.session);
+
+    if (result.plan.matrixIds.includes(activeMatrixId ?? "")) {
+      const nextMatrix = [...result.session.matrices].sort(
+        (a, b) => b.createdAt - a.createdAt
+      )[0];
+      setActiveMatrixId(nextMatrix?.id ?? null);
+
+      if (!nextMatrix) {
+        setOriginalDataRows([]);
+        setOriginalDataColumns([]);
+        setSelectedDataColumns([]);
+      }
+    }
+
+    return result;
+  };
+
+  const getMatrixDeletionPlan = (matrixId: string) =>
+    IcarusDBAdapter.getMatrixDeletionPlan(requireActiveSessionId(), matrixId);
+
+  const getActivityDeletionPlan = (activityId: string) =>
+    IcarusDBAdapter.getActivityDeletionPlan(
+      requireActiveSessionId(),
+      activityId
+    );
+
+  const getVisualizationDeletionPlan = (visualizationId: string) =>
+    IcarusDBAdapter.getVisualizationDeletionPlan(
+      requireActiveSessionId(),
+      visualizationId
+    );
+
+  const handleDeleteMatrix = async (
+    matrixId: string,
+    confirmedPlan?: DeletionPlan
+  ) => {
+    setIsProcessing(true);
+    try {
+      return applyDeletionResult(
+        await IcarusDBAdapter.deleteMatrixFromSession(
+          requireActiveSessionId(),
+          matrixId,
+          confirmedPlan
+        )
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteActivity = async (
+    activityId: string,
+    confirmedPlan?: DeletionPlan
+  ) => {
+    setIsProcessing(true);
+    try {
+      return applyDeletionResult(
+        await IcarusDBAdapter.deleteActivityFromSession(
+          requireActiveSessionId(),
+          activityId,
+          confirmedPlan
+        )
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleDeleteVisualization = async (
+    visualizationId: string,
+    confirmedPlan?: DeletionPlan
+  ) => {
+    setIsProcessing(true);
+    try {
+      return applyDeletionResult(
+        await IcarusDBAdapter.deleteVisualizationFromSession(
+          requireActiveSessionId(),
+          visualizationId,
+          confirmedPlan
+        )
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const saveActivityInWorkflow = async (
     params: Partial<SaveStatisticalActivity>
   ) => {
@@ -164,7 +261,13 @@ export const useIcarusAppSession = () => {
     activeMatrix,
     activeMatrixId,
     activeSession,
+    getActivityDeletionPlan,
+    getMatrixDeletionPlan,
+    getVisualizationDeletionPlan,
+    handleDeleteActivity,
+    handleDeleteMatrix,
     handleDeleteSession,
+    handleDeleteVisualization,
     handleSessionClick,
     handleSessionCreate,
     isProcessing,

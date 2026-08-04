@@ -290,12 +290,11 @@ export const deleteMatrixInSessionWorkflow = async (
   try {
     if (!activeSession) throw new Error("active session doesn't exist");
 
-    // delete matrix id
-    await IcarusDBAdapter.deleteMatrix(matrixId);
-
-    const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithAllData(
-      activeSession?.id as string
-    );
+    const { session: sessionWithWorkflows } =
+      await IcarusDBAdapter.deleteMatrixFromSession(
+        activeSession.id,
+        matrixId
+      );
 
     return { sessionWithWorkflows };
   } catch (err) {

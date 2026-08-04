@@ -13,6 +13,8 @@ export type MatrixTabProps = {
   visualizations?: IcarusVisualization[];
   activeVisualizationId?: string;
   onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
+  onMatrixDelete?: (matrixId: string) => void;
+  onVisualizationDelete?: (visualizationId: string) => void;
 };
 
 export type MatrixTabGroupProps = {
@@ -22,4 +24,6 @@ export type MatrixTabGroupProps = {
   activeVisualizationId?: string;
   onMatrixSelect: (matrixId: string) => void;
   onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
+  onMatrixDelete?: (matrixId: string) => void;
+  onVisualizationDelete?: (visualizationId: string) => void;
 };

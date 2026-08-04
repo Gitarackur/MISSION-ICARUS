@@ -32,6 +32,9 @@ const ActivityTree2 = ({
   onClickOfInputButton,
   onClickOfOutputButton,
   onClickOfVisualizationButton,
+  onDeleteMatrix,
+  onDeleteActivity,
+  onDeleteVisualization,
 }: DisplayedActivityTree) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -63,6 +66,9 @@ const ActivityTree2 = ({
             outputFill: "#052e1b",
             outputStroke: "#15803d",
             outputText: "#bbf7d0",
+            dangerFill: "#450a0a",
+            dangerStroke: "#991b1b",
+            dangerText: "#fecaca",
           }
         : {
             link: "#d1d5db",
@@ -84,6 +90,9 @@ const ActivityTree2 = ({
             outputFill: "#dcfce7",
             outputStroke: "#86efac",
             outputText: "#15803d",
+            dangerFill: "#fef2f2",
+            dangerStroke: "#fca5a5",
+            dangerText: "#b91c1c",
           },
     [isDarkMode]
   );
@@ -268,6 +277,43 @@ const ActivityTree2 = ({
         .text((d) => d.data.activity.name)
         .call(wrapText, 80);
 
+      if (onDeleteActivity) {
+        const activityDeleteButton = nodes
+          .append("g")
+          .attr("transform", `translate(${nodeWidth / 2 - 26}, ${-nodeHeight / 2 + 10})`)
+          .attr("role", "button")
+          .attr("tabindex", 0)
+          .attr("aria-label", (d) => `Delete activity ${d.data.activity.name}`)
+          .style("cursor", "pointer")
+          .on("click", (event: MouseEvent, d) => {
+            event.stopPropagation();
+            onDeleteActivity(d.data.activity.id);
+          })
+          .on("keydown", (event: KeyboardEvent, d) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            onDeleteActivity(d.data.activity.id);
+          });
+
+        activityDeleteButton
+          .append("rect")
+          .attr("width", 18)
+          .attr("height", 18)
+          .attr("rx", 4)
+          .attr("fill", palette.dangerFill)
+          .attr("stroke", palette.dangerStroke);
+
+        activityDeleteButton
+          .append("text")
+          .attr("x", 9)
+          .attr("y", 13)
+          .attr("font-size", "14px")
+          .attr("text-anchor", "middle")
+          .attr("fill", palette.dangerText)
+          .text("×");
+      }
+
       nodes.each(function (d) {
         const activityVisualizations =
           visualizationsByActivity.get(d.data.activity.id) ?? [];
@@ -317,12 +363,46 @@ const ActivityTree2 = ({
 
           button
             .append("text")
-            .attr("x", 37)
+            .attr("x", onDeleteVisualization ? 30 : 37)
             .attr("y", 12)
             .attr("font-size", "9px")
             .attr("text-anchor", "middle")
             .attr("fill", palette.visualizationText)
             .text(formatAxisLabel(label, 11));
+
+          if (onDeleteVisualization) {
+            const deleteButton = button
+              .append("g")
+              .attr("transform", "translate(57, 0)")
+              .attr("role", "button")
+              .attr("tabindex", 0)
+              .attr("aria-label", `Delete visualization ${visualizationLabel}`)
+              .on("click", (event: MouseEvent) => {
+                event.stopPropagation();
+                onDeleteVisualization(visualization.id);
+              })
+              .on("keydown", (event: KeyboardEvent) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                event.stopPropagation();
+                onDeleteVisualization(visualization.id);
+              });
+
+            deleteButton
+              .append("rect")
+              .attr("width", 17)
+              .attr("height", 18)
+              .attr("rx", 4)
+              .attr("fill", palette.dangerFill);
+            deleteButton
+              .append("text")
+              .attr("x", 8.5)
+              .attr("y", 13)
+              .attr("font-size", "13px")
+              .attr("text-anchor", "middle")
+              .attr("fill", palette.dangerText)
+              .text("×");
+          }
         });
 
         if (activityVisualizations.length > 4) {
@@ -350,16 +430,13 @@ const ActivityTree2 = ({
       //   .text((d) => `ID: ${d.data.activity.id.slice(-8)}`);
 
       // Button container
-      const nonVisualizationNodes = nodes.filter(
-        (node) => !node.data.activity.name.startsWith("visualization--")
-      );
-
-      const buttonGroup = nonVisualizationNodes
+      const buttonGroup = nodes
         .append("g")
         .attr("transform", `translate(0, ${nodeHeight / 2 - 30})`);
 
       // Input button
       const inputButton = buttonGroup
+        .filter((d) => Boolean(d.data.activity.inputMatrixReferences))
         .append("g")
         // .attr("transform", "translate(-45, 0)")
         .attr("transform", "translate(-81, -3)")
@@ -380,15 +457,58 @@ const ActivityTree2 = ({
 
       inputButton
         .append("text")
-        .attr("x", 40)
+        .attr("x", onDeleteMatrix ? 32 : 40)
         .attr("y", 14)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
         .attr("fill", palette.inputText)
         .text("⬇ Input");
 
+      if (onDeleteMatrix) {
+        const inputDeleteButton = inputButton
+          .filter((d) => Boolean(d.data.activity.inputMatrixReferences))
+          .append("g")
+          .attr("transform", "translate(59, 3)")
+          .attr("role", "button")
+          .attr("tabindex", 0)
+          .attr(
+            "aria-label",
+            (d) => `Delete input matrix ${d.data.activity.inputMatrixReferences}`
+          )
+          .on("click", (event: MouseEvent, d) => {
+            event.stopPropagation();
+            if (d.data.activity.inputMatrixReferences) {
+              onDeleteMatrix(d.data.activity.inputMatrixReferences);
+            }
+          })
+          .on("keydown", (event: KeyboardEvent, d) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (d.data.activity.inputMatrixReferences) {
+              onDeleteMatrix(d.data.activity.inputMatrixReferences);
+            }
+          });
+
+        inputDeleteButton
+          .append("rect")
+          .attr("width", 15)
+          .attr("height", 18)
+          .attr("rx", 3)
+          .attr("fill", palette.dangerFill);
+        inputDeleteButton
+          .append("text")
+          .attr("x", 7.5)
+          .attr("y", 13)
+          .attr("font-size", "12px")
+          .attr("text-anchor", "middle")
+          .attr("fill", palette.dangerText)
+          .text("×");
+      }
+
       // Output button
       const outputButton = buttonGroup
+        .filter((d) => Boolean(d.data.activity.outputMatrixReference))
         .append("g")
         // .attr("transform", "translate(45, 0)")
         .attr("transform", "translate(5, -3)")
@@ -409,12 +529,54 @@ const ActivityTree2 = ({
 
       outputButton
         .append("text")
-        .attr("x", 40)
+        .attr("x", onDeleteMatrix ? 32 : 40)
         .attr("y", 14)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
         .attr("fill", palette.outputText)
         .text("⬆ Output");
+
+      if (onDeleteMatrix) {
+        const outputDeleteButton = outputButton
+          .filter((d) => Boolean(d.data.activity.outputMatrixReference))
+          .append("g")
+          .attr("transform", "translate(57, 3)")
+          .attr("role", "button")
+          .attr("tabindex", 0)
+          .attr(
+            "aria-label",
+            (d) => `Delete output matrix ${d.data.activity.outputMatrixReference}`
+          )
+          .on("click", (event: MouseEvent, d) => {
+            event.stopPropagation();
+            if (d.data.activity.outputMatrixReference) {
+              onDeleteMatrix(d.data.activity.outputMatrixReference);
+            }
+          })
+          .on("keydown", (event: KeyboardEvent, d) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (d.data.activity.outputMatrixReference) {
+              onDeleteMatrix(d.data.activity.outputMatrixReference);
+            }
+          });
+
+        outputDeleteButton
+          .append("rect")
+          .attr("width", 15)
+          .attr("height", 18)
+          .attr("rx", 3)
+          .attr("fill", palette.dangerFill);
+        outputDeleteButton
+          .append("text")
+          .attr("x", 7.5)
+          .attr("y", 13)
+          .attr("font-size", "12px")
+          .attr("text-anchor", "middle")
+          .attr("fill", palette.dangerText)
+          .text("×");
+      }
 
       // Update xOffset for next tree
       xOffset += treeWidths[i] + 100;
@@ -451,6 +613,9 @@ const ActivityTree2 = ({
     onClickOfInputButton,
     onClickOfOutputButton,
     onClickOfVisualizationButton,
+    onDeleteActivity,
+    onDeleteMatrix,
+    onDeleteVisualization,
     palette,
     activeMatrixId,
   ]);

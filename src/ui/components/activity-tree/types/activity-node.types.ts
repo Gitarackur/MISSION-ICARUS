@@ -23,6 +23,9 @@ export interface DisplayedActivityTree {
     visualizationId: string,
     sourceMatrixId?: string
   ) => void;
+  onDeleteMatrix?: (matrixId: string) => void;
+  onDeleteActivity?: (activityId: string) => void;
+  onDeleteVisualization?: (visualizationId: string) => void;
 }
 
 

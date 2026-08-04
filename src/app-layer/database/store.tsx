@@ -7,6 +7,16 @@ import {
   IcarusVisualizationRecord,
   IcarusWorkflowRecord,
 } from "./database.types";
+import {
+  assertDeletionPlanIntegrity,
+  getPhysicalDeletionScope,
+  hasSameDeletionScope,
+  planActivityDeletion,
+  planMatrixDeletion,
+  planVisualizationDeletion,
+  type DeletionPlan,
+  type SessionDeletionResult,
+} from "./deletion";
 
 class DBAdapter {
   db: IcarusDB = db;
@@ -172,11 +182,6 @@ class DBAdapter {
     return await this.db.matrices.toArray();
   }
 
-  // Delete a matrix by ID
-  async deleteMatrix(id: string) {
-    return await this.db.matrices.delete(id);
-  }
-
   // Get matrices by array of IDs
   async getMatricesByIds(ids: string[]): Promise<IcarusMatrixRecord[]> {
     return await this.db.matrices.where("id").anyOf(ids).toArray();
@@ -195,11 +200,6 @@ class DBAdapter {
   // Get all activities
   async getAllActivities(): Promise<IcarusActivityRecord[]> {
     return await this.db.activities.toArray();
-  }
-
-  // Delete an activity by ID
-  async deleteActivity(id: string) {
-    return await this.db.activities.delete(id);
   }
 
   // Get activities by array of IDs
@@ -224,16 +224,161 @@ class DBAdapter {
     return await this.db.visualizations.toArray();
   }
 
-  // Delete a visualization by ID
-  async deleteVisualization(id: string) {
-    return await this.db.visualizations.delete(id);
-  }
-
   // Get visualizations by array of IDs
   async getVisualizationsByIds(
     ids: string[]
   ): Promise<IcarusVisualizationRecord[]> {
     return await this.db.visualizations.where("id").anyOf(ids).toArray();
+  }
+
+  private async getDeletionSnapshot(
+    sessionId: string
+  ): Promise<IcarusSessionWithWorkflowRecord> {
+    const session = await this.getSessionWithAllData(sessionId);
+    if (!session) throw new Error(`Session with id ${sessionId} not found`);
+    return session;
+  }
+
+  async getMatrixDeletionPlan(sessionId: string, matrixId: string) {
+    return planMatrixDeletion(
+      await this.getDeletionSnapshot(sessionId),
+      matrixId
+    );
+  }
+
+  async getActivityDeletionPlan(sessionId: string, activityId: string) {
+    return planActivityDeletion(
+      await this.getDeletionSnapshot(sessionId),
+      activityId
+    );
+  }
+
+  async getVisualizationDeletionPlan(
+    sessionId: string,
+    visualizationId: string
+  ) {
+    return planVisualizationDeletion(
+      await this.getDeletionSnapshot(sessionId),
+      visualizationId
+    );
+  }
+
+  private async executeSessionDeletion(
+    sessionId: string,
+    createPlan: (session: IcarusSessionWithWorkflowRecord) => DeletionPlan,
+    confirmedPlan?: DeletionPlan
+  ): Promise<SessionDeletionResult> {
+    let committedPlan: DeletionPlan | null = null;
+
+    await this.db.transaction(
+      "rw",
+      [
+        this.db.sessions,
+        this.db.workflows,
+        this.db.activities,
+        this.db.matrices,
+        this.db.visualizations,
+      ],
+      async () => {
+        // Rebuild the plan inside the write transaction. A preview shown by the UI
+        // can become stale, but the committed operation must always use fresh data.
+        const snapshot = await this.getDeletionSnapshot(sessionId);
+        const plan = createPlan(snapshot);
+        assertDeletionPlanIntegrity(snapshot, plan);
+        if (confirmedPlan && !hasSameDeletionScope(plan, confirmedPlan)) {
+          throw new Error(
+            "Dependencies changed after this warning was opened. No data was deleted; review the updated impact and try again."
+          );
+        }
+
+        const deletedMatrixIds = new Set(plan.matrixIds);
+        const deletedActivityIds = new Set(plan.activityIds);
+        const deletedVisualizationIds = new Set(plan.visualizationIds);
+        const updatedSession: IcarusSessionRecord = {
+          id: snapshot.id,
+          name: snapshot.name,
+          date: snapshot.date,
+          workflowIds: snapshot.workflowIds,
+          matrixIds: snapshot.matrixIds.filter(
+            (id) => !deletedMatrixIds.has(id)
+          ),
+          activityIds: snapshot.activityIds.filter(
+            (id) => !deletedActivityIds.has(id)
+          ),
+          visualizationIds: snapshot.visualizationIds.filter(
+            (id) => !deletedVisualizationIds.has(id)
+          ),
+        };
+
+        // Shared records are detached from this session but retained for the
+        // other session. IDs are normally unique, and this protects legacy data.
+        const physicalScope = getPhysicalDeletionScope({
+          plan,
+          sessionId,
+          sessions: await this.db.sessions.toArray(),
+          activities: await this.db.activities.toArray(),
+          visualizations: await this.db.visualizations.toArray(),
+        });
+
+        await this.db.sessions.put(updatedSession);
+        if (physicalScope.visualizationIds.length) {
+          await this.db.visualizations.bulkDelete(
+            physicalScope.visualizationIds
+          );
+        }
+        if (physicalScope.activityIds.length) {
+          await this.db.activities.bulkDelete(physicalScope.activityIds);
+        }
+        if (physicalScope.matrixIds.length) {
+          await this.db.matrices.bulkDelete(physicalScope.matrixIds);
+        }
+
+        committedPlan = plan;
+      }
+    );
+
+    if (!committedPlan) {
+      throw new Error("Deletion transaction did not produce a plan");
+    }
+
+    const session = await this.getDeletionSnapshot(sessionId);
+    return { plan: committedPlan, session };
+  }
+
+  async deleteMatrixFromSession(
+    sessionId: string,
+    matrixId: string,
+    confirmedPlan?: DeletionPlan
+  ): Promise<SessionDeletionResult> {
+    return this.executeSessionDeletion(
+      sessionId,
+      (session) => planMatrixDeletion(session, matrixId),
+      confirmedPlan
+    );
+  }
+
+  async deleteActivityFromSession(
+    sessionId: string,
+    activityId: string,
+    confirmedPlan?: DeletionPlan
+  ): Promise<SessionDeletionResult> {
+    return this.executeSessionDeletion(
+      sessionId,
+      (session) => planActivityDeletion(session, activityId),
+      confirmedPlan
+    );
+  }
+
+  async deleteVisualizationFromSession(
+    sessionId: string,
+    visualizationId: string,
+    confirmedPlan?: DeletionPlan
+  ): Promise<SessionDeletionResult> {
+    return this.executeSessionDeletion(
+      sessionId,
+      (session) => planVisualizationDeletion(session, visualizationId),
+      confirmedPlan
+    );
   }
 
   // fetch all data at once
