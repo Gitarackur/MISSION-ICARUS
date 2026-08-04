@@ -2,9 +2,7 @@ import React, { useState } from "react";
 import { useVisualizationPanel } from "@/app-layer/visualization/hooks/useVisualizationPanel";
 import { useVisualizationDisplay } from "@/app-layer/visualization/hooks/useVisualizationDisplay";
 import { VisualizationPanelProps } from "./types/index.types";
-import {
-  VisualizationViewer,
-} from "./components/visualization-viewer";
+import { VisualizationViewer } from "./components/visualization-viewer";
 import { PlotLibrary } from "./components/plot-library";
 import { visualizationStyles } from "./variants/visualization.variants";
 import { useVisualizationFeedback } from "./hooks/useVisualizationFeedback";
@@ -98,7 +96,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
 
       <PlotLibrary isRendering={isRendering} plots={plotActions} />
 
-      {error && <p className="text-sm font-medium text-red-600">{error}</p>}
+      {error && <p className={s.errorText()}>{error}</p>}
     </div>
   );
 };

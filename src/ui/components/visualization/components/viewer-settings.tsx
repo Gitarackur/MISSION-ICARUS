@@ -11,27 +11,24 @@ function VisualizationSettingsPanel({
   settings: VisualizationDisplaySettings;
   setSettings: React.Dispatch<React.SetStateAction<VisualizationDisplaySettings>>;
 }) {
-  const s = visualizationStyles();
+  const s = visualizationStyles({
+    compact,
+    xAngleDisabled: settings.autoRotateXLabels,
+  });
 
   return (
-    <div className={compact ? "relative" : s.configPanel()}>
+    <div className={s.configPanel()}>
       {compact ? (
-        <div className="sticky top-0 z-20 space-y-1 border-b border-gray-200 bg-white px-4 py-3 pr-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
-            Plot Settings
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">
+        <div className={s.configHeader()}>
+          <p className={s.configStrongLabel()}>Plot Settings</p>
+          <p className={s.configHelpText()}>
             Changes update Native immediately and automatically regenerate the selected
             Python or R renderer. X labels stay horizontal when they fit and rotate only
             when crowded; tick limits never remove data.
           </p>
         </div>
       ) : null}
-      <div
-        className={
-          compact ? "grid grid-cols-1 gap-3 p-4 pr-3" : s.configGrid()
-        }
-      >
+      <div className={s.configGrid()}>
         <label className={s.configField()}>
           <span className={s.configLabel()}>X Axis Label</span>
           <input
@@ -154,23 +151,21 @@ function VisualizationSettingsPanel({
           />
         </label>
         <div className={s.configField()}>
-          <span className="text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
-            Series Colors
-          </span>
-          <div className="grid grid-cols-2 gap-2">
+          <span className={s.configStrongLabel()}>Series Colors</span>
+          <div className={s.configColorGrid()}>
             {settings.plotColors.map((color, index) => (
               <label
                 key={index}
-                className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:border-blue-400 hover:bg-blue-50 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-800/80"
+                className={s.configColorOption()}
                 title={`Series ${index + 1}: ${color}`}
               >
                 <span
-                  className="relative h-7 w-7 shrink-0 overflow-hidden rounded-md border border-black/15 shadow-inner dark:border-white/20"
+                  className={s.configColorSwatch()}
                   style={{ backgroundColor: color }}
                 >
                   <input
                     type="color"
-                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    className={s.configColorInput()}
                     value={color}
                     aria-label={`Series ${index + 1} color`}
                     onChange={(event) =>
@@ -183,9 +178,9 @@ function VisualizationSettingsPanel({
                     }
                   />
                 </span>
-                <span className="min-w-0">
-                  <span className="block">Series {index + 1}</span>
-                  <span className="block truncate font-mono text-[10px] uppercase text-gray-500 dark:text-gray-400">
+                <span className={s.configColorText()}>
+                  <span className={s.configColorName()}>Series {index + 1}</span>
+                  <span className={s.configColorValue()}>
                     {color}
                   </span>
                 </span>
@@ -193,9 +188,10 @@ function VisualizationSettingsPanel({
             ))}
           </div>
         </div>
-        <label className="flex items-center gap-3 pt-6 text-sm text-gray-700 dark:text-gray-300">
+        <label className={s.configToggleField()}>
           <input
             type="checkbox"
+            className={s.configToggleInput()}
             checked={settings.autoRotateXLabels}
             onChange={(event) =>
               setSettings((current) => ({
@@ -206,11 +202,7 @@ function VisualizationSettingsPanel({
           />
           Auto-rotate crowded X labels
         </label>
-        <label
-          className={`${s.configField()} ${
-            settings.autoRotateXLabels ? "opacity-55" : ""
-          }`}
-        >
+        <label className={s.configAngleField()}>
           <span className={s.configLabel()}>
             X Label Angle: {settings.autoRotateXLabels ? "Automatic" : `${settings.xTickAngle}°`}
           </span>
@@ -325,9 +317,10 @@ function VisualizationSettingsPanel({
             }
           />
         </label>
-        <label className="flex items-center gap-3 pt-6 text-sm text-gray-700 dark:text-gray-300">
+        <label className={s.configToggleField()}>
           <input
             type="checkbox"
+            className={s.configToggleInput()}
             checked={settings.showGrid}
             onChange={(event) =>
               setSettings((current) => ({
