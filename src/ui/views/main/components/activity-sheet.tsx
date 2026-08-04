@@ -9,6 +9,9 @@ export function ActivitySheet({
   onClose,
   onMatrixSelect,
   onVisualizationSelect,
+  onMatrixDelete,
+  onActivityDelete,
+  onVisualizationDelete,
 }: {
   activeMatrixId: string | null;
   activeSession: IcarusSessionWithWorkflowRecord | null;
@@ -16,6 +19,9 @@ export function ActivitySheet({
   onClose: () => void;
   onMatrixSelect: (matrixId: string) => void;
   onVisualizationSelect: (visualizationId: string, sourceMatrixId?: string) => void;
+  onMatrixDelete: (matrixId: string) => void;
+  onActivityDelete: (activityId: string) => void;
+  onVisualizationDelete: (visualizationId: string) => void;
 }) {
   return (
     <SlidingSheet
@@ -36,6 +42,9 @@ export function ActivitySheet({
           onClickOfOutputButton={onMatrixSelect}
           onClickOfInputButton={onMatrixSelect}
           onClickOfVisualizationButton={onVisualizationSelect}
+          onDeleteMatrix={onMatrixDelete}
+          onDeleteActivity={onActivityDelete}
+          onDeleteVisualization={onVisualizationDelete}
         />
       )}
     </SlidingSheet>

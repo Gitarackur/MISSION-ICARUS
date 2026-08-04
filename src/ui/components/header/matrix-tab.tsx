@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { Download, Settings } from "lucide-react";
+import { Download, Settings, Trash2 } from "lucide-react";
 import { handleFileExport } from "@/app-layer/shared/utils";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationsForMatrix } from "@/domain/visualization/utils/main";
@@ -21,6 +21,8 @@ const MatrixTab = ({
   visualizations = [],
   activeVisualizationId,
   onVisualizationSelect,
+  onMatrixDelete,
+  onVisualizationDelete,
 }: MatrixTabProps) => {
   const { tabList } = tabNavigationVariants();
   const s = headerVariants();
@@ -64,6 +66,8 @@ const MatrixTab = ({
             activeVisualizationId={activeVisualizationId}
             onMatrixSelect={onMatrixSelect}
             onVisualizationSelect={onVisualizationSelect}
+            onMatrixDelete={onMatrixDelete}
+            onVisualizationDelete={onVisualizationDelete}
           />
         ))}
         &nbsp;
@@ -102,6 +106,8 @@ const MatrixTabGroup = ({
   activeVisualizationId,
   onMatrixSelect,
   onVisualizationSelect,
+  onMatrixDelete,
+  onVisualizationDelete,
 }: MatrixTabGroupProps) => {
   const { tabButton, visualizationList } = tabNavigationVariants({
     active: isActive,
@@ -114,17 +120,33 @@ const MatrixTabGroup = ({
       aria-label={`${matrix.id} matrix tab group`}
       onClick={() => onMatrixSelect(matrix.id)}
     >
-      <button
-        type="button"
-        onClick={(event) => {
-          event.stopPropagation();
-          onMatrixSelect(matrix.id);
-        }}
-        className={tabButton()}
-        title={matrix.id}
-      >
-        <span className="block truncate">{matrix.id}</span>
-      </button>
+      <div className="flex min-w-[180px] flex-1 items-stretch">
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onMatrixSelect(matrix.id);
+          }}
+          className={`${tabButton()} min-w-0 flex-1`}
+          title={matrix.id}
+        >
+          <span className="block truncate">{matrix.id}</span>
+        </button>
+        {onMatrixDelete && (
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onMatrixDelete(matrix.id);
+            }}
+            className="flex w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+            title={`Delete matrix ${matrix.id}`}
+            aria-label={`Delete matrix ${matrix.id}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
 
       {visualizations.length > 0 && (
         <div
@@ -140,6 +162,7 @@ const MatrixTabGroup = ({
               index={index}
               isActive={activeVisualizationId === visualization.id}
               onVisualizationSelect={onVisualizationSelect}
+              onVisualizationDelete={onVisualizationDelete}
             />
           ))}
         </div>

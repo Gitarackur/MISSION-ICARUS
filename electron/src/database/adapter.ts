@@ -1,5 +1,5 @@
-import { Database as DatabaseType } from "better-sqlite3";
-import {
+import type { Database as DatabaseType } from "better-sqlite3";
+import type {
   IcarusSessionRecord,
   IcarusWorkflowRecord,
   IcarusSessionWithWorkflowRecord,
@@ -7,6 +7,41 @@ import {
   IcarusActivityRecord,
   IcarusVisualizationRecord,
 } from "@/app-layer/database/database.types";
+import {
+  assertDeletionPlanIntegrity,
+  getPhysicalDeletionScope,
+  hasSameDeletionScope,
+  planActivityDeletion,
+  planMatrixDeletion,
+  planVisualizationDeletion,
+  type DeletionPlan,
+  type SessionDeletionResult,
+} from "@/app-layer/database/deletion";
+
+type ActivityRow = {
+  id: string;
+  name: string;
+  timestamp: string | number;
+  pluginId: string | null;
+  sourceMatrixId: string | null;
+  inputColumnNames: string | null;
+  outputColumnNames: string | null;
+  inputParameters: string | null;
+  outputMetrics: string | null;
+  inputMatrixReferences: string | null;
+  outputMatrixReference: string | null;
+};
+
+type VisualizationRow = {
+  id: string;
+  createdByActivityId: string | null;
+  createdAt: number;
+  sourceMatrixId: string | null;
+  renderer: IcarusVisualizationRecord["renderer"] | null;
+  visualizationType: IcarusVisualizationRecord["visualizationType"] | null;
+  title: string | null;
+  data: string;
+};
 
 export class IcarusDBAdapter {
   db: DatabaseType;
@@ -212,7 +247,7 @@ export class IcarusDBAdapter {
         createdAt: matrix.createdAt,
         columns,
         data,
-        createdByFirstActivity: matrix.createdByFirstActivity || null,
+        createdByFirstActivity: matrix.createdByFirstActivity ? 1 : null,
       });
   }
 
@@ -225,7 +260,7 @@ export class IcarusDBAdapter {
           createdAt: number;
           columns: string;
           data: string;
-          createdByFirstActivity?: boolean;
+          createdByFirstActivity: number | null;
         }
       | undefined;
 
@@ -235,11 +270,14 @@ export class IcarusDBAdapter {
       createdAt: row.createdAt,
       columns: JSON.parse(row.columns),
       data: JSON.parse(row.data),
-      createdByFirstActivity: row.createdByFirstActivity,
+      createdByFirstActivity:
+        row.createdByFirstActivity === null
+          ? undefined
+          : Boolean(row.createdByFirstActivity),
     };
   }
 
-  deleteMatrix(id: string): void {
+  private deleteMatrix(id: string): void {
     this.db.prepare(`DELETE FROM matrices WHERE id = ?`).run(id);
   }
 
@@ -288,33 +326,13 @@ export class IcarusDBAdapter {
       });
   }
 
-  getActivity(id: string): IcarusActivityRecord | null {
-    const row = this.db
-      .prepare(`SELECT * FROM activities WHERE id = ?`)
-      .get(id) as
-      | {
-          id: string;
-          name: string;
-          timestamp: string | number;
-          pluginId?: string;
-          sourceMatrixId?: string;
-          inputColumnNames?: string;
-          outputColumnNames?: string;
-          inputParameters?: string;
-          outputMetrics?: string;
-          inputMatrixReferences?: string;
-          outputMatrixReference?: string;
-        }
-      | undefined;
-
-    if (!row) return null;
-
+  private deserializeActivity(row: ActivityRow): IcarusActivityRecord {
     return {
       id: row.id,
       name: row.name,
       timestamp: row.timestamp,
-      pluginId: row.pluginId,
-      sourceMatrixId: row.sourceMatrixId,
+      pluginId: row.pluginId || undefined,
+      sourceMatrixId: row.sourceMatrixId || undefined,
       inputColumnNames: row.inputColumnNames
         ? JSON.parse(row.inputColumnNames)
         : undefined,
@@ -327,12 +345,27 @@ export class IcarusDBAdapter {
       outputMetrics: row.outputMetrics
         ? JSON.parse(row.outputMetrics)
         : undefined,
-      inputMatrixReferences: row.inputMatrixReferences,
-      outputMatrixReference: row.outputMatrixReference,
+      inputMatrixReferences: row.inputMatrixReferences || undefined,
+      outputMatrixReference: row.outputMatrixReference || undefined,
     };
   }
 
-  deleteActivity(id: string): void {
+  getActivity(id: string): IcarusActivityRecord | null {
+    const row = this.db
+      .prepare(`SELECT * FROM activities WHERE id = ?`)
+      .get(id) as ActivityRow | undefined;
+
+    return row ? this.deserializeActivity(row) : null;
+  }
+
+  private getAllActivities(): IcarusActivityRecord[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM activities`)
+      .all() as ActivityRow[];
+    return rows.map((row) => this.deserializeActivity(row));
+  }
+
+  private deleteActivity(id: string): void {
     this.db.prepare(`DELETE FROM activities WHERE id = ?`).run(id);
   }
 
@@ -365,23 +398,9 @@ export class IcarusDBAdapter {
       });
   }
 
-  getVisualization(id: string): IcarusVisualizationRecord | null {
-    const row = this.db
-      .prepare(`SELECT * FROM visualizations WHERE id = ?`)
-      .get(id) as
-      | {
-          id: string;
-          createdByActivityId: string | null;
-          createdAt: number;
-          sourceMatrixId?: string | null;
-          renderer?: IcarusVisualizationRecord["renderer"] | null;
-          visualizationType?: IcarusVisualizationRecord["visualizationType"] | null;
-          title?: string | null;
-          data: string;
-        }
-      | undefined;
-
-    if (!row) return null;
+  private deserializeVisualization(
+    row: VisualizationRow
+  ): IcarusVisualizationRecord {
     return {
       id: row.id,
       createdByActivityId: row.createdByActivityId,
@@ -394,7 +413,143 @@ export class IcarusDBAdapter {
     };
   }
 
-  deleteVisualization(id: string): void {
+  getVisualization(id: string): IcarusVisualizationRecord | null {
+    const row = this.db
+      .prepare(`SELECT * FROM visualizations WHERE id = ?`)
+      .get(id) as VisualizationRow | undefined;
+
+    return row ? this.deserializeVisualization(row) : null;
+  }
+
+  private getAllVisualizations(): IcarusVisualizationRecord[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM visualizations`)
+      .all() as VisualizationRow[];
+    return rows.map((row) => this.deserializeVisualization(row));
+  }
+
+  private deleteVisualization(id: string): void {
     this.db.prepare(`DELETE FROM visualizations WHERE id = ?`).run(id);
+  }
+
+  private getDeletionSnapshot(
+    sessionId: string
+  ): IcarusSessionWithWorkflowRecord {
+    const session = this.getSessionWithWorkflows(sessionId);
+    if (!session) throw new Error(`Session with id ${sessionId} not found`);
+    return session;
+  }
+
+  getMatrixDeletionPlan(sessionId: string, matrixId: string): DeletionPlan {
+    return planMatrixDeletion(this.getDeletionSnapshot(sessionId), matrixId);
+  }
+
+  getActivityDeletionPlan(sessionId: string, activityId: string): DeletionPlan {
+    return planActivityDeletion(
+      this.getDeletionSnapshot(sessionId),
+      activityId
+    );
+  }
+
+  getVisualizationDeletionPlan(
+    sessionId: string,
+    visualizationId: string
+  ): DeletionPlan {
+    return planVisualizationDeletion(
+      this.getDeletionSnapshot(sessionId),
+      visualizationId
+    );
+  }
+
+  private executeSessionDeletion(
+    sessionId: string,
+    createPlan: (session: IcarusSessionWithWorkflowRecord) => DeletionPlan,
+    confirmedPlan?: DeletionPlan
+  ): SessionDeletionResult {
+    const transaction = this.db.transaction(() => {
+      const snapshot = this.getDeletionSnapshot(sessionId);
+      const plan = createPlan(snapshot);
+      assertDeletionPlanIntegrity(snapshot, plan);
+
+      if (confirmedPlan && !hasSameDeletionScope(plan, confirmedPlan)) {
+        throw new Error(
+          "Dependencies changed after this warning was opened. No data was deleted; review the updated impact and try again."
+        );
+      }
+
+      const deletedMatrixIds = new Set(plan.matrixIds);
+      const deletedActivityIds = new Set(plan.activityIds);
+      const deletedVisualizationIds = new Set(plan.visualizationIds);
+      const updatedSession: IcarusSessionRecord = {
+        id: snapshot.id,
+        name: snapshot.name,
+        date: snapshot.date,
+        workflowIds: snapshot.workflowIds,
+        matrixIds: snapshot.matrixIds.filter(
+          (id) => !deletedMatrixIds.has(id)
+        ),
+        activityIds: snapshot.activityIds.filter(
+          (id) => !deletedActivityIds.has(id)
+        ),
+        visualizationIds: snapshot.visualizationIds.filter(
+          (id) => !deletedVisualizationIds.has(id)
+        ),
+      };
+      const physicalScope = getPhysicalDeletionScope({
+        plan,
+        sessionId,
+        sessions: this.getAllSessions(),
+        activities: this.getAllActivities(),
+        visualizations: this.getAllVisualizations(),
+      });
+
+      this.saveSession(updatedSession);
+      physicalScope.visualizationIds.forEach((id) =>
+        this.deleteVisualization(id)
+      );
+      physicalScope.activityIds.forEach((id) => this.deleteActivity(id));
+      physicalScope.matrixIds.forEach((id) => this.deleteMatrix(id));
+
+      return plan;
+    });
+
+    const plan = transaction();
+    return { plan, session: this.getDeletionSnapshot(sessionId) };
+  }
+
+  deleteMatrixFromSession(
+    sessionId: string,
+    matrixId: string,
+    confirmedPlan?: DeletionPlan
+  ): SessionDeletionResult {
+    return this.executeSessionDeletion(
+      sessionId,
+      (session) => planMatrixDeletion(session, matrixId),
+      confirmedPlan
+    );
+  }
+
+  deleteActivityFromSession(
+    sessionId: string,
+    activityId: string,
+    confirmedPlan?: DeletionPlan
+  ): SessionDeletionResult {
+    return this.executeSessionDeletion(
+      sessionId,
+      (session) => planActivityDeletion(session, activityId),
+      confirmedPlan
+    );
+  }
+
+  deleteVisualizationFromSession(
+    sessionId: string,
+    visualizationId: string,
+    confirmedPlan?: DeletionPlan
+  ): SessionDeletionResult {
+    return this.executeSessionDeletion(
+      sessionId,
+      (session) => planVisualizationDeletion(session, visualizationId),
+      confirmedPlan
+    );
   }
 }
