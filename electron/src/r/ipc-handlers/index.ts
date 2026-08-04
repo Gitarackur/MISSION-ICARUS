@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 import EmbeddedRManager from "../../r/r-manager";
 import path from "node:path";
 import { resourcePath } from "../../core/utils";
@@ -17,7 +17,14 @@ const resolveRScriptPath = (scriptPath: string): string => {
 export function setupRHandlers() {
   const rManager = new EmbeddedRManager();
 
-  ipcMain.handle("renderer:r-available", async () => rManager.isRAvailable());
+  ipcMain.handle("renderer:r-available", async () => {
+    const available = rManager.isRAvailable();
+    if (available && rManager.isUsingBundledR()) {
+      rManager.ensurePackagesInstalled(["ggplot2", "jsonlite", "ragg"]);
+      void rManager.warmUp(resolveRScriptPath("plot_r.r"));
+    }
+    return available;
+  });
 
   ipcMain.handle(
     "run-r",
@@ -45,7 +52,10 @@ export function setupRHandlers() {
           );
         }
 
-        const output = await rManager.runRScript(resolvedScriptPath, args || []);
+        const output = await rManager.runRendererScript(
+          resolvedScriptPath,
+          args || []
+        );
         return output;
       } catch (err) {
         console.error("R error:", err);
@@ -53,4 +63,6 @@ export function setupRHandlers() {
       }
     }
   );
+
+  app.once("before-quit", () => rManager.dispose());
 }

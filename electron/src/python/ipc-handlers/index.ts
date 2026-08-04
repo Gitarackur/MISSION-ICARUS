@@ -1,4 +1,4 @@
-import { ipcMain } from "electron";
+import { app, ipcMain } from "electron";
 import { PythonManager } from "../PythonManager";
 
 const pythonManager = new PythonManager();
@@ -10,9 +10,11 @@ interface Data {
 }
 
 export function setupPythonHandlers() {
-  ipcMain.handle("renderer:python-available", async () =>
-    pythonManager.isPythonRendererAvailable()
-  );
+  ipcMain.handle("renderer:python-available", async () => {
+    const available = pythonManager.isPythonRendererAvailable();
+    if (available) void pythonManager.warmUp();
+    return available;
+  });
 
   ipcMain.handle("run:python", async (_event, { method, args = [] }: Data) => {
     if (
@@ -25,4 +27,6 @@ export function setupPythonHandlers() {
     ) => Promise<unknown>;
     return methodFunc.call(pythonManager, ...(args || []));
   });
+
+  app.once("before-quit", () => pythonManager.dispose());
 }

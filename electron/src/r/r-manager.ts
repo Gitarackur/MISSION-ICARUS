@@ -3,12 +3,19 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { resourcePath } from '../core/utils';
+import {
+  PersistentJsonWorker,
+  PersistentWorkerUnavailableError,
+} from '../core/PersistentJsonWorker';
 
 export default class EmbeddedRManager {
   private rScriptExe: string | null;
   private bundledRuntimeRoot: string | null;
   private usingBundledRuntime: boolean;
   private verifiedPackages = new Set<string>();
+  private worker: PersistentJsonWorker | null = null;
+  private workerScriptPath: string | null = null;
+  private workerDisabled = false;
 
   constructor() {
     this.bundledRuntimeRoot = this.findBundledRuntimeRoot();
@@ -164,6 +171,10 @@ export default class EmbeddedRManager {
     return this.rScriptExe !== null && fs.existsSync(this.rScriptExe);
   }
 
+  isUsingBundledR(): boolean {
+    return this.usingBundledRuntime;
+  }
+
 
   public isPackageInstalled(pkgName: string): boolean {
     if (!this.rScriptExe) return false;
@@ -209,6 +220,40 @@ export default class EmbeddedRManager {
 
       this.verifiedPackages.add(pkg);
     });
+  }
+
+  public async warmUp(scriptPath: string): Promise<boolean> {
+    if (this.workerDisabled) return false;
+
+    try {
+      await this.getWorker(scriptPath).start();
+      return true;
+    } catch (error) {
+      this.disableWorker(error);
+      return false;
+    }
+  }
+
+  public async runRendererScript(
+    scriptPath: string,
+    args: string[] = []
+  ): Promise<string> {
+    if (!this.workerDisabled && args[0]) {
+      try {
+        return await this.getWorker(scriptPath).request({ payload: args[0] });
+      } catch (error) {
+        if (!(error instanceof PersistentWorkerUnavailableError)) throw error;
+        this.disableWorker(error);
+      }
+    }
+
+    return this.runRScript(scriptPath, args);
+  }
+
+  public dispose(): void {
+    this.worker?.dispose();
+    this.worker = null;
+    this.workerScriptPath = null;
   }
 
 
@@ -303,6 +348,43 @@ export default class EmbeddedRManager {
         });
       });
     });
+  }
+
+  private getWorker(scriptPath: string): PersistentJsonWorker {
+    if (this.worker && this.workerScriptPath === scriptPath) return this.worker;
+    if (!this.rScriptExe) {
+      throw new PersistentWorkerUnavailableError(
+        'Rscript executable not found on this system.'
+      );
+    }
+
+    this.worker?.dispose();
+    const workerScript = resourcePath('scripts', 'r', 'plot_r_worker.r');
+    if (!fs.existsSync(workerScript)) {
+      throw new PersistentWorkerUnavailableError(
+        `R renderer worker script not found at: ${workerScript}`
+      );
+    }
+
+    this.worker = new PersistentJsonWorker(
+      this.rScriptExe,
+      [workerScript, scriptPath],
+      { env: this.getRuntimeEnv() },
+      'R renderer'
+    );
+    this.workerScriptPath = scriptPath;
+    return this.worker;
+  }
+
+  private disableWorker(error: unknown): void {
+    console.warn(
+      'Persistent R renderer unavailable; using one-shot rendering.',
+      error
+    );
+    this.worker?.dispose();
+    this.worker = null;
+    this.workerScriptPath = null;
+    this.workerDisabled = true;
   }
 
 

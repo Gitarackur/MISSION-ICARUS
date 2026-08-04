@@ -3,12 +3,19 @@ import { Manager } from "../core/Manager";
 import path from "path";
 import fs from "fs";
 import CoreExec from "../core/Exec";
+import {
+  PersistentJsonWorker,
+  PersistentWorkerUnavailableError,
+} from "../core/PersistentJsonWorker";
 import { resourcePath } from "../core/utils";
 import { app } from "electron";
 
 
 
 export class PythonManager extends Manager {
+  private worker: PersistentJsonWorker | null = null;
+  private workerDisabled = false;
+
   private getRuntimeEnv(): NodeJS.ProcessEnv {
     const baseTempDir = path.join(app.getPath("temp"), "mission-icarus-python");
     const mplConfigDir = path.join(baseTempDir, "matplotlib");
@@ -25,6 +32,7 @@ export class PythonManager extends Manager {
       MPLCONFIGDIR: mplConfigDir,
       XDG_CACHE_HOME: xdgCacheDir,
       FONTCONFIG_PATH: fontConfigDir,
+      MPLBACKEND: "Agg",
     };
   }
 
@@ -82,6 +90,23 @@ export class PythonManager extends Manager {
     return CoreExec.run(binPath, args, data, { env });
   }
 
+  public async warmUp(): Promise<boolean> {
+    if (this.workerDisabled) return false;
+
+    try {
+      await this.getWorker().start();
+      return true;
+    } catch (error) {
+      this.disableWorker(error);
+      return false;
+    }
+  }
+
+  public dispose(): void {
+    this.worker?.dispose();
+    this.worker = null;
+  }
+
   public async getPlot<T = Record<string, unknown>>(data: T): Promise<string> {
     return this.runCommanderCommand('plot', data);
   }
@@ -91,8 +116,44 @@ export class PythonManager extends Manager {
     data: T
   ): Promise<string> {
     const scriptPath = resourcePath('scripts', 'python', 'commander.py');
+
+    if (!this.workerDisabled) {
+      try {
+        return await this.getWorker().request({ command, payload: data });
+      } catch (error) {
+        if (!(error instanceof PersistentWorkerUnavailableError)) throw error;
+        this.disableWorker(error);
+      }
+    }
+
     const stringifiedData = typeof data === 'string' ? data : JSON.stringify(data);
     return this.runScript(scriptPath, [command, stringifiedData, '--use-json']);
+  }
+
+  private getWorker(): PersistentJsonWorker {
+    if (this.worker) return this.worker;
+
+    const scriptPath = resourcePath("scripts", "python", "commander.py");
+    const useSource = !app.isPackaged && fs.existsSync(scriptPath);
+    const command = useSource ? "python3" : this.getBin(scriptPath);
+    const args = useSource ? [scriptPath, "--worker"] : ["--worker"];
+    this.worker = new PersistentJsonWorker(
+      command,
+      args,
+      { env: this.getRuntimeEnv() },
+      "Python renderer"
+    );
+    return this.worker;
+  }
+
+  private disableWorker(error: unknown): void {
+    console.warn(
+      "Persistent Python renderer unavailable; using one-shot rendering.",
+      error
+    );
+    this.worker?.dispose();
+    this.worker = null;
+    this.workerDisabled = true;
   }
 
   public async getHeatmap<T = Record<string, unknown>>(data: T): Promise<string> {

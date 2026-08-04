@@ -15,7 +15,7 @@ suppressPackageStartupMessages({
   if (is.null(a) || length(a) == 0 || identical(a, "")) b else a
 }
 
-input_arg <- args[1]
+input_arg <- getOption("icarus.renderer.input", args[1])
 
 if (file.exists(input_arg)) {
   input <- fromJSON(input_arg, simplifyVector = FALSE)

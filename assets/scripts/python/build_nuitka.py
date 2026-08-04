@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import subprocess
 import sys
@@ -47,6 +48,19 @@ NOFOLLOW_IMPORTS = [
 ]
 
 
+def renderer_source_hash() -> str:
+    source_files = [COMMANDER]
+    source_files.extend((ROOT / "commands").glob("*.py"))
+    source_files.extend((ROOT / "core").glob("*.py"))
+    digest = hashlib.sha256()
+
+    for source_file in sorted(source_files):
+        digest.update(source_file.relative_to(ROOT).as_posix().encode("utf-8"))
+        digest.update(source_file.read_bytes())
+
+    return digest.hexdigest()[:16]
+
+
 def get_env() -> dict[str, str]:
     CACHE_DIR.mkdir(exist_ok=True)
     MPL_CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -88,6 +102,10 @@ def build_args(mode: str) -> list[str]:
         # persistent extraction cache avoids unpacking the full scientific
         # Python runtime on every invocation in packaged applications.
         args.append("--onefile-cache-mode=cached")
+        args.append(
+            "--onefile-tempdir-spec="
+            f"{{CACHE_DIR}}/mission-icarus/python-renderer/{renderer_source_hash()}"
+        )
 
     for package in INCLUDE_PACKAGES:
         args.append(f"--include-package={package}")
