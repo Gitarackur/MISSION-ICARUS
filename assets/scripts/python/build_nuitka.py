@@ -83,6 +83,12 @@ def build_args(mode: str) -> list[str]:
         f"--output-filename={output_filename}",
     ]
 
+    if mode == "onefile":
+        # The renderer is invoked repeatedly while plot settings are tuned. A
+        # persistent extraction cache avoids unpacking the full scientific
+        # Python runtime on every invocation in packaged applications.
+        args.append("--onefile-cache-mode=cached")
+
     for package in INCLUDE_PACKAGES:
         args.append(f"--include-package={package}")
 

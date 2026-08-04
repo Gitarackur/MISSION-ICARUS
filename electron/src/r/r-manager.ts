@@ -8,6 +8,7 @@ export default class EmbeddedRManager {
   private rScriptExe: string | null;
   private bundledRuntimeRoot: string | null;
   private usingBundledRuntime: boolean;
+  private verifiedPackages = new Set<string>();
 
   constructor() {
     this.bundledRuntimeRoot = this.findBundledRuntimeRoot();
@@ -193,11 +194,20 @@ export default class EmbeddedRManager {
 
 
   public ensurePackagesInstalled(pkgs: string[]): void {
+    if (this.usingBundledRuntime) {
+      pkgs.forEach((pkg) => this.verifiedPackages.add(pkg));
+      return;
+    }
+
     pkgs.forEach(pkg => {
+      if (this.verifiedPackages.has(pkg)) return;
+
       if (!this.isPackageInstalled(pkg)) {
         console.log(`Installing missing R package: ${pkg}`);
         this.installPackage(pkg);
       }
+
+      this.verifiedPackages.add(pkg);
     });
   }
 

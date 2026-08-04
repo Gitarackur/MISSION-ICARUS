@@ -16,11 +16,9 @@ const FAST_PAN_STEP = 72;
 type PanState = { x: number; y: number };
 
 export const useVisualizationViewport = ({
-  activeDisplayImage,
   activeVisualizationId,
   displayMode,
 }: {
-  activeDisplayImage: string | null;
   activeVisualizationId?: string;
   displayMode: "saved" | "native" | "python" | "r";
 }) => {
@@ -70,7 +68,7 @@ export const useVisualizationViewport = ({
 
   useEffect(() => {
     resetViewport();
-  }, [activeDisplayImage, activeVisualizationId, displayMode, resetViewport]);
+  }, [activeVisualizationId, displayMode, resetViewport]);
 
   useEffect(() => {
     const handlePointerMove = (event: MouseEvent) => {

@@ -4,7 +4,7 @@ export const modalStyleVariants = tv({
   slots: {
     // Modal slots
     modalOverlay: [
-      "fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4",
+      "fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4",
       "transition-opacity duration-300 ease-in-out opacity-0",
       "data-[open=true]:opacity-100"
     ],
