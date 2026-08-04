@@ -42,7 +42,7 @@ def run_worker(commands):
             request = json.loads(line)
             if (
                 not isinstance(request, dict)
-                or not isinstance(request.get("id"), int)
+                or type(request.get("id")) is not int
             ):
                 raise ValueError("Worker request must contain a numeric id")
         except (json.JSONDecodeError, ValueError) as error:

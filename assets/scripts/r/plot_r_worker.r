@@ -13,8 +13,12 @@ suppressPackageStartupMessages({
 
 plot_script <- args[1]
 
-if (!file.exists(plot_script)) {
-  stop(sprintf("Renderer script not found: %s", plot_script))
+if (
+  !file.exists(plot_script) ||
+    dir.exists(plot_script) ||
+    file.access(plot_script, mode = 4) != 0
+) {
+  stop(sprintf("Renderer script is not a readable file: %s", plot_script))
 }
 
 emit_message <- function(message) {
