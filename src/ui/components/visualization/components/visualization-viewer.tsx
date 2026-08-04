@@ -188,6 +188,9 @@ export function VisualizationViewer({
                   {showSettings && activeVisualization ? (
                     <div
                       className={s.settingsPanelContainer()}
+                      role="region"
+                      aria-label="Plot settings"
+                      tabIndex={0}
                       onMouseDown={(event) => event.stopPropagation()}
                       onWheel={(event) => event.stopPropagation()}
                     >

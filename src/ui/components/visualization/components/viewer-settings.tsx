@@ -14,10 +14,10 @@ function VisualizationSettingsPanel({
   const s = visualizationStyles();
 
   return (
-    <div className={compact ? "space-y-3" : s.configPanel()}>
+    <div className={compact ? "relative" : s.configPanel()}>
       {compact ? (
-        <div className="space-y-1">
-          <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 dark:text-gray-400">
+        <div className="sticky top-0 z-20 space-y-1 border-b border-gray-200 bg-white px-4 py-3 pr-5 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
             Plot Settings
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -27,7 +27,11 @@ function VisualizationSettingsPanel({
           </p>
         </div>
       ) : null}
-      <div className={compact ? "grid grid-cols-1 gap-3" : s.configGrid()}>
+      <div
+        className={
+          compact ? "grid grid-cols-1 gap-3 p-4 pr-3" : s.configGrid()
+        }
+      >
         <label className={s.configField()}>
           <span className={s.configLabel()}>X Axis Label</span>
           <input
@@ -150,28 +154,41 @@ function VisualizationSettingsPanel({
           />
         </label>
         <div className={s.configField()}>
-          <span className={s.configLabel()}>Series Colors</span>
-          <div className="flex flex-wrap gap-2">
+          <span className="text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200">
+            Series Colors
+          </span>
+          <div className="grid grid-cols-2 gap-2">
             {settings.plotColors.map((color, index) => (
               <label
                 key={index}
-                className="relative h-8 w-8 overflow-hidden rounded-full border border-gray-300 shadow-sm dark:border-gray-700"
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-gray-200 bg-white px-2 py-2 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:border-blue-400 hover:bg-blue-50 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-blue-500 dark:hover:bg-gray-800/80"
                 title={`Series ${index + 1}: ${color}`}
               >
-                <input
-                  type="color"
-                  className="absolute -inset-2 h-12 w-12 cursor-pointer border-0 bg-transparent p-0"
-                  value={color}
-                  aria-label={`Series ${index + 1} color`}
-                  onChange={(event) =>
-                    setSettings((current) => ({
-                      ...current,
-                      plotColors: current.plotColors.map((item, colorIndex) =>
-                        colorIndex === index ? event.target.value : item
-                      ),
-                    }))
-                  }
-                />
+                <span
+                  className="relative h-7 w-7 shrink-0 overflow-hidden rounded-md border border-black/15 shadow-inner dark:border-white/20"
+                  style={{ backgroundColor: color }}
+                >
+                  <input
+                    type="color"
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    value={color}
+                    aria-label={`Series ${index + 1} color`}
+                    onChange={(event) =>
+                      setSettings((current) => ({
+                        ...current,
+                        plotColors: current.plotColors.map((item, colorIndex) =>
+                          colorIndex === index ? event.target.value : item
+                        ),
+                      }))
+                    }
+                  />
+                </span>
+                <span className="min-w-0">
+                  <span className="block">Series {index + 1}</span>
+                  <span className="block truncate font-mono text-[10px] uppercase text-gray-500 dark:text-gray-400">
+                    {color}
+                  </span>
+                </span>
               </label>
             ))}
           </div>
