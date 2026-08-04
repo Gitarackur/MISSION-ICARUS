@@ -83,7 +83,7 @@ export function VisualizationViewer({
                 className={s.secondaryButton()}
                 onClick={zoomOut}
               >
-                <Minus className="h-4 w-4" />
+                <Minus className={s.icon()} />
               </button>
               <span className={s.zoomText()}>
                 {zoomText}
@@ -93,21 +93,21 @@ export function VisualizationViewer({
                 className={s.secondaryButton()}
                 onClick={zoomIn}
               >
-                <Plus className="h-4 w-4" />
+                <Plus className={s.icon()} />
               </button>
               <button
                 type="button"
                 className={s.secondaryButton()}
                 onClick={resetViewport}
               >
-                <RotateCcw className="h-4 w-4" />
+                <RotateCcw className={s.icon()} />
                 Reset
               </button>
             </>
           )}
 
           {activeVisualization && (
-            <div className="min-w-44">
+            <div className={s.rendererSelect()}>
               <SingleSelect
                 options={displayRendererOptions}
                 value={displayMode}
@@ -124,11 +124,11 @@ export function VisualizationViewer({
           {isRendererRefreshing &&
           (displayMode === "python" || displayMode === "r") ? (
             <span
-              className="inline-flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-300"
+              className={s.rendererStatus()}
               role="status"
               aria-live="polite"
             >
-              <LoaderCircle className="h-4 w-4 animate-spin" />
+              <LoaderCircle className={s.loadingIcon()} />
               Updating {displayMode === "python" ? "Python" : "R"} renderer
             </span>
           ) : null}
@@ -139,7 +139,7 @@ export function VisualizationViewer({
             onClick={onToggleSettings}
             disabled={!activeVisualization}
           >
-            <Settings2 className="h-4 w-4" />
+            <Settings2 className={s.icon()} />
             Plot Settings
           </button>
           <button
@@ -148,14 +148,14 @@ export function VisualizationViewer({
             onClick={onDownload}
             disabled={!activeDisplayImage || isRendererRefreshing}
           >
-            <Download className="h-4 w-4" />
+            <Download className={s.icon()} />
             Download
           </button>
         </div>
       </div>
 
       <div className={s.gallerySection()}>
-        <div className="max-w-md">
+        <div className={s.visualizationSelect()}>
           <SingleSelect
             options={visualizationOptions}
             value={activeVisualization?.id ?? null}
@@ -169,7 +169,7 @@ export function VisualizationViewer({
         <div className={s.viewerFrame()}>
           <div
             key={`${activeVisualization?.id ?? "empty"}-${displayMode}`}
-            className="animate-[fade-slide-in_220ms_ease-out]"
+            className={s.viewerTransition()}
           >
             {activeDisplayImage ? (
               <div
@@ -202,7 +202,7 @@ export function VisualizationViewer({
                     </div>
                   ) : null}
                 </PlotInfo>
-                
+
                 <img
                   src={activeDisplayImage}
                   alt={activeVisualization?.title ?? "Selected visualization"}

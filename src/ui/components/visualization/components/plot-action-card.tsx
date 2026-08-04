@@ -49,14 +49,14 @@ function PlotActionCard({
           title={disabledReason ?? `Create ${title}`}
         >
           {isLoading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className={s.loadingIcon()} />
           ) : (
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={s.icon()} />
           )}
         </button>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2">
+      <div className={s.plotActionGrid()}>
         <SingleSelect
           label="Renderer"
           options={rendererOptions}
@@ -157,8 +157,8 @@ function PlotActionCard({
         ) : null}
 
         {!xAxisOptions?.length && selection.nComponents !== undefined ? (
-          <div className="md:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
+          <div className={s.plotActionFullField()}>
+            <label className={s.plotActionFieldLabel()}>
               Principal Components
             </label>
             <Input
@@ -177,7 +177,7 @@ function PlotActionCard({
       </div>
 
       <div className={s.plotContainer()}>
-        <div className="space-y-3 text-center">
+        <div className={s.plotActionContent()}>
           <p className={s.subtleText()}>{description}</p>
           {disabledReason ? (
             <div className={s.emptyState()}>{disabledReason}</div>
