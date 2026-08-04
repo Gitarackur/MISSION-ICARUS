@@ -55,7 +55,6 @@ export function VisualizationViewer({
     zoomText,
     zoomOut,
   } = useVisualizationViewport({
-    activeDisplayImage,
     activeVisualizationId: activeVisualization?.id,
     displayMode,
   });
