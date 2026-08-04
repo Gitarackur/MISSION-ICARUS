@@ -17,31 +17,9 @@ import {
   type DeletionPlan,
   type SessionDeletionResult,
 } from "@/app-layer/database/deletion";
+import { ActivityRow, VisualizationRow } from "./db.types";
 
-type ActivityRow = {
-  id: string;
-  name: string;
-  timestamp: string | number;
-  pluginId: string | null;
-  sourceMatrixId: string | null;
-  inputColumnNames: string | null;
-  outputColumnNames: string | null;
-  inputParameters: string | null;
-  outputMetrics: string | null;
-  inputMatrixReferences: string | null;
-  outputMatrixReference: string | null;
-};
 
-type VisualizationRow = {
-  id: string;
-  createdByActivityId: string | null;
-  createdAt: number;
-  sourceMatrixId: string | null;
-  renderer: IcarusVisualizationRecord["renderer"] | null;
-  visualizationType: IcarusVisualizationRecord["visualizationType"] | null;
-  title: string | null;
-  data: string;
-};
 
 export class IcarusDBAdapter {
   db: DatabaseType;
