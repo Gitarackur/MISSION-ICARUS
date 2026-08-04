@@ -48,6 +48,7 @@ export const visualizationStyles = tv({
     zoomText: "min-w-14 text-center text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400",
 
     displayActiveImageContainer: "relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950",
-    settingsPanelContainer: "pointer-events-auto max-h-[calc(100%-1rem)] w-full max-w-sm overflow-auto rounded-2xl border border-gray-200/80 bg-white/95 p-3 shadow-xl backdrop-blur dark:border-gray-700/80 dark:bg-gray-900/95"
+    settingsPanelContainer:
+      "pointer-events-auto isolate max-h-full min-h-0 w-full max-w-sm shrink-0 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200/80 bg-white shadow-xl [scrollbar-gutter:stable] focus:outline-none focus:ring-2 focus:ring-blue-500/40 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent dark:border-gray-700/80 dark:bg-gray-900 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600",
   },
 });
