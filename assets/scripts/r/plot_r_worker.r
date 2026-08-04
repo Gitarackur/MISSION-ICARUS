@@ -13,9 +13,13 @@ suppressPackageStartupMessages({
 
 plot_script <- args[1]
 
+if (!file.exists(plot_script)) {
+  stop(sprintf("Renderer script not found: %s", plot_script))
+}
+
 emit_message <- function(message) {
   cat(toJSON(message, auto_unbox = TRUE, null = "null"), "\n", sep = "")
-  flush.console()
+  flush(stdout())
 }
 
 render_request <- function(payload) {
@@ -47,11 +51,26 @@ repeat {
   if (length(line) == 0) break
   if (!nzchar(trimws(line))) next
 
-  request_id <- NULL
+  request <- tryCatch(
+    fromJSON(line, simplifyVector = FALSE),
+    error = function(error) {
+      message("Ignoring invalid worker request: ", conditionMessage(error))
+      NULL
+    }
+  )
+  if (
+    !is.list(request) ||
+      is.null(request$id) ||
+      length(request$id) != 1 ||
+      !is.numeric(request$id)
+  ) {
+    message("Ignoring worker request without a numeric id")
+    next
+  }
+
+  request_id <- request$id
   tryCatch(
     {
-      request <- fromJSON(line, simplifyVector = FALSE)
-      request_id <- request$id
       result <- render_request(request$payload)
       emit_message(list(id = request_id, ok = TRUE, result = result))
     },

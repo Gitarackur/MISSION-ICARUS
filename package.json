@@ -19,6 +19,7 @@
     "build:windows1": "tsc && vite build && electron-builder --win",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "test:deletion": "node scripts/test-deletion-planner.mjs",
+    "test:renderer-workers": "node scripts/test-renderer-workers.mjs",
     "test:sql-deletion": "node scripts/run-electron-node.mjs scripts/test-sql-deletion.mjs",
     "preview": "vite preview",
     "migrate": "ts-node src/database/cli.ts migrate",
