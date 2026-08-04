@@ -4,6 +4,12 @@ import electron from 'vite-plugin-electron/simple'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 
+const sharedAliases = {
+  '@': path.resolve(__dirname, 'src'),
+  'main@': path.resolve(__dirname),
+  'pub@': path.resolve(__dirname, 'public'),
+}
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
@@ -13,6 +19,9 @@ export default defineConfig({
       main: {
         entry: 'electron/main.ts',
         vite: {
+          resolve: {
+            alias: sharedAliases,
+          },
           build: {
             rollupOptions: {
               external: [
@@ -32,6 +41,9 @@ export default defineConfig({
       preload: {
         input: path.join(__dirname, 'electron/preload.ts'),
         vite: {
+          resolve: {
+            alias: sharedAliases,
+          },
           build: {
             rollupOptions: {
               output: {
@@ -47,10 +59,6 @@ export default defineConfig({
     }),
   ],
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, 'src'),
-      'main@': path.resolve(__dirname),
-      'pub@': path.resolve(__dirname, 'public'),
-    },
+    alias: sharedAliases,
   },
 })
