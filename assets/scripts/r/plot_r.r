@@ -48,7 +48,9 @@ max_x_ticks <- as.integer(setting_number("maxXTicks", 12, 2, 30))
 max_y_ticks <- as.integer(setting_number("maxYTicks", 8, 2, 20))
 x_label_length <- as.integer(setting_number("xMaxLabelLength", 16, 4, 60))
 y_label_length <- as.integer(setting_number("yMaxLabelLength", 12, 4, 40))
-x_tick_angle <- setting_number("xTickAngle", -35, -90, 90)
+auto_rotate_x_labels <- isTRUE(display_settings$autoRotateXLabels %||% TRUE)
+x_tick_angle <- setting_number("xTickAngle", 0, -90, 90)
+y_tick_angle <- setting_number("yTickAngle", 0, -90, 90)
 tick_font_size <- setting_number("tickFontSize", 10, 6, 24)
 axis_label_font_size <- setting_number("axisLabelFontSize", 12, 8, 32)
 point_size <- setting_number("pointSize", 4, 1, 16)
@@ -77,7 +79,31 @@ axis_label <- function(name, fallback) {
   display_settings[[name]] %||% fallback
 }
 
-plot_theme <- function() {
+resolve_x_tick_angle <- function(labels = NULL) {
+  if (!auto_rotate_x_labels) return(x_tick_angle)
+  if (is.null(labels) || length(labels) <= 1) return(0)
+
+  displayed_labels <- vapply(
+    as.character(labels),
+    truncate_label,
+    character(1),
+    max_length = x_label_length
+  )
+  widest_label <- max(nchar(displayed_labels)) * tick_font_size * 1.05
+  label_height <- tick_font_size * 2
+  available_width <- max(16, (plot_width - 160) / max(1, length(displayed_labels) - 1) - 8)
+
+  for (angle in c(0, -30, -45, -60)) {
+    radians <- abs(angle) * pi / 180
+    projected_width <- widest_label * cos(radians) + label_height * sin(radians)
+    if (projected_width <= available_width) return(angle)
+  }
+
+  -60
+}
+
+plot_theme <- function(x_labels = NULL) {
+  effective_x_tick_angle <- resolve_x_tick_angle(x_labels)
   grid_theme <- if (show_grid) {
     theme(panel.grid.major = element_line(color = "#e5e7eb", linewidth = 0.35))
   } else {
@@ -86,7 +112,11 @@ plot_theme <- function() {
 
   theme_minimal(base_size = tick_font_size) +
     theme(
-      axis.text.x = element_text(angle = x_tick_angle, hjust = if (x_tick_angle == 0) 0.5 else 1),
+      axis.text.x = element_text(
+        angle = effective_x_tick_angle,
+        hjust = if (effective_x_tick_angle == 0) 0.5 else 1
+      ),
+      axis.text.y = element_text(angle = y_tick_angle, hjust = 1),
       axis.title = element_text(size = axis_label_font_size),
       legend.position = "bottom",
       legend.box = "horizontal",
@@ -118,13 +148,14 @@ build_bar_plot <- function(data) {
       breaks = breaks,
       labels = function(values) vapply(values, truncate_label, character(1), max_length = x_label_length)
     ) +
+    scale_y_continuous(n.breaks = max_y_ticks) +
     scale_fill_manual(values = rep(plot_colors, length.out = length(unique(df$series)))) +
     labs(
       title = data$title %||% "Bar Plot",
       x = axis_label("xAxisLabel", data$xAxisLabel %||% "X Axis"),
       y = axis_label("yAxisLabel", data$yAxisLabel %||% "Y Axis")
     ) +
-    plot_theme()
+    plot_theme(breaks)
 }
 
 build_box_plot <- function(data) {
@@ -147,13 +178,14 @@ build_box_plot <- function(data) {
       breaks = breaks,
       labels = function(values) vapply(values, truncate_label, character(1), max_length = x_label_length)
     ) +
+    scale_y_continuous(n.breaks = max_y_ticks) +
     scale_fill_manual(values = rep(plot_colors, length.out = length(unique(df$series)))) +
     labs(
       title = data$title %||% "Box Plot",
       x = axis_label("xAxisLabel", data$xAxisLabel %||% "Columns"),
       y = axis_label("yAxisLabel", data$yAxisLabel %||% "Values")
     ) +
-    plot_theme()
+    plot_theme(breaks)
 }
 
 build_scatter_plot <- function(data) {
@@ -217,7 +249,7 @@ build_heatmap_plot <- function(data) {
       x = axis_label("xAxisLabel", data$xAxisLabel %||% "Columns"),
       y = axis_label("yAxisLabel", data$yAxisLabel %||% "Rows")
     ) +
-    plot_theme()
+    plot_theme(x_breaks)
 }
 
 build_volcano_plot <- function(data) {

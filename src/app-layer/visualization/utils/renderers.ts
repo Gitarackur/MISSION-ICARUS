@@ -34,7 +34,8 @@ const quantile = (values: number[], probability: number) => {
 const defaultSettings: VisualizationDisplaySettings = {
   xAxisLabel: "X Axis",
   yAxisLabel: "Y Axis",
-  xTickAngle: -35,
+  autoRotateXLabels: true,
+  xTickAngle: 0,
   yTickAngle: 0,
   xMaxLabelLength: 16,
   yMaxLabelLength: 12,
@@ -94,6 +95,46 @@ const formatNumericTick = (value: number, maxLength: number) => {
     .replace(/(\.\d*?)0+$/, "$1");
   if (fixed.length <= maxLength) return fixed;
   return value.toExponential(Math.max(0, Math.min(3, maxLength - 5)));
+};
+
+const measureTickLabelWidth = (label: string, fontSize: number) => {
+  if (typeof document !== "undefined") {
+    const context = document.createElement("canvas").getContext("2d");
+    if (context) {
+      context.font = `${fontSize}px sans-serif`;
+      return context.measureText(label).width;
+    }
+  }
+
+  return label.length * fontSize * 0.6;
+};
+
+const resolveXTickAngle = ({
+  labels,
+  settings,
+  spacing,
+}: {
+  labels: string[];
+  settings: VisualizationDisplaySettings;
+  spacing: number;
+}) => {
+  if (!settings.autoRotateXLabels) return settings.xTickAngle;
+  if (labels.length <= 1) return 0;
+
+  const widestLabel = Math.max(
+    ...labels.map((label) => measureTickLabelWidth(label, settings.tickFontSize))
+  );
+  const labelHeight = settings.tickFontSize * 1.25;
+  const availableWidth = Math.max(16, spacing - 8);
+
+  return (
+    [0, -30, -45, -60].find((angle) => {
+      const radians = (Math.abs(angle) * Math.PI) / 180;
+      const projectedWidth =
+        widestLabel * Math.cos(radians) + labelHeight * Math.sin(radians);
+      return projectedWidth <= availableWidth;
+    }) ?? -60
+  );
 };
 
 const renderLegend = ({
@@ -266,6 +307,16 @@ export const renderBarSvg = (
     ((value - minValue) / (maxValue - minValue || 1)) * plotHeight;
   const baselineY = scaleY(0);
   const palette = s.plotColors;
+  const visibleXLabels = payload.categories
+    .filter((_, index) =>
+      shouldRenderTick(index, payload.categories.length, s.maxXTicks)
+    )
+    .map((category) => formatLabel(category, s.xMaxLabelLength));
+  const xTickAngle = resolveXTickAngle({
+    labels: visibleXLabels,
+    settings: s,
+    spacing: plotWidth / Math.max(1, visibleXLabels.length - 1),
+  });
 
   const bars = payload.categories
     .map((category, index) =>
@@ -291,7 +342,7 @@ export const renderBarSvg = (
         return "";
       }
       const x = margin.left + step * index + step / 2;
-      return `<text transform="translate(${x} ${margin.top + plotHeight + 26}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(category, s.xMaxLabelLength))}<title>${escapeXml(category)}</title></text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 26}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(category, s.xMaxLabelLength))}<title>${escapeXml(category)}</title></text>`;
     })
     .join("");
 
@@ -387,6 +438,14 @@ export const renderBoxPlotSvg = (
   const boxWidth = Math.min(42, step * 0.5);
   const yTicks = buildTicks(domainMin, domainMax, s.maxYTicks);
   const palette = s.plotColors;
+  const visibleXLabels = stats
+    .filter((_, index) => shouldRenderTick(index, entries.length, s.maxXTicks))
+    .map((item) => formatLabel(item.name, s.xMaxLabelLength));
+  const xTickAngle = resolveXTickAngle({
+    labels: visibleXLabels,
+    settings: s,
+    spacing: plotWidth / Math.max(1, visibleXLabels.length - 1),
+  });
 
   const boxes = stats
     .map((item, index) => {
@@ -398,7 +457,7 @@ export const renderBoxPlotSvg = (
       const highY = scaleY(item.high);
       const color = palette[index % palette.length];
       const label = shouldRenderTick(index, entries.length, s.maxXTicks)
-        ? `<text transform="translate(${centerX} ${margin.top + plotHeight + 26}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(item.name, s.xMaxLabelLength))}<title>${escapeXml(item.name)}</title></text>`
+        ? `<text transform="translate(${centerX} ${margin.top + plotHeight + 26}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(item.name, s.xMaxLabelLength))}<title>${escapeXml(item.name)}</title></text>`
         : "";
       return `
         <line x1="${centerX}" y1="${highY}" x2="${centerX}" y2="${q3Y}" stroke="#1f2937" stroke-width="1.5"/>
@@ -488,6 +547,14 @@ export const renderScatterSvg = (
   const palette = s.plotColors;
   const xTicks = buildTicks(xMin - xPadding, xMax + xPadding, s.maxXTicks);
   const yTicks = buildTicks(yMin - yPadding, yMax + yPadding, s.maxYTicks);
+  const xTickLabels = xTicks.map((tick) =>
+    formatNumericTick(tick, s.xMaxLabelLength)
+  );
+  const xTickAngle = resolveXTickAngle({
+    labels: xTickLabels,
+    settings: s,
+    spacing: plotWidth / Math.max(1, xTickLabels.length - 1),
+  });
 
   const circles = finitePoints
     .map((point) => {
@@ -499,7 +566,7 @@ export const renderScatterSvg = (
   const xAxis = xTicks
     .map((tick) => {
       const x = scaleX(tick);
-      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
     })
     .join("");
   const yAxis = yTicks
@@ -587,6 +654,16 @@ export const renderHeatmapSvg = (
   const plotHeight = height - margin.top - margin.bottom;
   const cellWidth = plotWidth / payload.col_labels.length;
   const cellHeight = plotHeight / payload.row_labels.length;
+  const visibleXLabels = payload.col_labels
+    .filter((_, index) =>
+      shouldRenderTick(index, payload.col_labels.length, s.maxXTicks)
+    )
+    .map((label) => formatLabel(label, s.xMaxLabelLength));
+  const xTickAngle = resolveXTickAngle({
+    labels: visibleXLabels,
+    settings: s,
+    spacing: plotWidth / Math.max(1, visibleXLabels.length - 1),
+  });
   const colorForValue = (value: number) => {
     const normalized = Math.max(0, Math.min(1, (value + 1) / 2));
     return normalized <= 0.5
@@ -623,7 +700,7 @@ export const renderHeatmapSvg = (
             return "";
           }
           const x = margin.left + index * cellWidth + cellWidth / 2;
-          return `<text transform="translate(${x} ${margin.top + plotHeight + 22}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(label, s.xMaxLabelLength))}<title>${escapeXml(label)}</title></text>`;
+          return `<text transform="translate(${x} ${margin.top + plotHeight + 22}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(label, s.xMaxLabelLength))}<title>${escapeXml(label)}</title></text>`;
         })
         .join("")}
       <g ${s.showGrid ? 'stroke="#ffffff" stroke-width="1"' : ""}>${cells}</g>
@@ -662,6 +739,14 @@ export const renderVolcanoSvg = (
     margin.top + plotHeight - (value / (yMax || 1)) * plotHeight;
   const xTicks = buildTicks(xMin, xMax, s.maxXTicks);
   const yTicks = buildTicks(0, yMax, s.maxYTicks);
+  const xTickLabels = xTicks.map((tick) =>
+    formatNumericTick(tick, s.xMaxLabelLength)
+  );
+  const xTickAngle = resolveXTickAngle({
+    labels: xTickLabels,
+    settings: s,
+    spacing: plotWidth / Math.max(1, xTickLabels.length - 1),
+  });
 
   const thresholdY =
     payload.yTransform === "negative-log10" && payload.yThreshold
@@ -701,7 +786,7 @@ export const renderVolcanoSvg = (
   const xAxis = xTicks
     .map((tick) => {
       const x = scaleX(tick);
-      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${s.xTickAngle})" text-anchor="${s.xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
     })
     .join("");
   const yAxis = yTicks
