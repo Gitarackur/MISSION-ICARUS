@@ -8,6 +8,10 @@ import {
   PersistentWorkerUnavailableError,
 } from '../core/PersistentJsonWorker';
 
+type PersistentJsonWorkerFactory = (
+  ...args: ConstructorParameters<typeof PersistentJsonWorker>
+) => PersistentJsonWorker;
+
 export default class EmbeddedRManager {
   private rScriptExe: string | null;
   private bundledRuntimeRoot: string | null;
@@ -16,8 +20,12 @@ export default class EmbeddedRManager {
   private worker: PersistentJsonWorker | null = null;
   private workerScriptPath: string | null = null;
   private workerDisabled = false;
+  private disposed = false;
 
-  constructor() {
+  constructor(
+    private readonly workerFactory: PersistentJsonWorkerFactory = (...args) =>
+      new PersistentJsonWorker(...args)
+  ) {
     this.bundledRuntimeRoot = this.findBundledRuntimeRoot();
     this.rScriptExe = this.findRScriptPath();
     this.usingBundledRuntime =
@@ -223,13 +231,15 @@ export default class EmbeddedRManager {
   }
 
   public async warmUp(scriptPath: string): Promise<boolean> {
-    if (this.workerDisabled) return false;
+    if (this.disposed || this.workerDisabled) return false;
 
+    let worker: PersistentJsonWorker | null = null;
     try {
-      await this.getWorker(scriptPath).start();
-      return true;
+      worker = this.getWorker(scriptPath);
+      await worker.start();
+      return !this.disposed && this.worker === worker;
     } catch (error) {
-      this.disableWorker(error);
+      this.disableWorker(worker, error);
       return false;
     }
   }
@@ -238,22 +248,39 @@ export default class EmbeddedRManager {
     scriptPath: string,
     args: string[] = []
   ): Promise<string> {
+    if (this.disposed) {
+      throw new PersistentWorkerUnavailableError(
+        'R renderer manager is disposed.'
+      );
+    }
+
     if (!this.workerDisabled && args[0]) {
+      let worker: PersistentJsonWorker | null = null;
       try {
-        return await this.getWorker(scriptPath).request({ payload: args[0] });
+        worker = this.getWorker(scriptPath);
+        return await worker.request({ payload: args[0] });
       } catch (error) {
         if (!(error instanceof PersistentWorkerUnavailableError)) throw error;
-        this.disableWorker(error);
+        if (this.disposed) throw error;
+        this.disableWorker(worker, error);
       }
     }
 
+    if (this.disposed) {
+      throw new PersistentWorkerUnavailableError(
+        'R renderer manager is disposed.'
+      );
+    }
     return this.runRScript(scriptPath, args);
   }
 
   public dispose(): void {
-    this.worker?.dispose();
+    if (this.disposed) return;
+    this.disposed = true;
+    const worker = this.worker;
     this.worker = null;
     this.workerScriptPath = null;
+    worker?.dispose();
   }
 
 
@@ -262,6 +289,11 @@ export default class EmbeddedRManager {
     args: string[] = [],
     requiredPackages: string[] = []
   ): Promise<string> {
+    if (this.disposed) {
+      return Promise.reject(
+        new PersistentWorkerUnavailableError('R renderer manager is disposed.')
+      );
+    }
     if (!this.rScriptExe) {
       return Promise.reject(new Error('Rscript executable not found on this system.'));
     }
@@ -351,6 +383,11 @@ export default class EmbeddedRManager {
   }
 
   private getWorker(scriptPath: string): PersistentJsonWorker {
+    if (this.disposed) {
+      throw new PersistentWorkerUnavailableError(
+        'R renderer manager is disposed.'
+      );
+    }
     if (this.worker && this.workerScriptPath === scriptPath) return this.worker;
     if (!this.rScriptExe) {
       throw new PersistentWorkerUnavailableError(
@@ -358,7 +395,10 @@ export default class EmbeddedRManager {
       );
     }
 
-    this.worker?.dispose();
+    const previousWorker = this.worker;
+    this.worker = null;
+    this.workerScriptPath = null;
+    previousWorker?.dispose();
     const workerScript = resourcePath('scripts', 'r', 'plot_r_worker.r');
     if (!fs.existsSync(workerScript)) {
       throw new PersistentWorkerUnavailableError(
@@ -366,7 +406,7 @@ export default class EmbeddedRManager {
       );
     }
 
-    this.worker = new PersistentJsonWorker(
+    this.worker = this.workerFactory(
       this.rScriptExe,
       [workerScript, scriptPath],
       { env: this.getRuntimeEnv() },
@@ -376,15 +416,20 @@ export default class EmbeddedRManager {
     return this.worker;
   }
 
-  private disableWorker(error: unknown): void {
+  private disableWorker(
+    failedWorker: PersistentJsonWorker | null,
+    error: unknown
+  ): void {
+    if (this.disposed || this.worker !== failedWorker) return;
     console.warn(
       'Persistent R renderer unavailable; using one-shot rendering.',
       error
     );
-    this.worker?.dispose();
+    const worker = this.worker;
     this.worker = null;
     this.workerScriptPath = null;
     this.workerDisabled = true;
+    worker?.dispose();
   }
 
 

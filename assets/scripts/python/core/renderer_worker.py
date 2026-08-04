@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import io
 import json
 import sys
@@ -13,11 +14,12 @@ def _emit_worker_message(message):
 
 
 def _execute_worker_command(commands, command_name, payload):
-    command = commands.get(command_name)
+    command_template = commands.get(command_name)
 
-    if not command:
+    if not command_template:
         raise ValueError(f"Unsupported renderer command: {command_name}")
 
+    command = copy.copy(command_template)
     command.args = [json.dumps(payload, separators=(",", ":")), "--use-json"]
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
@@ -36,10 +38,19 @@ def run_worker(commands):
         if not line.strip():
             continue
 
-        request_id = None
         try:
             request = json.loads(line)
-            request_id = request.get("id")
+            if (
+                not isinstance(request, dict)
+                or type(request.get("id")) is not int
+            ):
+                raise ValueError("Worker request must contain a numeric id")
+        except (json.JSONDecodeError, ValueError) as error:
+            print(f"Ignoring invalid worker request: {error}", file=sys.stderr)
+            continue
+
+        request_id = request["id"]
+        try:
             result = _execute_worker_command(
                 commands,
                 request.get("command"),
