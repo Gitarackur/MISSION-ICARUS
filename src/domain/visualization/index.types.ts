@@ -88,6 +88,7 @@ export type SavedImageVisualizationData = {
 export type VisualizationDisplaySettings = {
   xAxisLabel: string;
   yAxisLabel: string;
+  autoRotateXLabels: boolean;
   xTickAngle: number;
   yTickAngle: number;
   xMaxLabelLength: number;

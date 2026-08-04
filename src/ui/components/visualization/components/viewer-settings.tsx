@@ -21,7 +21,9 @@ function VisualizationSettingsPanel({
             Plot Settings
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            Tick limits automatically hide overlapping labels without removing data.
+            Changes update Native immediately and automatically regenerate the selected
+            Python or R renderer. X labels stay horizontal when they fit and rotate only
+            when crowded; tick limits never remove data.
           </p>
         </div>
       ) : null}
@@ -174,9 +176,26 @@ function VisualizationSettingsPanel({
             ))}
           </div>
         </div>
-        <label className={s.configField()}>
+        <label className="flex items-center gap-3 pt-6 text-sm text-gray-700 dark:text-gray-300">
+          <input
+            type="checkbox"
+            checked={settings.autoRotateXLabels}
+            onChange={(event) =>
+              setSettings((current) => ({
+                ...current,
+                autoRotateXLabels: event.target.checked,
+              }))
+            }
+          />
+          Auto-rotate crowded X labels
+        </label>
+        <label
+          className={`${s.configField()} ${
+            settings.autoRotateXLabels ? "opacity-55" : ""
+          }`}
+        >
           <span className={s.configLabel()}>
-            X Label Angle: {settings.xTickAngle}°
+            X Label Angle: {settings.autoRotateXLabels ? "Automatic" : `${settings.xTickAngle}°`}
           </span>
           <input
             type="range"
@@ -185,6 +204,7 @@ function VisualizationSettingsPanel({
             step="5"
             className={s.configRange()}
             value={settings.xTickAngle}
+            disabled={settings.autoRotateXLabels}
             onChange={(event) =>
               setSettings((current) => ({
                 ...current,

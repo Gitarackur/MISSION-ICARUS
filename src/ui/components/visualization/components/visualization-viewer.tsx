@@ -1,4 +1,11 @@
-import { Download, Minus, Plus, RotateCcw, Settings2 } from "lucide-react";
+import {
+  Download,
+  LoaderCircle,
+  Minus,
+  Plus,
+  RotateCcw,
+  Settings2,
+} from "lucide-react";
 import { useVisualizationViewport } from "@/app-layer/visualization/hooks/useVisualizationViewport";
 import {
   getVisualizationLabel,
@@ -19,6 +26,7 @@ export function VisualizationViewer({
   displayMode,
   displayRendererOptions,
   hasVisualizations,
+  isRendererRefreshing,
   onDownload,
   onSelectVisualization,
   onSetDisplayMode,
@@ -113,6 +121,18 @@ export function VisualizationViewer({
             </div>
           )}
 
+          {isRendererRefreshing &&
+          (displayMode === "python" || displayMode === "r") ? (
+            <span
+              className="inline-flex items-center gap-2 text-xs font-medium text-blue-600 dark:text-blue-300"
+              role="status"
+              aria-live="polite"
+            >
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              Updating {displayMode === "python" ? "Python" : "R"} renderer
+            </span>
+          ) : null}
+
           <button
             type="button"
             className={s.secondaryButton()}
@@ -126,7 +146,7 @@ export function VisualizationViewer({
             type="button"
             className={s.tertiaryButton()}
             onClick={onDownload}
-            disabled={!activeDisplayImage}
+            disabled={!activeDisplayImage || isRendererRefreshing}
           >
             <Download className="h-4 w-4" />
             Download

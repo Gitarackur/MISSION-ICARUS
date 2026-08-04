@@ -1,4 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import {
   BarChartPayload,
   BoxPlotPayload,
@@ -39,6 +47,9 @@ type DisplayWarning = {
   title: string;
   message: string;
 };
+type LiveDisplayMode = "python" | "r";
+
+const SETTINGS_RENDER_DEBOUNCE_MS = 350;
 
 const getErrorMessage = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
@@ -160,11 +171,18 @@ export const useVisualizationDisplay = ({
   visualizations: VisualizationRecord[];
 }) => {
   const [displayMode, setDisplayMode] = useState<DisplayMode>("saved");
-  const [settings, setSettings] = useState<VisualizationDisplaySettings>(
+  const [settings, setSettingsState] = useState<VisualizationDisplaySettings>(
     getVisualizationDisplaySettings(activeVisualization)
   );
+  const [rendererSettings, setRendererSettings] =
+    useState<VisualizationDisplaySettings>(settings);
   const [pythonDisplayImage, setPythonDisplayImage] = useState<string | null>(null);
   const [rDisplayImage, setRDisplayImage] = useState<string | null>(null);
+  const [pythonRenderKey, setPythonRenderKey] = useState<string | null>(null);
+  const [rRenderKey, setRRenderKey] = useState<string | null>(null);
+  const [refreshingRenderer, setRefreshingRenderer] =
+    useState<LiveDisplayMode | null>(null);
+  const previousDisplayModeRef = useRef<DisplayMode>(displayMode);
   const [rendererAvailability, setRendererAvailability] = useState({
     python: true,
     r: false,
@@ -207,71 +225,137 @@ export const useVisualizationDisplay = ({
   }, []);
 
   useEffect(() => {
-    setSettings(getVisualizationDisplaySettings(activeVisualization));
+    const nextSettings = getVisualizationDisplaySettings(activeVisualization);
+    setSettingsState(nextSettings);
+    setRendererSettings(nextSettings);
     setDisplayMode(preferredDisplayMode);
     setPythonDisplayImage(null);
     setRDisplayImage(null);
+    setPythonRenderKey(null);
+    setRRenderKey(null);
+    setRefreshingRenderer(null);
     setRendererErrors({});
     setDisplayWarning(null);
   }, [activeVisualization, preferredDisplayMode]);
 
   useEffect(() => {
-    setPythonDisplayImage(null);
-    setRDisplayImage(null);
-    setRendererErrors({});
+    const timeout = window.setTimeout(() => {
+      setRendererSettings(settings);
+    }, SETTINGS_RENDER_DEBOUNCE_MS);
+
+    return () => window.clearTimeout(timeout);
   }, [settings]);
 
   useEffect(() => {
-    if (!activeVisualization) return;
-    if (displayMode !== "python" && displayMode !== "r") return;
+    const modeChanged = previousDisplayModeRef.current !== displayMode;
+    previousDisplayModeRef.current = displayMode;
 
-    const image = displayMode === "python" ? pythonDisplayImage : rDisplayImage;
-    if (image) return;
+    if (modeChanged && (displayMode === "python" || displayMode === "r")) {
+      setRendererSettings(settings);
+    }
+  }, [displayMode, settings]);
+
+  const settingsSignature = useMemo(() => JSON.stringify(settings), [settings]);
+  const rendererSettingsSignature = useMemo(
+    () => JSON.stringify(rendererSettings),
+    [rendererSettings]
+  );
+
+  useEffect(() => {
+    if (!activeVisualization) {
+      setRefreshingRenderer(null);
+      return;
+    }
+    if (displayMode !== "python" && displayMode !== "r") {
+      setRefreshingRenderer(null);
+      return;
+    }
+
+    const liveMode = displayMode;
+    if (settingsSignature !== rendererSettingsSignature) {
+      setRefreshingRenderer(liveMode);
+      return;
+    }
+
+    const image = liveMode === "python" ? pythonDisplayImage : rDisplayImage;
+    const renderedKey = liveMode === "python" ? pythonRenderKey : rRenderKey;
+    const requestedRenderKey = `${activeVisualization.id}:${rendererSettingsSignature}`;
+    if (image && renderedKey === requestedRenderKey) {
+      setRefreshingRenderer(null);
+      return;
+    }
 
     if (
-      (displayMode === "python" && !rendererAvailability.python) ||
-      (displayMode === "r" && !rendererAvailability.r)
+      (liveMode === "python" && !rendererAvailability.python) ||
+      (liveMode === "r" && !rendererAvailability.r)
     ) {
       setRendererErrors((previous) => ({
         ...previous,
-        [displayMode]:
-          displayMode === "python"
+        [liveMode]:
+          liveMode === "python"
             ? "Python renderer is not available on this system."
             : "R renderer is not available on this system.",
       }));
+      setRefreshingRenderer(null);
       return;
     }
 
     let cancelled = false;
 
     const loadRendererImage = async () => {
+      setRefreshingRenderer(liveMode);
+      setDisplayWarning(null);
+      setRendererErrors((previous) => {
+        const next = { ...previous };
+        delete next[liveMode];
+        return next;
+      });
+
       try {
         const nextImage = await buildRendererImage(
           activeVisualization,
-          displayMode,
-          settings
+          liveMode,
+          rendererSettings
         );
 
         if (cancelled) return;
+        if (!nextImage) {
+          throw new Error(
+            `${liveMode === "python" ? "Python" : "R"} renderer returned no image.`
+          );
+        }
 
-        if (displayMode === "python") {
+        if (liveMode === "python") {
           setPythonDisplayImage(nextImage);
+          setPythonRenderKey(requestedRenderKey);
         } else {
           setRDisplayImage(nextImage);
+          setRRenderKey(requestedRenderKey);
         }
 
         setRendererErrors((previous) => {
           const next = { ...previous };
-          delete next[displayMode];
+          delete next[liveMode];
           return next;
         });
       } catch (error) {
         if (cancelled) return;
 
+        const message = getErrorMessage(error);
+
         setRendererErrors((previous) => ({
           ...previous,
-          [displayMode]: getErrorMessage(error),
+          [liveMode]: message,
         }));
+
+        if (image) {
+          setDisplayWarning({
+            title: `${liveMode === "python" ? "Python" : "R"} renderer update failed`,
+            message: `${message} The previous renderer image is still displayed.`,
+          });
+        }
+      } finally {
+        if (!cancelled) setRefreshingRenderer(null);
       }
     };
 
@@ -284,9 +368,13 @@ export const useVisualizationDisplay = ({
     activeVisualization,
     displayMode,
     pythonDisplayImage,
+    pythonRenderKey,
     rDisplayImage,
+    rRenderKey,
     rendererAvailability,
-    settings,
+    rendererSettings,
+    rendererSettingsSignature,
+    settingsSignature,
   ]);
 
   const nativeDisplayImage = useMemo(
@@ -472,6 +560,43 @@ export const useVisualizationDisplay = ({
     }
   }, [displayMode, displayRendererOptions]);
 
+  const selectDisplayMode = useCallback((mode: DisplayMode) => {
+    setRendererErrors((previous) => {
+      const next = { ...previous };
+      delete next[mode];
+      return next;
+    });
+    setDisplayWarning(null);
+    setDisplayMode(mode);
+  }, []);
+
+  const updateSettings = useCallback<
+    Dispatch<SetStateAction<VisualizationDisplaySettings>>
+  >(
+    (update) => {
+      setSettingsState(update);
+
+      if (displayMode !== "saved") return;
+
+      const matchingLiveMode: DisplayMode | null =
+        activeVisualization?.renderer === "python"
+          ? "python"
+          : activeVisualization?.renderer === "r"
+            ? "r"
+            : activeVisualization?.renderer === "recharts"
+              ? "native"
+              : null;
+
+      if (
+        matchingLiveMode &&
+        supportsRenderer(activeVisualization, matchingLiveMode)
+      ) {
+        selectDisplayMode(matchingLiveMode);
+      }
+    },
+    [activeVisualization, displayMode, selectDisplayMode]
+  );
+
   const currentFileName = useMemo(() => {
     const label = activeVisualization
       ? getVisualizationLabel(activeVisualization, 0)
@@ -503,9 +628,10 @@ export const useVisualizationDisplay = ({
     displayRendererOptions,
     downloadCurrentVisualization,
     hasVisualizations: visualizations.length > 0,
+    isRendererRefreshing: refreshingRenderer === displayMode,
     clearDisplayWarning: () => setDisplayWarning(null),
     settings,
-    setDisplayMode,
-    setSettings,
+    setDisplayMode: selectDisplayMode,
+    setSettings: updateSettings,
   };
 };

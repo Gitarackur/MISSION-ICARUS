@@ -37,6 +37,7 @@ export type VisualizationViewerProps = {
   displayMode: VisualizationDisplayMode;
   displayRendererOptions: VisualizationRendererOption[];
   hasVisualizations: boolean;
+  isRendererRefreshing: boolean;
   onDownload: () => void;
   onSelectVisualization: (visualizationId: string) => void;
   onSetDisplayMode: (mode: VisualizationDisplayMode) => void;

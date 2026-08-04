@@ -1,5 +1,6 @@
 import json
 import math
+from matplotlib.ticker import MaxNLocator
 
 
 DEFAULT_PLOT_COLORS = [
@@ -31,7 +32,9 @@ def get_display_settings(data):
         'max_y_ticks': int(_bounded_number(raw.get('maxYTicks'), 8, 2, 20)),
         'x_label_length': int(_bounded_number(raw.get('xMaxLabelLength'), 16, 4, 60)),
         'y_label_length': int(_bounded_number(raw.get('yMaxLabelLength'), 12, 4, 40)),
-        'x_tick_angle': _bounded_number(raw.get('xTickAngle'), -35, -90, 90),
+        'auto_rotate_x_labels': bool(raw.get('autoRotateXLabels', True)),
+        'x_tick_angle': _bounded_number(raw.get('xTickAngle'), 0, -90, 90),
+        'y_tick_angle': _bounded_number(raw.get('yTickAngle'), 0, -90, 90),
         'tick_font_size': _bounded_number(raw.get('tickFontSize'), 10, 6, 24),
         'axis_label_font_size': _bounded_number(raw.get('axisLabelFontSize'), 12, 8, 32),
         'point_size': _bounded_number(raw.get('pointSize'), 4, 1, 16),
@@ -40,6 +43,55 @@ def get_display_settings(data):
         'x_axis_label': raw.get('xAxisLabel'),
         'y_axis_label': raw.get('yAxisLabel'),
     }
+
+
+def _set_x_tick_angle(labels, angle):
+    for label in labels:
+        label.set_rotation(angle)
+        label.set_horizontalalignment('right' if angle else 'center')
+        label.set_rotation_mode('anchor')
+
+
+def _x_tick_labels_overlap(axis, labels):
+    axis.figure.canvas.draw()
+    renderer = axis.figure.canvas.get_renderer()
+    visible_labels = [
+        label for label in labels if label.get_visible() and label.get_text()
+    ]
+    bounds = [label.get_window_extent(renderer=renderer) for label in visible_labels]
+    return any(
+        current.x1 + 4 > following.x0
+        for current, following in zip(bounds, bounds[1:])
+    )
+
+
+def apply_axis_tick_settings(axis, settings, numeric_x=False, numeric_y=False):
+    if numeric_x:
+        axis.xaxis.set_major_locator(MaxNLocator(nbins=settings['max_x_ticks']))
+    if numeric_y:
+        axis.yaxis.set_major_locator(MaxNLocator(nbins=settings['max_y_ticks']))
+
+    x_labels = axis.get_xticklabels()
+    if settings['auto_rotate_x_labels']:
+        for angle in (0, -30, -45, -60):
+            _set_x_tick_angle(x_labels, angle)
+            if not _x_tick_labels_overlap(axis, x_labels):
+                break
+    else:
+        _set_x_tick_angle(x_labels, settings['x_tick_angle'])
+
+    for label in axis.get_yticklabels():
+        label.set_rotation(settings['y_tick_angle'])
+        label.set_horizontalalignment('right')
+        label.set_verticalalignment('center')
+        label.set_rotation_mode('anchor')
+
+
+def apply_grid_settings(axis, settings, axis_name='both'):
+    if settings['show_grid']:
+        axis.grid(True, axis=axis_name, alpha=0.22, linewidth=0.8)
+    else:
+        axis.grid(False)
 
 
 def truncate_label(value, max_length):

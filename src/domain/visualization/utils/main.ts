@@ -283,6 +283,7 @@ export const buildDefaultVisualizationDisplaySettings = (
   const xAxisLabel = payload?.xAxisLabel;
   const yAxisLabel = payload?.yAxisLabel;
   const baseSettings = {
+    autoRotateXLabels: true,
     yTickAngle: 0,
     tickFontSize: 11,
     axisLabelFontSize: 14,
@@ -305,7 +306,7 @@ export const buildDefaultVisualizationDisplaySettings = (
         ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Columns",
         yAxisLabel: yAxisLabel ?? "Rows",
-        xTickAngle: -45,
+        xTickAngle: 0,
         xMaxLabelLength: 16,
         yMaxLabelLength: 16,
         maxXTicks: 18,
@@ -353,7 +354,7 @@ export const buildDefaultVisualizationDisplaySettings = (
         ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Columns",
         yAxisLabel: yAxisLabel ?? "Value",
-        xTickAngle: -35,
+        xTickAngle: 0,
         xMaxLabelLength: 16,
         yMaxLabelLength: 10,
         maxXTicks: 14,
@@ -365,7 +366,7 @@ export const buildDefaultVisualizationDisplaySettings = (
         ...baseSettings,
         xAxisLabel: xAxisLabel ?? "Columns",
         yAxisLabel: yAxisLabel ?? "Value",
-        xTickAngle: -35,
+        xTickAngle: 0,
         xMaxLabelLength: 16,
         yMaxLabelLength: 10,
         maxXTicks: 14,
@@ -377,7 +378,7 @@ export const buildDefaultVisualizationDisplaySettings = (
         ...baseSettings,
         xAxisLabel: "X Axis",
         yAxisLabel: "Y Axis",
-        xTickAngle: -20,
+        xTickAngle: 0,
         xMaxLabelLength: 14,
         yMaxLabelLength: 10,
         maxXTicks: 10,

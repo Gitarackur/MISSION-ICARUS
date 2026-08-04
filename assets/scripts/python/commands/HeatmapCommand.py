@@ -6,6 +6,7 @@ from io import BytesIO
 from matplotlib.colors import LinearSegmentedColormap
 from core.Command import Command
 from commands.utils import (
+    apply_axis_tick_settings,
     get_display_settings,
     load_payload,
     truncate_label,
@@ -89,6 +90,7 @@ class HeatmapCommand(Command):
         )
         axis.set_title(data.get('title', 'Heatmap'), pad=12)
         axis.tick_params(axis='both', labelsize=settings['tick_font_size'])
+        apply_axis_tick_settings(axis, settings)
         figure.tight_layout(pad=1.4)
 
         if preview:

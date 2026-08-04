@@ -4,7 +4,12 @@ import base64
 from io import BytesIO
 from sklearn.decomposition import PCA
 from core.Command import Command
-from commands.utils import get_display_settings, load_payload
+from commands.utils import (
+    apply_axis_tick_settings,
+    apply_grid_settings,
+    get_display_settings,
+    load_payload,
+)
 
 
 
@@ -67,7 +72,8 @@ class PCAPlotCommand(Command):
         )
         axis.set_title(data.get('title', 'PCA Plot'), pad=12)
         axis.tick_params(axis='both', labelsize=settings['tick_font_size'])
-        axis.grid(settings['show_grid'], alpha=0.22, linewidth=0.8)
+        apply_grid_settings(axis, settings)
+        apply_axis_tick_settings(axis, settings, numeric_x=True, numeric_y=True)
         axis.set_axisbelow(True)
         figure.tight_layout(pad=1.4)
 
