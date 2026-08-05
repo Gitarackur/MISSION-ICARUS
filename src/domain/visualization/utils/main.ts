@@ -201,6 +201,92 @@ export const getSavedVisualizationPayload = (
   return data?.payload;
 };
 
+const buildColorSeriesLabels = (
+  entries: Array<{ colorIndex: number; label: string }>,
+  colorCount: number
+) => {
+  const labels: Array<string | undefined> = Array.from({ length: colorCount });
+
+  entries.forEach(({ colorIndex, label }) => {
+    const normalizedLabel = label.trim();
+    if (!normalizedLabel || colorCount <= 0) return;
+
+    const normalizedIndex = colorIndex % colorCount;
+    labels[normalizedIndex] = labels[normalizedIndex]
+      ? `${labels[normalizedIndex]}, ${normalizedLabel}`
+      : normalizedLabel;
+  });
+
+  return labels;
+};
+
+export const getVisualizationColorSeriesLabels = (
+  visualization: VisualizationRecord | undefined,
+  colorCount: number
+): Array<string | undefined> => {
+  if (!visualization || colorCount <= 0) return [];
+
+  const payload = getSavedVisualizationPayload(visualization);
+  if (!payload || typeof payload !== "object") return [];
+
+  if (visualization.visualizationType === "heatmap") {
+    return buildColorSeriesLabels(
+      [
+        { colorIndex: 0, label: "Negative correlation" },
+        { colorIndex: 2, label: "Positive correlation" },
+      ],
+      colorCount
+    );
+  }
+
+  if (visualization.visualizationType === "volcano") {
+    return buildColorSeriesLabels(
+      [
+        { colorIndex: 0, label: "Downregulated" },
+        { colorIndex: 2, label: "Upregulated" },
+        { colorIndex: 4, label: "Not significant" },
+      ],
+      colorCount
+    );
+  }
+
+  if (visualization.visualizationType === "pca") {
+    const groups = (payload as { groups?: unknown }).groups;
+    const groupNames = Array.isArray(groups)
+      ? Array.from(
+          new Set(
+            groups
+              .filter((group): group is string => typeof group === "string")
+              .map((group) => group.trim())
+              .filter(Boolean)
+          )
+        )
+      : [];
+
+    return buildColorSeriesLabels(
+      (groupNames.length ? groupNames : ["PCA scores"]).map((label, index) => ({
+        colorIndex: index,
+        label,
+      })),
+      colorCount
+    );
+  }
+
+  const series = (payload as { series?: unknown }).series;
+  if (!Array.isArray(series)) return [];
+
+  return buildColorSeriesLabels(
+    series.flatMap((entry, index) => {
+      if (!entry || typeof entry !== "object") return [];
+      const name = (entry as { name?: unknown }).name;
+      return typeof name === "string"
+        ? [{ colorIndex: index, label: name }]
+        : [];
+    }),
+    colorCount
+  );
+};
+
 export const getVisualizationMatrixId = (
   visualization?: VisualizationRecord
 ): string | null => {

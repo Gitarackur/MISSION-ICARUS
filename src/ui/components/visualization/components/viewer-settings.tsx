@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import { VisualizationSettingsPanelProps } from "../types/index.types";
 
 function VisualizationSettingsPanel({
+  colorSeriesLabels,
   compact = false,
   settings,
   setSettings,
@@ -152,44 +153,51 @@ function VisualizationSettingsPanel({
             }
           />
         </label>
-        <div className={s.configField()}>
-          <span className={s.configStrongLabel()}>Series Colors</span>
-          <div className={s.configColorGrid()}>
-            {settings.plotColors.map((color, index) => (
-              <label
-                key={index}
-                className={s.configColorOption()}
-                title={`Series ${index + 1}: ${color}`}
-              >
-                <span
-                  className={s.configColorSwatch()}
-                  style={{ backgroundColor: color }}
-                >
-                  <input
-                    type="color"
-                    className={s.configColorInput()}
-                    value={color}
-                    aria-label={`Series ${index + 1} color`}
-                    onChange={(event) =>
-                      setSettings((current) => ({
-                        ...current,
-                        plotColors: current.plotColors.map((item, colorIndex) =>
-                          colorIndex === index ? event.target.value : item
-                        ),
-                      }))
-                    }
-                  />
-                </span>
-                <span className={s.configColorText()}>
-                  <span className={s.configColorName()}>Series {index + 1}</span>
-                  <span className={s.configColorValue()}>
-                    {color}
-                  </span>
-                </span>
-              </label>
-            ))}
+        {colorSeriesLabels.some(Boolean) ? (
+          <div className={s.configField()}>
+            <span className={s.configStrongLabel()}>Series Colors</span>
+            <div className={s.configColorGrid()}>
+              {settings.plotColors.map((color, index) => {
+                const seriesLabel = colorSeriesLabels[index];
+                if (!seriesLabel) return null;
+
+                return (
+                  <label
+                    key={index}
+                    className={s.configColorOption()}
+                    title={`${seriesLabel}: ${color}`}
+                  >
+                    <span
+                      className={s.configColorSwatch()}
+                      style={{ backgroundColor: color }}
+                    >
+                      <input
+                        type="color"
+                        className={s.configColorInput()}
+                        value={color}
+                        aria-label={`${seriesLabel} color`}
+                        onChange={(event) =>
+                          setSettings((current) => ({
+                            ...current,
+                            plotColors: current.plotColors.map((item, colorIndex) =>
+                              colorIndex === index ? event.target.value : item
+                            ),
+                          }))
+                        }
+                      />
+                    </span>
+                    <span className={s.configColorText()}>
+                      <span className={s.configColorName()}>{seriesLabel}</span>
+                      <span className={s.configColorValue()}>
+                        {color}
+                      </span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
           </div>
-        </div>
+        ) : null}
         <label className={s.configToggleField()}>
           <input
             type="checkbox"
