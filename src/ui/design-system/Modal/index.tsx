@@ -1,4 +1,5 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { modalStyleVariants } from './variants/modal.variants';
 
@@ -16,30 +17,16 @@ interface ModalProps {
 }
 
 export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
-  const [isVisible, setIsVisible] = useState(false);
   const styles = modalStyleVariants();
-
-  useEffect(() => {
-    if (isOpen) {
-      requestAnimationFrame(() => setIsVisible(true));
-    } else {
-      setIsVisible(false);
-    }
-  }, [isOpen]);
 
   if (!isOpen) {
     return null;
   }
 
-  return (
-    <div
-      className={styles.modalOverlay()}
-      data-open={isVisible}
-      onClick={onClose}
-    >
+  return createPortal(
+    <div className={styles.modalOverlay()} onClick={onClose}>
       <div
         className={styles.modalContent()}
-        data-open={isVisible}
         onClick={e => e.stopPropagation()}
       >
         <div className={styles.modalHeader()}>
@@ -50,6 +37,7 @@ export const Modal = ({ isOpen, onClose, title, children }: ModalProps) => {
         </div>
         <div className={styles.modalDataContainer()}>{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

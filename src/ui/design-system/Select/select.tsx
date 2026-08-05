@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check, X, Search } from "lucide-react";
 import { useControllableState } from "@/ui/hooks/useControllableState";
+import { useDropdownPortal } from "./hooks/useDropdownPortal";
 import { singleSelect } from "./style-variants/main";
 export interface Option {
   value: string;
@@ -73,7 +75,8 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
 
     const [isOpen, setIsOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState("");
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const portalRef = useRef<HTMLDivElement>(null);
+    const { triggerRef, dropdownStyle } = useDropdownPortal(isOpen);
 
     // Generate classes using tailwind-variants
     const {
@@ -107,10 +110,12 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
     // close on outside click
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-        if (
-          dropdownRef.current &&
-          !dropdownRef.current.contains(event.target as Node)
-        ) {
+        const target = event.target as Node;
+        const insideTrigger =
+          triggerRef.current && triggerRef.current.contains(target);
+        const insidePortal =
+          portalRef.current && portalRef.current.contains(target);
+        if (!insideTrigger && !insidePortal) {
           setIsOpen(false);
           setSearchTerm("");
         }
@@ -118,7 +123,7 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
       document.addEventListener("mousedown", handleClickOutside);
       return () =>
         document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
+    }, [triggerRef]);
 
     const handleSelect = (option: Option): void => {
       if (disabled || option.disabled) return;
@@ -182,7 +187,7 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
           </label>
         )}
 
-        <div className={container()} ref={dropdownRef}>
+        <div className={container()} ref={triggerRef}>
           <div
             className={triggerClass()}
             onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -235,8 +240,9 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
             </div>
           </div>
 
-          {isOpen && !disabled && (
-            <div className={dropdown()}>
+          {isOpen && !disabled &&
+            createPortal(
+              <div ref={portalRef} style={dropdownStyle} className={dropdown()}>
               {searchable && (
                 <div className={searchContainer()}>
                   <div className="relative">
@@ -314,8 +320,9 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
                   {filteredOptions.length !== 1 ? "s" : ""} available
                 </div>
               )}
-            </div>
-          )}
+              </div>,
+              document.body
+            )}
         </div>
 
         {(error || helperText) && (
