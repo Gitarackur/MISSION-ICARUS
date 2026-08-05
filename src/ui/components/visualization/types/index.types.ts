@@ -72,6 +72,7 @@ export type PlotLibraryCard = {
 
 
 export interface VisualizationSettingsPanelProps {
+  colorSeriesLabels: Array<string | undefined>;
   compact?: boolean;
   settings: VisualizationDisplaySettings;
   setSettings: React.Dispatch<React.SetStateAction<VisualizationDisplaySettings>>;

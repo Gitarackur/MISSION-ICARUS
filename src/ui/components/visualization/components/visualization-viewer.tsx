@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { useVisualizationViewport } from "@/app-layer/visualization/hooks/useVisualizationViewport";
 import {
+  getVisualizationColorSeriesLabels,
   getVisualizationLabel,
   getVisualizationPayloadPointCount,
 } from "@/domain/visualization/utils/main";
@@ -37,6 +38,10 @@ export function VisualizationViewer({
   onToggleShowSettings,
 }: VisualizationViewerProps) {
   const s = visualizationStyles();
+  const colorSeriesLabels = getVisualizationColorSeriesLabels(
+    activeVisualization,
+    settings.plotColors.length,
+  );
   const visualizationOptions = savedVisualizations.map(
     (visualization, index) => ({
       value: visualization.id,
@@ -194,6 +199,7 @@ export function VisualizationViewer({
                       onWheel={(event) => event.stopPropagation()}
                     >
                       <VisualizationSettingsPanel
+                        colorSeriesLabels={colorSeriesLabels}
                         settings={settings}
                         onToggleShowSettings={onToggleShowSettings}
                         setSettings={setSettings}
