@@ -22,6 +22,7 @@ function PlotActionCard({
   renderers,
   renderer,
   selection,
+  showVolcanoLegendLabels = false,
   title,
   xAxisOptions,
   yAxisOptions,
@@ -154,6 +155,49 @@ function PlotActionCard({
             placeholder="Select columns"
             maxDisplayed={2}
           />
+        ) : null}
+
+        {showVolcanoLegendLabels ? (
+          <>
+            <label>
+              <span className={s.plotActionFieldLabel()}>
+                Positive-side label
+              </span>
+              <Input
+                value={selection.positiveLegendLabel ?? ""}
+                placeholder="Above + threshold"
+                onChange={(event) =>
+                  onSelectionChange({ positiveLegendLabel: event.target.value })
+                }
+              />
+            </label>
+            <label>
+              <span className={s.plotActionFieldLabel()}>
+                Negative-side label
+              </span>
+              <Input
+                value={selection.negativeLegendLabel ?? ""}
+                placeholder="Below − threshold"
+                onChange={(event) =>
+                  onSelectionChange({ negativeLegendLabel: event.target.value })
+                }
+              />
+            </label>
+            <label className={s.plotActionFullField()}>
+              <span className={s.plotActionFieldLabel()}>
+                Other-points label
+              </span>
+              <Input
+                value={selection.notSignificantLegendLabel ?? ""}
+                placeholder="Not significant"
+                onChange={(event) =>
+                  onSelectionChange({
+                    notSignificantLegendLabel: event.target.value,
+                  })
+                }
+              />
+            </label>
+          </>
         ) : null}
 
         {!xAxisOptions?.length && selection.nComponents !== undefined ? (

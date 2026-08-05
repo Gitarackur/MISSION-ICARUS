@@ -218,8 +218,8 @@ function VisualizationSettingsPanel({
           </span>
           <input
             type="range"
-            min="-65"
-            max="0"
+            min="0"
+            max="65"
             step="5"
             className={s.configRange()}
             value={settings.xTickAngle}

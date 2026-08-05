@@ -225,6 +225,7 @@ export const usePlotLibraryCards = ({
         (column) => !selectedXAxes(plotSelections.volcano).includes(column)
       ),
       labelAxisOptions: columnOptions.allColumns,
+      showVolcanoLegendLabels: true,
       onRendererChange: (renderer) => setPlotSelection("volcano", { renderer }),
       onSelectionChange: (selection) => setPlotSelection("volcano", selection),
     },

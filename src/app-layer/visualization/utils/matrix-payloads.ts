@@ -123,6 +123,13 @@ const getSelectedXAxes = (selection: PlotAxisSelection) =>
 const getSelectedLabelAxes = (selection: PlotAxisSelection) =>
   getSelectionValues(selection.labelAxes, selection.labelAxis);
 
+const buildVolcanoLegendLabels = (selection: PlotAxisSelection) => ({
+  positive: selection.positiveLegendLabel?.trim() || "Above + threshold",
+  negative: selection.negativeLegendLabel?.trim() || "Below − threshold",
+  notSignificant:
+    selection.notSignificantLegendLabel?.trim() || "Not significant",
+});
+
 const getSelectedNumericDescriptors = (
   matrix: MatrixRecord,
   columns?: string[]
@@ -259,6 +266,9 @@ export const getDefaultPlotSelection = (
         labelAxes: labelAxis ? [labelAxis] : [],
         labelAxis,
         applyNegativeLog10ToY: true,
+        positiveLegendLabel: "Above + threshold",
+        negativeLegendLabel: "Below − threshold",
+        notSignificantLegendLabel: "Not significant",
       };
     }
     case "pca":
@@ -593,6 +603,7 @@ const buildVolcanoFromExistingColumns = (
     xThreshold: 1,
     yThreshold: selection.applyNegativeLog10ToY ? 0.05 : undefined,
     yTransform: selection.applyNegativeLog10ToY ? "negative-log10" : "none",
+    legendLabels: buildVolcanoLegendLabels(selection),
   };
 };
 
@@ -671,6 +682,7 @@ export const buildConfiguredVolcanoPayload = (
       xThreshold: 1,
       yThreshold: 0.05,
       yTransform: "negative-log10",
+      legendLabels: buildVolcanoLegendLabels(selection),
     },
   };
 };
