@@ -41,11 +41,11 @@ export type VisualizationViewerProps = {
   onDownload: () => void;
   onSelectVisualization: (visualizationId: string) => void;
   onSetDisplayMode: (mode: VisualizationDisplayMode) => void;
-  onToggleSettings: () => void;
   settings: VisualizationDisplaySettings;
   savedVisualizations: VisualizationRecord[];
   setSettings: React.Dispatch<React.SetStateAction<VisualizationDisplaySettings>>;
   showSettings: boolean;
+  onToggleShowSettings: () => void;
 };
 
 
@@ -69,3 +69,11 @@ export type PlotLibraryCard = {
   onSelectionChange: (selection: Partial<PlotAxisSelection>) => void;
   onRender: () => void | Promise<void>;
 };
+
+
+export interface VisualizationSettingsPanelProps {
+  compact?: boolean;
+  settings: VisualizationDisplaySettings;
+  setSettings: React.Dispatch<React.SetStateAction<VisualizationDisplaySettings>>;
+  onToggleShowSettings: () => void;
+}
