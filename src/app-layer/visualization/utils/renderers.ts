@@ -766,9 +766,9 @@ export const renderVolcanoSvg = (
     .map((xValue, index) => {
       const yValue = yValues[index];
       const isXSignificant =
-        typeof payload.xThreshold === "number" ? Math.abs(xValue) >= payload.xThreshold : false;
+        typeof payload.xThreshold === "number" ? Math.abs(xValue) > payload.xThreshold : false;
       const isYSignificant =
-        typeof thresholdY !== "number" || yValue >= thresholdY;
+        typeof thresholdY !== "number" || yValue > thresholdY;
       const significant = isXSignificant && isYSignificant;
       const fill = significant
         ? xValue >= 0
