@@ -150,6 +150,11 @@ export const buildVolcanoPayload = (
     xThreshold: 1,
     yThreshold: 0.05,
     yTransform: "negative-log10",
+    legendLabels: {
+      positive: "Upregulated",
+      negative: "Downregulated",
+      notSignificant: "Not significant",
+    },
   };
 };
 
@@ -240,11 +245,21 @@ export const getVisualizationColorSeriesLabels = (
   }
 
   if (visualization.visualizationType === "volcano") {
+    const legendLabels = (payload as VolcanoPayload).legendLabels;
     return buildColorSeriesLabels(
       [
-        { colorIndex: 0, label: "Downregulated" },
-        { colorIndex: 2, label: "Upregulated" },
-        { colorIndex: 4, label: "Not significant" },
+        {
+          colorIndex: 0,
+          label: legendLabels?.negative?.trim() || "Below − threshold",
+        },
+        {
+          colorIndex: 2,
+          label: legendLabels?.positive?.trim() || "Above + threshold",
+        },
+        {
+          colorIndex: 4,
+          label: legendLabels?.notSignificant?.trim() || "Not significant",
+        },
       ],
       colorCount
     );

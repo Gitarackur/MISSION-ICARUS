@@ -72,12 +72,6 @@ class HeatmapCommand(Command):
                 for position in y_positions
             ])
 
-        plt.setp(
-            axis.get_xticklabels(),
-            rotation=settings['x_tick_angle'],
-            ha='right' if settings['x_tick_angle'] else 'center',
-            rotation_mode='anchor',
-        )
         axis.set_xlabel(
             settings['x_axis_label'] or data.get('xAxisLabel', 'Columns'),
             fontsize=settings['axis_label_font_size'],

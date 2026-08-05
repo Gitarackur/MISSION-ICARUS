@@ -19,6 +19,9 @@ export type PlotAxisSelection = {
   labelAxis?: string;
   columns?: string[];
   applyNegativeLog10ToY?: boolean;
+  positiveLegendLabel?: string;
+  negativeLegendLabel?: string;
+  notSignificantLegendLabel?: string;
   nComponents?: number;
 };
 
@@ -49,6 +52,11 @@ export type VolcanoPayload = {
   xThreshold?: number;
   yThreshold?: number;
   yTransform?: "none" | "negative-log10";
+  legendLabels?: {
+    positive?: string;
+    negative?: string;
+    notSignificant?: string;
+  };
 };
 
 export type BoxPlotPayload = {

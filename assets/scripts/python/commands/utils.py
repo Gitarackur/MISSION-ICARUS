@@ -49,6 +49,7 @@ def _set_x_tick_angle(labels, angle):
     for label in labels:
         label.set_rotation(angle)
         label.set_horizontalalignment('right' if angle else 'center')
+        label.set_verticalalignment('top')
         label.set_rotation_mode('anchor')
 
 
@@ -73,12 +74,14 @@ def apply_axis_tick_settings(axis, settings, numeric_x=False, numeric_y=False):
 
     x_labels = axis.get_xticklabels()
     if settings['auto_rotate_x_labels']:
-        for angle in (0, -30, -45, -60):
+        for angle in (0, 30, 45, 60):
             _set_x_tick_angle(x_labels, angle)
             if not _x_tick_labels_overlap(axis, x_labels):
                 break
     else:
         _set_x_tick_angle(x_labels, settings['x_tick_angle'])
+
+    axis.tick_params(axis='x', pad=6)
 
     for label in axis.get_yticklabels():
         label.set_rotation(settings['y_tick_angle'])

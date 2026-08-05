@@ -93,13 +93,13 @@ resolve_x_tick_angle <- function(labels = NULL) {
   label_height <- tick_font_size * 2
   available_width <- max(16, (plot_width - 160) / max(1, length(displayed_labels) - 1) - 8)
 
-  for (angle in c(0, -30, -45, -60)) {
+  for (angle in c(0, 30, 45, 60)) {
     radians <- abs(angle) * pi / 180
     projected_width <- widest_label * cos(radians) + label_height * sin(radians)
     if (projected_width <= available_width) return(angle)
   }
 
-  -60
+  60
 }
 
 plot_theme <- function(x_labels = NULL) {
@@ -253,26 +253,66 @@ build_heatmap_plot <- function(data) {
 }
 
 build_volcano_plot <- function(data) {
+  x <- as.numeric(unlist(data$x))
   y <- as.numeric(unlist(data$y))
 
   if (!is.null(data$yTransform) && identical(data$yTransform, "negative-log10")) {
     y <- -log10(pmax(y, 1e-300))
   }
 
+  x_threshold <- as.numeric(data$xThreshold %||% 1)
+  threshold_y <- NULL
+
+  if (!is.null(data$yThreshold)) {
+    threshold_y <- as.numeric(data$yThreshold)
+
+    if (!is.null(data$yTransform) && identical(data$yTransform, "negative-log10")) {
+      threshold_y <- -log10(max(threshold_y, 1e-300))
+    }
+  }
+
+  passes_y_threshold <- if (is.null(threshold_y)) rep(TRUE, length(y)) else y > threshold_y
+  category <- rep("not_significant", length(x))
+  category[x > x_threshold & passes_y_threshold] <- "positive"
+  category[x < -x_threshold & passes_y_threshold] <- "negative"
+
+  legend_labels <- data$legendLabels %||% list()
+  legend_label <- function(value, fallback) {
+    normalized <- trimws(as.character(value %||% "")[1])
+    if (nchar(normalized) > 0) normalized else fallback
+  }
+  category_labels <- c(
+    not_significant = legend_label(legend_labels$notSignificant, "Not significant"),
+    positive = legend_label(legend_labels$positive, "Above + threshold"),
+    negative = legend_label(legend_labels$negative, "Below − threshold")
+  )
+
   df <- data.frame(
-    x = as.numeric(unlist(data$x)),
+    x = x,
     y = y,
+    category = factor(category, levels = names(category_labels)),
     stringsAsFactors = FALSE
   )
 
-  plot_obj <- ggplot(df, aes(x = x, y = y)) +
-    geom_point(alpha = 0.7, color = plot_colors[1], size = point_size) +
+  plot_obj <- ggplot(df, aes(x = x, y = y, color = category)) +
+    geom_point(alpha = 0.7, size = point_size) +
     scale_x_continuous(n.breaks = max_x_ticks) +
     scale_y_continuous(n.breaks = max_y_ticks) +
+    scale_color_manual(
+      values = c(
+        not_significant = plot_colors[(4 %% length(plot_colors)) + 1],
+        positive = plot_colors[(2 %% length(plot_colors)) + 1],
+        negative = plot_colors[1]
+      ),
+      breaks = names(category_labels),
+      labels = unname(category_labels),
+      drop = FALSE
+    ) +
     labs(
       title = data$title %||% "Volcano Plot",
       x = axis_label("xAxisLabel", data$xAxisLabel %||% "X Axis"),
-      y = axis_label("yAxisLabel", data$yAxisLabel %||% "Y Axis")
+      y = axis_label("yAxisLabel", data$yAxisLabel %||% "Y Axis"),
+      color = NULL
     ) +
     plot_theme()
 
@@ -286,13 +326,7 @@ build_volcano_plot <- function(data) {
       )
   }
 
-  if (!is.null(data$yThreshold)) {
-    threshold_y <- as.numeric(data$yThreshold)
-
-    if (!is.null(data$yTransform) && identical(data$yTransform, "negative-log10")) {
-      threshold_y <- -log10(max(threshold_y, 1e-300))
-    }
-
+  if (!is.null(threshold_y)) {
     plot_obj <- plot_obj +
       geom_hline(
         yintercept = threshold_y,

@@ -39,6 +39,16 @@ class VolcanoPlotCommand(Command):
 
         x_threshold = data.get('xThreshold', 1.0)
 
+        legend_labels = data.get('legendLabels') or {}
+
+        def legend_label(key, fallback):
+            value = legend_labels.get(key)
+            return value.strip() if isinstance(value, str) and value.strip() else fallback
+
+        positive_label = legend_label('positive', 'Above + threshold')
+        negative_label = legend_label('negative', 'Below − threshold')
+        not_significant_label = legend_label('notSignificant', 'Not significant')
+
         settings = get_display_settings(data)
         dpi = 100
         figure, axis = plt.subplots(
@@ -58,13 +68,13 @@ class VolcanoPlotCommand(Command):
         marker_size = settings['point_size'] ** 2
         axis.scatter(x_values[not_significant], plotted_y[not_significant],
                      c=settings['colors'][4 % len(settings['colors'])], s=marker_size,
-                     alpha=0.5, label='Not significant', edgecolors='none')
+                     alpha=0.5, label=not_significant_label, edgecolors='none')
         axis.scatter(x_values[significant_up], plotted_y[significant_up],
                      c=settings['colors'][2 % len(settings['colors'])], s=marker_size,
-                     alpha=0.65, label='Upregulated', edgecolors='none')
+                     alpha=0.65, label=positive_label, edgecolors='none')
         axis.scatter(x_values[significant_down], plotted_y[significant_down],
                      c=settings['colors'][0], s=marker_size,
-                     alpha=0.65, label='Downregulated', edgecolors='none')
+                     alpha=0.65, label=negative_label, edgecolors='none')
         
         # Add threshold lines
         if plotted_y_threshold is not None:

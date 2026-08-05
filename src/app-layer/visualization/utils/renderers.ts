@@ -128,12 +128,12 @@ const resolveXTickAngle = ({
   const availableWidth = Math.max(16, spacing - 8);
 
   return (
-    [0, -30, -45, -60].find((angle) => {
+    [0, 30, 45, 60].find((angle) => {
       const radians = (Math.abs(angle) * Math.PI) / 180;
       const projectedWidth =
         widestLabel * Math.cos(radians) + labelHeight * Math.sin(radians);
       return projectedWidth <= availableWidth;
-    }) ?? -60
+    }) ?? 60
   );
 };
 
@@ -342,7 +342,7 @@ export const renderBarSvg = (
         return "";
       }
       const x = margin.left + step * index + step / 2;
-      return `<text transform="translate(${x} ${margin.top + plotHeight + 26}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(category, s.xMaxLabelLength))}<title>${escapeXml(category)}</title></text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 26}) rotate(${-xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(category, s.xMaxLabelLength))}<title>${escapeXml(category)}</title></text>`;
     })
     .join("");
 
@@ -457,7 +457,7 @@ export const renderBoxPlotSvg = (
       const highY = scaleY(item.high);
       const color = palette[index % palette.length];
       const label = shouldRenderTick(index, entries.length, s.maxXTicks)
-        ? `<text transform="translate(${centerX} ${margin.top + plotHeight + 26}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(item.name, s.xMaxLabelLength))}<title>${escapeXml(item.name)}</title></text>`
+        ? `<text transform="translate(${centerX} ${margin.top + plotHeight + 26}) rotate(${-xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(item.name, s.xMaxLabelLength))}<title>${escapeXml(item.name)}</title></text>`
         : "";
       return `
         <line x1="${centerX}" y1="${highY}" x2="${centerX}" y2="${q3Y}" stroke="#1f2937" stroke-width="1.5"/>
@@ -566,7 +566,7 @@ export const renderScatterSvg = (
   const xAxis = xTicks
     .map((tick) => {
       const x = scaleX(tick);
-      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${-xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
     })
     .join("");
   const yAxis = yTicks
@@ -700,7 +700,7 @@ export const renderHeatmapSvg = (
             return "";
           }
           const x = margin.left + index * cellWidth + cellWidth / 2;
-          return `<text transform="translate(${x} ${margin.top + plotHeight + 22}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(label, s.xMaxLabelLength))}<title>${escapeXml(label)}</title></text>`;
+          return `<text transform="translate(${x} ${margin.top + plotHeight + 22}) rotate(${-xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#374151">${escapeXml(formatLabel(label, s.xMaxLabelLength))}<title>${escapeXml(label)}</title></text>`;
         })
         .join("")}
       <g ${s.showGrid ? 'stroke="#ffffff" stroke-width="1"' : ""}>${cells}</g>
@@ -715,7 +715,16 @@ export const renderVolcanoSvg = (
   settings?: Partial<VisualizationDisplaySettings>,
   title = payload.title ?? "Volcano Plot"
 ) => {
-  const s = axisSettings(settings);
+  const s = axisSettings({
+    xAxisLabel: payload.xAxisLabel ?? defaultSettings.xAxisLabel,
+    yAxisLabel: payload.yAxisLabel ?? defaultSettings.yAxisLabel,
+    ...settings,
+  });
+  const legendLabels = [
+    payload.legendLabels?.notSignificant?.trim() || "Not significant",
+    payload.legendLabels?.positive?.trim() || "Above + threshold",
+    payload.legendLabels?.negative?.trim() || "Below − threshold",
+  ];
   const yValues =
     payload.yTransform === "negative-log10"
       ? payload.y.map((value) => -Math.log10(Math.max(value, 1e-300)))
@@ -725,7 +734,7 @@ export const renderVolcanoSvg = (
   const margin = {
     top: 48,
     right: 32,
-    bottom: 92,
+    bottom: 132,
     left: Math.max(76, s.tickFontSize * 6),
   };
   const plotWidth = width - margin.left - margin.right;
@@ -759,7 +768,7 @@ export const renderVolcanoSvg = (
       const isXSignificant =
         typeof payload.xThreshold === "number" ? Math.abs(xValue) >= payload.xThreshold : false;
       const isYSignificant =
-        typeof thresholdY === "number" ? yValue >= thresholdY : false;
+        typeof thresholdY !== "number" || yValue >= thresholdY;
       const significant = isXSignificant && isYSignificant;
       const fill = significant
         ? xValue >= 0
@@ -786,7 +795,7 @@ export const renderVolcanoSvg = (
   const xAxis = xTicks
     .map((tick) => {
       const x = scaleX(tick);
-      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
+      return `<text transform="translate(${x} ${margin.top + plotHeight + 24}) rotate(${-xTickAngle})" text-anchor="${xTickAngle === 0 ? "middle" : "end"}" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.xMaxLabelLength))}</text>`;
     })
     .join("");
   const yAxis = yTicks
@@ -795,6 +804,18 @@ export const renderVolcanoSvg = (
       return `<text transform="translate(${margin.left - 12} ${y + 4}) rotate(${s.yTickAngle})" text-anchor="end" font-size="${s.tickFontSize}" fill="#6b7280">${escapeXml(formatNumericTick(tick, s.yMaxLabelLength))}</text>`;
     })
     .join("");
+  const legend = renderLegend({
+    labels: legendLabels,
+    palette: [
+      s.plotColors[4 % s.plotColors.length],
+      s.plotColors[2 % s.plotColors.length],
+      s.plotColors[0],
+    ],
+    width,
+    startX: margin.left,
+    startY: height - 28,
+    fontSize: s.tickFontSize,
+  });
 
   return toSvgDataUrl(`
     <svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">
@@ -816,8 +837,9 @@ export const renderVolcanoSvg = (
       ${points}
       ${xAxis}
       ${yAxis}
-      <text x="${margin.left + plotWidth / 2}" y="${height - 24}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
+      <text x="${margin.left + plotWidth / 2}" y="${height - 62}" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.xAxisLabel)}</text>
       <text transform="translate(${s.axisLabelFontSize + 8} ${margin.top + plotHeight / 2}) rotate(-90)" font-size="${s.axisLabelFontSize}" text-anchor="middle" fill="#374151">${escapeXml(s.yAxisLabel)}</text>
+      ${legend}
     </svg>
   `);
 };

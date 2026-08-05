@@ -65,6 +65,7 @@ export type PlotLibraryCard = {
   yAxisOptions?: string[];
   labelAxisOptions?: string[];
   multipleLabelAxis?: boolean;
+  showVolcanoLegendLabels?: boolean;
   onRendererChange: (renderer: VisualizationRenderer) => void;
   onSelectionChange: (selection: Partial<PlotAxisSelection>) => void;
   onRender: () => void | Promise<void>;
