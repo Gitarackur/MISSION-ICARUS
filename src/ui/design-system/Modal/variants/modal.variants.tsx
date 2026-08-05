@@ -5,14 +5,11 @@ export const modalStyleVariants = tv({
     // Modal slots
     modalOverlay: [
       "fixed inset-0 bg-black/50 flex items-center justify-center z-[100] p-4",
-      "transition-opacity duration-300 ease-in-out opacity-0",
-      "data-[open=true]:opacity-100"
+      "animate-[modal-overlay-in_280ms_ease-in-out_forwards]"
     ],
     modalContent: [
       "bg-white text-gray-900 rounded-lg p-6 w-full max-w-2xl max-h-[85vh] overflow-hidden dark:bg-gray-900 dark:text-gray-100",
-      "transition-all duration-300 ease-in-out",
-      "scale-95 opacity-0 translate-y-4",
-      "data-[open=true]:scale-100 data-[open=true]:opacity-100 data-[open=true]:translate-y-0"
+      "animate-[modal-panel-in_320ms_ease-out_forwards]"
     ],
     modalHeader: "flex justify-between items-center gap-4 mb-4",
     modalTitle: "text-lg font-semibold",

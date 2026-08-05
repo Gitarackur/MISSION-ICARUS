@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown, Check, X, Search } from "lucide-react";
 import { useDragSelect } from "@/ui/hooks/useDragSelect";
 import { useControllableState } from "@/ui/hooks/useControllableState";
+import { useDropdownPortal } from "../hooks/useDropdownPortal";
 import { multiSelect } from "../style-variants/main";
 
 // Types (updated to support uncontrolled state)
@@ -68,7 +70,8 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
   ) => {
     const [isOpen, setIsOpen] = useState<boolean>(false);
     const [searchTerm, setSearchTerm] = useState<string>("");
-    const dropdownRef = useRef<HTMLDivElement>(null);
+    const portalRef = useRef<HTMLDivElement>(null);
+    const { triggerRef, dropdownStyle } = useDropdownPortal(isOpen);
 
     // Use controllable state for value with proper typing
     const [selectedValues, setSelectedValues] = useControllableState<string[]>({
@@ -114,10 +117,12 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
 
     useEffect(() => {
       const handleClickOutside = (event: MouseEvent) => {
-        if (
-          dropdownRef.current &&
-          !dropdownRef.current.contains(event.target as Node)
-        ) {
+        const target = event.target as Node;
+        const insideTrigger =
+          triggerRef.current && triggerRef.current.contains(target);
+        const insidePortal =
+          portalRef.current && portalRef.current.contains(target);
+        if (!insideTrigger && !insidePortal) {
           setIsOpen(false);
           setSearchTerm("");
         }
@@ -128,7 +133,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
         document.removeEventListener("mousedown", handleClickOutside);
         document.removeEventListener("mouseup", handleMouseUp);
       };
-    }, [handleMouseUp]);
+    }, [handleMouseUp, triggerRef]);
 
     const handleToggle = (option: Option): void => {
       if (disabled || option.disabled) return;
@@ -196,7 +201,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
           </label>
         )}
 
-        <div className={container()} ref={dropdownRef}>
+        <div className={container()} ref={triggerRef}>
           <div
             className={triggerClass()}
             onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -255,8 +260,9 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
             </div>
           </div>
 
-          {isOpen && !disabled && (
-            <div className={dropdown()}>
+          {isOpen && !disabled &&
+            createPortal(
+              <div ref={portalRef} style={dropdownStyle} className={dropdown()}>
               {searchable && (
                 <div className={searchContainer()}>
                   <div className="relative">
@@ -332,8 +338,9 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                   {selectedOptions.length !== 1 ? "s" : ""} selected
                 </div>
               )}
-            </div>
-          )}
+              </div>,
+              document.body
+            )}
         </div>
 
         {(error || helperText) && (
