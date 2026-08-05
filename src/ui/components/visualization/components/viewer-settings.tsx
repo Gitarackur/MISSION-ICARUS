@@ -1,16 +1,13 @@
-import React from "react";
-import { VisualizationDisplaySettings } from "@/domain/visualization/index.types";
 import { visualizationStyles } from "../variants/visualization.variants";
+import { X } from "lucide-react";
+import { VisualizationSettingsPanelProps } from "../types/index.types";
 
 function VisualizationSettingsPanel({
   compact = false,
   settings,
   setSettings,
-}: {
-  compact?: boolean;
-  settings: VisualizationDisplaySettings;
-  setSettings: React.Dispatch<React.SetStateAction<VisualizationDisplaySettings>>;
-}) {
+  onToggleShowSettings,
+}: VisualizationSettingsPanelProps) {
   const s = visualizationStyles({
     compact,
     xAngleDisabled: settings.autoRotateXLabels,
@@ -21,11 +18,16 @@ function VisualizationSettingsPanel({
       {compact ? (
         <div className={s.configHeader()}>
           <p className={s.configStrongLabel()}>Plot Settings</p>
-          <p className={s.configHelpText()}>
-            Changes update Native immediately and automatically regenerate the selected
-            Python or R renderer. X labels stay horizontal when they fit and rotate only
-            when crowded; tick limits never remove data.
-          </p>
+
+          <div className={s.configHeaderIcons()}>
+            <p className={s.configHelpText()}>
+              Changes update Native immediately and automatically regenerate the selected
+              Python or R renderer. X labels stay horizontal when they fit and rotate only
+              when crowded; tick limits never remove data.
+            </p>
+
+            <X className={s.configHeaderIcon()} onClick={onToggleShowSettings} />
+          </div>
         </div>
       ) : null}
       <div className={s.configGrid()}>

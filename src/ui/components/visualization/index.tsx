@@ -10,7 +10,7 @@ import { usePlotLibraryCards } from "./hooks/usePlotLibraryCards";
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const s = visualizationStyles();
-  const [showSettings, setShowSettings] = useState(false);
+  const [showSettings, setShowSettings] = useState(true);
   const {
     activeSavedVisualization,
     columnOptions,
@@ -87,11 +87,11 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         onDownload={downloadCurrentVisualization}
         onSelectVisualization={setActiveVisualizationId}
         onSetDisplayMode={setDisplayMode}
-        onToggleSettings={() => setShowSettings((value) => !value)}
         settings={settings}
         savedVisualizations={savedVisualizations}
         setSettings={setSettings}
         showSettings={showSettings}
+        onToggleShowSettings={() => setShowSettings((value) => !value)}
       />
 
       <PlotLibrary isRendering={isRendering} plots={plotActions} />

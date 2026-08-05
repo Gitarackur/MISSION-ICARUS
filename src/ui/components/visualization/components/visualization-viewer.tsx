@@ -30,11 +30,11 @@ export function VisualizationViewer({
   onDownload,
   onSelectVisualization,
   onSetDisplayMode,
-  onToggleSettings,
   settings,
   savedVisualizations,
   setSettings,
   showSettings,
+  onToggleShowSettings,
 }: VisualizationViewerProps) {
   const s = visualizationStyles();
   const visualizationOptions = savedVisualizations.map(
@@ -135,7 +135,7 @@ export function VisualizationViewer({
           <button
             type="button"
             className={s.secondaryButton()}
-            onClick={onToggleSettings}
+            onClick={onToggleShowSettings}
             disabled={!activeVisualization}
           >
             <Settings2 className={s.icon()} />
@@ -195,6 +195,7 @@ export function VisualizationViewer({
                     >
                       <VisualizationSettingsPanel
                         settings={settings}
+                        onToggleShowSettings={onToggleShowSettings}
                         setSettings={setSettings}
                         compact
                       />

@@ -19,6 +19,8 @@ export const visualizationStyles = tv({
       "sticky top-0 z-20 space-y-1 border-b border-gray-200 bg-white px-4 py-3 pr-5 shadow-sm dark:border-gray-700 dark:bg-gray-900",
     configStrongLabel:
       "text-xs font-semibold uppercase tracking-wide text-gray-700 dark:text-gray-200",
+    configHeaderIcons: "flex items-center gap-2",
+    configHeaderIcon: "h-14 w-14 text-gray-500 dark:text-gray-400 cursor-pointer",
     configHelpText: "text-xs text-gray-500 dark:text-gray-400",
     configField: "space-y-2",
     configAngleField: "space-y-2",
