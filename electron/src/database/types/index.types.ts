@@ -1,30 +1,25 @@
-import type {
-  IcarusSessionRecord,
-  IcarusWorkflowRecord,
-  IcarusMatrixRecord,
-  IcarusActivityRecord,
-  IcarusVisualizationRecord,
-  IcarusSessionWithWorkflowRecord,
-} from "@/app-layer/database/database.types";
+import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
+import type { IcarusWorkflowRecord, IcarusMatrix, IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
+
 import type {
   DeletionPlan,
   SessionDeletionResult,
 } from "@/app-layer/database/deletion";
 
 export type IcarusDBAdapterType = {
-  saveSession(session: IcarusSessionRecord): void;
-  getSession(id: string): IcarusSessionRecord | null;
-  getAllSessions(): IcarusSessionRecord[];
+  saveSession(session: IcarusSession): void;
+  getSession(id: string): IcarusSession | null;
+  getAllSessions(): IcarusSession[];
   deleteSession(id: string): void;
-  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflowRecord | null;
+  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflow | null;
   saveWorkflow(workflow: IcarusWorkflowRecord): void;
   getWorkflow(id: string): IcarusWorkflowRecord | null;
-  saveMatrix(matrix: IcarusMatrixRecord): void;
-  getMatrix(id: string): IcarusMatrixRecord | null;
-  saveActivity(activity: IcarusActivityRecord): void;
-  getActivity(id: string): IcarusActivityRecord | null;
-  saveVisualization(visualization: IcarusVisualizationRecord): void;
-  getVisualization(id: string): IcarusVisualizationRecord | null;
+  saveMatrix(matrix: IcarusMatrix): void;
+  getMatrix(id: string): IcarusMatrix | null;
+  saveActivity(activity: IcarusActivity): void;
+  getActivity(id: string): IcarusActivity | null;
+  saveVisualization(visualization: IcarusVisualization): void;
+  getVisualization(id: string): IcarusVisualization | null;
   getMatrixDeletionPlan(sessionId: string, matrixId: string): DeletionPlan;
   getActivityDeletionPlan(sessionId: string, activityId: string): DeletionPlan;
   getVisualizationDeletionPlan(

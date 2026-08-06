@@ -1,9 +1,10 @@
-import { IcarusSessionRecord } from "@/app-layer/database/database.types";
+import type { IcarusSession } from "@/domain/session";
+
 
 export interface SidebarProps {
-  sessions: IcarusSessionRecord[] | null;
-  activeSession: IcarusSessionRecord | null;
-  onSessionClick: (session: IcarusSessionRecord) => void;
+  sessions: IcarusSession[] | null;
+  activeSession: IcarusSession | null;
+  onSessionClick: (session: IcarusSession) => void;
   onCreateSession: () => void;
   onDeleteSession: (id: string) => void;
 }

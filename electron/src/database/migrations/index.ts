@@ -1,7 +1,7 @@
 // 2. MIGRATION DEFINITIONS (src/database/migrations/index.ts)
 import Database from 'better-sqlite3';
 import { MigrationRunner } from './migration-runner';
-import { IcarusActivityRecord } from '@/app-layer/database/database.types';
+import { IcarusActivity } from '@/domain/workflow/main.types';
 
 export function setupMigrations(db: Database.Database): MigrationRunner {
   const migrationRunner = new MigrationRunner(db);
@@ -148,7 +148,7 @@ export function setupMigrations(db: Database.Database): MigrationRunner {
       // Convert string timestamps to integers for activities
       const activities = db.prepare(`SELECT id, timestamp FROM activities WHERE typeof(timestamp) = 'text'`).all();
       
-      for (const activity of activities as IcarusActivityRecord[]) {
+      for (const activity of activities as IcarusActivity[]) {
         const numericTimestamp = Date.parse(activity.timestamp as unknown as string);
         if (!isNaN(numericTimestamp)) {
           db.prepare(`UPDATE activities SET timestamp = ? WHERE id = ?`)
@@ -160,7 +160,7 @@ export function setupMigrations(db: Database.Database): MigrationRunner {
       // Convert back to ISO strings
       const activities = db.prepare(`SELECT id, timestamp FROM activities WHERE typeof(timestamp) = 'text' AND timestamp GLOB '[0-9]*'`).all();
       
-      for (const activity of activities as IcarusActivityRecord[]) {
+      for (const activity of activities as IcarusActivity[]) {
         const date = new Date(parseInt(activity.timestamp as unknown as string, 10));
         db.prepare(`UPDATE activities SET timestamp = ? WHERE id = ?`)
           .run(date.toISOString(), activity.id);

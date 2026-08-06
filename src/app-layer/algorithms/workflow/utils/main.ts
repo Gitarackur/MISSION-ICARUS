@@ -1,5 +1,6 @@
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { IcarusWorkflowRecord } from "@/app-layer/database/database.types";
+import type { IcarusWorkflowRecord } from "@/domain/workflow/main.types";
+
 
 // Validates the column and matrix data for a session
 export const validateColumnAndMatrixData = (

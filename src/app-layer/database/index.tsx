@@ -1,5 +1,7 @@
 import Dexie, { Table } from 'dexie';
-import { IcarusActivityRecord, IcarusMatrixRecord, IcarusSessionRecord, IcarusVisualizationRecord, IcarusWorkflowRecord } from './database.types';
+import type { IcarusSession } from "@/domain/session";
+import type { IcarusActivity, IcarusMatrix, IcarusVisualization, IcarusWorkflowRecord } from "@/domain/workflow/main.types";
+
 
 
 const VERSION_NUMBER = 1;
@@ -8,10 +10,10 @@ const VERSION_NUMBER = 1;
 
 export class IcarusDB extends Dexie {
   workflows!: Table<IcarusWorkflowRecord, string>;
-  sessions!: Table<IcarusSessionRecord, string>;
-  matrices!: Table<IcarusMatrixRecord, string>;
-  activities!: Table<IcarusActivityRecord, string>;
-  visualizations!: Table<IcarusVisualizationRecord, string>
+  sessions!: Table<IcarusSession, string>;
+  matrices!: Table<IcarusMatrix, string>;
+  activities!: Table<IcarusActivity, string>;
+  visualizations!: Table<IcarusVisualization, string>
 
   constructor() {
     super("IcarusDatabase");

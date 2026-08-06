@@ -4,10 +4,8 @@ import {
   TableColumns,
 } from "@/domain/workflow/main.types";
 import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
-import {
-  IcarusMatrixRecord,
-  IcarusSessionWithWorkflowRecord,
-} from "@/app-layer/database/database.types";
+import type { IcarusSessionWithWorkflow } from "@/domain/session";
+
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { tabsIdTypes } from "@/ui/components/tabs/types/index.types";
 
@@ -38,8 +36,8 @@ export type ProteomicsAnalysisHomeViewProps = {
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
 
   sessionSourceMatrix?: IcarusMatrix
-  activeMatrix?: IcarusMatrixRecord;
-  activeSession: IcarusSessionWithWorkflowRecord | null;
+  activeMatrix?: IcarusMatrix;
+  activeSession: IcarusSessionWithWorkflow | null;
   activeTab: tabTypes;
   setActiveTab: (tab: tabTypes) => void;
   activeVisualizationId: string;

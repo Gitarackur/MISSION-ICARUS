@@ -6,10 +6,8 @@ import type {
   DeletionPlan,
   SessionDeletionResult,
 } from "@/app-layer/database/deletion";
-import {
-  IcarusSessionRecord,
-  IcarusSessionWithWorkflowRecord,
-} from "@/app-layer/database/database.types";
+import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
+
 import { reconstructFromMatrix } from "@/app-layer/shared/utils";
 import {
   generateActiveSessionWitNestedWorkflow,
@@ -28,7 +26,7 @@ import {
 export const useIcarusAppSession = () => {
   const [showSession, setShowSession] = useState(true);
   const [activeSession, setActiveSession] =
-    useState<IcarusSessionWithWorkflowRecord | null>(null);
+    useState<IcarusSessionWithWorkflow | null>(null);
   const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
   const [originalDataColumns, setOriginalDataColumns] = useState<TableColumns>(
     []
@@ -103,7 +101,7 @@ export const useIcarusAppSession = () => {
     }
   };
 
-  const handleSessionClick = async (session: IcarusSessionRecord) => {
+  const handleSessionClick = async (session: IcarusSession) => {
     setIsProcessing(true);
     try {
       const { sessionWithWorkflows } =

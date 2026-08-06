@@ -1,8 +1,8 @@
-import { IcarusActivityRecord } from "@/app-layer/database/database.types";
+import { IcarusActivity } from "@/domain/workflow/main.types";
 
 export interface IcarusActivityNodeParams {
   sourceMatrixId?: string;
-  activities: IcarusActivityRecord[];
+  activities: IcarusActivity[];
 }
 
-export type MapIcarusActivity = Record<string, IcarusActivityRecord[]>
+export type MapIcarusActivity = Record<string, IcarusActivity[]>

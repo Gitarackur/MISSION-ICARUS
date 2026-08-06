@@ -1,6 +1,7 @@
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import ActivityTree2 from "@/ui/components/activity-tree/index2";
-import { IcarusSessionWithWorkflowRecord } from "@/app-layer/database/database.types";
+import type { IcarusSessionWithWorkflow } from "@/domain/session";
+
 
 export function ActivitySheet({
   activeMatrixId,
@@ -14,7 +15,7 @@ export function ActivitySheet({
   onVisualizationDelete,
 }: {
   activeMatrixId: string | null;
-  activeSession: IcarusSessionWithWorkflowRecord | null;
+  activeSession: IcarusSessionWithWorkflow | null;
   isOpen: boolean;
   onClose: () => void;
   onMatrixSelect: (matrixId: string) => void;

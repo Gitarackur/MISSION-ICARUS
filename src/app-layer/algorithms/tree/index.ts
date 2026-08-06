@@ -1,6 +1,7 @@
 import { ActivityTreeNode, ActivityTreeNodeForD3, ActivityTreeNodeForNonD3 } from "@/domain/tree/tree.types";
 import { IcarusActivityNodeParams, MapIcarusActivity } from "@/domain/activity/main.types";
-import { IcarusActivityRecord } from "@/app-layer/database/database.types";
+import type { IcarusActivity } from "@/domain/workflow/main.types";
+
 
 export const generateIcarusActivityNode = ({
   sourceMatrixId,
@@ -47,7 +48,7 @@ export const generateIcarusActivityNode = ({
 // Each activity may reference an input matrix and produce an output matrix
 // The tree is built by linking activities based on these matrix references
 
-export const buildActivityTree = (activities: IcarusActivityRecord[]): ActivityTreeNodeForD3[] => {
+export const buildActivityTree = (activities: IcarusActivity[]): ActivityTreeNodeForD3[] => {
   if (!activities.length) return [];
 
   const activityMap = new Map<string, ActivityTreeNodeForD3>();
@@ -94,7 +95,7 @@ export const buildActivityTree = (activities: IcarusActivityRecord[]): ActivityT
 // and for simpler tree manipulations
 
 export const buildActivityTreeForNonD3 = (
-  activities: IcarusActivityRecord[]
+  activities: IcarusActivity[]
 ): ActivityTreeNodeForNonD3[] => {
   if (!activities.length) return [];
 

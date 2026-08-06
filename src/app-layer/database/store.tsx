@@ -1,12 +1,7 @@
 import { db, IcarusDB } from ".";
-import {
-  IcarusActivityRecord,
-  IcarusMatrixRecord,
-  IcarusSessionRecord,
-  IcarusSessionWithWorkflowRecord,
-  IcarusVisualizationRecord,
-  IcarusWorkflowRecord,
-} from "./database.types";
+import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
+import type { IcarusActivity, IcarusMatrix, IcarusVisualization, IcarusWorkflowRecord } from "@/domain/workflow/main.types";
+
 import {
   assertDeletionPlanIntegrity,
   getPhysicalDeletionScope,
@@ -26,17 +21,17 @@ class DBAdapter {
   }
 
   // Save or update a session
-  async saveSession(session: IcarusSessionRecord) {
+  async saveSession(session: IcarusSession) {
     return await this.db.sessions.put(session);
   }
 
   // Get session by ID
-  async getSessionById(id: string): Promise<IcarusSessionRecord | undefined> {
+  async getSessionById(id: string): Promise<IcarusSession | undefined> {
     return await this.db.sessions.get(id);
   }
 
   // Get all sessions
-  async getAllSessions(): Promise<IcarusSessionRecord[]> {
+  async getAllSessions(): Promise<IcarusSession[]> {
     return await this.db.sessions.toArray();
   }
 
@@ -168,72 +163,72 @@ class DBAdapter {
 
 
   // get matrixes
-  async saveMatrix(matrix: IcarusMatrixRecord) {
+  async saveMatrix(matrix: IcarusMatrix) {
     return await this.db.matrices.put(matrix);
   }
 
   // Get matrix by ID
-  async getMatrixById(id: string): Promise<IcarusMatrixRecord | undefined> {
+  async getMatrixById(id: string): Promise<IcarusMatrix | undefined> {
     return await this.db.matrices.get(id);
   }
 
   // Get all matrices
-  async getAllMatrices(): Promise<IcarusMatrixRecord[]> {
+  async getAllMatrices(): Promise<IcarusMatrix[]> {
     return await this.db.matrices.toArray();
   }
 
   // Get matrices by array of IDs
-  async getMatricesByIds(ids: string[]): Promise<IcarusMatrixRecord[]> {
+  async getMatricesByIds(ids: string[]): Promise<IcarusMatrix[]> {
     return await this.db.matrices.where("id").anyOf(ids).toArray();
   }
 
   // get activities
-  async saveActivity(activity: IcarusActivityRecord) {
+  async saveActivity(activity: IcarusActivity) {
     return await this.db.activities.put(activity);
   }
 
   // Get activity by ID
-  async getActivityById(id: string): Promise<IcarusActivityRecord | undefined> {
+  async getActivityById(id: string): Promise<IcarusActivity | undefined> {
     return await this.db.activities.get(id);
   }
 
   // Get all activities
-  async getAllActivities(): Promise<IcarusActivityRecord[]> {
+  async getAllActivities(): Promise<IcarusActivity[]> {
     return await this.db.activities.toArray();
   }
 
   // Get activities by array of IDs
-  async getActivitiesByIds(ids: string[]): Promise<IcarusActivityRecord[]> {
+  async getActivitiesByIds(ids: string[]): Promise<IcarusActivity[]> {
     return await this.db.activities.where("id").anyOf(ids).toArray();
   }
 
   // get visualizations
-  async saveVisualization(visualization: IcarusVisualizationRecord) {
+  async saveVisualization(visualization: IcarusVisualization) {
     return await this.db.visualizations.put(visualization);
   }
 
   // Get visualization by ID
   async getVisualizationById(
     id: string
-  ): Promise<IcarusVisualizationRecord | undefined> {
+  ): Promise<IcarusVisualization | undefined> {
     return await this.db.visualizations.get(id);
   }
 
   // Get all visualizations
-  async getAllVisualization(): Promise<IcarusVisualizationRecord[]> {
+  async getAllVisualization(): Promise<IcarusVisualization[]> {
     return await this.db.visualizations.toArray();
   }
 
   // Get visualizations by array of IDs
   async getVisualizationsByIds(
     ids: string[]
-  ): Promise<IcarusVisualizationRecord[]> {
+  ): Promise<IcarusVisualization[]> {
     return await this.db.visualizations.where("id").anyOf(ids).toArray();
   }
 
   private async getDeletionSnapshot(
     sessionId: string
-  ): Promise<IcarusSessionWithWorkflowRecord> {
+  ): Promise<IcarusSessionWithWorkflow> {
     const session = await this.getSessionWithAllData(sessionId);
     if (!session) throw new Error(`Session with id ${sessionId} not found`);
     return session;
@@ -265,7 +260,7 @@ class DBAdapter {
 
   private async executeSessionDeletion(
     sessionId: string,
-    createPlan: (session: IcarusSessionWithWorkflowRecord) => DeletionPlan,
+    createPlan: (session: IcarusSessionWithWorkflow) => DeletionPlan,
     confirmedPlan?: DeletionPlan
   ): Promise<SessionDeletionResult> {
     let committedPlan: DeletionPlan | null = null;
@@ -294,7 +289,7 @@ class DBAdapter {
         const deletedMatrixIds = new Set(plan.matrixIds);
         const deletedActivityIds = new Set(plan.activityIds);
         const deletedVisualizationIds = new Set(plan.visualizationIds);
-        const updatedSession: IcarusSessionRecord = {
+        const updatedSession: IcarusSession = {
           id: snapshot.id,
           name: snapshot.name,
           date: snapshot.date,
@@ -384,7 +379,7 @@ class DBAdapter {
   // fetch all data at once
   async getSessionWithAllData(
     id: string
-  ): Promise<IcarusSessionWithWorkflowRecord | null> {
+  ): Promise<IcarusSessionWithWorkflow | null> {
     const session = await this.getSessionById(id);
     if (!session) return null;
 

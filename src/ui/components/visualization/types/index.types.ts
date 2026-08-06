@@ -1,8 +1,7 @@
 import type React from "react";
-import {
-  IcarusSessionWithWorkflowRecord,
-  IcarusMatrixRecord,
-} from "@/app-layer/database/database.types";
+import type { IcarusSessionWithWorkflow } from "@/domain/session";
+import type { IcarusMatrix } from "@/domain/workflow/main.types";
+
 import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
 import { PlotAxisSelection, VisualizationDisplaySettings } from "@/domain/visualization/index.types";
 import { VisualizationRecord } from "@/domain/visualization/index.types";
@@ -16,8 +15,8 @@ export type VisualizationPanelProps = {
     significant: boolean;
   }[];
   intensityDist: { sample: string; meanIntensity: number; count: number }[];
-  activeSession: IcarusSessionWithWorkflowRecord | null;
-  activeMatrix?: IcarusMatrixRecord;
+  activeSession: IcarusSessionWithWorkflow | null;
+  activeMatrix?: IcarusMatrix;
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
   activeVisualizationId?: string;
   setActiveVisualizationId?: (visualizationId: string) => void;

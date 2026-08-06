@@ -1,12 +1,7 @@
 import type { Database as DatabaseType } from "better-sqlite3";
-import type {
-  IcarusSessionRecord,
-  IcarusWorkflowRecord,
-  IcarusSessionWithWorkflowRecord,
-  IcarusMatrixRecord,
-  IcarusActivityRecord,
-  IcarusVisualizationRecord,
-} from "@/app-layer/database/database.types";
+import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
+import type { IcarusWorkflowRecord, IcarusMatrix, IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
+
 import {
   assertDeletionPlanIntegrity,
   getPhysicalDeletionScope,
@@ -29,7 +24,7 @@ export class IcarusDBAdapter {
   }
 
   // SESSION METHODS
-  saveSession(session: IcarusSessionRecord): void {
+  saveSession(session: IcarusSession): void {
     const workflowIds = JSON.stringify(session.workflowIds || []);
     const activityIds = JSON.stringify(session.activityIds || []);
     const matrixIds = JSON.stringify(session.matrixIds || []);
@@ -57,12 +52,12 @@ export class IcarusDBAdapter {
       });
   }
 
-  getSession(id: string): IcarusSessionRecord | null {
+  getSession(id: string): IcarusSession | null {
     const row = this.db
       .prepare(`SELECT * FROM sessions WHERE id = ?`)
       .get(id) as
       | (Omit<
-          IcarusSessionRecord,
+          IcarusSession,
           | "workflowIds"
           | "activityIds"
           | "matrixIds"
@@ -117,10 +112,10 @@ export class IcarusDBAdapter {
     this.db.prepare(`DELETE FROM sessions WHERE id = ?`).run(id);
   }
 
-  getAllSessions(): IcarusSessionRecord[] {
+  getAllSessions(): IcarusSession[] {
     const rows = this.db.prepare(`SELECT * FROM sessions`).all() as Array<
       Omit<
-        IcarusSessionRecord,
+        IcarusSession,
         | "workflowIds"
         | "activityIds"
         | "matrixIds"
@@ -145,7 +140,7 @@ export class IcarusDBAdapter {
     }));
   }
 
-  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflowRecord | null {
+  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflow | null {
     const session = this.getSession(id);
     if (!session) return null;
 
@@ -153,17 +148,17 @@ export class IcarusDBAdapter {
       .map((wid) => this.getWorkflow(wid))
       .filter((wf): wf is IcarusWorkflowRecord => !!wf);
 
-    const activities: IcarusActivityRecord[] = session.activityIds
+    const activities: IcarusActivity[] = session.activityIds
       .map((aid) => this.getActivity(aid))
-      .filter((activity): activity is IcarusActivityRecord => !!activity);
+      .filter((activity): activity is IcarusActivity => !!activity);
 
-    const matrices: IcarusMatrixRecord[] = session.matrixIds
+    const matrices: IcarusMatrix[] = session.matrixIds
       .map((mid) => this.getMatrix(mid))
-      .filter((matrix): matrix is IcarusMatrixRecord => !!matrix);
+      .filter((matrix): matrix is IcarusMatrix => !!matrix);
 
-    const visualizations: IcarusVisualizationRecord[] = session.visualizationIds
+    const visualizations: IcarusVisualization[] = session.visualizationIds
       .map((vid) => this.getVisualization(vid))
-      .filter((viz): viz is IcarusVisualizationRecord => !!viz);
+      .filter((viz): viz is IcarusVisualization => !!viz);
 
     return {
       ...session,
@@ -209,7 +204,7 @@ export class IcarusDBAdapter {
   }
 
   // MATRIX METHODS
-  saveMatrix(matrix: IcarusMatrixRecord): void {
+  saveMatrix(matrix: IcarusMatrix): void {
     const columns = JSON.stringify(matrix.columns);
     const data = JSON.stringify(matrix.data);
 
@@ -229,7 +224,7 @@ export class IcarusDBAdapter {
       });
   }
 
-  getMatrix(id: string): IcarusMatrixRecord | null {
+  getMatrix(id: string): IcarusMatrix | null {
     const row = this.db
       .prepare(`SELECT * FROM matrices WHERE id = ?`)
       .get(id) as
@@ -260,7 +255,7 @@ export class IcarusDBAdapter {
   }
 
   // ACTIVITY METHODS
-  saveActivity(activity: IcarusActivityRecord): void {
+  saveActivity(activity: IcarusActivity): void {
     const inputColumnNames = activity.inputColumnNames
       ? JSON.stringify(activity.inputColumnNames)
       : null;
@@ -304,7 +299,7 @@ export class IcarusDBAdapter {
       });
   }
 
-  private deserializeActivity(row: ActivityRow): IcarusActivityRecord {
+  private deserializeActivity(row: ActivityRow): IcarusActivity {
     return {
       id: row.id,
       name: row.name,
@@ -328,7 +323,7 @@ export class IcarusDBAdapter {
     };
   }
 
-  getActivity(id: string): IcarusActivityRecord | null {
+  getActivity(id: string): IcarusActivity | null {
     const row = this.db
       .prepare(`SELECT * FROM activities WHERE id = ?`)
       .get(id) as ActivityRow | undefined;
@@ -336,7 +331,7 @@ export class IcarusDBAdapter {
     return row ? this.deserializeActivity(row) : null;
   }
 
-  private getAllActivities(): IcarusActivityRecord[] {
+  private getAllActivities(): IcarusActivity[] {
     const rows = this.db
       .prepare(`SELECT * FROM activities`)
       .all() as ActivityRow[];
@@ -348,7 +343,7 @@ export class IcarusDBAdapter {
   }
 
   // VISUALIZATION METHODS
-  saveVisualization(visualization: IcarusVisualizationRecord): void {
+  saveVisualization(visualization: IcarusVisualization): void {
     const data = JSON.stringify(visualization.data);
 
     this.db
@@ -378,7 +373,7 @@ export class IcarusDBAdapter {
 
   private deserializeVisualization(
     row: VisualizationRow
-  ): IcarusVisualizationRecord {
+  ): IcarusVisualization {
     return {
       id: row.id,
       createdByActivityId: row.createdByActivityId,
@@ -391,7 +386,7 @@ export class IcarusDBAdapter {
     };
   }
 
-  getVisualization(id: string): IcarusVisualizationRecord | null {
+  getVisualization(id: string): IcarusVisualization | null {
     const row = this.db
       .prepare(`SELECT * FROM visualizations WHERE id = ?`)
       .get(id) as VisualizationRow | undefined;
@@ -399,7 +394,7 @@ export class IcarusDBAdapter {
     return row ? this.deserializeVisualization(row) : null;
   }
 
-  private getAllVisualizations(): IcarusVisualizationRecord[] {
+  private getAllVisualizations(): IcarusVisualization[] {
     const rows = this.db
       .prepare(`SELECT * FROM visualizations`)
       .all() as VisualizationRow[];
@@ -412,7 +407,7 @@ export class IcarusDBAdapter {
 
   private getDeletionSnapshot(
     sessionId: string
-  ): IcarusSessionWithWorkflowRecord {
+  ): IcarusSessionWithWorkflow {
     const session = this.getSessionWithWorkflows(sessionId);
     if (!session) throw new Error(`Session with id ${sessionId} not found`);
     return session;
@@ -441,7 +436,7 @@ export class IcarusDBAdapter {
 
   private executeSessionDeletion(
     sessionId: string,
-    createPlan: (session: IcarusSessionWithWorkflowRecord) => DeletionPlan,
+    createPlan: (session: IcarusSessionWithWorkflow) => DeletionPlan,
     confirmedPlan?: DeletionPlan
   ): SessionDeletionResult {
     const transaction = this.db.transaction(() => {
@@ -458,7 +453,7 @@ export class IcarusDBAdapter {
       const deletedMatrixIds = new Set(plan.matrixIds);
       const deletedActivityIds = new Set(plan.activityIds);
       const deletedVisualizationIds = new Set(plan.visualizationIds);
-      const updatedSession: IcarusSessionRecord = {
+      const updatedSession: IcarusSession = {
         id: snapshot.id,
         name: snapshot.name,
         date: snapshot.date,
