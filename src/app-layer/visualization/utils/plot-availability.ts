@@ -14,13 +14,22 @@ const unavailable = (reason: string): AvailabilityResult => ({
   reason,
 });
 
-const hasXAxis = ({
+const getXAxisColumns = ({
   xAxis,
   xAxes,
 }: {
   xAxis?: string;
   xAxes?: string[];
-}) => Boolean(xAxis || xAxes?.length);
+}): string[] => [
+  ...(xAxes ?? []),
+  ...(xAxis ? [xAxis] : []),
+];
+
+const columnsAvailable = (
+  columns: string[],
+  available: string[],
+): boolean =>
+  columns.length > 0 && columns.every((col) => available.includes(col));
 
 export const getPlotAvailability = ({
   activeMatrixId,
@@ -35,7 +44,10 @@ export const getPlotAvailability = ({
 
     switch (plot) {
       case "bar":
-        return hasXAxis(plotSelections.bar)
+        return columnsAvailable(
+          getXAxisColumns(plotSelections.bar),
+          allColumns,
+        )
           ? ready()
           : unavailable(
               "Choose at least one x-axis column for the bar plot.",
@@ -47,8 +59,14 @@ export const getPlotAvailability = ({
           : unavailable("Box plot needs at least one numeric column.");
 
       case "scatter":
-        return hasXAxis(plotSelections.scatter) &&
-          Boolean(plotSelections.scatter.yAxes?.length)
+        return columnsAvailable(
+          getXAxisColumns(plotSelections.scatter),
+          numericColumns,
+        ) &&
+          columnsAvailable(
+            plotSelections.scatter.yAxes ?? [],
+            numericColumns,
+          )
           ? ready()
           : unavailable(
               "Scatter plot needs at least one x-axis and one y-axis column.",
@@ -59,13 +77,17 @@ export const getPlotAvailability = ({
           ? ready()
           : unavailable("Heatmap needs at least two numeric columns.");
 
-      case "volcano":
-        return hasXAxis(plotSelections.volcano) &&
-          Boolean(plotSelections.volcano.yAxes?.[0])
+      case "volcano": {
+        const xColumns = getXAxisColumns(plotSelections.volcano);
+        const yColumn = plotSelections.volcano.yAxes?.[0];
+        return columnsAvailable(xColumns, numericColumns) &&
+          yColumn !== undefined &&
+          numericColumns.includes(yColumn)
           ? ready()
           : unavailable(
               "Volcano plot needs one x-axis and one y-axis column.",
             );
+      }
 
       case "qc":
         return numericColumns.length >= 1
