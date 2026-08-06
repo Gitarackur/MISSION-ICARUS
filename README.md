@@ -21,6 +21,38 @@ The current app is built around a few core ideas:
 
 ---
 
+## Data Structure
+
+The core workflow is modeled as a **Directed Acyclic Graph (DAG)**, but it is not stored as a first-class graph object. Edges are implicit references held as identifiers, and the DAG is materialized as a tree only when needed.
+
+- **Implicit adjacency list (edge-list by reference).** Each `IcarusActivity` links an input matrix to an output matrix via `inputMatrixReference(s)` and `outputMatrixReference` string identifiers. Matrices, activities, and visualizations are persisted as flat records; no explicit adjacency list or graph type is kept on disk.
+- **DAG semantics.** Flow always moves forward (input → output) and never revisits a matrix, so the graph is acyclic.
+- **Projection to a rooted n-ary forest for display.** The activity tree builders (`buildActivityTree` / `buildActivityTreeForNonD3`) walk the references with an `outputMatrixMap`, group activities that share an input matrix under an `inputMatrixKey` node, assign a `depth`, and produce `{ activity, children, depth }` nodes. Duplicate/shared parents are collapsed here, so the persisted DAG loses some multi-parent structure in the rendered tree.
+- **Cascade traversal.** Deletion planning walks the same reference/cascade to compute dependent matrices, activities, and visualizations.
+
+In short: an **implicit adjacency-list DAG** that is **materialized as a forest of n-ary trees** for rendering and dependency analysis.
+
+```mermaid
+flowchart LR
+    S[IcarusSession] -->|owns| W[IcarusWorkflow]
+    S -->|links records| M0[Source Matrix]
+
+    subgraph G["Activity DAG (implicit)"]
+        M0 -->|inputMatrixReference| A1[[Activity]]
+        A1 -->|outputMatrixReference| M1[Matrix]
+        M1 -->|inputMatrixReference| A2[[Activity]]
+        A2 -->|outputMatrixReference| M2[Matrix]
+        A2 -->|createdByActivityId| V[Visualization]
+    end
+
+    M1 -.->|tree projection| AT[Activity Tree (n-ary forest)]
+    M2 -.->|depth/children| AT
+```
+
+`matrices`, `activities`, and `visualizations` are persisted as flat lists; the arrows above are identifier references (`*MatrixReference`), not stored node objects. The activity tree is a navigational projection of this graph.
+
+---
+
 ## Current Features
 
 ### Data import
