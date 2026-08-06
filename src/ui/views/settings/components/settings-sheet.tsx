@@ -1,0 +1,173 @@
+import { Monitor, Moon, Sun, RotateCcw, Save } from "lucide-react";
+import SlidingSheet from "@/ui/design-system/Sheet/main";
+import { Button } from "@/ui/design-system/Button";
+import { Checkbox } from "@/ui/design-system/Checkbox";
+import SingleSelect from "@/ui/design-system/Select/select";
+import { useThemeMode } from "@/ui/theme/use-theme-mode";
+import { useAppSettings } from "@/ui/settings/use-app-settings";
+import { DELIMITER_LABELS, EXPORT_SCOPE_LABELS } from "@/ui/settings/settings.types";
+import { EXPORT_FORMAT_INFO, ExportFormat } from "@/app-layer/shared/exporter";
+import {
+  settingsPanelStyles,
+  themeSwatchStyles,
+} from "../variants/settings.variants";
+import { settingsButtonStyles } from "../variants/settings-buttons.variants";
+import type { CsvDelimiter, ExportScope } from "@/ui/settings/settings.types";
+import type { ThemeMode } from "@/ui/theme/types";
+import type { SettingsViewProps } from "../types/index.types";
+
+const THEME_OPTIONS = [
+  { value: "light", label: "Light", icon: Sun },
+  { value: "dark", label: "Dark", icon: Moon },
+  { value: "system", label: "System", icon: Monitor },
+] as const;
+
+const ThemeModeControl = () => {
+  const { mode, setMode } = useThemeMode();
+  const s = themeSwatchStyles();
+
+  return (
+    <div className={s.grid()}>
+      {THEME_OPTIONS.map((option) => {
+        const activeStyles = themeSwatchStyles({ active: mode === option.value });
+        const Icon = option.icon;
+        return (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => setMode(option.value as ThemeMode)}
+            className={activeStyles.swatch()}
+          >
+            <Icon className={activeStyles.icon()} />
+            <span className={activeStyles.label()}>{option.label}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
+};
+
+const SettingsSheet = ({ isOpen, onClose }: SettingsViewProps) => {
+  const panel = settingsPanelStyles();
+  const buttonStyles = settingsButtonStyles();
+  const {
+    settings: appSettings,
+    setDefaultExportFormat,
+    setDelimiter,
+    setIncludeHeaders,
+    setIncludeMetadataColumns,
+    setExportScope,
+    resetSettings,
+  } = useAppSettings();
+
+  const formatOptions = (
+    Object.keys(EXPORT_FORMAT_INFO) as ExportFormat[]
+  ).map((key) => ({
+    value: key,
+    label: EXPORT_FORMAT_INFO[key].label,
+    description: EXPORT_FORMAT_INFO[key].description,
+  }));
+
+  const delimiterOptions = (
+    Object.keys(DELIMITER_LABELS) as CsvDelimiter[]
+  ).map((key) => ({ value: key, label: DELIMITER_LABELS[key] }));
+
+  const scopeOptions = (
+    Object.keys(EXPORT_SCOPE_LABELS) as ExportScope[]
+  ).map((key) => ({ value: key, label: EXPORT_SCOPE_LABELS[key] }));
+
+  return (
+    <SlidingSheet
+      isOpen={isOpen}
+      onClose={onClose}
+      title="Settings"
+      position="right"
+      sidebarWidth="0px"
+    >
+      <div className={panel.container()}>
+        <section className={panel.section()}>
+          <h3 className={panel.sectionTitle()}>Appearance</h3>
+          <ThemeModeControl />
+        </section>
+
+        <section className={panel.section()}>
+          <h3 className={panel.sectionTitle()}>Export &amp; Data</h3>
+          <div className={panel.fieldGroup()}>
+            <SingleSelect
+              value={appSettings.defaultExportFormat}
+              onChange={(value) =>
+                value && setDefaultExportFormat(value as ExportFormat)
+              }
+              options={formatOptions}
+              label="Default export format"
+              placeholder="Choose default format"
+              showDescriptions
+            />
+            <SingleSelect
+              value={appSettings.delimiter}
+              onChange={(value) => value && setDelimiter(value as CsvDelimiter)}
+              options={delimiterOptions}
+              label="Delimiter for CSV / text"
+              placeholder="Choose delimiter"
+              searchable={false}
+            />
+            <SingleSelect
+              value={appSettings.exportScope}
+              onChange={(value) => value && setExportScope(value as ExportScope)}
+              options={scopeOptions}
+              label="Default export scope"
+              placeholder="Choose scope"
+              searchable={false}
+            />
+            <div className={panel.optionsGroup()}>
+              <Checkbox
+                checked={appSettings.includeHeaders}
+                onChange={(event) => setIncludeHeaders(event.target.checked)}
+                label="Include header rows in exports"
+              />
+              <Checkbox
+                checked={appSettings.includeMetadataColumns}
+                onChange={(event) =>
+                  setIncludeMetadataColumns(event.target.checked)
+                }
+                label="Include metadata columns"
+              />
+            </div>
+          </div>
+        </section>
+
+        <section className={panel.section()}>
+          <h3 className={panel.sectionTitle()}>Preferences</h3>
+          <Button
+            variant="secondary"
+            className={buttonStyles.fullWidth()}
+            onClick={resetSettings}
+          >
+            <RotateCcw className={buttonStyles.icon()} />
+            Reset to defaults
+          </Button>
+        </section>
+
+        <section className={panel.actionRow()}>
+          <Button
+            variant="outline"
+            className={buttonStyles.flexOne()}
+            onClick={onClose}
+          >
+            Close
+          </Button>
+          <Button
+            variant="primary"
+            className={buttonStyles.flexOne()}
+            onClick={onClose}
+          >
+            <Save className={buttonStyles.icon()} />
+            Done
+          </Button>
+        </section>
+      </div>
+    </SlidingSheet>
+  );
+};
+
+export default SettingsSheet;

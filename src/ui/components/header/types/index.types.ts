@@ -15,6 +15,8 @@ export type MatrixTabProps = {
   onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;
   onMatrixDelete?: (matrixId: string) => void;
   onVisualizationDelete?: (visualizationId: string) => void;
+  onOpenSettings?: () => void;
+  onOpenExport?: () => void;
 };
 
 export type MatrixTabGroupProps = {
