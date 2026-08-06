@@ -34,19 +34,19 @@ In short: an **implicit adjacency-list DAG** that is **materialized as a forest 
 
 ```mermaid
 flowchart LR
-    S[IcarusSession] -->|owns| W[IcarusWorkflow]
-    S -->|links records| M0[Source Matrix]
+    S[IcarusSession] --> W[IcarusWorkflow]
+    S --> M0[Source Matrix]
 
-    subgraph G["Activity DAG (implicit)"]
-        M0 -->|inputMatrixReference| A1[[Activity]]
-        A1 -->|outputMatrixReference| M1[Matrix]
-        M1 -->|inputMatrixReference| A2[[Activity]]
-        A2 -->|outputMatrixReference| M2[Matrix]
-        A2 -->|createdByActivityId| V[Visualization]
+    subgraph G[Activity DAG]
+        M0 -->|input reference| A1[Activity]
+        A1 -->|output reference| M1[Matrix]
+        M1 -->|input reference| A2[Activity]
+        A2 -->|output reference| M2[Matrix]
+        A2 -->|created by| V[Visualization]
     end
 
-    M1 -.->|tree projection| AT[Activity Tree (n-ary forest)]
-    M2 -.->|depth/children| AT
+    M1 -.-> AT[Activity Tree]
+    M2 -.-> AT
 ```
 
 `matrices`, `activities`, and `visualizations` are persisted as flat lists; the arrows above are identifier references (`*MatrixReference`), not stored node objects. The activity tree is a navigational projection of this graph.
