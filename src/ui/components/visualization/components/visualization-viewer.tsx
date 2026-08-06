@@ -195,6 +195,7 @@ export function VisualizationViewer({
                       role="region"
                       aria-label="Plot settings"
                       tabIndex={0}
+                      data-visualization-settings="true"
                       onMouseDown={(event) => event.stopPropagation()}
                       onWheel={(event) => event.stopPropagation()}
                     >

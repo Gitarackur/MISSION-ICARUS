@@ -71,6 +71,24 @@ export const useVisualizationViewport = ({
   }, [activeVisualizationId, displayMode, resetViewport]);
 
   useEffect(() => {
+    const handleWheelScrollLock = (event: WheelEvent) => {
+      const target = event.target as Node | null;
+      const frame = frameRef.current;
+      if (!target || !frame || !frame.contains(target)) return;
+
+      if ((target as Element | null)?.closest?.("[data-visualization-settings]")) {
+        return;
+      }
+
+      event.preventDefault();
+    };
+
+    window.addEventListener("wheel", handleWheelScrollLock, { passive: false });
+    return () =>
+      window.removeEventListener("wheel", handleWheelScrollLock);
+  }, []);
+
+  useEffect(() => {
     const handlePointerMove = (event: MouseEvent) => {
       if (!dragRef.current.active) return;
       setPan(
