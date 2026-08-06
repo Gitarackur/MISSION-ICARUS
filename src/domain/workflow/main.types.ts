@@ -10,7 +10,7 @@ export type TableMatrix<T = (string | number)> = T[];
 // Icarus Matrix
 export interface IcarusMatrix {
   id: string;
-  createdAt?: number;
+  createdAt: number;
   columns: TableColumns;
   data: TableMatrices;
   createdByFirstActivity?: boolean;
@@ -37,8 +37,8 @@ export interface IcarusActivity {
   inputParameters?: Record<string, string | number | boolean | string[] | unknown | number[][] | null>;
   outputMetrics?: Record<string, string | number | boolean | unknown | null>;
 
-  inputMatrixReferences?: string; 
-  outputMatrixReference?: string;
+  inputMatrixReferences?: string | null;
+  outputMatrixReference?: string | null;
 }
 
 export interface IMapActivityData {
@@ -53,8 +53,8 @@ export interface IMapActivityData {
   inputParameters?: Record<string, string | number | boolean | unknown | null>;
   outputMetrics?: Record<string, string | number | boolean | unknown | null>;
 
-  inputMatrixReferences?: string;
-  outputMatrixReference?: string;
+  inputMatrixReferences?: string | null;
+  outputMatrixReference?: string | null;
 }
 
 export type SaveStatisticalActivity = IcarusActivity & {
@@ -113,4 +113,18 @@ export interface IcarusPlugin {
   id: string;
   createdAt?: string;
   metadata: unknown;
+}
+
+// Persisted workflow aggregate. `data` is the workflow graph instance.
+export interface IcarusWorkflowData {
+  id: string;
+  matrices: IcarusMatrix[];
+  activities: IcarusActivity[];
+  visualizations: IcarusVisualization[];
+}
+
+export interface IcarusWorkflowRecord {
+  id: string;
+  createdAt: number;
+  data: IcarusWorkflowData;
 }

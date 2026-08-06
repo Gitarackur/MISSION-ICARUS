@@ -1,10 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { StrictValidationResult } from "@/domain/shared/index.types";
-import {
-  IcarusSessionRecord,
-  IcarusSessionWithWorkflowRecord,
-} from "@/app-layer/database/database.types";
-import IcarusSession from "..";
+import IcarusSessionEntity from "..";
+import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
 import IcarusWorkflow from "@/app-layer/algorithms/workflow";
 import { BareSession } from "@/domain/session";
 import {
@@ -25,7 +22,7 @@ import { IcarusDBAdapter } from "@/app-layer/database/store";
 //
 //-----------------------------------------------------------------------------
 export function validateAndExtractWorkflowDataStrict(
-  sessionWithWorkflows: IcarusSessionWithWorkflowRecord | null | undefined
+  sessionWithWorkflows: IcarusSessionWithWorkflow | null | undefined
 ): StrictValidationResult {
   try {
     const matrices = sessionWithWorkflows?.matrices;
@@ -78,7 +75,7 @@ export const generateActiveSessionWitNestedWorkflow = async ({
     const { rowsAs2dMatrix } = result;
 
     // cerate icarus session instance
-    const session = new IcarusSession();
+    const session = new IcarusSessionEntity();
     session.changeSessionName(
       name || `Test Session - ${Math.random() * 6 + 1}`
     );
@@ -194,7 +191,7 @@ export const reconstructOriginalRowsAndColumnsFromSessionWorkflows = async (
 //-------------------------------------------------------------------------------------------------------------------
 
 export const saveActivityInSessionWorkflow = async (
-  activeSession: IcarusSessionWithWorkflowRecord | null,
+  activeSession: IcarusSessionWithWorkflow | null,
   activity: Omit<IcarusActivity, "id" | "timestamp">
 ) => {
   try {
@@ -238,7 +235,7 @@ export const saveActivityInSessionWorkflow = async (
 //-------------------------------------------------------------------------------------------------------------------
 
 export const saveMatrixInSessionWorkflow = async (
-  activeSession: IcarusSessionWithWorkflowRecord | null,
+  activeSession: IcarusSessionWithWorkflow | null,
   matrix: Omit<IcarusMatrix, "id" | "createdAt">
 ) => {
   try {
@@ -284,7 +281,7 @@ export const saveMatrixInSessionWorkflow = async (
 //-------------------------------------------------------------------------------------------------------------------
 
 export const deleteMatrixInSessionWorkflow = async (
-  activeSession: IcarusSessionWithWorkflowRecord | IcarusSessionRecord | null,
+  activeSession: IcarusSessionWithWorkflow | IcarusSession | null,
   matrixId: string
 ) => {
   try {
@@ -331,7 +328,7 @@ export const fetchAllDataForSession = async (activeSessionId: string) => {
 //-------------------------------------------------------------------------------------------------------------------
 
 export const saveNewStatisticalActivityInWorkflow = async (
-  activeSession: IcarusSessionWithWorkflowRecord,
+  activeSession: IcarusSessionWithWorkflow,
   params: Partial<SaveStatisticalActivity>
 ) => {
   const {
@@ -402,7 +399,7 @@ export const saveNewStatisticalActivityInWorkflow = async (
 //-------------------------------------------------------------------------------------------------------------------
 
 export const saveNewVisualizationActivityInWorkflow = async (
-  activeSession: IcarusSessionWithWorkflowRecord,
+  activeSession: IcarusSessionWithWorkflow,
   params: SaveVisualizationActivity
 ) => {
   const {

@@ -1,4 +1,5 @@
-import { IcarusVisualizationRecord } from "@/app-layer/database/database.types";
+import type { IcarusVisualization } from "@/domain/workflow/main.types";
+
 
 // ---- Types ----
 export type ActivityRow = {
@@ -20,8 +21,8 @@ export type VisualizationRow = {
   createdByActivityId: string | null;
   createdAt: number;
   sourceMatrixId: string | null;
-  renderer: IcarusVisualizationRecord["renderer"] | null;
-  visualizationType: IcarusVisualizationRecord["visualizationType"] | null;
+  renderer: IcarusVisualization["renderer"] | null;
+  visualizationType: IcarusVisualization["visualizationType"] | null;
   title: string | null;
   data: string;
 };

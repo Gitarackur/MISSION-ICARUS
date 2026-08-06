@@ -1,4 +1,5 @@
-import { IcarusSessionWithWorkflowRecord } from "@/app-layer/database/database.types";
+import type { IcarusSessionWithWorkflow } from "@/domain/session";
+
 import { ActivityTreeNode, ActivityTreeNodeForNonD3 } from "@/domain/tree/tree.types";
 import { TableColumns } from "@/domain/workflow/main.types";
 
@@ -15,7 +16,7 @@ export interface TreeNodeUI {
 }
 
 export interface DisplayedActivityTree {
-  sessionData: IcarusSessionWithWorkflowRecord;
+  sessionData: IcarusSessionWithWorkflow;
   activeMatrixId?: string | null;
   onClickOfOutputButton?: (matrixId: string) => void;
   onClickOfInputButton?: (inputMatrixRef: string) => void;

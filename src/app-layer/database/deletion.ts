@@ -1,9 +1,6 @@
-import type {
-  IcarusActivityRecord,
-  IcarusSessionRecord,
-  IcarusSessionWithWorkflowRecord,
-  IcarusVisualizationRecord,
-} from "./database.types";
+import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
+import type { IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
+
 
 export type DeletionTargetType = "matrix" | "activity" | "visualization";
 
@@ -21,7 +18,7 @@ export interface DeletionPlan {
 
 export interface SessionDeletionResult {
   plan: DeletionPlan;
-  session: IcarusSessionWithWorkflowRecord;
+  session: IcarusSessionWithWorkflow;
 }
 
 export interface PhysicalDeletionScope {
@@ -30,7 +27,7 @@ export interface PhysicalDeletionScope {
   visualizationIds: string[];
 }
 
-const getActivityMatrixInputs = (activity: IcarusActivityRecord) => {
+const getActivityMatrixInputs = (activity: IcarusActivity) => {
   const references = new Set<string>();
 
   if (activity.sourceMatrixId) {
@@ -51,7 +48,7 @@ const getActivityMatrixInputs = (activity: IcarusActivityRecord) => {
 };
 
 export const getActivityReferencedMatrixIds = (
-  activity: IcarusActivityRecord
+  activity: IcarusActivity
 ) => {
   const references = getActivityMatrixInputs(activity);
   if (activity.outputMatrixReference) {
@@ -61,7 +58,7 @@ export const getActivityReferencedMatrixIds = (
 };
 
 export const getVisualizationReferencedMatrixIds = (
-  visualization: IcarusVisualizationRecord
+  visualization: IcarusVisualization
 ) => {
   const references = new Set<string>();
   if (visualization.sourceMatrixId) {
@@ -82,7 +79,7 @@ const orderedIds = (ids: string[], selected: Set<string>) =>
   ids.filter((id) => selected.has(id));
 
 const requireSessionRecord = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   type: DeletionTargetType,
   id: string
 ) => {
@@ -106,7 +103,7 @@ const requireSessionRecord = (
 };
 
 const expandMatrixCascade = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   matrixIds: Set<string>,
   activityIds: Set<string>
 ) => {
@@ -149,7 +146,7 @@ const expandMatrixCascade = (
 };
 
 const collectCascadingVisualizations = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   matrixIds: Set<string>,
   activityIds: Set<string>
 ) => {
@@ -173,7 +170,7 @@ const collectCascadingVisualizations = (
 };
 
 export const planMatrixDeletion = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   matrixId: string
 ): DeletionPlan => {
   requireSessionRecord(session, "matrix", matrixId);
@@ -217,7 +214,7 @@ export const planMatrixDeletion = (
 };
 
 export const planActivityDeletion = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   activityId: string
 ): DeletionPlan => {
   requireSessionRecord(session, "activity", activityId);
@@ -258,7 +255,7 @@ export const planActivityDeletion = (
 };
 
 export const planVisualizationDeletion = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   visualizationId: string
 ): DeletionPlan => {
   requireSessionRecord(session, "visualization", visualizationId);
@@ -303,7 +300,7 @@ export const planVisualizationDeletion = (
 };
 
 export const assertDeletionPlanIntegrity = (
-  session: IcarusSessionWithWorkflowRecord,
+  session: IcarusSessionWithWorkflow,
   plan: DeletionPlan
 ) => {
   const matrixIds = new Set(plan.matrixIds);
@@ -369,9 +366,9 @@ export const getPhysicalDeletionScope = ({
 }: {
   plan: DeletionPlan;
   sessionId: string;
-  sessions: IcarusSessionRecord[];
-  activities: IcarusActivityRecord[];
-  visualizations: IcarusVisualizationRecord[];
+  sessions: IcarusSession[];
+  activities: IcarusActivity[];
+  visualizations: IcarusVisualization[];
 }): PhysicalDeletionScope => {
   const otherSessions = sessions.filter((session) => session.id !== sessionId);
   const isReferencedByAnotherSession = (

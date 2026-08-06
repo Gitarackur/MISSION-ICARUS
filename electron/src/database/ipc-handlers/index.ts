@@ -1,11 +1,7 @@
 import { ipcMain } from "electron";
-import type {
-  IcarusActivityRecord,
-  IcarusMatrixRecord,
-  IcarusSessionRecord,
-  IcarusVisualizationRecord,
-  IcarusWorkflowRecord,
-} from "@/app-layer/database/database.types";
+import type { IcarusSession } from "@/domain/session";
+import type { IcarusActivity, IcarusMatrix, IcarusVisualization, IcarusWorkflowRecord } from "@/domain/workflow/main.types";
+
 import type { DeletionPlan } from "@/app-layer/database/deletion";
 import type { IcarusDBAdapterType } from "../types/index.types";
 
@@ -31,7 +27,7 @@ type VisualizationDeletionRequest = {
 export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
   const icarusDB = IcarusDB;
 
-  ipcMain.handle("db:saveSession", async (_, session: IcarusSessionRecord) => {
+  ipcMain.handle("db:saveSession", async (_, session: IcarusSession) => {
     try {
       icarusDB.saveSession(session);
       return { success: true };
@@ -127,7 +123,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
   });
 
   // Matrix handlers
-  ipcMain.handle("db:saveMatrix", async (_, matrix: IcarusMatrixRecord) => {
+  ipcMain.handle("db:saveMatrix", async (_, matrix: IcarusMatrix) => {
     try {
       icarusDB.saveMatrix(matrix);
       return { success: true };
@@ -156,7 +152,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
   // Activity handlers
   ipcMain.handle(
     "db:saveActivity",
-    async (_, activity: IcarusActivityRecord) => {
+    async (_, activity: IcarusActivity) => {
       try {
         icarusDB.saveActivity(activity);
         return { success: true };
@@ -186,7 +182,7 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
   // Visualization handlers
   ipcMain.handle(
     "db:saveVisualization",
-    async (_, visualization: IcarusVisualizationRecord) => {
+    async (_, visualization: IcarusVisualization) => {
       try {
         icarusDB.saveVisualization(visualization);
         return { success: true };
