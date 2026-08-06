@@ -9,30 +9,23 @@ import {
   ScatterPlotPayload,
   VolcanoPayload,
 } from "@/domain/visualization/index.types";
-import { mean, tTestTwoSample } from "@/app-layer/statistics/utils/statistical-engine";
+import {
+  mean,
+  tTestTwoSample,
+} from "@/app-layer/statistics/utils/statistical-engine";
 import { parseLocalizedNumber } from "@/domain/shared/number-parsing";
-
-export type VisualizationReadiness<TPayload> = {
-  payload: TPayload | null;
-  reason?: string;
-};
-
-type ColumnDescriptor = {
-  column: string;
-  index: number;
-  numeric: boolean;
-};
-
-const MAX_PROFILE_ROWS = 2000;
-const MAX_VISUALIZATION_ROWS = 5000;
-const MAX_SCATTER_POINTS = 4000;
-const MAX_PCA_ROWS = 2500;
-const MAX_HEATMAP_ROWS = 3000;
-const MAX_CATEGORY_COUNT = 120;
-
-const CONTROL_COLUMN_PATTERN = /(control|ctrl|ctr|vehicle|untreated|mock)/i;
-const LOG_FOLD_CHANGE_PATTERN = /(log2.*fold|logfc|log_fc|fold.*change|log2fc)/i;
-const P_VALUE_PATTERN = /(^p$|pvalue|p_value|p-value|adj.*p|qvalue|q_value)/i;
+import {
+  CONTROL_COLUMN_PATTERN,
+  LOG_FOLD_CHANGE_PATTERN,
+  MAX_CATEGORY_COUNT,
+  MAX_HEATMAP_ROWS,
+  MAX_PCA_ROWS,
+  MAX_PROFILE_ROWS,
+  MAX_SCATTER_POINTS,
+  MAX_VISUALIZATION_ROWS,
+  P_VALUE_PATTERN,
+} from "@/app-layer/visualization/constants";
+import { ColumnDescriptor, PlotKind, VisualizationReadiness } from "@/app-layer/visualization/types";
 
 const toFinite = (value: unknown) => {
   return parseLocalizedNumber(value);
@@ -61,8 +54,8 @@ const getColumnDescriptors = (matrix?: MatrixRecord): ColumnDescriptor[] =>
     index,
     numeric: Boolean(
       sampleRows(matrix?.data ?? [], MAX_PROFILE_ROWS).some(
-        (row) => toFinite(row[index]) !== null
-      )
+        (row) => toFinite(row[index]) !== null,
+      ),
     ),
   }));
 
@@ -77,7 +70,7 @@ const getFiniteColumnValues = (matrix: MatrixRecord, columnIndex: number) =>
 const getRowLabel = (
   matrix: MatrixRecord,
   rowIndex: number,
-  preferredColumns?: string[] | string
+  preferredColumns?: string[] | string,
 ) => {
   const descriptors = getColumnDescriptors(matrix);
   const requestedColumns = Array.isArray(preferredColumns)
@@ -103,8 +96,8 @@ const getRowLabel = (
   }
 
   const descriptor = descriptors.find((item) =>
-        /(protein|gene|id|name|label|feature|sample|group)/i.test(item.column)
-      );
+    /(protein|gene|id|name|label|feature|sample|group)/i.test(item.column),
+  );
 
   const value = descriptor ? matrix.data[rowIndex]?.[descriptor.index] : null;
   return value === null || value === undefined || value === ""
@@ -132,12 +125,12 @@ const buildVolcanoLegendLabels = (selection: PlotAxisSelection) => ({
 
 const getSelectedNumericDescriptors = (
   matrix: MatrixRecord,
-  columns?: string[]
+  columns?: string[],
 ) => {
   const numericColumns = getNumericColumnDescriptors(matrix);
   if (!columns?.length) return numericColumns;
   const selected = numericColumns.filter((descriptor) =>
-    columns.includes(descriptor.column)
+    columns.includes(descriptor.column),
   );
   return selected.length ? selected : numericColumns;
 };
@@ -155,45 +148,50 @@ const buildScatterSeries = ({
 }) => {
   const descriptors = getColumnDescriptors(matrix);
   const xDescriptors = descriptors.filter(
-    (item) => xAxes.includes(item.column) && item.numeric
+    (item) => xAxes.includes(item.column) && item.numeric,
   );
   const yDescriptors = descriptors.filter(
-    (item) => yAxes.includes(item.column) && item.numeric
+    (item) => yAxes.includes(item.column) && item.numeric,
   );
 
   if (!xDescriptors.length || !yDescriptors.length) return [];
 
-  return xDescriptors.flatMap((xDescriptor) =>
-    yDescriptors.map((yDescriptor) => {
-      const rows = sampleRowsWithIndex(matrix.data, MAX_SCATTER_POINTS)
-        .map(({ row, rowIndex }) => ({
-          x: toFinite(row[xDescriptor.index]),
-          y: toFinite(row[yDescriptor.index]),
-          label: getRowLabel(matrix, rowIndex, labelAxes),
-        }))
-        .filter(
-          (row): row is { x: number; y: number; label: string } =>
-            row.x !== null && row.y !== null
-        );
+  return xDescriptors
+    .flatMap((xDescriptor) =>
+      yDescriptors.map((yDescriptor) => {
+        const rows = sampleRowsWithIndex(matrix.data, MAX_SCATTER_POINTS)
+          .map(({ row, rowIndex }) => ({
+            x: toFinite(row[xDescriptor.index]),
+            y: toFinite(row[yDescriptor.index]),
+            label: getRowLabel(matrix, rowIndex, labelAxes),
+          }))
+          .filter(
+            (row): row is { x: number; y: number; label: string } =>
+              row.x !== null && row.y !== null,
+          );
 
-      if (!rows.length) return null;
+        if (!rows.length) return null;
 
-      return {
-        name:
-          xDescriptors.length > 1
-            ? `${yDescriptor.column} vs ${xDescriptor.column}`
-            : yDescriptor.column,
-        x: rows.map((row) => row.x),
-        y: rows.map((row) => row.y),
-        labels: rows.map((row) => row.label),
-      };
-    })
-  )
+        return {
+          name:
+            xDescriptors.length > 1
+              ? `${yDescriptor.column} vs ${xDescriptor.column}`
+              : yDescriptor.column,
+          x: rows.map((row) => row.x),
+          y: rows.map((row) => row.y),
+          labels: rows.map((row) => row.label),
+        };
+      }),
+    )
     .filter(
       (
-        series
-      ): series is { name: string; x: number[]; y: number[]; labels: string[] } =>
-        series !== null
+        series,
+      ): series is {
+        name: string;
+        x: number[];
+        y: number[];
+        labels: string[];
+      } => series !== null,
     );
 };
 
@@ -201,38 +199,37 @@ export const getMatrixPlotColumnOptions = (matrix?: MatrixRecord) => {
   const descriptors = getColumnDescriptors(matrix);
   return {
     allColumns: descriptors.map((item) => item.column),
-    numericColumns: descriptors.filter((item) => item.numeric).map((item) => item.column),
+    numericColumns: descriptors
+      .filter((item) => item.numeric)
+      .map((item) => item.column),
     labelColumns: descriptors.map((item) => item.column),
   };
 };
 
 export const getDefaultPlotSelection = (
-  kind:
-    | "bar"
-    | "box"
-    | "scatter"
-    | "heatmap"
-    | "volcano"
-    | "pca"
-    | "qc"
-    | "missing-values",
-  matrix?: MatrixRecord
+  kind: PlotKind,
+  matrix?: MatrixRecord,
 ): PlotAxisSelection => {
   const { allColumns, numericColumns } = getMatrixPlotColumnOptions(matrix);
-  const labelAxis = allColumns.find((column) => !numericColumns.includes(column));
+  const labelAxis = allColumns.find(
+    (column) => !numericColumns.includes(column),
+  );
 
   switch (kind) {
-    case "bar":
-      {
-        const xAxes = labelAxis ? [labelAxis] : allColumns[0] ? [allColumns[0]] : [];
-        return {
-          xAxes,
-          xAxis: xAxes[0] ?? "",
-          yAxes: numericColumns.slice(0, 2),
-          labelAxes: labelAxis ? [labelAxis] : [],
-          labelAxis,
-        };
-      }
+    case "bar": {
+      const xAxes = labelAxis
+        ? [labelAxis]
+        : allColumns[0]
+          ? [allColumns[0]]
+          : [];
+      return {
+        xAxes,
+        xAxis: xAxes[0] ?? "",
+        yAxes: numericColumns.slice(0, 2),
+        labelAxes: labelAxis ? [labelAxis] : [],
+        labelAxis,
+      };
+    }
     case "box":
       return {
         yAxes: numericColumns.slice(0, 6),
@@ -291,10 +288,13 @@ export const getDefaultPlotSelection = (
 
 export const buildConfiguredQcPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<BoxPlotPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
-  const descriptors = getSelectedNumericDescriptors(matrix, selection.yAxes).slice(0, 12);
+  const descriptors = getSelectedNumericDescriptors(
+    matrix,
+    selection.yAxes,
+  ).slice(0, 12);
 
   if (!descriptors.length) {
     return {
@@ -328,14 +328,14 @@ export const buildConfiguredQcPayload = (
 
 export const buildConfiguredMissingValuesPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<BarChartPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
 
   const descriptors = getColumnDescriptors(matrix).filter((descriptor) =>
     (selection.columns?.length ? selection.columns : matrix.columns).includes(
-      descriptor.column
-    )
+      descriptor.column,
+    ),
   );
 
   if (!descriptors.length) {
@@ -349,10 +349,12 @@ export const buildConfiguredMissingValuesPayload = (
   const values = descriptors.map((descriptor) =>
     matrix.data.reduce((count, row) => {
       const value = row[descriptor.index];
-      return value === null || value === undefined || String(value).trim() === ""
+      return value === null ||
+        value === undefined ||
+        String(value).trim() === ""
         ? count + 1
         : count;
-    }, 0)
+    }, 0),
   );
 
   return {
@@ -373,20 +375,23 @@ export const buildConfiguredMissingValuesPayload = (
 
 export const buildConfiguredBarPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<BarChartPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
   const selectedXAxes = getSelectedXAxes(selection);
   if (!selectedXAxes.length) {
-    return { payload: null, reason: "Choose at least one x-axis column for the bar plot." };
+    return {
+      payload: null,
+      reason: "Choose at least one x-axis column for the bar plot.",
+    };
   }
 
   const descriptors = getColumnDescriptors(matrix);
   const xDescriptors = descriptors.filter((item) =>
-    selectedXAxes.includes(item.column)
+    selectedXAxes.includes(item.column),
   );
   const yDescriptors = descriptors.filter(
-    (item) => selection.yAxes?.includes(item.column) && item.numeric
+    (item) => selection.yAxes?.includes(item.column) && item.numeric,
   );
 
   if (!xDescriptors.length) {
@@ -408,13 +413,13 @@ export const buildConfiguredBarPayload = (
       .join(" · ");
 
   const categories = Array.from(
-    new Set(
-      sampledRows.map((row, rowIndex) => getCategory(row, rowIndex))
-    )
+    new Set(sampledRows.map((row, rowIndex) => getCategory(row, rowIndex))),
   ).slice(0, MAX_CATEGORY_COUNT);
 
   const groupedRows = categories.map((category) =>
-    sampledRows.filter((row, rowIndex) => getCategory(row, rowIndex) === category)
+    sampledRows.filter(
+      (row, rowIndex) => getCategory(row, rowIndex) === category,
+    ),
   );
 
   const series = yDescriptors.length
@@ -437,7 +442,10 @@ export const buildConfiguredBarPayload = (
       ];
 
   if (!series.length) {
-    return { payload: null, reason: "Bar plot could not find values for the chosen axes." };
+    return {
+      payload: null,
+      reason: "Bar plot could not find values for the chosen axes.",
+    };
   }
 
   return {
@@ -457,13 +465,19 @@ export const buildConfiguredBarPayload = (
 
 export const buildConfiguredBoxPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<BoxPlotPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
 
-  const descriptors = getSelectedNumericDescriptors(matrix, selection.yAxes).slice(0, 24);
+  const descriptors = getSelectedNumericDescriptors(
+    matrix,
+    selection.yAxes,
+  ).slice(0, 24);
   if (!descriptors.length) {
-    return { payload: null, reason: "Box plot needs at least one numeric column." };
+    return {
+      payload: null,
+      reason: "Box plot needs at least one numeric column.",
+    };
   }
 
   const series = descriptors
@@ -483,13 +497,14 @@ export const buildConfiguredBoxPayload = (
       }
     : {
         payload: null,
-        reason: "Box plot needs at least one numeric column with two finite values.",
+        reason:
+          "Box plot needs at least one numeric column with two finite values.",
       };
 };
 
 export const buildConfiguredScatterPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<ScatterPlotPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
   const selectedXAxes = getSelectedXAxes(selection);
@@ -508,7 +523,10 @@ export const buildConfiguredScatterPayload = (
   });
 
   if (!series.length) {
-    return { payload: null, reason: "Scatter plot could not find paired numeric values." };
+    return {
+      payload: null,
+      reason: "Scatter plot could not find paired numeric values.",
+    };
   }
 
   return {
@@ -524,19 +542,26 @@ export const buildConfiguredScatterPayload = (
 
 export const buildConfiguredHeatmapPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<HeatmapPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
   if (matrix.data.length < 2) {
     return {
       payload: null,
-      reason: "Heatmap needs at least two rows; summary result matrices are not suitable.",
+      reason:
+        "Heatmap needs at least two rows; summary result matrices are not suitable.",
     };
   }
 
-  const descriptors = getSelectedNumericDescriptors(matrix, selection.columns).slice(0, 30);
+  const descriptors = getSelectedNumericDescriptors(
+    matrix,
+    selection.columns,
+  ).slice(0, 30);
   if (descriptors.length < 2) {
-    return { payload: null, reason: "Heatmap needs at least two numeric columns." };
+    return {
+      payload: null,
+      reason: "Heatmap needs at least two numeric columns.",
+    };
   }
 
   const correlations = descriptors.map(({ index: xIndex }) =>
@@ -544,14 +569,14 @@ export const buildConfiguredHeatmapPayload = (
       const pairs = sampleRows(matrix.data, MAX_HEATMAP_ROWS)
         .map((row) => [toFinite(row[xIndex]), toFinite(row[yIndex])] as const)
         .filter((pair): pair is readonly [number, number] =>
-          pair.every((value) => value !== null)
+          pair.every((value) => value !== null),
         );
       if (pairs.length < 2) return 0;
       const x = pairs.map(([value]) => value);
       const y = pairs.map(([, value]) => value);
       const correlation = jStat.corrcoeff(x, y);
       return Number.isFinite(correlation) ? correlation : 0;
-    })
+    }),
   );
 
   const labels = descriptors.map((descriptor) => descriptor.column);
@@ -569,7 +594,7 @@ const buildVolcanoFromExistingColumns = (
   matrix: MatrixRecord,
   xAxis: string,
   yAxis: string,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VolcanoPayload | null => {
   const descriptors = getNumericColumnDescriptors(matrix);
   const xDescriptor = descriptors.find((item) => item.column === xAxis);
@@ -588,7 +613,7 @@ const buildVolcanoFromExistingColumns = (
       (row): row is { x: number; y: number; label: string } =>
         row.x !== null &&
         row.y !== null &&
-        (!selection.applyNegativeLog10ToY || row.y > 0)
+        (!selection.applyNegativeLog10ToY || row.y > 0),
     );
 
   if (!rows.length) return null;
@@ -609,23 +634,33 @@ const buildVolcanoFromExistingColumns = (
 
 export const buildConfiguredVolcanoPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<VolcanoPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
 
   const xAxis = getSelectedXAxes(selection)[0];
   const yAxis = selection.yAxes?.[0];
   if (!xAxis || !yAxis) {
-    return { payload: null, reason: "Volcano plot needs one x-axis and one y-axis column." };
+    return {
+      payload: null,
+      reason: "Volcano plot needs one x-axis and one y-axis column.",
+    };
   }
 
-  const existingPayload = buildVolcanoFromExistingColumns(matrix, xAxis, yAxis, selection);
+  const existingPayload = buildVolcanoFromExistingColumns(
+    matrix,
+    xAxis,
+    yAxis,
+    selection,
+  );
   if (existingPayload) return { payload: existingPayload };
 
   const numericColumns = getNumericColumnDescriptors(matrix);
-  const control = numericColumns.filter(({ column }) => CONTROL_COLUMN_PATTERN.test(column));
+  const control = numericColumns.filter(({ column }) =>
+    CONTROL_COLUMN_PATTERN.test(column),
+  );
   const treatment = numericColumns.filter(
-    ({ index }) => !control.some((item) => item.index === index)
+    ({ index }) => !control.some((item) => item.index === index),
   );
 
   if (control.length < 2 || treatment.length < 2) {
@@ -661,13 +696,14 @@ export const buildConfiguredVolcanoPayload = (
     })
     .filter(
       (row): row is { x: number; y: number; label: string } =>
-        row !== null && Number.isFinite(row.x) && Number.isFinite(row.y)
+        row !== null && Number.isFinite(row.x) && Number.isFinite(row.y),
     );
 
   if (!rows.length) {
     return {
       payload: null,
-      reason: "Volcano plot could not derive enough finite row-level comparisons.",
+      reason:
+        "Volcano plot could not derive enough finite row-level comparisons.",
     };
   }
 
@@ -689,11 +725,14 @@ export const buildConfiguredVolcanoPayload = (
 
 export const buildConfiguredPcaPayload = (
   matrix: MatrixRecord | undefined,
-  selection: PlotAxisSelection
+  selection: PlotAxisSelection,
 ): VisualizationReadiness<PcaPlotPayload> => {
   if (!matrix) return { payload: null, reason: "No active matrix selected." };
 
-  const descriptors = getSelectedNumericDescriptors(matrix, selection.columns).slice(0, 80);
+  const descriptors = getSelectedNumericDescriptors(
+    matrix,
+    selection.columns,
+  ).slice(0, 80);
   if (descriptors.length < 2 || matrix.data.length < 2) {
     return {
       payload: null,
@@ -714,7 +753,10 @@ export const buildConfiguredPcaPayload = (
     .filter((row): row is { values: number[]; label: string } => row !== null);
 
   if (rows.length < 2) {
-    return { payload: null, reason: "PCA plot could not find enough complete numeric rows." };
+    return {
+      payload: null,
+      reason: "PCA plot could not find enough complete numeric rows.",
+    };
   }
 
   return {

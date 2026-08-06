@@ -8,17 +8,10 @@ import {
   type SetStateAction,
 } from "react";
 import {
-  BarChartPayload,
-  BoxPlotPayload,
-  HeatmapPayload,
-  PcaPlotPayload,
-  ScatterPlotPayload,
   VisualizationDisplaySettings,
   VisualizationRecord,
-  VolcanoPayload,
 } from "@/domain/visualization/index.types";
 import {
-  getSavedVisualizationPayload,
   getVisualizationLabel,
   getVisualizationImage,
 } from "@/domain/visualization/utils/main";
@@ -28,140 +21,16 @@ import {
   renderVisualizationForDisplay,
 } from "@/app-layer/visualization/utils/display";
 import {
-  invokePythonBarPlot,
-  invokePythonBoxPlot,
-  invokePythonHeatmap,
-  invokePythonPcaPlot,
-  invokePythonScatterPlot,
-  invokePythonVolcanoPlot,
-  invokeRBarPlot,
-  invokeRBoxPlot,
-  invokeRHeatmap,
-  invokeRPcaPlot,
-  invokeRScatterPlot,
-  invokeRVolcanoPlot,
+  buildRendererImage,
+  getErrorMessage,
+  supportsRenderer,
 } from "@/app-layer/visualization/utils/renderers";
-
-type DisplayMode = "saved" | "native" | "python" | "r";
-type DisplayWarning = {
-  title: string;
-  message: string;
-};
-type LiveDisplayMode = "python" | "r";
-
-const SETTINGS_RENDER_DEBOUNCE_MS = 100;
-
-const getErrorMessage = (error: unknown) =>
-  error instanceof Error ? error.message : String(error);
-
-const supportsRenderer = (
-  visualization: VisualizationRecord | undefined,
-  mode: DisplayMode
-) => {
-  if (!visualization) return false;
-  if (mode === "saved") return true;
-
-  return [
-    "bar",
-    "box",
-    "scatter",
-    "heatmap",
-    "volcano",
-    "pca",
-    "qc",
-    "missing-values",
-  ].includes(visualization.visualizationType ?? "");
-};
-
-const isBarPayload = (payload: unknown): payload is BarChartPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<BarChartPayload>).categories) &&
-  Array.isArray((payload as Partial<BarChartPayload>).series);
-
-const isBoxPayload = (payload: unknown): payload is BoxPlotPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<BoxPlotPayload>).series);
-
-const isScatterPayload = (payload: unknown): payload is ScatterPlotPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<ScatterPlotPayload>).series);
-
-const isHeatmapPayload = (payload: unknown): payload is HeatmapPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<HeatmapPayload>).matrix);
-
-const isVolcanoPayload = (payload: unknown): payload is VolcanoPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<VolcanoPayload>).x) &&
-  Array.isArray((payload as Partial<VolcanoPayload>).y);
-
-const isPcaPayload = (payload: unknown): payload is PcaPlotPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<PcaPlotPayload>).data);
-
-const buildRendererImage = async (
-  visualization: VisualizationRecord | undefined,
-  renderer: "python" | "r",
-  settings: VisualizationDisplaySettings
-) => {
-  if (!visualization) return null;
-
-  const payload = getSavedVisualizationPayload(visualization);
-  switch (visualization.visualizationType) {
-    case "bar":
-    case "missing-values":
-      if (isBarPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonBarPlot(payload, settings)
-          : invokeRBarPlot(payload, settings);
-      }
-      throw new Error("Saved plot payload is not compatible with the bar renderer.");
-    case "box":
-    case "qc":
-      if (isBoxPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonBoxPlot(payload, settings)
-          : invokeRBoxPlot(payload, settings);
-      }
-      throw new Error("Saved plot payload is not compatible with the box renderer.");
-    case "scatter":
-      if (isScatterPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonScatterPlot(payload, settings)
-          : invokeRScatterPlot(payload, settings);
-      }
-      throw new Error("Saved plot payload is not compatible with the scatter renderer.");
-    case "heatmap":
-      if (isHeatmapPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonHeatmap(payload, settings)
-          : invokeRHeatmap(payload, settings);
-      }
-      throw new Error("Saved plot payload is not compatible with the heatmap renderer.");
-    case "volcano":
-      if (isVolcanoPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonVolcanoPlot(payload, settings)
-          : invokeRVolcanoPlot(payload, settings);
-      }
-      throw new Error("Saved plot payload is not compatible with the volcano renderer.");
-    case "pca":
-      if (isPcaPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonPcaPlot(payload, settings)
-          : invokeRPcaPlot(payload, settings);
-      }
-      throw new Error("Saved plot payload is not compatible with the PCA renderer.");
-    default:
-      return null;
-  }
-};
+import { SETTINGS_RENDER_DEBOUNCE_MS } from "@/app-layer/visualization/constants";
+import {
+  DisplayMode,
+  DisplayWarning,
+  LiveDisplayMode,
+} from "@/app-layer/visualization/types";
 
 export const useVisualizationDisplay = ({
   activeVisualization,
@@ -172,11 +41,13 @@ export const useVisualizationDisplay = ({
 }) => {
   const [displayMode, setDisplayMode] = useState<DisplayMode>("saved");
   const [settings, setSettingsState] = useState<VisualizationDisplaySettings>(
-    getVisualizationDisplaySettings(activeVisualization)
+    getVisualizationDisplaySettings(activeVisualization),
   );
   const [rendererSettings, setRendererSettings] =
     useState<VisualizationDisplaySettings>(settings);
-  const [pythonDisplayImage, setPythonDisplayImage] = useState<string | null>(null);
+  const [pythonDisplayImage, setPythonDisplayImage] = useState<string | null>(
+    null,
+  );
   const [rDisplayImage, setRDisplayImage] = useState<string | null>(null);
   const [pythonRenderKey, setPythonRenderKey] = useState<string | null>(null);
   const [rRenderKey, setRRenderKey] = useState<string | null>(null);
@@ -191,7 +62,7 @@ export const useVisualizationDisplay = ({
     Partial<Record<DisplayMode, string>>
   >({});
   const [displayWarning, setDisplayWarning] = useState<DisplayWarning | null>(
-    null
+    null,
   );
   const preferredDisplayMode = useMemo<DisplayMode>(() => {
     if (activeVisualization?.renderer === "r") return "saved";
@@ -258,7 +129,7 @@ export const useVisualizationDisplay = ({
   const settingsSignature = useMemo(() => JSON.stringify(settings), [settings]);
   const rendererSettingsSignature = useMemo(
     () => JSON.stringify(rendererSettings),
-    [rendererSettings]
+    [rendererSettings],
   );
 
   useEffect(() => {
@@ -315,13 +186,13 @@ export const useVisualizationDisplay = ({
         const nextImage = await buildRendererImage(
           activeVisualization,
           liveMode,
-          rendererSettings
+          rendererSettings,
         );
 
         if (cancelled) return;
         if (!nextImage) {
           throw new Error(
-            `${liveMode === "python" ? "Python" : "R"} renderer returned no image.`
+            `${liveMode === "python" ? "Python" : "R"} renderer returned no image.`,
           );
         }
 
@@ -383,12 +254,12 @@ export const useVisualizationDisplay = ({
         settings,
         visualization: activeVisualization,
       }),
-    [activeVisualization, settings]
+    [activeVisualization, settings],
   );
 
   const savedDisplayImage = useMemo(
     () => getVisualizationImage(activeVisualization),
-    [activeVisualization]
+    [activeVisualization],
   );
 
   const availableDisplayModes = useMemo(() => {
@@ -445,10 +316,20 @@ export const useVisualizationDisplay = ({
       case "r":
         return rDisplayImage ?? savedDisplayImage ?? nativeDisplayImage;
       case "native":
-        return nativeDisplayImage ?? savedDisplayImage ?? pythonDisplayImage ?? rDisplayImage;
+        return (
+          nativeDisplayImage ??
+          savedDisplayImage ??
+          pythonDisplayImage ??
+          rDisplayImage
+        );
       case "saved":
       default:
-        return savedDisplayImage ?? pythonDisplayImage ?? rDisplayImage ?? nativeDisplayImage;
+        return (
+          savedDisplayImage ??
+          pythonDisplayImage ??
+          rDisplayImage ??
+          nativeDisplayImage
+        );
     }
   }, [
     displayMode,
@@ -480,7 +361,7 @@ export const useVisualizationDisplay = ({
               : null;
 
     console.warn(
-      `[Visualization] ${displayMode} renderer failed for "${activeVisualization.title ?? activeVisualization.visualizationType ?? activeVisualization.id}": ${requestedError}`
+      `[Visualization] ${displayMode} renderer failed for "${activeVisualization.title ?? activeVisualization.visualizationType ?? activeVisualization.id}": ${requestedError}`,
     );
 
     setDisplayWarning({
@@ -508,7 +389,10 @@ export const useVisualizationDisplay = ({
   ]);
 
   const displayRendererOptions = useMemo(() => {
-    const optionMap = new Map<DisplayMode, { value: DisplayMode; label: string }>();
+    const optionMap = new Map<
+      DisplayMode,
+      { value: DisplayMode; label: string }
+    >();
     if (savedDisplayImage) {
       optionMap.set("saved", {
         value: "saved",
@@ -543,9 +427,13 @@ export const useVisualizationDisplay = ({
     return order
       .map((mode) => optionMap.get(mode))
       .filter(
-        (option, index, items): option is { value: DisplayMode; label: string } =>
+        (
+          option,
+          index,
+          items,
+        ): option is { value: DisplayMode; label: string } =>
           Boolean(option) &&
-          items.findIndex((item) => item?.value === option?.value) === index
+          items.findIndex((item) => item?.value === option?.value) === index,
       );
   }, [
     activeVisualization,
@@ -555,7 +443,9 @@ export const useVisualizationDisplay = ({
   ]);
 
   useEffect(() => {
-    if (!displayRendererOptions.some((option) => option.value === displayMode)) {
+    if (
+      !displayRendererOptions.some((option) => option.value === displayMode)
+    ) {
       setDisplayMode(displayRendererOptions[0]?.value ?? "saved");
     }
   }, [displayMode, displayRendererOptions]);
@@ -594,14 +484,17 @@ export const useVisualizationDisplay = ({
         selectDisplayMode(matchingLiveMode);
       }
     },
-    [activeVisualization, displayMode, selectDisplayMode]
+    [activeVisualization, displayMode, selectDisplayMode],
   );
 
   const currentFileName = useMemo(() => {
     const label = activeVisualization
       ? getVisualizationLabel(activeVisualization, 0)
       : "visualization";
-    return label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return label
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
   }, [activeVisualization]);
 
   const downloadCurrentVisualization = () => {

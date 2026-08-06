@@ -1,63 +1,92 @@
 import {
   PlotAvailabilityMap,
-  PlotSelectionState,
+  type PlotType,
+  type AvailabilityResult,
+  GetPlotAvailabilityParams
 } from "@/app-layer/visualization/types";
+import { plotTypes } from "@/app-layer/visualization/constants";
+
+
+const ready = (): AvailabilityResult => ({ ready: true });
+
+const unavailable = (reason: string): AvailabilityResult => ({
+  ready: false,
+  reason,
+});
+
+const hasXAxis = ({
+  xAxis,
+  xAxes,
+}: {
+  xAxis?: string;
+  xAxes?: string[];
+}) => Boolean(xAxis || xAxes?.length);
 
 export const getPlotAvailability = ({
   activeMatrixId,
   allColumns,
   numericColumns,
   plotSelections,
-}: {
-  activeMatrixId?: string;
-  allColumns: string[];
-  numericColumns: string[];
-  plotSelections: PlotSelectionState;
-}): PlotAvailabilityMap => ({
-  bar: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : !(plotSelections.bar.xAxes?.length || plotSelections.bar.xAxis)
-      ? { ready: false, reason: "Choose at least one x-axis column for the bar plot." }
-      : { ready: true },
-  box: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : numericColumns.length === 0
-      ? { ready: false, reason: "Box plot needs at least one numeric column." }
-      : { ready: true },
-  scatter: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : !(plotSelections.scatter.xAxes?.length || plotSelections.scatter.xAxis) || !plotSelections.scatter.yAxes?.length
-      ? {
-          ready: false,
-          reason: "Scatter plot needs at least one x-axis and one y-axis column.",
-        }
-      : { ready: true },
-  heatmap: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : numericColumns.length < 2
-      ? { ready: false, reason: "Heatmap needs at least two numeric columns." }
-      : { ready: true },
-  volcano: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : !(plotSelections.volcano.xAxes?.length || plotSelections.volcano.xAxis) || !plotSelections.volcano.yAxes?.[0]
-      ? {
-          ready: false,
-          reason: "Volcano plot needs one x-axis and one y-axis column.",
-        }
-      : { ready: true },
-  qc: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : numericColumns.length === 0
-      ? { ready: false, reason: "QC plot requires at least one numeric column." }
-      : { ready: true },
-  "missing-values": !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : allColumns.length === 0
-      ? { ready: false, reason: "Missing-values plot requires at least one column." }
-      : { ready: true },
-  pca: !activeMatrixId
-    ? { ready: false, reason: "No active matrix selected." }
-    : numericColumns.length < 2
-      ? { ready: false, reason: "PCA plot needs at least two numeric columns." }
-      : { ready: true },
-});
+}: GetPlotAvailabilityParams): PlotAvailabilityMap => {
+  const getAvailability = (plot: PlotType): AvailabilityResult => {
+    if (!activeMatrixId) {
+      return unavailable("No active matrix selected.");
+    }
+
+    switch (plot) {
+      case "bar":
+        return hasXAxis(plotSelections.bar)
+          ? ready()
+          : unavailable(
+              "Choose at least one x-axis column for the bar plot.",
+            );
+
+      case "box":
+        return numericColumns.length >= 1
+          ? ready()
+          : unavailable("Box plot needs at least one numeric column.");
+
+      case "scatter":
+        return hasXAxis(plotSelections.scatter) &&
+          Boolean(plotSelections.scatter.yAxes?.length)
+          ? ready()
+          : unavailable(
+              "Scatter plot needs at least one x-axis and one y-axis column.",
+            );
+
+      case "heatmap":
+        return numericColumns.length >= 2
+          ? ready()
+          : unavailable("Heatmap needs at least two numeric columns.");
+
+      case "volcano":
+        return hasXAxis(plotSelections.volcano) &&
+          Boolean(plotSelections.volcano.yAxes?.[0])
+          ? ready()
+          : unavailable(
+              "Volcano plot needs one x-axis and one y-axis column.",
+            );
+
+      case "qc":
+        return numericColumns.length >= 1
+          ? ready()
+          : unavailable("QC plot requires at least one numeric column.");
+
+      case "missing-values":
+        return allColumns.length >= 1
+          ? ready()
+          : unavailable(
+              "Missing-values plot requires at least one column.",
+            );
+
+      case "pca":
+        return numericColumns.length >= 2
+          ? ready()
+          : unavailable("PCA plot needs at least two numeric columns.");
+    }
+  };
+
+  return Object.fromEntries(
+    plotTypes.map((plot) => [plot, getAvailability(plot)]),
+  ) as PlotAvailabilityMap;
+};

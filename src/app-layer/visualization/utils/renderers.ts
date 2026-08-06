@@ -5,8 +5,12 @@ import {
   PcaPlotPayload,
   ScatterPlotPayload,
   VisualizationDisplaySettings,
+  VisualizationRecord,
   VolcanoPayload,
 } from "@/domain/visualization/index.types";
+import { DisplayMode, PlotKind } from "../types";
+import { plotTypes } from "../constants";
+import { getSavedVisualizationPayload } from "@/domain/visualization/utils/main";
 
 const toPngDataUrl = (base64: string) =>
   `data:image/png;base64,${base64.replace(/\s+/g, "").trim()}`;
@@ -842,4 +846,115 @@ export const renderVolcanoSvg = (
       ${legend}
     </svg>
   `);
+};
+
+
+
+
+/* renderer utilities */
+
+export const getErrorMessage = (error: unknown) =>
+  error instanceof Error ? error.message : String(error);
+
+export const supportsRenderer = (
+  visualization: VisualizationRecord | undefined,
+  mode: DisplayMode
+) => {
+  if (!visualization) return false;
+  if (mode === "saved") return true;
+
+  const vizType = visualization.visualizationType;
+  if (!vizType) return false;
+
+  return plotTypes.includes(vizType as unknown as PlotKind);
+};
+
+export const isBarPayload = (payload: unknown): payload is BarChartPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<BarChartPayload>).categories) &&
+  Array.isArray((payload as Partial<BarChartPayload>).series);
+
+export const isBoxPayload = (payload: unknown): payload is BoxPlotPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<BoxPlotPayload>).series);
+
+export const isScatterPayload = (payload: unknown): payload is ScatterPlotPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<ScatterPlotPayload>).series);
+
+export const isHeatmapPayload = (payload: unknown): payload is HeatmapPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<HeatmapPayload>).matrix);
+
+export const isVolcanoPayload = (payload: unknown): payload is VolcanoPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<VolcanoPayload>).x) &&
+  Array.isArray((payload as Partial<VolcanoPayload>).y);
+
+export const isPcaPayload = (payload: unknown): payload is PcaPlotPayload =>
+  Boolean(payload) &&
+  typeof payload === "object" &&
+  Array.isArray((payload as Partial<PcaPlotPayload>).data);
+
+export const buildRendererImage = async (
+  visualization: VisualizationRecord | undefined,
+  renderer: "python" | "r",
+  settings: VisualizationDisplaySettings
+) => {
+  if (!visualization) return null;
+
+  const payload = getSavedVisualizationPayload(visualization);
+  switch (visualization.visualizationType) {
+    case "bar":
+    case "missing-values":
+      if (isBarPayload(payload)) {
+        return renderer === "python"
+          ? invokePythonBarPlot(payload, settings)
+          : invokeRBarPlot(payload, settings);
+      }
+      throw new Error("Saved plot payload is not compatible with the bar renderer.");
+    case "box":
+    case "qc":
+      if (isBoxPayload(payload)) {
+        return renderer === "python"
+          ? invokePythonBoxPlot(payload, settings)
+          : invokeRBoxPlot(payload, settings);
+      }
+      throw new Error("Saved plot payload is not compatible with the box renderer.");
+    case "scatter":
+      if (isScatterPayload(payload)) {
+        return renderer === "python"
+          ? invokePythonScatterPlot(payload, settings)
+          : invokeRScatterPlot(payload, settings);
+      }
+      throw new Error("Saved plot payload is not compatible with the scatter renderer.");
+    case "heatmap":
+      if (isHeatmapPayload(payload)) {
+        return renderer === "python"
+          ? invokePythonHeatmap(payload, settings)
+          : invokeRHeatmap(payload, settings);
+      }
+      throw new Error("Saved plot payload is not compatible with the heatmap renderer.");
+    case "volcano":
+      if (isVolcanoPayload(payload)) {
+        return renderer === "python"
+          ? invokePythonVolcanoPlot(payload, settings)
+          : invokeRVolcanoPlot(payload, settings);
+      }
+      throw new Error("Saved plot payload is not compatible with the volcano renderer.");
+    case "pca":
+      if (isPcaPayload(payload)) {
+        return renderer === "python"
+          ? invokePythonPcaPlot(payload, settings)
+          : invokeRPcaPlot(payload, settings);
+      }
+      throw new Error("Saved plot payload is not compatible with the PCA renderer.");
+    default:
+      return null;
+  }
 };

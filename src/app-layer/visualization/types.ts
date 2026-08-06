@@ -60,3 +60,35 @@ export type PlotAvailabilityState = {
 };
 
 export type PlotAvailabilityMap = Record<PlotKind, PlotAvailabilityState>;
+
+export type PlotType = keyof PlotAvailabilityMap;
+
+export type AvailabilityResult = PlotAvailabilityMap[PlotType];
+
+export interface GetPlotAvailabilityParams {
+  activeMatrixId?: string;
+  allColumns: string[];
+  numericColumns: string[];
+  plotSelections: PlotSelectionState;
+}
+
+export type DisplayMode = "saved" | "native" | "python" | "r";
+export type DisplayWarning = {
+  title: string;
+  message: string;
+};
+export type LiveDisplayMode = "python" | "r";
+
+export type VisualizationReadiness<TPayload> = {
+  payload: TPayload | null;
+  reason?: string;
+};
+
+export type ColumnDescriptor = {
+  column: string;
+  index: number;
+  numeric: boolean;
+};
+
+export type PanState = { x: number; y: number };
+

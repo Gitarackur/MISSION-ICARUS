@@ -4,16 +4,8 @@ import type {
   WheelEvent as ReactWheelEvent,
 } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 3;
-const WHEEL_ZOOM_STEP = 0.015;
-const KEYBOARD_ZOOM_STEP = 0.03;
-const BUTTON_ZOOM_STEP = 0.05;
-const PAN_STEP = 36;
-const FAST_PAN_STEP = 72;
-
-type PanState = { x: number; y: number };
+import { BUTTON_ZOOM_STEP, FAST_PAN_STEP, KEYBOARD_ZOOM_STEP, MAX_ZOOM, MIN_ZOOM, PAN_STEP, WHEEL_ZOOM_STEP } from "@/app-layer/visualization/constants";
+import { PanState } from "@/app-layer/visualization/types";
 
 export const useVisualizationViewport = ({
   activeVisualizationId,
