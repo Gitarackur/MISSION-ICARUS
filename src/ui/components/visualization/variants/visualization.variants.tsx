@@ -77,7 +77,11 @@ export const visualizationStyles = tv({
     plotInfoOverlay:
       "pointer-events-none absolute inset-0 z-10 flex min-h-0 items-start justify-between gap-4 p-4",
     plotInfoHelp:
-      "pointer-events-auto rounded-xl border border-gray-200/80 bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm backdrop-blur dark:border-gray-700/80 dark:bg-gray-900/90 dark:text-gray-300",
+      "pointer-events-auto flex items-start gap-2 rounded-xl border border-gray-200/80 bg-white/90 px-3 py-2 text-xs font-medium text-gray-600 shadow-sm backdrop-blur dark:border-gray-700/80 dark:bg-gray-900/90 dark:text-gray-300",
+    plotInfoScrollNote:
+      "pointer-events-auto flex max-w-sm items-start gap-2 rounded-xl border border-gray-200/80 bg-white/90 px-3 py-2 text-xs leading-relaxed text-gray-500 shadow-sm backdrop-blur dark:border-gray-700/80 dark:bg-gray-900/90 dark:text-gray-400",
+    plotInfoClose:
+      "ml-auto inline-flex shrink-0 cursor-pointer items-center justify-center rounded-md p-0.5 text-gray-400 transition-colors hover:bg-gray-200/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200",
     plotActionGrid: "grid gap-3 md:grid-cols-2",
     plotActionFullField: "md:col-span-2",
     plotActionFieldLabel:
@@ -95,7 +99,7 @@ export const visualizationStyles = tv({
 
     displayActiveImageContainer: "relative overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-950",
     settingsPanelContainer:
-      "pointer-events-auto isolate max-h-full min-h-0 w-full max-w-sm shrink-0 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200/80 bg-white shadow-xl [scrollbar-gutter:stable] focus:outline-none focus:ring-2 focus:ring-blue-500/40 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent dark:border-gray-700/80 dark:bg-gray-900 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600",
+      "pointer-events-auto isolate ml-auto max-h-full min-h-0 w-full max-w-sm shrink-0 overflow-y-auto overscroll-contain rounded-2xl border border-gray-200/80 bg-white shadow-xl [scrollbar-gutter:stable] focus:outline-none focus:ring-2 focus:ring-blue-500/40 [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-transparent dark:border-gray-700/80 dark:bg-gray-900 dark:[&::-webkit-scrollbar-thumb]:bg-gray-600",
   },
   variants: {
     compact: {
