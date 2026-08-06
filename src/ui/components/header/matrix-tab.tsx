@@ -1,6 +1,5 @@
 import { useCallback, useMemo } from "react";
 import { Download, Settings, Trash2 } from "lucide-react";
-import { handleFileExport } from "@/app-layer/shared/utils";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationsForMatrix } from "@/domain/visualization/utils/main";
 import { ThemeModeControl } from "@/ui/theme/theme-mode-control";
@@ -17,19 +16,20 @@ const MatrixTab = ({
   activeMatrixId,
   onMatrixSelect,
   toggleSidebar,
-  dataRows,
   visualizations = [],
   activeVisualizationId,
   onVisualizationSelect,
   onMatrixDelete,
   onVisualizationDelete,
+  onOpenSettings,
+  onOpenExport,
 }: MatrixTabProps) => {
   const { tabList } = tabNavigationVariants();
   const s = headerVariants();
 
   const handleExport = useCallback(
-    () => handleFileExport(dataRows, "proteomics-data"),
-    [dataRows],
+    () => onOpenExport?.(),
+    [onOpenExport],
   );
 
   const visualizationsByMatrix = useMemo(
@@ -87,6 +87,7 @@ const MatrixTab = ({
           <button
             type="button"
             className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+            onClick={onOpenSettings}
           >
             <Settings className={s.buttonIcon()} />
             <span className="text-sm">Settings</span>

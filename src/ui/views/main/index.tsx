@@ -9,6 +9,8 @@ import { tabTypes } from "@/ui/views/proteomics/types/index.types";
 import { ActivitySheet } from "./components/activity-sheet";
 import { useModal } from "@/ui/design-system/Modal/context";
 import { DeletionConfirmation } from "@/ui/components/deletion/deletion-confirmation";
+import SettingsSheet from "@/ui/views/settings/components/settings-sheet";
+import ExportSheet from "@/ui/views/settings/components/export-sheet";
 import type {
   DeletionPlan,
   SessionDeletionResult,
@@ -49,6 +51,8 @@ const IcarusApp: React.FC = () => {
   const [activeProteomicsTab, setActiveProteomicsTab] =
     useState<tabTypes>("import");
   const [activeVisualizationId, setActiveVisualizationId] = useState("");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isExportOpen, setIsExportOpen] = useState(false);
   const { openModal, closeModal } = useModal();
 
   const closeActivitySheet = () => setIsSheetOpen(false);
@@ -161,6 +165,8 @@ const IcarusApp: React.FC = () => {
           onVisualizationSelect={selectVisualization}
           onMatrixDelete={requestMatrixDeletion}
           onVisualizationDelete={requestVisualizationDeletion}
+          onOpenSettings={() => setIsSettingsOpen(true)}
+          onOpenExport={() => setIsExportOpen(true)}
         />
 
         {activeMatrix ? (
@@ -213,6 +219,15 @@ const IcarusApp: React.FC = () => {
           onDeleteSession={handleDeleteSession}
         />
       )}
+
+      <SettingsSheet isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <ExportSheet
+        isOpen={isExportOpen}
+        onClose={() => setIsExportOpen(false)}
+        rows={originalDataRows}
+        columns={originalDataColumns}
+        session={activeSession}
+      />
     </div>
   );
 };
