@@ -24,7 +24,7 @@ export function mean(values: number[]) {
 
 // Calculates the median of an array of numbers
 export function median(values: number[]) {
-  const v = finiteNumbers(values).sort((a, b) => a - b);
+  const v = finiteNumbers(values);
   if (!v.length) return 0;
   return ss.median(v);
 }
@@ -69,67 +69,12 @@ export function normalization(values: number[][]) {
   });
 }
 
-// calcuate the t-test of the data
-export function tTest(data: number[][]) {
-  if (data.length !== 2) {
-    console.error(
-      "T-Test requires exactly two groups of data, but received a different number."
-    );
-    return null;
-  }
-
-  const group1Data = data[0];
-  const group2Data = data[1];
-
-  if (group1Data.length < 2 || group2Data.length < 2) {
-    console.error(
-      "Each group must have at least two data points to perform the t-test."
-    );
-    return null;
-  }
-
-  // Calculate means
-  const n1 = group1Data.length;
-  const n2 = group2Data.length;
-
-  const mean1 = mean(group1Data);
-  const mean2 = mean(group2Data);
-
-  // Calculate variances
-  const variance1 = variance(group1Data);
-  const variance2 = variance(group2Data);
-
-  // Calculate pooled standard deviation
-  const degreesOfFreedom = n1 + n2 - 2;
-  const pooledVariance =
-    ((n1 - 1) * variance1 + (n2 - 1) * variance2) / degreesOfFreedom;
-  const pooledStdDev = Math.sqrt(pooledVariance);
-
-  // Calculate t-statistic
-  let tStatistic =
-    (mean1 - mean2) / (pooledStdDev * Math.sqrt(1 / n1 + 1 / n2));
-
-  // Handle case where pooledStdDev is zero
-  if (!isFinite(tStatistic)) {
-    tStatistic = 0;
-  }
-
-  return {
-    tStatistic,
-    degreesOfFreedom,
-    mean1,
-    mean2,
-    stdDev1: Math.sqrt(variance1),
-    stdDev2: Math.sqrt(variance2),
-  };
-}
-
 //Imputation of Mean
 export const imputeMeanColumn = (col: number[]): number[] => {
   // compute mean from observed (finite) values only
   const obs = col.filter((x) => Number.isFinite(x));
   if (obs.length === 0) return col.slice(); // nothing to impute (all NaN) → return as-is
-  const m = obs.reduce((a, b) => a + b, 0) / obs.length;
+  const m = mean(obs);
   // replace missing (NaN / ±Infinity) with mean
   return col.map((x) => (Number.isFinite(x) ? x : m));
 };
@@ -140,13 +85,9 @@ export const imputeMeanColumn = (col: number[]): number[] => {
 
 /** Median of a numeric column, ignoring NaN. Returns NaN if no finite values. */
 export function columnMedian(col: number[]): number {
-  const vals = col
-    .filter(Number.isFinite)
-    .slice()
-    .sort((a, b) => a - b);
+  const vals = finiteNumbers(col);
   if (vals.length === 0) return NaN;
-  const mid = Math.floor(vals.length / 2);
-  return vals.length % 2 ? vals[mid] : (vals[mid - 1] + vals[mid]) / 2;
+  return ss.median(vals);
 }
 
 /** Impute a column by its median (fill only non-finite values). */
@@ -529,8 +470,12 @@ export function limmaAnalysis(
     ? 1
     : 0;
 
-  // Adjusted p-value (simplified Benjamini-Hochberg)
-  const adjustedPValue = Math.min(pValue * 1.5, 1); // Simplified adjustment
+  // Adjusted p-value. This function tests a single gene against a single
+  // control group (one p-value per call), so there is no family of tests to
+  // run a real Benjamini-Hochberg correction over. With N=1 the adjusted
+  // p-value equals the raw p-value; the previous p*1.5 heuristic was not a
+  // valid BH correction, so it is replaced here.
+  const adjustedPValue = pValue;
 
   return {
     logFoldChange,
@@ -539,6 +484,119 @@ export function limmaAnalysis(
     tStatistic,
     averageExpression,
   };
+}
+
+export type PValueAdjustmentMethod = "BH" | "bonferroni";
+
+/**
+ * Adjust a family of p-values for multiple testing.
+ * - "BH": Benjamini-Hochberg step-up (controls FDR).
+ * - "bonferroni": classic Bonferroni (p * n, capped at 1).
+ * Non-finite p-values are passed through unchanged and excluded from ranking.
+ */
+export function adjustPValues(
+  pValues: number[],
+  method: PValueAdjustmentMethod = "BH"
+): number[] {
+  const n = pValues.length;
+  if (n === 0) return [];
+
+  if (method === "bonferroni") {
+    return pValues.map((p) => (Number.isFinite(p) ? Math.min(1, p * n) : p));
+  }
+
+  // Benjamini-Hochberg step-up: sort ascending, q_i = p_i * n / rank_i,
+  // then enforce monotonicity from the largest p-value down.
+  const finite: Array<{ p: number; i: number }> = [];
+  const adjusted: number[] = new Array(n).fill(NaN);
+  pValues.forEach((p, i) => {
+    if (Number.isFinite(p)) finite.push({ p, i });
+  });
+  finite.sort((a, b) => a.p - b.p);
+
+  let prev = 1;
+  for (let k = finite.length - 1; k >= 0; k--) {
+    const { p, i } = finite[k];
+    const rank = k + 1;
+    const q = Math.min(1, (p * n) / rank);
+    prev = Math.min(prev, q);
+    adjusted[i] = prev;
+  }
+  return adjusted;
+}
+
+export interface LimmaBatchGeneResult {
+  geneName: string;
+  logFoldChange: number;
+  pValue: number;
+  adjustedPValue: number;
+  tStatistic: number;
+  averageExpression: number;
+}
+
+/**
+ * Real per-gene LIMMA-style differential expression across a batch of genes.
+ * Each row of the matrices is one gene; each column is one sample (replicate).
+ * Raw p-values are computed per gene (moderated t-statistic), then adjusted
+ * across the whole family with BH or Bonferroni.
+ */
+export function limmaBatchAnalysis(
+  treatmentMatrix: number[][],
+  controlMatrix: number[][],
+  geneNames: string[] = [],
+  adjustmentMethod: PValueAdjustmentMethod = "BH"
+): LimmaBatchGeneResult[] {
+  const geneCount = treatmentMatrix.length;
+  const results: LimmaBatchGeneResult[] = [];
+  const pValues: number[] = [];
+
+  for (let g = 0; g < geneCount; g++) {
+    const treatment = finiteNumbers(treatmentMatrix[g]);
+    const control = finiteNumbers(controlMatrix[g]);
+    const geneName = geneNames[g] ?? `gene_${g + 1}`;
+
+    if (treatment.length < 2 || control.length < 2) {
+      results.push({
+        geneName,
+        logFoldChange: NaN,
+        pValue: NaN,
+        adjustedPValue: NaN,
+        tStatistic: NaN,
+        averageExpression: NaN,
+      });
+      pValues.push(NaN);
+      continue;
+    }
+
+    try {
+      const r = limmaAnalysis(treatment, control);
+      results.push({
+        geneName,
+        logFoldChange: r.logFoldChange,
+        pValue: r.pValue,
+        adjustedPValue: r.pValue,
+        tStatistic: r.tStatistic,
+        averageExpression: r.averageExpression,
+      });
+      pValues.push(r.pValue);
+    } catch {
+      results.push({
+        geneName,
+        logFoldChange: NaN,
+        pValue: NaN,
+        adjustedPValue: NaN,
+        tStatistic: NaN,
+        averageExpression: NaN,
+      });
+      pValues.push(NaN);
+    }
+  }
+
+  const adjusted = adjustPValues(pValues, adjustmentMethod);
+  results.forEach((r, i) => {
+    r.adjustedPValue = adjusted[i];
+  });
+  return results;
 }
 
 // ===================================================================

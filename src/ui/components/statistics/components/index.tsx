@@ -1,5 +1,11 @@
 import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { useStatisticalAnalysis } from "@/app-layer/statistics/hooks/useStatistics";
+import {
+  LIMMA_TREATMENT_COLUMNS_KEY,
+  LIMMA_CONTROL_COLUMNS_KEY,
+  LIMMA_ADJUSTMENT_METHOD_KEY,
+  LIMMA_DEFAULT_ADJUSTMENT_METHOD,
+} from "@/app-layer/statistics/constants";
 import { COMMON_PTMS } from "@/app-layer/statistics/utils/statistical-engine";
 import {
   downloadTextFile,
@@ -3245,14 +3251,14 @@ export const Limma: React.FC<{
   
   const [treatmentColumns, setTreatmentColumns] = useState<string[]>([]);
   const [controlColumns, setControlColumns] = useState<string[]>([]);
-  const [adjustmentMethod, setAdjustmentMethod] = useState<'BH' | 'bonferroni'>('BH');
+  const [adjustmentMethod, setAdjustmentMethod] = useState<'BH' | 'bonferroni'>(LIMMA_DEFAULT_ADJUSTMENT_METHOD as 'BH' | 'bonferroni');
   const [error, setError] = useState<string | null>(null);
 
   const runLIMMA = () => {
     setError(null);
     
-    if (treatmentColumns.length === 0 || controlColumns.length === 0) {
-      setError("Please select columns for both treatment and control groups.");
+    if (treatmentColumns.length < 2 || controlColumns.length < 2) {
+      setError("Please select at least 2 columns for both treatment and control groups (each column is one replicate sample).");
       onError?.();
       return;
     }
@@ -3260,17 +3266,17 @@ export const Limma: React.FC<{
     try {
       const filteredData = new Map<string, TableMatrix>();
       
-      // Add treatment group data
+      // Add treatment group data with the original (unprefixed) column names
       treatmentColumns.forEach((column) => {
         if (allColumnarData.has(column)) {
-          filteredData.set(`treatment_${column}`, allColumnarData.get(column)!);
+          filteredData.set(column, allColumnarData.get(column)!);
         }
       });
       
-      // Add control group data
+      // Add control group data with the original (unprefixed) column names
       controlColumns.forEach((column) => {
         if (allColumnarData.has(column)) {
-          filteredData.set(`control_${column}`, allColumnarData.get(column)!);
+          filteredData.set(column, allColumnarData.get(column)!);
         }
       });
       
@@ -3280,8 +3286,10 @@ export const Limma: React.FC<{
         return;
       }
 
-      // Add adjustment method as metadata
-      filteredData.set(`__adjustment_method__`, [adjustmentMethod] as unknown as TableMatrix);
+      // Explicit group membership + adjustment method as metadata
+      filteredData.set(LIMMA_TREATMENT_COLUMNS_KEY, treatmentColumns as unknown as TableMatrix);
+      filteredData.set(LIMMA_CONTROL_COLUMNS_KEY, controlColumns as unknown as TableMatrix);
+      filteredData.set(LIMMA_ADJUSTMENT_METHOD_KEY, [adjustmentMethod] as unknown as TableMatrix);
       
       const result = performAnalysis(actionId, filteredData);
       onSuccess?.(result);
@@ -3292,37 +3300,40 @@ export const Limma: React.FC<{
     }
   };
 
-  const isRunButtonDisabled = treatmentColumns.length === 0 || controlColumns.length === 0;
+  const isRunButtonDisabled = treatmentColumns.length < 2 || controlColumns.length < 2;
 
   return (
     <div className={containerClass}>
       <h1 className={headingClass}>LIMMA</h1>
       <p className={descriptionClass}>
-        Linear Models for Microarray Data (LIMMA) - Advanced differential expression analysis using moderated t-statistics.
+        Linear Models for Microarray Data (LIMMA) - Differential expression analysis
+        across all rows using moderated t-statistics. Each selected column is treated as
+        one replicate sample of its group; a moderated t-test is run per row (gene) and
+        p-values are corrected across the whole family with the chosen adjustment method.
       </p>
       
       <div className="space-y-4 mb-6">
         <div>
           <MultiSelect
             id="limma-treatment"
-            label="Treatment Group Columns"
-            placeholder="Select treatment group columns..."
+            label="Treatment Group Columns (Replicates)"
+            placeholder="Select treatment replicate columns..."
             options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
             value={treatmentColumns}
             onChange={setTreatmentColumns}
-            helperText="Choose the numeric columns for the treatment group"
+            helperText="Select 2 or more replicate sample columns for the treatment group"
           />
         </div>
         
         <div>
           <MultiSelect
             id="limma-control"
-            label="Control Group Columns"
-            placeholder="Select control group columns..."
+            label="Control Group Columns (Replicates)"
+            placeholder="Select control replicate columns..."
             options={numericColumns.map((curr) => ({ value: curr, label: curr, disabled: false }))}
             value={controlColumns}
             onChange={setControlColumns}
-            helperText="Choose the numeric columns for the control group"
+            helperText="Select 2 or more replicate sample columns for the control group"
           />
         </div>
         
@@ -3337,6 +3348,9 @@ export const Limma: React.FC<{
               { value: 'bonferroni', label: 'Bonferroni' }
             ]}
           />
+          <p className="text-xs text-gray-500 mt-1">
+            Applies multiple-testing correction across all rows (genes) using the full p-value family.
+          </p>
         </div>
       </div>
       

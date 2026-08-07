@@ -31,7 +31,7 @@ import {
   tTestTwoSample,
   oneWayANOVA,
   calculateFoldChange,
-  limmaAnalysis,
+  limmaBatchAnalysis,
   filterColumnsByName,
   filterColumnsByType,
   addRows,
@@ -71,6 +71,12 @@ fillColumn,
 import { TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import {
+  LIMMA_TREATMENT_COLUMNS_KEY,
+  LIMMA_CONTROL_COLUMNS_KEY,
+  LIMMA_ADJUSTMENT_METHOD_KEY,
+  LIMMA_DEFAULT_ADJUSTMENT_METHOD,
+} from "@/app-layer/statistics/constants";
+import {
   extractNumericData,
   transposedStatisticalResults,
 } from "@/app-layer/shared/utils";
@@ -80,6 +86,7 @@ import {
   getRawColumnData,
   isMissingValue,
   parseNumberMetadata,
+  parseStringArrayMetadata,
   parseStringMetadata,
   pearsonCorrelation,
   product,
@@ -370,22 +377,69 @@ export const runStatisticalAnalysis = (
     }
 
     case "limma": {
-      if (numericData.length !== 2) {
-        throw new Error("LIMMA requires exactly 2 groups of data");
+      // The UI sends the selected columns unchanged plus explicit group
+      // membership via shared metadata-key constants (see
+      // app-layer/statistics/constants.ts), so we never rely on a
+      // `treatment_`/`control_` naming convention in the user's data.
+      const adjustmentMethod = parseStringMetadata(
+        data,
+        LIMMA_ADJUSTMENT_METHOD_KEY,
+        LIMMA_DEFAULT_ADJUSTMENT_METHOD,
+      ) as "BH" | "bonferroni";
+
+      const treatmentColumnNames = parseStringArrayMetadata(
+        data,
+        LIMMA_TREATMENT_COLUMNS_KEY,
+        [],
+      );
+      const controlColumnNames = parseStringArrayMetadata(
+        data,
+        LIMMA_CONTROL_COLUMNS_KEY,
+        [],
+      );
+
+      const treatmentData: number[][] = [];
+      const controlData: number[][] = [];
+
+      numericColumns.forEach((columnName, index) => {
+        if (treatmentColumnNames.includes(columnName)) {
+          treatmentData.push(numericData[index]);
+        } else if (controlColumnNames.includes(columnName)) {
+          controlData.push(numericData[index]);
+        }
+      });
+
+      if (treatmentData.length === 0 || controlData.length === 0) {
+        throw new Error(
+          "LIMMA requires at least one treatment and one control group column",
+        );
       }
 
-      const limmaResults = limmaAnalysis(numericData[0], numericData[1]);
+      const rowCount = numericData[0]?.length ?? 0;
 
-      // Only return essential columns
+      // Transpose: one row per gene with the values across the selected
+      // sample columns for that gene.
+      const treatmentMatrix: number[][] = [];
+      const controlMatrix: number[][] = [];
+      for (let row = 0; row < rowCount; row++) {
+        treatmentMatrix.push(treatmentData.map((col) => col[row]));
+        controlMatrix.push(controlData.map((col) => col[row]));
+      }
+
+      const batchResults = limmaBatchAnalysis(
+        treatmentMatrix,
+        controlMatrix,
+        [],
+        adjustmentMethod,
+      );
+
       results = [
-        [
-          limmaResults.logFoldChange,
-          limmaResults.pValue,
-          limmaResults.adjustedPValue,
-        ],
+        batchResults.map((r) => r.logFoldChange),
+        batchResults.map((r) => r.pValue),
+        batchResults.map((r) => r.adjustedPValue),
       ];
 
-      newColumnNames = ["log_fold_change", "p_value", "adjusted_p_value"];
+      newColumnNames = ["log2_fold_change", "p_value", "adjusted_p_value"];
       break;
     }
 
