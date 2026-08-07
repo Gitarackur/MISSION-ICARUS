@@ -63,3 +63,24 @@ export const EPSILON = 1e-12;
 // Metadata column prefix for identifying metadata columns in datasets
 export const metadataColumnPrefix = "__";
 
+/// Pj modes for statistical analysis
+export const PJ_MODES = [
+  {
+    id: "pi-divide",
+    label: "Pj: π ÷ value",
+    description:
+      "Appends a new column for each selected column equal to π divided by each value (mirrors Pi Divide).",
+  },
+  {
+    id: "clustering",
+    label: "Pj Cluster",
+    description:
+      "Runs K-Means (k=3) over the selected columns and appends a cluster-assignment column based on Pj.",
+  },
+  {
+    id: "stub",
+    label: "Pj (placeholder)",
+    description:
+      "A placeholder view, ready to be replaced by a full Pj implementation.",
+  },
+] as const;
