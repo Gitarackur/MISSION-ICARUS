@@ -1,6 +1,11 @@
 import { getNumericColumnsOptimized } from "@/app-layer/shared/utils";
 import { useStatisticalAnalysis } from "@/app-layer/statistics/hooks/useStatistics";
 import { COMMON_PTMS } from "@/app-layer/statistics/utils/statistical-engine";
+import {
+  downloadTextFile,
+  serializeActiveMatrix,
+  toFilenameSlug,
+} from "@/app-layer/shared/exporter";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import {
   StatisticalAction,
@@ -2223,9 +2228,11 @@ export const FillColumn = ({
 
     try {
       const filteredData = new Map();
-      if (allColumnarData.has(selectedColumn)) {
-        filteredData.set(selectedColumn, allColumnarData.get(selectedColumn));
-      }
+      numericColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column));
+        }
+      });
       filteredData.set("__column__", [selectedColumn]);
       filteredData.set("__value__", [fillNum]);
 
@@ -7722,52 +7729,571 @@ export const WgcnaAnalysis = ({
 SAVE DATA
 ----------------------------------------------------*/
 
-export const SaveData = () => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Save Data</h1>
-    <p className={descriptionClass}>Saves the current state of the dataset.</p>
-    <div className="mb-6">
-      <label htmlFor="save-file-name" className={labelClass}>
-        File Name
-      </label>
-      <input
-        type="text"
-        id="save-file-name"
-        placeholder="my_data.json"
-        className={inputClass}
-      />
+export const SaveData = ({
+  dataColumns,
+  dataRows,
+}: {
+  dataColumns: TableColumns;
+  dataRows: ProteinRow[];
+}) => {
+  const [fileName, setFileName] = useState("my_data");
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = () => {
+    try {
+      const file = serializeActiveMatrix(dataRows, dataColumns, "json", {
+        includeHeaders: true,
+      });
+      const stem = toFilenameSlug(fileName.trim() || "my_data");
+      downloadTextFile(`${stem}.json`, file.mime, file.content);
+      setSaved(true);
+    } catch (err) {
+      console.error("Save Data failed:", err);
+      setSaved(false);
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Save Data</h1>
+      <p className={descriptionClass}>Saves the current data to a JSON file.</p>
+      <div className="mb-6">
+        <label htmlFor="save-file-name" className={labelClass}>
+          File Name
+        </label>
+        <input
+          type="text"
+          id="save-file-name"
+          value={fileName}
+          onChange={(e) => setFileName(e.target.value)}
+          placeholder="my_data"
+          className={inputClass}
+        />
+      </div>
+      {saved && (
+        <p className="text-green-600 text-sm mb-4">Data saved successfully</p>
+      )}
+      <div className="flex justify-end">
+        <button className={buttonClass} onClick={handleSave}>
+          Save
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Save</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 EXPORT CSV
-----------------------------------------------------*/
+---------------------------------------------------*/
 
-export const ExportCsv = () => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Export CSV</h1>
-    <p className={descriptionClass}>
-      Exports the current dataset to a CSV file.
-    </p>
-    <div className="mb-6">
-      <label htmlFor="export-csv-name" className={labelClass}>
-        File Name
-      </label>
-      <input
-        type="text"
-        id="export-csv-name"
-        placeholder="my_data.csv"
-        className={inputClass}
-      />
+export const ExportCsv = ({
+  dataColumns,
+  dataRows,
+}: {
+  dataColumns: TableColumns;
+  dataRows: ProteinRow[];
+}) => {
+  const [fileName, setFileName] = useState("my_data");
+  const [exported, setExported] = useState(false);
+
+  const handleExport = () => {
+    try {
+      const file = serializeActiveMatrix(dataRows, dataColumns, "csv", {
+        includeHeaders: true,
+      });
+      const stem = toFilenameSlug(fileName.trim() || "my_data");
+      downloadTextFile(`${stem}.csv`, file.mime, file.content);
+      setExported(true);
+    } catch (err) {
+      console.error("Export CSV failed:", err);
+      setExported(false);
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Export CSV</h1>
+      <p className={descriptionClass}>
+        Exports the current dataset to a CSV file.
+      </p>
+      <div className="mb-6">
+        <label htmlFor="export-csv-name" className={labelClass}>
+          File Name
+        </label>
+        <input
+          type="text"
+          id="export-csv-name"
+          value={fileName}
+          onChange={(e) => setFileName(e.target.value)}
+          placeholder="my_data"
+          className={inputClass}
+        />
+      </div>
+      {exported && (
+        <div className="text-green-600 text-sm mb-4">
+          CSV exported successfully
+        </div>
+      )}
+      <div className="flex justify-end">
+        <button className={buttonClass} onClick={handleExport}>
+          Export
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Export</button>
+  );
+};
+
+
+/*---------------------------------------------------
+FX: EXPRESSION f(x)
+---------------------------------------------------*/
+
+export const FxExpression = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [expression, setExpression] = useState<string>("x^2 + 2*x + 1");
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = () => {
+    setError(null);
+    if (!selectedColumn) {
+      setError("Please select a column.");
+      onError?.();
+      return;
+    }
+    if (!expression.trim()) {
+      setError("Please enter a valid expression.");
+      onError?.();
+      return;
+    }
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      const values = allColumnarData.get(selectedColumn);
+      if (values) filteredData.set(selectedColumn, values);
+      filteredData.set("__column__", [selectedColumn]);
+      filteredData.set("__expression__", [expression]);
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while evaluating the function.");
+      console.error("f(x) evaluation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Expression f(x)</h1>
+      <p className={descriptionClass}>
+        Applies a function f(x) to a column. Use `x` for the cell value and
+        operators + - * / ^ along with functions like ln, log10, sqrt, abs,
+        exp, sin, cos, tan and the constant pi.
+      </p>
+      <div className="space-y-4 mb-6">
+        <SingleSelect
+          id="fx-column"
+          label="Select Column"
+          placeholder="Select a data column..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue=""
+          onChange={(value) => setSelectedColumn(value as string)}
+          helperText="Choose the column to apply f(x) to"
+        />
+        <div>
+          <label htmlFor="fx-expression" className={labelClass}>
+            f(x) Expression
+          </label>
+          <input
+            type="text"
+            id="fx-expression"
+            value={expression}
+            onChange={(e) => setExpression(e.target.value)}
+            placeholder="e.g. x^2 + 3*x + ln(x)"
+            className={inputClass}
+          />
+        </div>
+      </div>
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!selectedColumn}
+          onClick={runAnalysis}
+        >
+          Evaluate
+        </button>
+      </div>
     </div>
-  </div>
+  );
+};
+
+
+/*---------------------------------------------------
+FX: LINEAR (ax+b)
+---------------------------------------------------*/
+
+export const FxLinear = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [a, setA] = useState("1");
+  const [b, setB] = useState("0");
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = () => {
+    setError(null);
+    if (!selectedColumn) {
+      setError("Please select a column.");
+      onError?.();
+      return;
+    }
+    const factorA = Number(a);
+    const factorB = Number(b);
+    if (!Number.isFinite(factorA) || !Number.isFinite(factorB)) {
+      setError("Invalid values for a or b.");
+      onError?.();
+      return;
+    }
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      const values = allColumnarData.get(selectedColumn);
+      if (values) filteredData.set(selectedColumn, values);
+      filteredData.set("__column__", [selectedColumn]);
+      filteredData.set("__factor_a__", [factorA]);
+      filteredData.set("__factor_b__", [factorB]);
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while applying the linear mapping.");
+      console.error("Linear mapping failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Linear Map: y = a·x + b</h1>
+      <p className={descriptionClass}>
+        Maps each cell of a column through the linear function y = a·x + b.
+      </p>
+      <div className="space-y-4 mb-6">
+        <SingleSelect
+          id="fx-linear-column"
+          label="Select Column"
+          placeholder="Select a data column..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue=""
+          onChange={(value) => setSelectedColumn(value as string)}
+          helperText="Choose the column to map"
+        />
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="fx-linear-a" className={labelClass}>
+              a (slope)
+            </label>
+            <input
+              type="number"
+              id="fx-linear-a"
+              value={a}
+              onChange={(e) => setA(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div>
+            <label htmlFor="fx-linear-b" className={labelClass}>
+              b (intercept)
+            </label>
+            <input
+              type="number"
+              id="fx-linear-b"
+              value={b}
+              onChange={(e) => setB(e.target.value)}
+              className={inputClass}
+            />
+          </div>
+        </div>
+      </div>
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!selectedColumn}
+          onClick={runAnalysis}
+        >
+          Map
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+/*---------------------------------------------------
+1D: NORMALIZE
+---------------------------------------------------*/
+
+export const OneDNormalize = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = () => {
+    setError(null);
+    if (selectedColumns.length === 0) {
+      setError("Please select at least one column.");
+      onError?.();
+      return;
+    }
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      selectedColumns.forEach((column) => {
+        const values = allColumnarData.get(column);
+        if (values) filteredData.set(column, values);
+      });
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during 1D normalization.");
+      console.error("1D normalize failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>1D Normalize</h1>
+      <p className={descriptionClass}>
+        Normalizes each selected column independently (min-max scaling).
+      </p>
+      <div className="mb-6">
+        <MultiSelect
+          id="1d-normalize-columns"
+          label="Select Columns"
+          placeholder="Select data columns to normalize..."
+          options={numericColumns.map((column) => ({
+            value: column,
+            label: column,
+            disabled: false,
+          }))}
+          value={selectedColumns}
+          onChange={setSelectedColumns}
+          helperText="Choose the numeric columns to normalize"
+        />
+      </div>
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={selectedColumns.length === 0}
+          onClick={runAnalysis}
+        >
+          Normalize
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+/*---------------------------------------------------
+1D: INDEX
+---------------------------------------------------*/
+
+export const OneDIndex = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumns = [...useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  )];
+
+  const runAnalysis = () => {
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      numericColumns.forEach((column) => {
+        const values = allColumnarData.get(column);
+        if (values) filteredData.set(column, values);
+      });
+      if (filteredData.size === 0) {
+        onError?.();
+        return;
+      }
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      console.error("1D index failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>1D Index</h1>
+      <p className={descriptionClass}>
+        Appends an index column (1, 2, 3, ...) with one entry per row to the
+        matrix.
+      </p>
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={numericColumns.length === 0}
+          onClick={runAnalysis}
+        >
+          Add Index
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+/*---------------------------------------------------
+PI: MULTIPLY / DIVIDE
+---------------------------------------------------*/
+
+const PiColumnRunner = ({
+  actionId,
+  dataColumns,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+  multiply,
+}: StatisticalComponentProps & { multiply: boolean }) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = () => {
+    setError(null);
+    if (selectedColumns.length === 0) {
+      setError("Please select at least one column.");
+      onError?.();
+      return;
+    }
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      selectedColumns.forEach((column) => {
+        const values = allColumnarData.get(column);
+        if (values) filteredData.set(column, values);
+      });
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while applying Pi.");
+      console.error("Pi operation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>
+        {multiply ? "Multiply by Pi" : "Divide by Pi"}
+      </h1>
+      <p className={descriptionClass}>
+        {multiply
+          ? "Appends a new column for each selected column equal to value × π."
+          : "Appends a new column for each selected column equal to π ÷ value."}
+      </p>
+      <div className="mb-6">
+        <MultiSelect
+          id={`pi-${multiply ? "multiply" : "divide"}-columns`}
+          label="Select Columns"
+          placeholder="Select data columns..."
+          options={numericColumns.map((column) => ({
+            value: column,
+            label: column,
+            disabled: false,
+          }))}
+          value={selectedColumns}
+          onChange={setSelectedColumns}
+          helperText="Choose the numeric columns to transform"
+        />
+      </div>
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={selectedColumns.length === 0}
+          onClick={runAnalysis}
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export const PiMultiply = (props: StatisticalComponentProps) => (
+  <PiColumnRunner {...props} multiply />
+);
+export const PiDivide = (props: StatisticalComponentProps) => (
+  <PiColumnRunner {...props} multiply={false} />
 );
 
 
@@ -7825,3 +8351,138 @@ export const NoUiFound = ({ actionId }: { actionId: StatisticalAction }) => (
     </p>
   </div>
 );
+
+/*---------------------------------------------------
+Pj
+---------------------------------------------------*/
+
+const PJ_MODES = [
+  {
+    id: "pi-divide",
+    label: "Pj: π ÷ value",
+    description:
+      "Appends a new column for each selected column equal to π divided by each value (mirrors Pi Divide).",
+  },
+  {
+    id: "clustering",
+    label: "Pj Cluster",
+    description:
+      "Runs K-Means (k=3) over the selected columns and appends a cluster-assignment column based on Pj.",
+  },
+  {
+    id: "stub",
+    label: "Pj (placeholder)",
+    description:
+      "A placeholder view, ready to be replaced by a full Pj implementation.",
+  },
+] as const;
+
+export const Pj = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: StatisticalComponentProps) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [mode, setMode] = useState<string>("pi-divide");
+  const [error, setError] = useState<string | null>(null);
+
+  const runAnalysis = () => {
+    setError(null);
+    if (mode === "stub") return;
+    if (selectedColumns.length === 0) {
+      setError("Please select at least one column.");
+      onError?.();
+      return;
+    }
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      selectedColumns.forEach((column) => {
+        const values = allColumnarData.get(column);
+        if (values) filteredData.set(column, values);
+      });
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+      filteredData.set("__pj_mode__", [mode] as unknown as TableMatrix);
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("Pj operation failed.");
+      console.error("Pj operation failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Pj</h1>
+      <p className={descriptionClass}>
+        Choose the Pj operation you want to run on the selected columns.
+      </p>
+
+      <div className="mb-6">
+        <label className={labelClass}>Pj Operation</label>
+        <div className="space-y-2">
+          {PJ_MODES.map((option) => (
+            <button
+              key={option.id}
+              type="button"
+              className={`w-full text-left px-3 py-2 rounded-md border transition-colors ${
+                mode === option.id
+                  ? "border-blue-500 bg-blue-50"
+                  : "border-gray-300 hover:border-blue-400"
+              }`}
+              onClick={() => setMode(option.id)}
+            >
+              <span className="block text-sm font-medium text-gray-800">
+                {option.label}
+              </span>
+              <span className="block text-xs text-gray-500">
+                {option.description}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <MultiSelect
+          id="pj-columns"
+          label="Select Columns"
+          placeholder="Select data columns..."
+          options={numericColumns.map((column) => ({
+            value: column,
+            label: column,
+            disabled: false,
+          }))}
+          value={selectedColumns}
+          onChange={setSelectedColumns}
+          helperText="Choose the numeric columns to process"
+        />
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={mode === "stub" || selectedColumns.length === 0}
+          onClick={runAnalysis}
+        >
+          Apply
+        </button>
+      </div>
+    </div>
+  );
+};

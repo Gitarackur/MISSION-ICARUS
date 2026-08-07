@@ -74,7 +74,14 @@ import {
   MeanCenteringNormalizationLog,
   GrubbsOutlier,
   IQROutlier,
-  ZScoreOutlier
+  ZScoreOutlier,
+  FxExpression,
+  FxLinear,
+  OneDNormalize,
+  OneDIndex,
+  PiMultiply,
+  PiDivide,
+  Pj,
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -1253,10 +1260,140 @@ case 'delete-row':
         );
         break;
       case "save-data":
-        content = <SaveData />;
+        content = (
+          <SaveData dataColumns={dataColumns} dataRows={dataRows} />
+        );
         break;
       case "export-csv":
-        content = <ExportCsv />;
+        content = (
+          <ExportCsv dataColumns={dataColumns} dataRows={dataRows} />
+        );
+        break;
+      case "fx-expression":
+        content = (
+          <FxExpression
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "fx-linear":
+        content = (
+          <FxLinear
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "1d-normalize":
+        content = (
+          <OneDNormalize
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "1d-index":
+        content = (
+          <OneDIndex
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "pi-multiply":
+        content = (
+          <PiMultiply
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "pi-divide":
+        content = (
+          <PiDivide
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "pj":
+        content = (
+          <Pj
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       default:
         // Optional: Provide a fallback UI for unhandled actions

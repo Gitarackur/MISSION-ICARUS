@@ -198,16 +198,19 @@ const menuData = {
       {
         id: "fx",
         label: "f(x)",
+        hasDropdown: true,
         icon: <SquareFunction className={toolbarButtonIcon()} />,
       },
       {
         id: "1d",
         label: "1D",
+        hasDropdown: true,
         icon: <ListCollapse className={toolbarButtonIcon()} />,
       },
       {
         id: "pi",
         label: "Pi",
+        hasDropdown: true,
         icon: <Sigma className={toolbarButtonIcon()} />,
       },
       {
@@ -325,6 +328,18 @@ const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
   misc: [
     { id: "save-data", label: "Save Data" },
     { id: "export-csv", label: "Export CSV" },
+  ],
+  fx: [
+    { id: "fx-expression", label: "Expression f(x)" },
+    { id: "fx-linear", label: "Linear (ax+b)" },
+  ],
+  "1d": [
+    { id: "1d-normalize", label: "1D Normalize" },
+    { id: "1d-index", label: "1D Index" },
+  ],
+  pi: [
+    { id: "pi-multiply", label: "Multiply by Pi" },
+    { id: "pi-divide", label: "Divide by Pi" },
   ],
 };
 

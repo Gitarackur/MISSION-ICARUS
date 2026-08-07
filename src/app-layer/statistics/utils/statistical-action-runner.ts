@@ -1,6 +1,9 @@
 import {
   StatisticalAction,
   StatisticalAnalysisResult,
+  KMeansResult,
+  HierarchicalClusteringResult,
+  PCAClusteringResult,
 } from "@/domain/statistics/index.types";
 import {
   correctForPurity,
@@ -42,9 +45,6 @@ import {
   performKMeans,
   performHierarchicalClustering,
   performPCAForClustering,
-  type KMeansResult,
-  type HierarchicalClusteringResult,
-  type PCAClusteringResult,
   zScoreNormalization,
   logTransformNormalization,
   quantileNormalization,
@@ -54,10 +54,16 @@ import {
   detectGrubbsOutliers,
   addColumn,
   deleteColumns,
-  fillColumn,
+fillColumn,
   filterRowsByMissing,
   filterRowsByRange,
   filterRowsByOutlier,
+  applyFunctionExpression,
+  fxLinear,
+  normalize1D,
+  index1D,
+  multiplyByConstant,
+  divideConstantBy,
   type OutlierFilterMethod,
   type MissingFilterMode,
 } from "@/app-layer/statistics/utils/statistical-engine";
@@ -932,6 +938,84 @@ export const runStatisticalAnalysis = (
         console.error("Mean Centering error:", error);
         throw error;
       }
+    }
+
+    case "fx-expression": {
+      const expression = parseStringMetadata(data, "__expression__", "");
+      const target = parseStringMetadata(data, "__column__", "");
+      const targetIndex = numericColumns.indexOf(target);
+      if (targetIndex === -1) {
+        throw new Error(`Column '${target}' not found in selected columns`);
+      }
+      const evaluated = applyFunctionExpression(
+        numericData[targetIndex],
+        expression
+      );
+      results = numericData.map((col) => [...col]).concat([evaluated]);
+      newColumnNames = [...numericColumns, `${target}_f`];
+      break;
+    }
+
+    case "fx-linear": {
+      const a = parseNumberMetadata(data, "__factor_a__", 1);
+      const b = parseNumberMetadata(data, "__factor_b__", 0);
+      const target = parseStringMetadata(data, "__column__", "");
+      const targetIndex = numericColumns.indexOf(target);
+      if (targetIndex === -1) {
+        throw new Error(`Column '${target}' not found in selected columns`);
+      }
+      const mapped = fxLinear(numericData[targetIndex], a, b);
+      results = numericData.map((col) => [...col]).concat([mapped]);
+      newColumnNames = [...numericColumns, `${target}_linear`];
+      break;
+    }
+
+    case "1d-normalize": {
+      const normalized = numericData.map((col) => normalize1D(col));
+      results = numericData.map((col) => [...col]).concat(normalized);
+      newColumnNames = numericColumns.map((col) => `${col}_1d`);
+      break;
+    }
+
+    case "1d-index": {
+      const length = numericData[0]?.length ?? 0;
+      const index = index1D(length);
+      results = numericData.map((col) => [...col]).concat([index]);
+      newColumnNames = [...numericColumns, "index_1d"];
+      break;
+    }
+
+    case "pi-multiply": {
+      const mapped = numericData.map((col) => multiplyByConstant(col, Math.PI));
+      results = numericData.map((col) => [...col]).concat(mapped);
+      newColumnNames = numericColumns.map((col) => `${col}_pi`);
+      break;
+    }
+
+    case "pi-divide": {
+      const mapped = numericData.map((col) => divideConstantBy(col, Math.PI));
+      results = numericData.map((col) => [...col]).concat(mapped);
+      newColumnNames = numericColumns.map((col) => `${col}_div_pi`);
+      break;
+    }
+
+    case "pj": {
+      const mode = parseStringMetadata(data, "__pj_mode__", "pi-divide");
+      if (mode === "pi-divide") {
+        const mapped = numericData.map((col) => divideConstantBy(col, Math.PI));
+        results = numericData.map((col) => [...col]).concat(mapped);
+        newColumnNames = numericColumns.map((col) => `${col}_div_pi`);
+      } else if (mode === "clustering") {
+        const kmeansResult = performKMeans(numericData, 3);
+        results = numericData.map((col) => [...col]).concat([
+          kmeansResult.clusterAssignments,
+        ]);
+        newColumnNames = [...numericColumns, "Pj_Cluster_Assignment"];
+      } else {
+        results = numericData.map((col) => [...col]);
+        newColumnNames = numericColumns;
+      }
+      break;
     }
 
     case "f-test-test": {
