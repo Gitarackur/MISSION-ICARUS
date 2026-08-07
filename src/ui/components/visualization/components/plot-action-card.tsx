@@ -28,9 +28,15 @@ function PlotActionCard({
   yAxisOptions,
 }: PlotLibraryCard & { isRendering: boolean }) {
   const s = visualizationStyles();
+  const rendererLabel = (item: string) =>
+    item === "recharts"
+      ? "Native"
+      : item === "fsharp"
+        ? "F#"
+        : item.toUpperCase();
   const rendererOptions = renderers.map((item) => ({
     value: item,
-    label: item === "recharts" ? "Native" : item.toUpperCase(),
+    label: rendererLabel(item),
   }));
   const axisOptions = (values?: string[]) =>
     (values ?? []).map((value) => ({ value, label: value }));
@@ -232,7 +238,7 @@ function PlotActionCard({
               onClick={() => onRender()}
               disabled={disabled || isRendering}
             >
-              Create with {renderer === "recharts" ? "Native" : renderer.toUpperCase()}
+              Create with {renderer === "recharts" ? "Native" : renderer === "fsharp" ? "F#" : renderer.toUpperCase()}
             </button>
           )}
         </div>

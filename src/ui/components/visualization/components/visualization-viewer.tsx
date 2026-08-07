@@ -126,14 +126,21 @@ export function VisualizationViewer({
           )}
 
           {isRendererRefreshing &&
-          (displayMode === "python" || displayMode === "r") ? (
+          (displayMode === "python" ||
+            displayMode === "r" ||
+            displayMode === "fsharp") ? (
             <span
               className={s.rendererStatus()}
               role="status"
               aria-live="polite"
             >
               <LoaderCircle className={s.loadingIcon()} />
-              Updating {displayMode === "python" ? "Python" : "R"} renderer
+              Updating{" "}
+              {displayMode === "python"
+                ? "Python"
+                : displayMode === "r"
+                  ? "R"
+                  : "F#"} renderer
             </span>
           ) : null}
 

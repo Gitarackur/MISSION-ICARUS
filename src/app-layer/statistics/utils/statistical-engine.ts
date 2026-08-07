@@ -1086,6 +1086,190 @@ export function renameRows(
 }
 
 // ===================================================================
+// COLUMN MANIPULATION FUNCTIONS
+// ===================================================================
+
+export interface AddColumnResult {
+  updatedData: number[][];
+  newColumnIndex: number;
+}
+
+export function addColumn(
+  data: number[][],
+  values: number[] | "empty"
+): AddColumnResult {
+  if (!data || data.length === 0) {
+    throw new Error("No data to add a column to");
+  }
+
+  const numRows = data[0].length;
+  const newColumn =
+    Array.isArray(values) && values.length === numRows
+      ? values.map((v) => (Number.isFinite(v) ? v : NaN))
+      : new Array(numRows).fill(NaN);
+
+  const updatedData = [...data.map((col) => [...col]), newColumn];
+
+  return {
+    updatedData,
+    newColumnIndex: updatedData.length - 1,
+  };
+}
+
+export function deleteColumns(
+  data: number[][],
+  columnIndices: number[]
+): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data to delete columns from");
+  }
+
+  const indicesToDelete = new Set(columnIndices);
+  const remaining = data.filter((_, idx) => !indicesToDelete.has(idx));
+
+  if (remaining.length === 0) {
+    throw new Error("Cannot delete all columns");
+  }
+
+  return remaining;
+}
+
+export function fillColumn(
+  data: number[][],
+  columnIndex: number,
+  value: number
+): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data to fill");
+  }
+
+  if (columnIndex < 0 || columnIndex >= data.length) {
+    throw new Error(`Invalid column index: ${columnIndex}`);
+  }
+
+  return data.map((col, idx) =>
+    idx === columnIndex ? col.map(() => value) : [...col]
+  );
+}
+
+// ===================================================================
+// ROW FILTERING FUNCTIONS (keep rows that match the criterion)
+// ===================================================================
+
+export type MissingFilterMode = "with-missing" | "without-missing";
+
+/**
+ * Keep rows that have (or lack) missing values in any selected column.
+ * Operates on column-major data (each column is a number[] of length nRows).
+ */
+export function filterRowsByMissing(
+  data: number[][],
+  mode: MissingFilterMode = "with-missing"
+): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data to filter");
+  }
+
+  const numRows = data[0].length;
+  const keep: boolean[] = new Array(numRows).fill(false);
+
+  for (let r = 0; r < numRows; r++) {
+    let rowHasMissing = false;
+    for (const col of data) {
+      const v = col[r];
+      if (v === undefined || isNaN(v) || v === null) {
+        rowHasMissing = true;
+        break;
+      }
+    }
+    keep[r] = mode === "with-missing" ? rowHasMissing : !rowHasMissing;
+  }
+
+  return data.map((col) => col.filter((_, r) => keep[r]));
+}
+
+/**
+ * Keep rows where at least one selected column value falls within [min, max].
+ */
+export function filterRowsByRange(
+  data: number[][],
+  minValue: number,
+  maxValue: number
+): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data to filter");
+  }
+
+  if (!Number.isFinite(minValue) || !Number.isFinite(maxValue)) {
+    throw new Error("Range bounds must be finite numbers");
+  }
+
+  if (minValue > maxValue) {
+    throw new Error("Minimum value must be less than or equal to maximum value");
+  }
+
+  const numRows = data[0].length;
+  const keep: boolean[] = new Array(numRows).fill(false);
+
+  for (let r = 0; r < numRows; r++) {
+    for (const col of data) {
+      const v = col[r];
+      if (Number.isFinite(v) && v >= minValue && v <= maxValue) {
+        keep[r] = true;
+        break;
+      }
+    }
+  }
+
+  return data.map((col) => col.filter((_, r) => keep[r]));
+}
+
+export type OutlierFilterMethod = "iqr" | "z-score" | "grubbs";
+
+/**
+ * Keep rows where at least one selected column value is flagged as an outlier
+ * by the chosen detection method.
+ */
+export function filterRowsByOutlier(
+  data: number[][],
+  method: OutlierFilterMethod = "iqr"
+): number[][] {
+  if (!data || data.length === 0) {
+    throw new Error("No data to filter");
+  }
+
+  const numRows = data[0].length;
+  const keep: boolean[] = new Array(numRows).fill(false);
+
+  for (const col of data) {
+    // Methods with minimum-size requirements (e.g. Grubbs needs >= 3) should
+    // simply not flag anything for that column rather than throwing.
+    try {
+      let flags: boolean[];
+      switch (method) {
+        case "z-score":
+          flags = detectZScoreOutliers(col).map((o) => o.isOutlier);
+          break;
+        case "grubbs":
+          flags = detectGrubbsOutliers(col).map((o) => o.isOutlier);
+          break;
+        case "iqr":
+        default:
+          flags = detectIQROutliers(col).map((o) => o.isOutlier);
+          break;
+      }
+      flags.forEach((isOutlier, r) => {
+        if (isOutlier) keep[r] = true;
+      });
+    } catch {
+      // column lacks enough data for the chosen method; skip it
+    }
+  }
+
+  return data.map((col) => col.filter((_, r) => keep[r]));
+}
+
+// ===================================================================
 // MACHINE LEARNING / DIMENSIONALITY REDUCTION - COMPLETE WORKING IMPLEMENTATIONS
 // ===================================================================
 
@@ -1121,118 +1305,56 @@ export function performPCA(
     throw new Error("No samples in data");
   }
 
-  if (numComponents > Math.min(numFeatures, numSamples)) {
-    numComponents = Math.min(numFeatures, numSamples);
-  }
+  const maxComponents = Math.min(numFeatures, numSamples);
+  const k = Math.max(1, Math.min(numComponents, maxComponents));
 
-  // Step 1: Center and scale the data (z-score normalization)
+  // Step 1: z-score center + scale each feature (missing treated as column mean → 0 after centering).
   const centeredData: number[][] = [];
-  const means: number[] = [];
-  const stdDevs: number[] = [];
-
-  data.forEach((column) => {
+  for (const column of data) {
     const validValues = getValidValues(column);
+    const safeStd = validValues.length > 0 ? stddev(validValues) : 1;
 
-    if (validValues.length === 0) {
-      // If all NaN, use zeros
-      means.push(0);
-      stdDevs.push(1);
-      centeredData.push(new Array(numSamples).fill(0));
-      return;
+    let columnMean = 0;
+    if (validValues.length > 0) {
+      columnMean = mean(validValues);
     }
+    const colStd = Number.isFinite(safeStd) && safeStd > 0 ? safeStd : 1;
 
-    const columnMean = mean(validValues);
-    const columnStd = stddev(validValues);
-    const safeStd = columnStd > 0 ? columnStd : 1;
-
-    means.push(columnMean);
-    stdDevs.push(safeStd);
-
-    // Center and scale, replacing NaN with mean (0 after centering)
-    const centered = column.map((val) => {
-      if (isNaN(val) || !isFinite(val)) return 0;
-      return (val - columnMean) / safeStd;
-    });
-
-    centeredData.push(centered);
-  });
-
-  // Step 2: Create principal components using simplified approach
-  // For production, use proper SVD/Eigendecomposition library
-  const components: number[][] = [];
-
-  for (let i = 0; i < numComponents; i++) {
-    let component: number[] = new Array(numFeatures);
-
-    // Create component based on data covariance structure
-    for (let j = 0; j < numFeatures; j++) {
-      let sum = 0;
-      for (let k = 0; k < numSamples; k++) {
-        sum += centeredData[j][k] * (1.0 - i * 0.15); // Decreasing importance
-      }
-      component[j] = sum / numSamples + (Math.random() - 0.5) * 0.1;
-    }
-
-    // Orthogonalize against previous components (Gram-Schmidt)
-    for (let k = 0; k < i; k++) {
-      const dotProduct = component.reduce(
-        (sum, val, idx) => sum + val * components[k][idx],
-        0
-      );
-      component = component.map(
-        (val, idx) => val - dotProduct * components[k][idx]
-      );
-    }
-
-    // Normalize to unit length
-    const norm = Math.sqrt(component.reduce((sum, val) => sum + val * val, 0));
-    if (norm > 0) {
-      component = component.map((val) => val / norm);
-    } else {
-      // Fallback: create random orthogonal vector
-      component = component.map(
-        () => (Math.random() - 0.5) / Math.sqrt(numFeatures)
-      );
-    }
-
-    components.push(component);
+    centeredData.push(
+      column.map((val) => {
+        if (isNaN(val) || !isFinite(val)) return 0;
+        return (val - columnMean) / colStd;
+      })
+    );
   }
 
-  // Step 3: Project data onto principal components
-  const transformed_data: number[][] = [];
+  // Step 2: exact symmetric eigendecomposition of the covariance matrix via
+  // the Jacobi rotation method (jStat.PCA). Returns [X, D, Vt, Y] where Vt is
+  // the sorted eigenvector matrix and D the sorted eigenvalues.
+  const [, eigenvalues, eigenvectors, transformed] = jStat.PCA(centeredData);
+
+  const components: number[][] = [];
+  const transformedData: number[][] = [];
   const variances: number[] = [];
 
-  for (let i = 0; i < numComponents; i++) {
-    const pcValues: number[] = [];
-
-    for (let sample = 0; sample < numSamples; sample++) {
-      let value = 0;
-      for (let feature = 0; feature < numFeatures; feature++) {
-        value += centeredData[feature][sample] * components[i][feature];
-      }
-      pcValues.push(value);
-    }
-
-    transformed_data.push(pcValues);
-
-    // Calculate variance explained by this component
-    const validPcValues = getValidValues(pcValues);
-    const pcVariance = variance(validPcValues);
-    variances.push(pcVariance);
+  for (let i = 0; i < k; i++) {
+    components.push(eigenvectors[i]);
+    transformedData.push(transformed[i]);
+    const ev = eigenvalues[i];
+    variances.push(Number.isFinite(ev) && ev >= 0 ? ev : 0);
   }
 
-  // Normalize explained variance to sum to 1
-  const totalVariance = variances.reduce((sum, v) => sum + v, 0);
+  const totalVariance = variances.reduce((s, v) => s + v, 0);
   const explained_variance =
     totalVariance > 0
       ? variances.map((v) => v / totalVariance)
-      : variances.map(() => 1 / numComponents);
+      : variances.map(() => 1 / k);
 
   return {
     components,
     explained_variance,
-    transformed_data,
-    num_components: numComponents,
+    transformed_data: transformedData,
+    num_components: k,
   };
 }
 
@@ -2233,61 +2355,68 @@ export function quantileNormalization(data: number[][]): number[][] {
   if (!data || data.length === 0) {
     throw new Error("No data provided for Quantile normalization");
   }
-  
-  const numColumns = data.length;
+
+  // Main diagonal entries must be mutually consistent: each column's value
+  // count equals the number of rows.
   const numRows = data[0].length;
-  
-  // Transpose: convert to row-major for sorting
-  const samples: number[][] = [];
-  for (let i = 0; i < numRows; i++) {
-    const row: number[] = [];
-    for (let j = 0; j < numColumns; j++) {
-      const val = data[j][i];
-      row.push(isNaN(val) || !isFinite(val) ? 0 : val);
-    }
-    samples.push(row);
-  }
-  
-  // Sort each column and compute rank
-  const sortedColumns: number[][] = [];
-  data.forEach(column => {
-    const validValues = column.filter(v => !isNaN(v) && isFinite(v));
-    const sorted = [...validValues].sort((a, b) => a - b);
-    sortedColumns.push(sorted);
+
+  // Build the reference distribution: sort each column's *observed* values
+  // and average them across columns rank-by-rank. Missing values are excluded
+  // entirely (never replaced by 0).
+  const observedCounts: number[] = [];
+  const sortedColumns: number[][] = data.map((column) => {
+    const observed = getValidValues(column).sort((a, b) => a - b);
+    observedCounts.push(observed.length);
+    return observed;
   });
-  
-  // Compute mean of sorted values across columns for each rank
+
+  const maxRank = Math.max(0, ...observedCounts);
   const meanSorted: number[] = [];
-  for (let i = 0; i < numRows; i++) {
+  for (let rank = 0; rank < maxRank; rank++) {
     let sum = 0;
     let count = 0;
-    
-    sortedColumns.forEach(sortedCol => {
-      if (i < sortedCol.length) {
-        sum += sortedCol[i];
+    for (const sortedCol of sortedColumns) {
+      if (rank < sortedCol.length) {
+        sum += sortedCol[rank];
         count++;
       }
-    });
-    
+    }
     meanSorted.push(count > 0 ? sum / count : 0);
   }
-  
-  // Assign quantile-normalized values
-  const result: number[][] = [];
-  
-  data.forEach(column => {
-    // Get ranks for this column
-    const indexed = column.map((val, idx) => ({ val, idx }));
-    indexed.sort((a, b) => a.val - b.val);
-    
-    const normalized = new Array(numRows).fill(0);
-    indexed.forEach((item, rank) => {
-      normalized[item.idx] = meanSorted[rank] || 0;
+
+  const numRanks = meanSorted.length;
+
+  // Map each observed value in each column back to the reference distribution.
+  const result: number[][] = data.map((column) => {
+    // Rank the observed values (ascending); ties share the mean rank.
+    const observed = column
+      .map((val, idx) => ({ val, idx }))
+      .filter((o) => isFinite(o.val))
+      .sort((a, b) => a.val - b.val);
+
+    const rankOf: number[] = new Array(observed.length);
+    let i = 0;
+    while (i < observed.length) {
+      let j = i;
+      while (j + 1 < observed.length && observed[j + 1].val === observed[i].val)
+        j++;
+      const sharedRank = (i + j) / 2;
+      for (let t = i; t <= j; t++) rankOf[t] = sharedRank;
+      i = j + 1;
+    }
+
+    const normalized = new Array(numRows).fill(NaN);
+    observed.forEach((item, index) => {
+      const rankIndex = Math.max(
+        0,
+        Math.min(numRanks - 1, Math.round(rankOf[index]))
+      );
+      normalized[item.idx] = meanSorted[rankIndex];
     });
-    
-    result.push(normalized);
+
+    return normalized;
   });
-  
+
   return result;
 }
 
@@ -2504,14 +2633,10 @@ export function detectIQROutliers(
     throw new Error("Cannot detect outliers in empty array");
   }
 
-  const sorted = [...values].sort((a, b) => a - b);
-  const n = sorted.length;
-
-  // Calculate Q1 (25th percentile) and Q3 (75th percentile)
-  const q1Index = Math.floor(n * 0.25);
-  const q3Index = Math.floor(n * 0.75);
-  const q1 = sorted[q1Index];
-  const q3 = sorted[q3Index];
+  // Use Type-7 (R default) quantiles rather than a single-element pick, which
+  // is what Excel/R/Numpy report for the boxplot fence.
+  const q1 = ss.quantileSorted([...values].sort((a, b) => a - b), 0.25);
+  const q3 = ss.quantileSorted([...values].sort((a, b) => a - b), 0.75);
   const iqr = q3 - q1;
 
   const lowerBound = q1 - multiplier * iqr;
@@ -2546,23 +2671,27 @@ export interface GrubbsTestResult {
 
 export function detectGrubbsOutliers(
   values: number[],
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  _alpha: number = 0.05
+  alpha: number = 0.05
 ): GrubbsTestResult[] {
   if (values.length < 3) {
     throw new Error("Grubbs' test requires at least 3 data points");
+  }
+
+  if (alpha <= 0 || alpha >= 1) {
+    throw new Error("Alpha must be between 0 and 1 (exclusive)");
   }
 
   const n = values.length;
   const meanValue = mean(values);
   const stdDevValue = stddev(values);
 
-  // Critical value approximation for Grubbs' test
-  // For α = 0.05, approximate formula
-  const tCritical = 1.96; // Approximation for large n
+  // Exact two-sided Grubbs critical value, computed from the Student-t
+  // distribution. Replaces the previous hard-coded 1.96 approximation so the
+  // thresholds are correct for any sample size.
+  const tCrit = jStat.studentt.inv(1 - alpha / (2 * n), n - 2);
   const criticalValue =
     ((n - 1) / Math.sqrt(n)) *
-    Math.sqrt(Math.pow(tCritical, 2) / (n - 2 + Math.pow(tCritical, 2)));
+    Math.sqrt(Math.pow(tCrit, 2) / (n - 2 + Math.pow(tCrit, 2)));
 
   return values.map((value, index) => {
     const grubbsStatistic =

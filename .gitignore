@@ -83,6 +83,16 @@ assets/runtime/r/windows*/
 !assets/runtime/r/linux-x64/.gitkeep
 !assets/runtime/r/windows-x64/.gitkeep
 
+# Vendored F# runtimes are generated platform artifacts.
+assets/runtime/fsharp/macos*/
+assets/runtime/fsharp/linux*/
+assets/runtime/fsharp/windows*/
+
+# F# plot renderer build artifacts
+assets/scripts/fsharp/IcarusPlotRenderer/bin/
+assets/scripts/fsharp/IcarusPlotRenderer/obj/
+
+
 
 # OS generated files
 .DS_Store

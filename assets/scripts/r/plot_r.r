@@ -340,12 +340,34 @@ build_volcano_plot <- function(data) {
 }
 
 build_pca_plot <- function(data) {
+  # Raw feature matrix (rows = samples, columns = features) is provided by the
+  # app; PCA must be computed here (as Python with sklearn and F# with
+  # FSharp.Stats do) instead of plotting raw columns directly.
+  features <- do.call(rbind, lapply(data$data, function(row) as.numeric(unlist(row))))
+
+  if (is.null(features) || nrow(features) < 2 || ncol(features) < 2) {
+    stop("PCA plot needs at least 2 rows and 2 numeric columns")
+  }
+
+  n_components <- as.integer(data$n_components %||% 2)
+
+  pca <- prcomp(features, center = TRUE, scale. = FALSE)
+  components <- pca$x[, seq_len(n_components), drop = FALSE]
+
+  variance_ratio <- pca$sdev^2 / sum(pca$sdev^2)
+  variance_ratio <- variance_ratio[seq_len(n_components)]
+
+  group <- if (!is.null(data$groups)) as.character(unlist(data$groups)) else rep("PCA", nrow(components))
+
   df <- data.frame(
-    x = vapply(data$data, function(row) as.numeric(row[[1]]), numeric(1)),
-    y = vapply(data$data, function(row) as.numeric(row[[2]]), numeric(1)),
-    group = if (!is.null(data$groups)) as.character(unlist(data$groups)) else "PCA",
+    x = components[, 1],
+    y = components[, 2],
+    group = group,
     stringsAsFactors = FALSE
   )
+
+  x_label <- sprintf("PC1 (%.2f%% variance)", variance_ratio[1] * 100)
+  y_label <- sprintf("PC2 (%.2f%% variance)", variance_ratio[2] * 100)
 
   ggplot(df, aes(x = x, y = y, color = group)) +
     geom_point(alpha = 0.75, size = point_size) +
@@ -354,8 +376,8 @@ build_pca_plot <- function(data) {
     scale_color_manual(values = rep(plot_colors, length.out = length(unique(df$group)))) +
     labs(
       title = data$title %||% "PCA Plot",
-      x = axis_label("xAxisLabel", "PC1"),
-      y = axis_label("yAxisLabel", "PC2")
+      x = axis_label("xAxisLabel", x_label),
+      y = axis_label("yAxisLabel", y_label)
     ) +
     plot_theme()
 }

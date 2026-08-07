@@ -8,6 +8,16 @@ import {
 } from "@/domain/visualization/index.types";
 import { SaveVisualizationActivity } from "@/domain/workflow/main.types";
 
+import { PlotKind } from "@/domain/visualization/index.types";
+
+export type {
+  DisplayMode,
+  DisplayWarning,
+  LiveDisplayMode,
+  PlotKind,
+  RenderJob,
+} from "@/domain/visualization/index.types";
+
 export type SaveVisualizationResult = {
   visualizationId?: string;
 };
@@ -30,27 +40,6 @@ export type VisualizationPanelStateParams = {
   shouldAutoSelectVisualization?: boolean;
 };
 
-export type RenderJob =
-  | "python-bar"
-  | "r-bar"
-  | "box"
-  | "scatter"
-  | "pca"
-  | "heatmap"
-  | "volcano"
-  | "qc"
-  | "missing-values";
-
-export type PlotKind =
-  | "bar"
-  | "box"
-  | "scatter"
-  | "heatmap"
-  | "volcano"
-  | "pca"
-  | "qc"
-  | "missing-values";
-
 export type PlotSelectionState = Record<PlotKind, PlotAxisSelection>;
 
 export type PlotAvailabilityState = {
@@ -70,13 +59,6 @@ export interface GetPlotAvailabilityParams {
   numericColumns: string[];
   plotSelections: PlotSelectionState;
 }
-
-export type DisplayMode = "saved" | "native" | "python" | "r";
-export type DisplayWarning = {
-  title: string;
-  message: string;
-};
-export type LiveDisplayMode = "python" | "r";
 
 export type VisualizationReadiness<TPayload> = {
   payload: TPayload | null;

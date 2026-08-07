@@ -39,6 +39,12 @@ import {
   invokeRPcaPlot,
   invokeRScatterPlot,
   invokeRVolcanoPlot,
+  invokeFSharpBarPlot,
+  invokeFSharpBoxPlot,
+  invokeFSharpHeatmap,
+  invokeFSharpPcaPlot,
+  invokeFSharpScatterPlot,
+  invokeFSharpVolcanoPlot,
   renderBoxPlotSvg,
   renderHeatmapSvg,
   renderPcaSvg,
@@ -244,6 +250,7 @@ export const useVisualizationPanel = ({
       nativeRenderer,
       pythonRenderer,
       rRenderer,
+      fsharpRenderer,
       payload,
       preferredRenderer,
     }: {
@@ -251,6 +258,7 @@ export const useVisualizationPanel = ({
       nativeRenderer: () => string | null;
       pythonRenderer: () => Promise<string>;
       rRenderer?: () => Promise<string>;
+      fsharpRenderer?: () => Promise<string>;
       payload: unknown;
       preferredRenderer: VisualizationRenderer;
     }) => {
@@ -269,6 +277,17 @@ export const useVisualizationPanel = ({
             throw new Error("R renderer is not available for this plot type.");
           }
           return { image: await rRenderer(), renderer: "r" as const, payload };
+        }
+
+        if (preferredRenderer === "fsharp") {
+          if (!fsharpRenderer) {
+            throw new Error("F# renderer is not available for this plot type.");
+          }
+          return {
+            image: await fsharpRenderer(),
+            renderer: "fsharp" as const,
+            payload,
+          };
         }
 
         return {
@@ -322,6 +341,7 @@ export const useVisualizationPanel = ({
             ),
           pythonRenderer: () => invokePythonBarPlot(readiness.payload!),
           rRenderer: () => invokeRBarPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpBarPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -360,6 +380,7 @@ export const useVisualizationPanel = ({
           nativeRenderer: () => renderBoxPlotSvg(readiness.payload!),
           pythonRenderer: () => invokePythonBoxPlot(readiness.payload!),
           rRenderer: () => invokeRBoxPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpBoxPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -395,6 +416,7 @@ export const useVisualizationPanel = ({
           nativeRenderer: () => renderScatterSvg(readiness.payload!),
           pythonRenderer: () => invokePythonScatterPlot(readiness.payload!),
           rRenderer: () => invokeRScatterPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpScatterPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -443,6 +465,7 @@ export const useVisualizationPanel = ({
           nativeRenderer: () => renderHeatmapSvg(readiness.payload!),
           pythonRenderer: () => invokePythonHeatmap(readiness.payload!),
           rRenderer: () => invokeRHeatmap(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpHeatmap(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -481,6 +504,7 @@ export const useVisualizationPanel = ({
           nativeRenderer: () => renderVolcanoSvg(readiness.payload!),
           pythonRenderer: () => invokePythonVolcanoPlot(readiness.payload!),
           rRenderer: () => invokeRVolcanoPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpVolcanoPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -526,6 +550,7 @@ export const useVisualizationPanel = ({
           nativeRenderer: () => renderPcaSvg(readiness.payload!),
           pythonRenderer: () => invokePythonPcaPlot(readiness.payload!),
           rRenderer: () => invokeRPcaPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpPcaPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -563,6 +588,7 @@ export const useVisualizationPanel = ({
           nativeRenderer: () => renderBoxPlotSvg(readiness.payload!),
           pythonRenderer: () => invokePythonBoxPlot(readiness.payload!),
           rRenderer: () => invokeRBoxPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpBoxPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });
@@ -613,6 +639,7 @@ export const useVisualizationPanel = ({
             ),
           pythonRenderer: () => invokePythonBarPlot(readiness.payload!),
           rRenderer: () => invokeRBarPlot(readiness.payload!),
+          fsharpRenderer: () => invokeFSharpBarPlot(readiness.payload!),
           payload: readiness.payload,
           preferredRenderer,
         });

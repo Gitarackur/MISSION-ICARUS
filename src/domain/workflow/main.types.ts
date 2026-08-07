@@ -64,7 +64,7 @@ export type SaveStatisticalActivity = IcarusActivity & {
 
 
 // Icarus Visualizations
-export type VisualizationRenderer = "python" | "r" | "recharts";
+export type VisualizationRenderer = "python" | "r" | "recharts" | "fsharp";
 
 export type VisualizationKind =
   | "bar"
