@@ -89,6 +89,100 @@ jobs:
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
+      - name: Setup .NET SDK (F# plot renderer)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Build bundled runtimes (best-effort)
+        shell: bash
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+          PIPENV_VENV_IN_PROJECT: "1"
+        run: |
+          set +e
+
+          PLATFORM=$(node -p "({darwin:'macos',win32:'windows',linux:'linux'})[process.platform]")
+          ARCH=$(node -p "process.arch")
+          RUNTIME_DIR="assets/runtime"
+          FSHARP_DIR="$RUNTIME_DIR/fsharp/$PLATFORM-$ARCH"
+          R_DIR="$RUNTIME_DIR/r/$PLATFORM-$ARCH"
+
+          case "$PLATFORM" in
+            macos)   COMMANDER_EXT="bin"; RID="osx-$ARCH" ;;
+            windows) COMMANDER_EXT="exe"; RID="win-$ARCH" ;;
+            linux)   COMMANDER_EXT="";   RID="linux-$ARCH" ;;
+            *)       RID="$PLATFORM-$ARCH" ;;
+          esac
+
+          built=0
+          notes=""
+
+          echo "==> Building F# plot renderer ($RID)"
+          if command -v dotnet >/dev/null 2>&1; then
+            mkdir -p "$FSHARP_DIR"
+            dotnet publish assets/scripts/fsharp/IcarusPlotRenderer/IcarusPlotRenderer.fsproj \
+              -c Release -r "$RID" --self-contained \
+              /p:PublishSingleFile=true -o "$FSHARP_DIR" >/dev/null 2>&1
+            if [ -f "$FSHARP_DIR/fsharp-plot" ] || [ -f "$FSHARP_DIR/fsharp-plot.exe" ]; then
+              echo "    F# runtime OK: $FSHARP_DIR"
+              built=$((built + 1))
+            else
+              echo "    WARN: dotnet publish did not produce fsharp-plot; keeping existing asset."
+              notes="${notes}\n  - F# runtime: FAILED"
+            fi
+          else
+            echo "    WARN: dotnet not available; skipping F# runtime build."
+            notes="${notes}\n  - F# runtime: SKIPPED (no dotnet)"
+          fi
+
+          echo "==> Building Python renderer (Nuitka)"
+          if command -v python3 >/dev/null 2>&1 && command -v pip3 >/dev/null 2>&1; then
+            (
+              cd assets/scripts/python || exit 1
+              python3 -m pip install --quiet --user pipenv >/dev/null 2>&1
+              export PATH="$HOME/.local/bin:$PATH"
+              if command -v pipenv >/dev/null 2>&1; then
+                pipenv sync --dev >/dev/null 2>&1 || pipenv install --dev >/dev/null 2>&1
+                pipenv run prepare >/dev/null 2>&1
+                code=$?
+                if [ -f "bin/commander.$COMMANDER_EXT" ]; then
+                  echo "    Python runtime OK: bin/commander.$COMMANDER_EXT"
+                  built=$((built + 1))
+                else
+                  echo "    WARN: Nuitka build finished (exit $code) but commander.$COMMANDER_EXT missing."
+                  notes="$notes\n  - Python runtime: FAILED (exit $code)"
+                fi
+              else
+                echo "    WARN: pipenv install failed; skipping Python runtime build."
+                notes="$notes\n  - Python runtime: SKIPPED (no pipenv)"
+              fi
+            )
+          else
+            echo "    WARN: python3/pip3 not available; skipping Python runtime build."
+            notes="$notes\n  - Python runtime: SKIPPED (no python3/pip3)"
+          fi
+
+          echo "==> Building R runtime"
+          if command -v Rscript >/dev/null 2>&1 || [ -n "$RSCRIPT_PATH" ]; then
+            node assets/scripts/r/vendor-r-runtime.mjs --clean >/dev/null 2>&1
+            code=$?
+            if [ -f "$R_DIR/bin/Rscript" ] || [ -f "$R_DIR/bin/Rscript.exe" ]; then
+              echo "    R runtime OK: $R_DIR"
+              built=$((built + 1))
+            else
+              echo "    WARN: R runtime build finished (exit $code) but Rscript not found."
+              notes="$notes\n  - R runtime: FAILED (exit $code)"
+            fi
+          else
+            echo "    WARN: no system Rscript; skipping R runtime build."
+            notes="$notes\n  - R runtime: SKIPPED (no Rscript; install R or set RSCRIPT_PATH to enable)"
+          fi
+
+          echo "==> Built $built/3 runtimes for $PLATFORM-$ARCH."
+          printf '%b\n' "$notes"
+          exit 0
+
       - name: Prepare macOS notarization assets
         if: matrix.os == 'macos-latest'
         shell: bash

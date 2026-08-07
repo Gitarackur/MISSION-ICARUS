@@ -8,8 +8,38 @@ export type PlotSeries = {
   values: number[];
 };
 
+export type RenderJob =
+  | "python-bar"
+  | "r-bar"
+  | "box"
+  | "scatter"
+  | "pca"
+  | "heatmap"
+  | "volcano"
+  | "qc"
+  | "missing-values";
+
+export type PlotKind =
+  | "bar"
+  | "box"
+  | "scatter"
+  | "heatmap"
+  | "volcano"
+  | "pca"
+  | "qc"
+  | "missing-values";
+
+export type DisplayMode = "saved" | "native" | "python" | "r" | "fsharp";
+
+export type DisplayWarning = {
+  title: string;
+  message: string;
+};
+
+export type LiveDisplayMode = "python" | "r" | "fsharp";
+
 export type PlotAxisSelection = {
-  renderer?: "python" | "r" | "recharts";
+  renderer?: "python" | "r" | "recharts" | "fsharp";
   xAxes?: string[];
   /** @deprecated Kept for saved selections created before multi-axis support. */
   xAxis?: string;

@@ -49,14 +49,19 @@ export const useVisualizationDisplay = ({
     null,
   );
   const [rDisplayImage, setRDisplayImage] = useState<string | null>(null);
+  const [fsharpDisplayImage, setFSharpDisplayImage] = useState<string | null>(
+    null,
+  );
   const [pythonRenderKey, setPythonRenderKey] = useState<string | null>(null);
   const [rRenderKey, setRRenderKey] = useState<string | null>(null);
+  const [fsharpRenderKey, setFSharpRenderKey] = useState<string | null>(null);
   const [refreshingRenderer, setRefreshingRenderer] =
     useState<LiveDisplayMode | null>(null);
   const previousDisplayModeRef = useRef<DisplayMode>(displayMode);
   const [rendererAvailability, setRendererAvailability] = useState({
     python: true,
     r: false,
+    fsharp: false,
   });
   const [rendererErrors, setRendererErrors] = useState<
     Partial<Record<DisplayMode, string>>
@@ -67,6 +72,7 @@ export const useVisualizationDisplay = ({
   const preferredDisplayMode = useMemo<DisplayMode>(() => {
     if (activeVisualization?.renderer === "r") return "saved";
     if (activeVisualization?.renderer === "python") return "saved";
+    if (activeVisualization?.renderer === "fsharp") return "saved";
     if (activeVisualization?.renderer === "recharts") return "native";
     return "saved";
   }, [activeVisualization?.renderer]);
@@ -75,16 +81,20 @@ export const useVisualizationDisplay = ({
     let cancelled = false;
 
     const loadRendererAvailability = async () => {
-      const [python, r] = await Promise.allSettled([
+      const [python, r, fsharp] = await Promise.allSettled([
         window.electron.ipcRenderer.invoke("renderer:python-available"),
         window.electron.ipcRenderer.invoke("renderer:r-available"),
+        window.electron.ipcRenderer.invoke("renderer:fsharp-available"),
       ]);
 
       if (cancelled) return;
 
       setRendererAvailability({
-        python: python.status === "fulfilled" ? Boolean(python.value) : false,
+        python:
+          python.status === "fulfilled" ? Boolean(python.value) : false,
         r: r.status === "fulfilled" ? Boolean(r.value) : false,
+        fsharp:
+          fsharp.status === "fulfilled" ? Boolean(fsharp.value) : false,
       });
     };
 
@@ -102,8 +112,10 @@ export const useVisualizationDisplay = ({
     setDisplayMode(preferredDisplayMode);
     setPythonDisplayImage(null);
     setRDisplayImage(null);
+    setFSharpDisplayImage(null);
     setPythonRenderKey(null);
     setRRenderKey(null);
+    setFSharpRenderKey(null);
     setRefreshingRenderer(null);
     setRendererErrors({});
     setDisplayWarning(null);
@@ -121,7 +133,10 @@ export const useVisualizationDisplay = ({
     const modeChanged = previousDisplayModeRef.current !== displayMode;
     previousDisplayModeRef.current = displayMode;
 
-    if (modeChanged && (displayMode === "python" || displayMode === "r")) {
+    if (
+      modeChanged &&
+      (displayMode === "python" || displayMode === "r" || displayMode === "fsharp")
+    ) {
       setRendererSettings(settings);
     }
   }, [displayMode, settings]);
@@ -137,7 +152,11 @@ export const useVisualizationDisplay = ({
       setRefreshingRenderer(null);
       return;
     }
-    if (displayMode !== "python" && displayMode !== "r") {
+    if (
+      displayMode !== "python" &&
+      displayMode !== "r" &&
+      displayMode !== "fsharp"
+    ) {
       setRefreshingRenderer(null);
       return;
     }
@@ -148,8 +167,18 @@ export const useVisualizationDisplay = ({
       return;
     }
 
-    const image = liveMode === "python" ? pythonDisplayImage : rDisplayImage;
-    const renderedKey = liveMode === "python" ? pythonRenderKey : rRenderKey;
+    const image =
+      liveMode === "python"
+        ? pythonDisplayImage
+        : liveMode === "r"
+          ? rDisplayImage
+          : fsharpDisplayImage;
+    const renderedKey =
+      liveMode === "python"
+        ? pythonRenderKey
+        : liveMode === "r"
+          ? rRenderKey
+          : fsharpRenderKey;
     const requestedRenderKey = `${activeVisualization.id}:${rendererSettingsSignature}`;
     if (image && renderedKey === requestedRenderKey) {
       setRefreshingRenderer(null);
@@ -158,14 +187,17 @@ export const useVisualizationDisplay = ({
 
     if (
       (liveMode === "python" && !rendererAvailability.python) ||
-      (liveMode === "r" && !rendererAvailability.r)
+      (liveMode === "r" && !rendererAvailability.r) ||
+      (liveMode === "fsharp" && !rendererAvailability.fsharp)
     ) {
       setRendererErrors((previous) => ({
         ...previous,
         [liveMode]:
           liveMode === "python"
             ? "Python renderer is not available on this system."
-            : "R renderer is not available on this system.",
+            : liveMode === "r"
+              ? "R renderer is not available on this system."
+              : "F# renderer is not available on this system.",
       }));
       setRefreshingRenderer(null);
       return;
@@ -192,16 +224,19 @@ export const useVisualizationDisplay = ({
         if (cancelled) return;
         if (!nextImage) {
           throw new Error(
-            `${liveMode === "python" ? "Python" : "R"} renderer returned no image.`,
+            `${liveMode === "python" ? "Python" : liveMode === "r" ? "R" : "F#"} renderer returned no image.`,
           );
         }
 
         if (liveMode === "python") {
           setPythonDisplayImage(nextImage);
           setPythonRenderKey(requestedRenderKey);
-        } else {
+        } else if (liveMode === "r") {
           setRDisplayImage(nextImage);
           setRRenderKey(requestedRenderKey);
+        } else {
+          setFSharpDisplayImage(nextImage);
+          setFSharpRenderKey(requestedRenderKey);
         }
 
         setRendererErrors((previous) => {
@@ -221,7 +256,7 @@ export const useVisualizationDisplay = ({
 
         if (image) {
           setDisplayWarning({
-            title: `${liveMode === "python" ? "Python" : "R"} renderer update failed`,
+            title: `${liveMode === "python" ? "Python" : liveMode === "r" ? "R" : "F#"} renderer update failed`,
             message: `${message} The previous renderer image is still displayed.`,
           });
         }
@@ -242,6 +277,8 @@ export const useVisualizationDisplay = ({
     pythonRenderKey,
     rDisplayImage,
     rRenderKey,
+    fsharpDisplayImage,
+    fsharpRenderKey,
     rendererAvailability,
     rendererSettings,
     rendererSettingsSignature,
@@ -274,6 +311,12 @@ export const useVisualizationDisplay = ({
     if (rendererAvailability.r && supportsRenderer(activeVisualization, "r")) {
       modes.push("r");
     }
+    if (
+      rendererAvailability.fsharp &&
+      supportsRenderer(activeVisualization, "fsharp")
+    ) {
+      modes.push("fsharp");
+    }
     if (nativeDisplayImage) modes.push("native");
     return modes;
   }, [
@@ -289,6 +332,7 @@ export const useVisualizationDisplay = ({
       "saved",
       "native",
       "python",
+      "fsharp",
       "r",
     ];
 
@@ -298,6 +342,7 @@ export const useVisualizationDisplay = ({
       if (mode === "native") return Boolean(nativeDisplayImage);
       if (mode === "python") return Boolean(pythonDisplayImage);
       if (mode === "r") return Boolean(rDisplayImage);
+      if (mode === "fsharp") return Boolean(fsharpDisplayImage);
       return false;
     });
   }, [
@@ -306,6 +351,7 @@ export const useVisualizationDisplay = ({
     preferredDisplayMode,
     pythonDisplayImage,
     rDisplayImage,
+    fsharpDisplayImage,
     savedDisplayImage,
   ]);
 
@@ -315,12 +361,15 @@ export const useVisualizationDisplay = ({
         return pythonDisplayImage ?? savedDisplayImage ?? nativeDisplayImage;
       case "r":
         return rDisplayImage ?? savedDisplayImage ?? nativeDisplayImage;
+      case "fsharp":
+        return fsharpDisplayImage ?? savedDisplayImage ?? nativeDisplayImage;
       case "native":
         return (
           nativeDisplayImage ??
           savedDisplayImage ??
           pythonDisplayImage ??
-          rDisplayImage
+          rDisplayImage ??
+          fsharpDisplayImage
         );
       case "saved":
       default:
@@ -328,6 +377,7 @@ export const useVisualizationDisplay = ({
           savedDisplayImage ??
           pythonDisplayImage ??
           rDisplayImage ??
+          fsharpDisplayImage ??
           nativeDisplayImage
         );
     }
@@ -336,6 +386,7 @@ export const useVisualizationDisplay = ({
     nativeDisplayImage,
     pythonDisplayImage,
     rDisplayImage,
+    fsharpDisplayImage,
     savedDisplayImage,
   ]);
 
@@ -344,7 +395,11 @@ export const useVisualizationDisplay = ({
     if (displayMode === "saved" || displayMode === "native") return;
 
     const requestedImage =
-      displayMode === "python" ? pythonDisplayImage : rDisplayImage;
+      displayMode === "python"
+        ? pythonDisplayImage
+        : displayMode === "r"
+          ? rDisplayImage
+          : fsharpDisplayImage;
     const requestedError = rendererErrors[displayMode];
 
     if (requestedImage || !requestedError) return;
@@ -358,7 +413,9 @@ export const useVisualizationDisplay = ({
             ? "Python renderer"
             : fallbackMode === "r"
               ? "R renderer"
-              : null;
+              : fallbackMode === "fsharp"
+                ? "F# renderer"
+                : null;
 
     console.warn(
       `[Visualization] ${displayMode} renderer failed for "${activeVisualization.title ?? activeVisualization.visualizationType ?? activeVisualization.id}": ${requestedError}`,
@@ -366,7 +423,11 @@ export const useVisualizationDisplay = ({
 
     setDisplayWarning({
       title: `${
-        displayMode === "python" ? "Python" : "R"
+        displayMode === "python"
+          ? "Python"
+          : displayMode === "r"
+            ? "R"
+            : "F#"
       } renderer unavailable`,
       message: fallbackLabel
         ? `${requestedError} The view has been switched to the ${fallbackLabel}.`
@@ -381,6 +442,7 @@ export const useVisualizationDisplay = ({
     displayMode,
     pythonDisplayImage,
     rDisplayImage,
+    fsharpDisplayImage,
     rendererErrors,
     savedDisplayImage,
     nativeDisplayImage,
@@ -401,9 +463,11 @@ export const useVisualizationDisplay = ({
             ? "Saved R Renderer"
             : activeVisualization?.renderer === "python"
               ? "Saved Python Renderer"
-              : activeVisualization?.renderer === "recharts"
-                ? "Saved Native Renderer"
-                : "Saved Renderer",
+              : activeVisualization?.renderer === "fsharp"
+                ? "Saved F# Renderer"
+                : activeVisualization?.renderer === "recharts"
+                  ? "Saved Native Renderer"
+                  : "Saved Renderer",
       });
     }
     if (supportsRenderer(activeVisualization, "python")) {
@@ -411,6 +475,9 @@ export const useVisualizationDisplay = ({
     }
     if (supportsRenderer(activeVisualization, "r")) {
       optionMap.set("r", { value: "r", label: "R Renderer" });
+    }
+    if (supportsRenderer(activeVisualization, "fsharp")) {
+      optionMap.set("fsharp", { value: "fsharp", label: "F# Renderer" });
     }
     if (nativeDisplayImage) {
       optionMap.set("native", { value: "native", label: "Native Renderer" });
@@ -420,6 +487,7 @@ export const useVisualizationDisplay = ({
       preferredDisplayMode,
       "saved",
       "python",
+      "fsharp",
       "r",
       "native",
     ];
@@ -473,9 +541,11 @@ export const useVisualizationDisplay = ({
           ? "python"
           : activeVisualization?.renderer === "r"
             ? "r"
-            : activeVisualization?.renderer === "recharts"
-              ? "native"
-              : null;
+            : activeVisualization?.renderer === "fsharp"
+              ? "fsharp"
+              : activeVisualization?.renderer === "recharts"
+                ? "native"
+                : null;
 
       if (
         matchingLiveMode &&

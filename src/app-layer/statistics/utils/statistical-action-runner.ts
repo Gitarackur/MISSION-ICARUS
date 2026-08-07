@@ -52,6 +52,14 @@ import {
   detectZScoreOutliers,
   detectIQROutliers,
   detectGrubbsOutliers,
+  addColumn,
+  deleteColumns,
+  fillColumn,
+  filterRowsByMissing,
+  filterRowsByRange,
+  filterRowsByOutlier,
+  type OutlierFilterMethod,
+  type MissingFilterMode,
 } from "@/app-layer/statistics/utils/statistical-engine";
 
 import { TableMatrix } from "@/domain/workflow/main.types";
@@ -108,6 +116,7 @@ export const runStatisticalAnalysis = (
   let results: number[][] = [];
   let newColumnNames: string[] = [];
   const calculationMethod = action;
+  let inputParametersMetadata: Record<string, unknown> = {};
 
   switch (action) {
     case "mean-values":
@@ -523,10 +532,16 @@ export const runStatisticalAnalysis = (
 
     case "filter-columns-by-name": {
       try {
-        // Extract pattern and match type from metadata
-        const pattern = "test"; // This should come from user input
-        const matchType = "contains"; // This should come from user input
-        const caseSensitive = false;
+        const pattern = parseStringMetadata(data, "__pattern__", "");
+        const rawMatch = parseStringMetadata(data, "__match_type__", "contains");
+        const matchType: filterMatchType =
+          rawMatch === "starts" ||
+          rawMatch === "ends" ||
+          rawMatch === "exact"
+            ? rawMatch
+            : "contains";
+        const caseSensitive =
+          parseStringMetadata(data, "__case_sensitive__", "false") === "true";
 
         const filterResult = filterColumnsByName(
           numericColumns,
@@ -547,8 +562,15 @@ export const runStatisticalAnalysis = (
 
     case "filter-columns-by-type": {
       try {
-        // Extract target type from metadata
-        const targetType = "numeric"; // This should come from user input
+        const rawType = parseStringMetadata(data, "__type__", "numeric");
+        const targetType =
+          rawType === "integer" ||
+          rawType === "float" ||
+          rawType === "positive" ||
+          rawType === "negative" ||
+          rawType === "nonzero"
+            ? rawType
+            : "numeric";
 
         const filterResult = filterColumnsByType(
           numericColumns,
@@ -561,61 +583,6 @@ export const runStatisticalAnalysis = (
         break;
       } catch (error) {
         console.error("Filter by type error:", error);
-        throw error;
-      }
-    }
-
-    case "add-row": {
-      try {
-        // Create empty rows to add (should come from user input)
-        const numRowsToAdd = 1;
-        const emptyRows: number[][] = numericData.map(() =>
-          new Array(numRowsToAdd).fill(0),
-        );
-
-        const addResult = addRows(numericData, emptyRows, "end");
-        results = addResult.updatedData;
-        newColumnNames = numericColumns.map((col) => col);
-        break;
-      } catch (error) {
-        console.error("Add row error:", error);
-        throw error;
-      }
-    }
-
-    case "delete-row": {
-      try {
-        // Row indices to delete (should come from user selection)
-        const rowIndicesToDelete: string | number[] = []; // This should be populated from user input
-
-        if (rowIndicesToDelete.length === 0) {
-          throw new Error("No rows selected for deletion");
-        }
-
-        const deleteResult = deleteRows(numericData, rowIndicesToDelete);
-        results = deleteResult.updatedData;
-        newColumnNames = numericColumns.map((col) => col);
-        break;
-      } catch (error) {
-        console.error("Delete row error:", error);
-        throw error;
-      }
-    }
-
-    case "rename-row": {
-      try {
-        // This operation modifies row metadata, not numeric data
-        // We need to pass back the data with updated row information
-
-        // Pass through numeric data unchanged
-        results = numericData;
-        newColumnNames = numericColumns;
-
-        // The row renaming is handled by returning metadata about the change
-        // The UI layer will need to handle the actual row label update
-        break;
-      } catch (error) {
-        console.error("Rename row error:", error);
         throw error;
       }
     }
@@ -1059,6 +1026,129 @@ export const runStatisticalAnalysis = (
       break;
     }
 
+    case "filter-by-missing": {
+      const mode: MissingFilterMode =
+        parseStringMetadata(data, "__mode__", "with-missing") ===
+        "without-missing"
+          ? "without-missing"
+          : "with-missing";
+      results = filterRowsByMissing(numericData, mode);
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "filter-by-range": {
+      const minValue = parseNumberMetadata(data, "__min__", 0);
+      const maxValue = parseNumberMetadata(data, "__max__", 100);
+      results = filterRowsByRange(numericData, minValue, maxValue);
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "filter-by-outlier": {
+      const methodRaw = parseStringMetadata(data, "__method__", "iqr");
+      const method: OutlierFilterMethod =
+        methodRaw === "z-score" || methodRaw === "grubbs" ? methodRaw : "iqr";
+      results = filterRowsByOutlier(numericData, method);
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "add-column": {
+      // Column values come from the "__values__" sentinel; otherwise empty.
+      const rawValues = data instanceof Map ? data.get("__values__") : undefined;
+      const newValues = Array.isArray(rawValues)
+        ? rawValues.map(Number)
+        : "empty";
+      const newName = parseStringMetadata(data, "__new_name__", "__new_column__");
+      const addResult = addColumn(numericData, newValues);
+      results = addResult.updatedData;
+      newColumnNames = [...numericColumns, newName];
+      break;
+    }
+
+    case "delete-column": {
+      const target = parseStringMetadata(data, "__column__", "");
+      const targetIndex = numericColumns.indexOf(target);
+      if (targetIndex === -1) {
+        throw new Error(`Column '${target}' not found in selected columns`);
+      }
+      results = deleteColumns(numericData, [targetIndex]);
+      newColumnNames = numericColumns.filter((col) => col !== target);
+      break;
+    }
+
+    case "rename-column": {
+      const oldName = parseStringMetadata(data, "__old_name__", "");
+      const newName = parseStringMetadata(data, "__new_name__", "");
+      const oldIndex = numericColumns.indexOf(oldName);
+      if (oldIndex === -1) {
+        throw new Error(`Column '${oldName}' not found in selected columns`);
+      }
+      if (!newName) {
+        throw new Error("A new column name is required");
+      }
+      results = numericData.map((col) => [...col]);
+      newColumnNames = numericColumns.map((col, idx) =>
+        idx === oldIndex ? newName : col
+      );
+      break;
+    }
+
+    case "fill-column": {
+      const target = parseStringMetadata(data, "__column__", "");
+      const value = parseNumberMetadata(data, "__value__", 0);
+      const targetIndex = numericColumns.indexOf(target);
+      if (targetIndex === -1) {
+        throw new Error(`Column ''${target}' not found in selected columns`);
+      }
+      results = fillColumn(numericData, targetIndex, value);
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "add-row": {
+      const rowValues =
+        data instanceof Map && Array.isArray(data.get("__values__"))
+          ? (data.get("__values__") as number[])
+          : [];
+      const columnSized =
+        rowValues.length === numericData.length
+          ? rowValues
+          : numericData.map(() => NaN);
+      results = addRows(numericData, [columnSized], "end").updatedData;
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "delete-row": {
+      const rawIndices =
+        data instanceof Map ? data.get("__indices__") : undefined;
+      const indices = Array.isArray(rawIndices)
+        ? rawIndices.map((v) => Number(v)).filter((i) => Number.isFinite(i))
+        : [];
+      if (indices.length === 0) {
+        throw new Error("No rows selected for deletion");
+      }
+      results = deleteRows(numericData, indices).updatedData;
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "rename-row": {
+      const index = parseNumberMetadata(data, "__index__", -1);
+      const label = parseStringMetadata(data, "__label__", "");
+      if (index < 0 || !label) {
+        throw new Error("A valid row index and new label are required");
+      }
+      // Row renaming is a metadata change. Pass the data through unchanged;
+      // the new row label is surfaced in the metadata for the UI to apply.
+      results = numericData.map((col) => [...col]);
+      newColumnNames = numericColumns;
+      inputParametersMetadata = { rowIndex: index, newRowLabel: label };
+      break;
+    }
+
     default: {
       throw new Error(`Action '${action}' not supported.`);
     }
@@ -1077,6 +1167,7 @@ export const runStatisticalAnalysis = (
           ? "Row[]"
           : "Map<string, TableMatrix>",
         columnsProcessed: numericColumns.length,
+        ...inputParametersMetadata,
       },
     },
     newly_created_columns: newColumnNames,

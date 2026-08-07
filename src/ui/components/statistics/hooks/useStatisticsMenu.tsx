@@ -320,34 +320,129 @@ const useStatisticsMenu = ({
         break;
       case "filter-by-missing":
         content = (
-          <FilterByMissing dataColumns={dataColumns} actionId={actionId} />
+          <FilterByMissing
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "filter-by-range":
         content = (
-          <FilterByRange dataColumns={dataColumns} actionId={actionId} />
+          <FilterByRange
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "filter-by-outlier":
         content = (
-          <FilterByOutlier dataColumns={dataColumns} actionId={actionId} />
+          <FilterByOutlier
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "add-column":
-        content = <AddColumn />;
+        content = (
+          <AddColumn
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "rename-column":
         content = (
-          <RenameColumn dataColumns={dataColumns} actionId={actionId} />
+          <RenameColumn
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "delete-column":
         content = (
-          <DeleteColumn dataColumns={dataColumns} actionId={actionId} />
+          <DeleteColumn
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
         );
         break;
       case "fill-column":
-        content = <FillColumn dataColumns={dataColumns} actionId={actionId} />;
+        content = (
+          <FillColumn
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
         break;
       case "impute-mean":
         content = (

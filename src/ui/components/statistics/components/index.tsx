@@ -1505,36 +1505,109 @@ COUNT COLUMN VALUES BY MISSING
 
 export const FilterByMissing = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Filter By Missing Values</h1>
-    <p className={descriptionClass}>
-      Filters rows to show only those with missing values in a specific column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="filter-missing-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [mode, setMode] = useState<string>("with-missing");
+  const [error, setError] = useState<string | null>(null);
+
+  const runFilter = () => {
+    setError(null);
+
+    if (!selectedColumn) {
+      setError("Please select a column.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      if (allColumnarData.has(selectedColumn)) {
+        filteredData.set(selectedColumn, allColumnarData.get(selectedColumn));
+      }
+      filteredData.set("__mode__", [mode]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected column.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Filter operation.");
+      console.error("Filter by missing failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Filter By Missing Values</h1>
+      <p className={descriptionClass}>
+        Filters rows to show only those with (or without) missing values in a
+        specific column.
+      </p>
+      <div className="space-y-4 mb-6">
+        <SingleSelect
+          id="filter-missing-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue=""
+          onChange={(value) => setSelectedColumn(value as string)}
+          helperText="Choose the column to inspect for missing values"
+        />
+        <SingleSelect
+          id="filter-missing-mode"
+          label={`Mode`}
+          placeholder="Select a mode..."
+          options={[
+            { value: "with-missing", label: "Only missing values", disabled: false },
+            { value: "without-missing", label: "Only valid values", disabled: false },
+          ]}
+          defaultValue=""
+          onChange={(value) => setMode(value as string)}
+          helperText="Whether to keep rows that have or lack missing values"
+        />
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!selectedColumn}
+          onClick={runFilter}
+        >
+          Filter
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Filter</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 FILTER COLUMN VALUES BY RANGE
@@ -1542,51 +1615,138 @@ FILTER COLUMN VALUES BY RANGE
 
 export const FilterByRange = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Filter By Range</h1>
-    <p className={descriptionClass}>
-      Filters rows based on a specified numeric range (e.g., between X and Y).
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="filter-range-column"
-          label={`Select Column`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [minValue, setMinValue] = useState<string>("");
+  const [maxValue, setMaxValue] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const runFilter = () => {
+    setError(null);
+
+    if (!selectedColumn) {
+      setError("Please select a column.");
+      onError?.();
+      return;
+    }
+
+    const minNum = Number(minValue);
+    const maxNum = Number(maxValue);
+    if (minValue.trim() === "" || maxValue.trim() === "" || isNaN(minNum) || isNaN(maxNum)) {
+      setError("Please enter valid minimum and maximum values.");
+      onError?.();
+      return;
+    }
+    if (minNum > maxNum) {
+      setError("Minimum value must be less than or equal to maximum value.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      if (allColumnarData.has(selectedColumn)) {
+        filteredData.set(selectedColumn, allColumnarData.get(selectedColumn));
+      }
+      filteredData.set("__min__", [minNum]);
+      filteredData.set("__max__", [maxNum]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected column.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Filter operation.");
+      console.error("Filter by range failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Filter By Range</h1>
+      <p className={descriptionClass}>
+        Filters rows based on a specified numeric range (e.g., between X and Y).
+      </p>
+      <div className="space-y-4 mb-6">
+        <div>
+          <SingleSelect
+            id="filter-range-column"
+            label={`Select Column`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            defaultValue=""
+            onChange={(value) => setSelectedColumn(value as string)}
+            helperText="Choose the column to filter by range"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="filter-range-min" className={labelClass}>
+            Minimum Value
+          </label>
+          <input
+            type="number"
+            id="filter-range-min"
+            className={inputClass}
+            value={minValue}
+            onChange={(e) => setMinValue(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="filter-range-max" className={labelClass}>
+            Maximum Value
+          </label>
+          <input
+            type="number"
+            id="filter-range-max"
+            className={inputClass}
+            value={maxValue}
+            onChange={(e) => setMaxValue(e.target.value)}
+          />
+        </div>
       </div>
 
-      <div>
-        <label htmlFor="filter-range-min" className={labelClass}>
-          Minimum Value
-        </label>
-        <input type="number" id="filter-range-min" className={inputClass} />
-      </div>
-      <div>
-        <label htmlFor="filter-range-max" className={labelClass}>
-          Maximum Value
-        </label>
-        <input type="number" id="filter-range-max" className={inputClass} />
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!selectedColumn || !minValue.trim() || !maxValue.trim()}
+          onClick={runFilter}
+        >
+          Filter
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Filter</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 FILTER COLUMN VALUES BY OUTLIER
@@ -1594,97 +1754,323 @@ FILTER COLUMN VALUES BY OUTLIER
 
 export const FilterByOutlier = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Filter By Outliers</h1>
-    <p className={descriptionClass}>
-      Filters rows to show only the detected outliers in a column.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="filter-outlier-column"
-        label={`Select Column`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [method, setMethod] = useState<string>("iqr");
+  const [error, setError] = useState<string | null>(null);
+
+  const runFilter = () => {
+    setError(null);
+
+    if (!selectedColumn) {
+      setError("Please select a column.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      if (allColumnarData.has(selectedColumn)) {
+        filteredData.set(selectedColumn, allColumnarData.get(selectedColumn));
+      }
+      filteredData.set("__method__", [method]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected column.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred during the Filter operation.");
+      console.error("Filter by outlier failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Filter By Outliers</h1>
+      <p className={descriptionClass}>
+        Filters rows to show only the detected outliers in a column.
+      </p>
+      <div className="space-y-4 mb-6">
+        <SingleSelect
+          id="filter-outlier-column"
+          label={`Select Column`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue=""
+          onChange={(value) => setSelectedColumn(value as string)}
+          helperText="Choose the column to detect outliers in"
+        />
+        <SingleSelect
+          id="filter-outlier-method"
+          label={`Outlier Method`}
+          placeholder="Select a method..."
+          options={[
+            { value: "iqr", label: "IQR (1.5x)", disabled: false },
+            { value: "z-score", label: "Z-Score (3σ)", disabled: false },
+            { value: "grubbs", label: "Grubbs' Test", disabled: false },
+          ]}
+          defaultValue=""
+          onChange={(value) => setMethod(value as string)}
+          helperText="Which outlier detection method to use"
+        />
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!selectedColumn}
+          onClick={runFilter}
+        >
+          Filter
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Filter</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 ADD COLUMN VALUES
 ----------------------------------------------------*/
 
-export const AddColumn = () => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Add New Column</h1>
-    <p className={descriptionClass}>
-      Creates a new, empty column in the dataset.
-    </p>
-    <div className="mb-6">
-      <label htmlFor="new-column-name" className={labelClass}>
-        New Column Name
-      </label>
-      <input type="text" id="new-column-name" className={inputClass} />
-    </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Add Column</button>
-    </div>
-  </div>
-);
-
-export const RenameColumn = ({
+export const AddColumn = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Rename Column</h1>
-    <p className={descriptionClass}>Renames an existing column.</p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="old-column-name"
-          label={`Old Column Name`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
-      </div>
-      <div>
-        <label htmlFor="new-column-name-rename" className={labelClass}>
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [newColumnName, setNewColumnName] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const runAddColumn = () => {
+    setError(null);
+
+    if (numericColumns.length === 0) {
+      setError("No numeric columns available to add a new column to.");
+      onError?.();
+      return;
+    }
+    if (!newColumnName.trim()) {
+      setError("Please enter a name for the new column.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      numericColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column));
+        }
+      });
+      filteredData.set("__values__", "empty");
+      filteredData.set("__new_name__", [newColumnName.trim()]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while adding the column.");
+      console.error("Add column failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Add New Column</h1>
+      <p className={descriptionClass}>
+        Creates a new, empty column in the dataset.
+      </p>
+      <div className="mb-6">
+        <label htmlFor="new-column-name" className={labelClass}>
           New Column Name
         </label>
-        <input type="text" id="new-column-name-rename" className={inputClass} />
+        <input
+          type="text"
+          id="new-column-name"
+          className={inputClass}
+          value={newColumnName}
+          onChange={(e) => setNewColumnName(e.target.value)}
+          placeholder="Enter the name of the new column"
+        />
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!newColumnName.trim()}
+          onClick={runAddColumn}
+        >
+          Add Column
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Rename</button>
+  );
+};
+
+export const RenameColumn = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [oldName, setOldName] = useState<string>("");
+  const [newName, setNewName] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const runRename = () => {
+    setError(null);
+
+    if (!oldName) {
+      setError("Please select the column to rename.");
+      onError?.();
+      return;
+    }
+    if (!newName.trim()) {
+      setError("Please enter a new column name.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      if (allColumnarData.has(oldName)) {
+        filteredData.set(oldName, allColumnarData.get(oldName));
+      }
+      filteredData.set("__old_name__", [oldName]);
+      filteredData.set("__new_name__", [newName.trim()]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected column.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while renaming the column.");
+      console.error("Rename column failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Rename Column</h1>
+      <p className={descriptionClass}>Renames an existing column.</p>
+      <div className="space-y-4 mb-6">
+        <div>
+          <SingleSelect
+            id="old-column-name"
+            label={`Old Column Name`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            defaultValue=""
+            onChange={(value) => setOldName(value as string)}
+            helperText="Choose the column to rename"
+          />
+        </div>
+        <div>
+          <label htmlFor="new-column-name-rename" className={labelClass}>
+            New Column Name
+          </label>
+          <input
+            type="text"
+            id="new-column-name-rename"
+            className={inputClass}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder="Enter the new column name"
+          />
+        </div>
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!oldName || !newName.trim()}
+          onClick={runRename}
+        >
+          Rename
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 DELETE COLUMN VALUES
@@ -1692,36 +2078,103 @@ DELETE COLUMN VALUES
 
 export const DeleteColumn = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Delete Column</h1>
-    <p className={descriptionClass}>
-      Deletes a selected column from the dataset.
-    </p>
-    <div className="mb-6">
-      <SingleSelect
-        id="delete-column-name"
-        label={`Select Column to Delete`}
-        placeholder="Select data columns to analyze..."
-        options={dataColumns.map((curr) => ({
-          value: curr,
-          label: curr,
-          disabled: false,
-        }))}
-        defaultValue={""}
-        onChange={(value) => console.log(value)}
-        helperText="Choose the numeric columns you want to include in your analysis"
-      />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const runDelete = () => {
+    setError(null);
+
+    if (!selectedColumn) {
+      setError("Please select the column to delete.");
+      onError?.();
+      return;
+    }
+
+    if (numericColumns.length <= 1) {
+      setError("Cannot delete the only remaining numeric column.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      numericColumns.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column));
+        }
+      });
+      filteredData.set("__column__", [selectedColumn]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while deleting the column.");
+      console.error("Delete column failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Delete Column</h1>
+      <p className={descriptionClass}>
+        Deletes a selected column from the dataset.
+      </p>
+      <div className="mb-6">
+        <SingleSelect
+          id="delete-column-name"
+          label={`Select Column to Delete`}
+          placeholder="Select data columns to analyze..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          defaultValue=""
+          onChange={(value) => setSelectedColumn(value as string)}
+          helperText="Choose the column to delete"
+        />
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={dangerButtonClass}
+          disabled={!selectedColumn}
+          onClick={runDelete}
+        >
+          Delete Column
+        </button>
+      </div>
     </div>
-    <div className="flex justify-end">
-      <button className={dangerButtonClass}>Delete Column</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 FILL COLUMN VALUES
@@ -1729,44 +2182,119 @@ FILL COLUMN VALUES
 
 export const FillColumn = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>Fill Column</h1>
-    <p className={descriptionClass}>
-      Fills all cells in a column with a single specified value.
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <SingleSelect
-          id="fill-column-name"
-          label={`Select Column to Fill`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={""}
-          onChange={(value) => console.log(value)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumn, setSelectedColumn] = useState<string>("");
+  const [fillValue, setFillValue] = useState<string>("");
+  const [error, setError] = useState<string | null>(null);
+
+  const runFill = () => {
+    setError(null);
+
+    if (!selectedColumn) {
+      setError("Please select the column to fill.");
+      onError?.();
+      return;
+    }
+
+    const fillNum = Number(fillValue);
+    if (fillValue.trim() === "" || isNaN(fillNum)) {
+      setError("Please enter a valid numeric value.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map();
+      if (allColumnarData.has(selectedColumn)) {
+        filteredData.set(selectedColumn, allColumnarData.get(selectedColumn));
+      }
+      filteredData.set("__column__", [selectedColumn]);
+      filteredData.set("__value__", [fillNum]);
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected column.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError("An error occurred while filling the column.");
+      console.error("Fill column failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Fill Column</h1>
+      <p className={descriptionClass}>
+        Fills all cells in a column with a single specified value.
+      </p>
+      <div className="space-y-4 mb-6">
+        <div>
+          <SingleSelect
+            id="fill-column-name"
+            label={`Select Column to Fill`}
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((curr) => ({
+              value: curr,
+              label: curr,
+              disabled: false,
+            }))}
+            defaultValue=""
+            onChange={(value) => setSelectedColumn(value as string)}
+            helperText="Choose the column to fill"
+          />
+        </div>
+        <div>
+          <label htmlFor="fill-value" className={labelClass}>
+            Value to Fill
+          </label>
+          <input
+            type="number"
+            id="fill-value"
+            className={inputClass}
+            value={fillValue}
+            onChange={(e) => setFillValue(e.target.value)}
+            placeholder="Enter the numeric value to fill"
+          />
+        </div>
       </div>
-      <div>
-        <label htmlFor="fill-value" className={labelClass}>
-          Value to Fill
-        </label>
-        <input type="text" id="fill-value" className={inputClass} />
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={!selectedColumn || fillValue.trim() === ""}
+          onClick={runFill}
+        >
+          Fill Column
+        </button>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Fill Column</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 INPUT MEAN COLUMN VALUES

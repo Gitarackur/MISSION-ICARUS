@@ -12,7 +12,7 @@ export const useVisualizationViewport = ({
   displayMode,
 }: {
   activeVisualizationId?: string;
-  displayMode: "saved" | "native" | "python" | "r";
+  displayMode: "saved" | "native" | "python" | "r" | "fsharp";
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pan, setPan] = useState<PanState>({ x: 0, y: 0 });

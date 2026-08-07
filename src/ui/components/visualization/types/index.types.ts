@@ -23,7 +23,7 @@ export type VisualizationPanelProps = {
   shouldAutoSelectVisualization?: boolean;
 };
 
-export type VisualizationDisplayMode = "saved" | "native" | "python" | "r";
+export type VisualizationDisplayMode = "saved" | "native" | "python" | "r" | "fsharp";
 
 export type VisualizationRendererOption = {
   value: VisualizationDisplayMode;

@@ -5,6 +5,7 @@ import path from "node:path";
 
 import { setupPythonHandlers } from "./src/python/ipc-handlers";
 import { setupRHandlers } from "./src/r/ipc-handlers";
+import { setupFSharpHandlers } from "./src/fsharp/ipc-handlers";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
@@ -142,6 +143,14 @@ try {
   console.log("R handlers set up successfully");
 } catch (error) {
   console.error("Error setting up R handlers:", error);
+}
+
+try {
+  console.log("Setting up F# handlers...");
+  setupFSharpHandlers();
+  console.log("F# handlers set up successfully");
+} catch (error) {
+  console.error("Error setting up F# handlers:", error);
 }
 
 app.on("window-all-closed", () => {
