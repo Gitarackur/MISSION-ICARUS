@@ -81,7 +81,11 @@ const SlidingSheet: React.FC<SheetProps> = ({
 }) => {
   const { overlay, panel, header, body } = slidingSheetStyles({ position, isOpen });
 
-  const overlayStyles: React.CSSProperties = {};
+  const overlayStyles: React.CSSProperties = {
+    top: 0,
+    right: 0,
+    bottom: 0,
+  };
 
   if (position === 'right' || position === 'bottom') {
     overlayStyles.left = sidebarWidth;
