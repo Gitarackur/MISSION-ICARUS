@@ -5,8 +5,8 @@ import {
   LIMMA_CONTROL_COLUMNS_KEY,
   LIMMA_ADJUSTMENT_METHOD_KEY,
   LIMMA_DEFAULT_ADJUSTMENT_METHOD,
+  COMMON_PTMS,
 } from "@/app-layer/statistics/constants";
-import { COMMON_PTMS } from "@/app-layer/statistics/utils/statistical-engine";
 import {
   downloadTextFile,
   serializeActiveMatrix,
