@@ -17,6 +17,12 @@ const bundle = await build({
         addColumn,
         fillColumn,
         deleteColumns,
+        applyFunctionExpression,
+        fxLinear,
+        normalize1D,
+        index1D,
+        multiplyByConstant,
+        divideConstantBy,
       } from "./src/app-layer/statistics/utils/statistical-engine.ts";
     `,
     resolveDir: repositoryRoot,
@@ -94,6 +100,25 @@ assert.deepEqual(addColumnFixture(), [7, 8, 9]);
 assert.deepEqual(addColumnFallbackFixture(), [NaN, NaN, NaN]);
 assert.deepEqual(fillColumnFixture(), [5, 5, 5]);
 assert.deepEqual(deleteColumnsFixture(), [[10, 20]]);
+
+// --- f(x) / 1D / Pi operations ---
+const fxCol = [1, 2, 3, 4];
+assert.deepEqual(engine.applyFunctionExpression(fxCol, "x^2 + 1"), [2, 5, 10, 17]);
+assert.deepEqual(
+  engine.applyFunctionExpression([4, 9, 16], "sqrt(x)"),
+  [2, 3, 4]
+);
+assert.deepEqual(engine.fxLinear(fxCol, 2, 1), [3, 5, 7, 9]);
+assert.deepEqual(engine.normalize1D([1, 2, 3, 4]), [0, 1 / 3, 2 / 3, 1]);
+assert.deepEqual(engine.index1D(4), [1, 2, 3, 4]);
+assert.ok(
+  (engine.multiplyByConstant([2], Math.PI)[0] - 2 * Math.PI) < 1e-12,
+  "pi multiply"
+);
+assert.ok(
+  (engine.divideConstantBy([2], Math.PI)[0] - Math.PI / 2) < 1e-12,
+  "pi divide"
+);
 
 function addColumnFixture() {
   const res = engine.addColumn(

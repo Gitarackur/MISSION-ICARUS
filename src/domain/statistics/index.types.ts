@@ -117,8 +117,40 @@ export type StatisticalAction =
   | "k-means-clustering-run"
   | "save-data"
   | "export-csv"
-  | "filter_by_value";
+  | "filter_by_value"
+  | "fx-expression"
+  | "fx-linear"
+  | "1d-normalize"
+  | "1d-index"
+  | "pi-multiply"
+  | "pi-divide";
 
+
+// Clustering result types
+export interface KMeansResult {
+  clusterAssignments: number[];
+  centroids: number[][];
+  iterations: number;
+  inertia: number;
+}
+
+export interface HierarchicalClusteringResult {
+  clusterAssignments: number[];
+  dendrogram: Array<{
+    cluster1: number;
+    cluster2: number;
+    distance: number;
+    size: number;
+  }>;
+  numClusters: number;
+}
+
+export interface PCAClusteringResult {
+  transformedData: number[][];
+  clusterAssignments?: number[];
+  explained_variance: number[];
+  num_components: number;
+}
 
 // statistical analysis result
 export interface StatisticalAnalysisResult {

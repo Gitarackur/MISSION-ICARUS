@@ -1,5 +1,10 @@
 import { jStat } from "jstat";
 import * as ss from "simple-statistics";
+import {
+  KMeansResult,
+  HierarchicalClusteringResult,
+  PCAClusteringResult,
+} from "@/domain/statistics/index.types";
 
 const EPSILON = 1e-12;
 
@@ -1838,16 +1843,6 @@ function euclideanDistance(point1: number[], point2: number[]): number {
 }
 
 /**
- * K-Means Clustering Result
- */
-export interface KMeansResult {
-  clusterAssignments: number[];
-  centroids: number[][];
-  iterations: number;
-  inertia: number;
-}
-
-/**
  * K-Means Clustering Implementation
  */
 export function performKMeans(
@@ -1991,20 +1986,6 @@ export function performKMeans(
     iterations,
     inertia
   };
-}
-
-/**
- * Hierarchical Clustering Result
- */
-export interface HierarchicalClusteringResult {
-  clusterAssignments: number[];
-  dendrogram: Array<{
-    cluster1: number;
-    cluster2: number;
-    distance: number;
-    size: number;
-  }>;
-  numClusters: number;
 }
 
 /**
@@ -2227,16 +2208,6 @@ export function performHierarchicalClustering(
 
 
 /**
- * PCA Result (already defined earlier, but included for completeness)
- */
-export interface PCAClusteringResult {
-  transformedData: number[][];
-  clusterAssignments?: number[];
-  explained_variance: number[];
-  num_components: number;
-}
-
-/**
  * PCA for Clustering/Visualization
  */
 export function performPCAForClustering(
@@ -2450,6 +2421,254 @@ export function meanCenteringNormalization(data: number[][]): number[][] {
   });
   
   return result;
+}
+
+
+// ===================================================================
+// F(X) / 1D / PI TOOLBAR OPERATIONS
+// ===================================================================
+
+const EXPR_CONSTANTS: Record<string, number> = { pi: Math.PI, e: Math.E };
+
+const EXPR_PRECEDENCE: Record<string, [number, boolean]> = {
+  "+": [1, false],
+  "-": [1, false],
+  "*": [2, false],
+  "/": [2, false],
+  "^": [3, true],
+};
+
+interface ExprToken {
+  type: "num" | "ident" | "op" | "lparen" | "rparen" | "comma" | "end";
+  value: string;
+}
+
+const EXPR_FUNCTIONS: Record<string, (args: number[]) => number> = {
+  ln: (a) => Math.log(a[0]),
+  log10: (a) => Math.log10(a[0]),
+  log2: (a) => Math.log2(a[0]),
+  log: (a) => (a[1] ? Math.log(a[0]) / Math.log(a[1]) : Math.log10(a[0])),
+  sqrt: (a) => Math.sqrt(a[0]),
+  abs: (a) => Math.abs(a[0]),
+  exp: (a) => Math.exp(a[0]),
+  pow: (a) => Math.pow(a[0], a[1]),
+  min: (a) => Math.min(...a),
+  max: (a) => Math.max(...a),
+  sin: (a) => Math.sin(a[0]),
+  cos: (a) => Math.cos(a[0]),
+  tan: (a) => Math.tan(a[0]),
+  floor: (a) => Math.floor(a[0]),
+  ceil: (a) => Math.ceil(a[0]),
+};
+
+/** Tokenizes a mathematical expression in the variable `x`. */
+const tokenizeExpression = (input: string): ExprToken[] => {
+  const tokens: ExprToken[] = [];
+  const source = input.replace(/\s+/g, "");
+  let i = 0;
+
+  while (i < source.length) {
+    const ch = source[i];
+
+    if (/[\d.]/.test(ch)) {
+      let j = i;
+      let hasDot = false;
+      while (j < source.length && /[\d.]/.test(source[j])) {
+        if (source[j] === ".") {
+          if (hasDot) break;
+          hasDot = true;
+        }
+        j++;
+      }
+      const raw = source.slice(i, j);
+      const value = Number(raw);
+      if (!Number.isFinite(value)) throw new Error(`Invalid number: '${raw}'`);
+      tokens.push({ type: "num", value: raw });
+      i = j;
+      continue;
+    }
+
+    if (/[A-Za-z_]/.test(ch)) {
+      let j = i;
+      while (j < source.length && /[A-Za-z0-9_]/.test(source[j])) j++;
+      tokens.push({ type: "ident", value: source.slice(i, j) });
+      i = j;
+      continue;
+    }
+
+    switch (ch) {
+      case "+":
+      case "-":
+      case "*":
+      case "/":
+      case "^":
+        tokens.push({ type: "op", value: ch });
+        break;
+      case "(":
+        tokens.push({ type: "lparen", value: "(" });
+        break;
+      case ")":
+        tokens.push({ type: "rparen", value: ")" });
+        break;
+      case ",":
+        tokens.push({ type: "comma", value: "," });
+        break;
+      default:
+        throw new Error(`Unexpected character: '${ch}'`);
+    }
+    i++;
+  }
+
+  tokens.push({ type: "end", value: "" });
+  return tokens;
+};
+
+/** Builds a function f(x) from an expression string using a Pratt parser. */
+const compileExpression = (input: string) => {
+  const tokens = tokenizeExpression(input);
+  let pos = 0;
+
+  const peek = (): ExprToken => tokens[pos];
+  const advance = (): ExprToken => tokens[pos++];
+
+  const parseExpression = (minPrec: number, x: number): number => {
+    let left: number;
+
+    const token = peek();
+
+    if (token.type === "num") {
+      advance();
+      left = Number(token.value);
+    } else if (token.type === "ident") {
+      advance();
+      if (token.value === "x") {
+        left = x;
+      } else if (token.value in EXPR_CONSTANTS) {
+        left = EXPR_CONSTANTS[token.value];
+      } else {
+        if (!EXPR_FUNCTIONS[token.value] || peek().type !== "lparen") {
+          throw new Error(`Unknown identifier: '${token.value}'`);
+        }
+        advance(); // consume '('
+        const args: number[] = [];
+        if (peek().type !== "rparen") {
+          args.push(parseExpression(0, x));
+          while (peek().type === "comma") {
+            advance();
+            args.push(parseExpression(0, x));
+          }
+        }
+        if (advance().type !== "rparen") {
+          throw new Error(`Expected ')' for '${token.value}'`);
+        }
+        left = EXPR_FUNCTIONS[token.value](args);
+      }
+    } else if (token.type === "op" && (token.value === "-" || token.value === "+")) {
+      advance();
+      const operand = parseExpression(7, x);
+      left = token.value === "-" ? -operand : operand;
+    } else if (token.type === "lparen") {
+      advance();
+      left = parseExpression(0, x);
+      if (advance().type !== "rparen") throw new Error("Expected ')'");
+    } else {
+      throw new Error(`Unexpected token: '${token.value}'`);
+    }
+
+    while (peek().type === "op") {
+      const next = peek();
+      const [prec, rightAssoc] = EXPR_PRECEDENCE[next.value];
+      if (prec < minPrec) break;
+      advance();
+      const rhs = parseExpression(rightAssoc ? prec : prec + 1, x);
+      switch (next.value) {
+        case "+": left += rhs; break;
+        case "-": left -= rhs; break;
+        case "*": left *= rhs; break;
+        case "/": left /= rhs; break;
+        case "^": left = Math.pow(left, rhs); break;
+      }
+    }
+
+    return left;
+  };
+
+  return (x: number) => {
+    if (!Number.isFinite(x)) return NaN;
+    pos = 0;
+    return parseExpression(0, x);
+  };
+};
+
+/**
+ * Applies a user-supplied expression f(x) to each value of a column,
+ * returning a computed column of the same length.
+ */
+export function applyFunctionExpression(
+  column: number[],
+  expression: string
+): number[] {
+  if (!expression || !expression.trim()) {
+    throw new Error("An expression is required");
+  }
+  if (!column || column.length === 0) {
+    throw new Error("Column is empty");
+  }
+  const fn = compileExpression(expression);
+  return column.map((value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? fn(num) : NaN;
+  });
+}
+
+/** Maps each cell as y = a*x + b over a column. */
+export function fxLinear(column: number[], a: number, b: number): number[] {
+  if (!column || column.length === 0) {
+    throw new Error("Column is empty");
+  }
+  return column.map((value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? a * num + b : NaN;
+  });
+}
+
+/** Min-max normalization of a single column, independently (1D). */
+export function normalize1D(column: number[]): number[] {
+  if (!column || column.length === 0) throw new Error("Column is empty");
+  const valid = column.filter((v) => Number.isFinite(Number(v)));
+  if (valid.length === 0) return column.map(() => 0);
+  const minv = Math.min(...valid);
+  const maxv = Math.max(...valid);
+  const range = maxv - minv;
+  return column.map((value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return NaN;
+    return range === 0 ? 0 : (num - minv) / range;
+  });
+}
+
+/** Creates a 1D index/sequence column [1, 2, ..., n]. */
+export function index1D(length: number): number[] {
+  if (length < 0) throw new Error("Invalid length");
+  return Array.from({ length }, (_, i) => i + 1);
+}
+
+/** Scales a column by a constant multiplier. */
+export function multiplyByConstant(column: number[], constant: number): number[] {
+  if (!column || column.length === 0) throw new Error("Column is empty");
+  return column.map((value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num * constant : NaN;
+  });
+}
+
+/** Computes constant / value per cell (e.g. pi / x). */
+export function divideConstantBy(column: number[], constant: number): number[] {
+  if (!column || column.length === 0) throw new Error("Column is empty");
+  return column.map((value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? constant / num : NaN;
+  });
 }
 
 
