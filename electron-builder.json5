@@ -15,6 +15,10 @@
       to: "assets",
       filter: [
         "**/*",
+        "!scripts/fsharp/IcarusPlotRenderer/bin/**/*",
+        "!scripts/fsharp/IcarusPlotRenderer/bin",
+        "!scripts/fsharp/IcarusPlotRenderer/obj/**/*",
+        "!scripts/fsharp/IcarusPlotRenderer/obj",
         "!scripts/python/bin/commander.build/**/*",
         "!scripts/python/bin/commander.build",
         "!scripts/python/bin/commander.dist/**/*",
