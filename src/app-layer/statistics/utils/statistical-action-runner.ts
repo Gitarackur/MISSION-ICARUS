@@ -4,11 +4,14 @@ import {
   KMeansResult,
   HierarchicalClusteringResult,
   PCAClusteringResult,
+  filterMatchType,
+  filterType,
+  type MissingFilterMode,
+  type OutlierFilterMethod,
+  PTMAnnotation,
 } from "@/domain/statistics/index.types";
 import {
   correctForPurity,
-  filterMatchType,
-  filterType,
   imputeMeanColumn,
   imputeMedianColumn,
   imputeZeroColumn,
@@ -18,7 +21,7 @@ import {
   movingAverage,
   normalization,
   normalizeReporterIons,
-  PTMAnnotation,
+
   reorderColumns,
   rollingStdDev,
   sortDataByColumn,
@@ -41,7 +44,6 @@ import {
   performTSNE,
   addPTMAnnotations,
   removePTMAnnotations,
-  COMMON_PTMS,
   performKMeans,
   performHierarchicalClustering,
   performPCAForClustering,
@@ -64,8 +66,6 @@ fillColumn,
   index1D,
   multiplyByConstant,
   divideConstantBy,
-  type OutlierFilterMethod,
-  type MissingFilterMode,
 } from "@/app-layer/statistics/utils/statistical-engine";
 
 import { TableMatrix } from "@/domain/workflow/main.types";
@@ -75,6 +75,7 @@ import {
   LIMMA_CONTROL_COLUMNS_KEY,
   LIMMA_ADJUSTMENT_METHOD_KEY,
   LIMMA_DEFAULT_ADJUSTMENT_METHOD,
+  COMMON_PTMS,
 } from "@/app-layer/statistics/constants";
 import {
   extractNumericData,

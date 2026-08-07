@@ -4,9 +4,41 @@ import {
   KMeansResult,
   HierarchicalClusteringResult,
   PCAClusteringResult,
+  LimmaBatchGeneResult,
+  LIMMAResult,
+  PValueAdjustmentMethod,
+  NormalizationMethod,
+  ReporterIonNormalizationResult,
+  PurityCorrectionResult,
+  SortResult,
+  filterMatchType,
+  FilterByNameResult,
+  filterType,
+  FilterByTypeResult,
+  AddRowResult,
+  DeleteRowResult,
+  RenameRowResult,
+  AddColumnResult,
+  MissingFilterMode,
+  OutlierFilterMethod,
+  PCAResult,
+  PLSDAResult,
+  TSNEResult,
+  PTMAnnotation,
+  RemovePTMResult,
+  FTestResult,
+  ChiSquareTestResult,
+  ZScoreOutlierResult,
+  IQROutlierResult,
+  GrubbsTestResult,
+  ExprToken,
+  AddPTMResult,
+  ANOVAResult,
+  TTestResult,
 } from "@/domain/statistics/index.types";
+import { EPSILON, EXPR_CONSTANTS, EXPR_FUNCTIONS, EXPR_PRECEDENCE } from "@/app-layer/statistics/constants";
 
-const EPSILON = 1e-12;
+
 
 const finiteNumbers = (values: number[]) => values.filter(Number.isFinite);
 
@@ -236,16 +268,6 @@ export function rollingStdDev(
 }
 
 // T-Test implementation (already exists but enhanced)
-export interface TTestResult {
-  tStatistic: number;
-  pValue: number;
-  degreesOfFreedom: number;
-  mean1: number;
-  mean2: number;
-  std1: number;
-  std2: number;
-}
-
 export function tTestTwoSample(
   group1: number[],
   group2: number[]
@@ -302,16 +324,6 @@ export function tTestTwoSample(
 }
 
 // ANOVA (One-way Analysis of Variance)
-export interface ANOVAResult {
-  fStatistic: number;
-  pValue: number;
-  dfBetween: number;
-  dfWithin: number;
-  msBetween: number;
-  msWithin: number;
-  grandMean: number;
-}
-
 export function oneWayANOVA(groups: number[][]): ANOVAResult {
   const cleanedGroups = groups.map(finiteNumbers).filter((group) => group.length > 0);
 
@@ -418,14 +430,6 @@ export function calculateFoldChange(
 }
 
 // LIMMA (Linear Models for Microarray Data) - Simplified implementation
-export interface LIMMAResult {
-  logFoldChange: number;
-  pValue: number;
-  adjustedPValue: number;
-  tStatistic: number;
-  averageExpression: number;
-}
-
 export function limmaAnalysis(
   treatmentGroup: number[],
   controlGroup: number[]
@@ -486,8 +490,6 @@ export function limmaAnalysis(
   };
 }
 
-export type PValueAdjustmentMethod = "BH" | "bonferroni";
-
 /**
  * Adjust a family of p-values for multiple testing.
  * - "BH": Benjamini-Hochberg step-up (controls FDR).
@@ -523,15 +525,6 @@ export function adjustPValues(
     adjusted[i] = prev;
   }
   return adjusted;
-}
-
-export interface LimmaBatchGeneResult {
-  geneName: string;
-  logFoldChange: number;
-  pValue: number;
-  adjustedPValue: number;
-  tStatistic: number;
-  averageExpression: number;
 }
 
 /**
@@ -606,14 +599,6 @@ export function limmaBatchAnalysis(
 /**
  * Normalize reporter ion intensities using various methods
  */
-export interface ReporterIonNormalizationResult {
-  normalizedData: number[][];
-  method: string;
-  scalingFactors: number[];
-}
-
-type NormalizationMethod = "median" | "mean" | "total";
-
 export function normalizeReporterIons(
   reporterIonData: number[][],
   method: NormalizationMethod = "median"
@@ -666,12 +651,6 @@ export function normalizeReporterIons(
  * Correct reporter ion intensities for isotopic impurity
  * Based on TMT/iTRAQ manufacturer's purity correction matrix
  */
-export interface PurityCorrectionResult {
-  correctedData: number[][];
-  purityMatrix: number[][];
-  method: string;
-}
-
 export function correctForPurity(
   reporterIonData: number[][],
   purityMatrix?: number[][]
@@ -793,13 +772,6 @@ export function calculateChannelRatios(
 /**
  * Sort array along with indices to maintain data integrity
  */
-export interface SortResult {
-  sortedData: number[][];
-  sortedIndices: number[];
-  sortColumn: string;
-  sortDirection: "asc" | "desc";
-}
-
 export function sortDataByColumn(
   data: number[][],
   columnIndex: number,
@@ -910,14 +882,6 @@ export function reorderColumns(
 /**
  * Filter columns by name pattern
  */
-export interface FilterByNameResult {
-  filteredColumns: string[];
-  filteredData: number[][];
-  matchedCount: number;
-}
-
-export type filterMatchType = "contains" | "starts" | "ends" | "exact";
-
 export function filterColumnsByName(
   columnNames: string[],
   data: number[][],
@@ -971,20 +935,6 @@ export function filterColumnsByName(
 /**
  * Filter columns by data type
  */
-export interface FilterByTypeResult {
-  filteredColumns: string[];
-  filteredData: number[][];
-  matchedCount: number;
-}
-
-export type filterType =
-  | "numeric"
-  | "integer"
-  | "float"
-  | "positive"
-  | "negative"
-  | "nonzero";
-
 
 export function filterColumnsByType(
   columnNames: string[],
@@ -1045,11 +995,6 @@ export function filterColumnsByType(
 /**
  * Add new rows to the dataset
  */
-export interface AddRowResult {
-  updatedData: number[][];
-  newRowCount: number;
-  addedRows: number;
-}
 
 export function addRows(
   data: number[][],
@@ -1091,11 +1036,6 @@ export function addRows(
 /**
  * Delete rows from the dataset
  */
-export interface DeleteRowResult {
-  updatedData: number[][];
-  deletedCount: number;
-  remainingCount: number;
-}
 
 export function deleteRows(
   data: number[][],
@@ -1123,10 +1063,6 @@ export function deleteRows(
 /**
  * Rename rows (update row identifiers/labels)
  */
-export interface RenameRowResult {
-  updatedLabels: string[];
-  renamedCount: number;
-}
 
 export function renameRows(
   originalLabels: string[],
@@ -1151,12 +1087,6 @@ export function renameRows(
 // ===================================================================
 // COLUMN MANIPULATION FUNCTIONS
 // ===================================================================
-
-export interface AddColumnResult {
-  updatedData: number[][];
-  newColumnIndex: number;
-}
-
 export function addColumn(
   data: number[][],
   values: number[] | "empty"
@@ -1218,8 +1148,6 @@ export function fillColumn(
 // ===================================================================
 // ROW FILTERING FUNCTIONS (keep rows that match the criterion)
 // ===================================================================
-
-export type MissingFilterMode = "with-missing" | "without-missing";
 
 /**
  * Keep rows that have (or lack) missing values in any selected column.
@@ -1287,8 +1215,6 @@ export function filterRowsByRange(
   return data.map((col) => col.filter((_, r) => keep[r]));
 }
 
-export type OutlierFilterMethod = "iqr" | "z-score" | "grubbs";
-
 /**
  * Keep rows where at least one selected column value is flagged as an outlier
  * by the chosen detection method.
@@ -1346,13 +1272,6 @@ function getValidValues(values: number[]): number[] {
 /**
  * PCA - Principal Component Analysis (WORKING VERSION)
  */
-export interface PCAResult {
-  components: number[][];
-  explained_variance: number[];
-  transformed_data: number[][];
-  num_components: number;
-}
-
 export function performPCA(
   data: number[][],
   numComponents: number = 2
@@ -1424,12 +1343,6 @@ export function performPCA(
 /**
  * PLS-DA - Partial Least Squares Discriminant Analysis (WORKING VERSION)
  */
-export interface PLSDAResult {
-  components: number[][];
-  transformed_data: number[][];
-  num_components: number;
-  class_separation: number;
-}
 
 export function performPLSDA(
   data: number[][],
@@ -1596,13 +1509,6 @@ export function performPLSDA(
 /**
  * t-SNE - t-Distributed Stochastic Neighbor Embedding (WORKING VERSION)
  */
-export interface TSNEResult {
-  embedded_data: number[][];
-  num_dimensions: number;
-  perplexity: number;
-  iterations: number;
-}
-
 export function performTSNE(
   data: number[][],
   numDimensions: number = 2,
@@ -1767,26 +1673,9 @@ export function performTSNE(
 // ===================================================================
 // PTM (POST-TRANSLATIONAL MODIFICATION) FUNCTIONS
 // ===================================================================
-
-/**
- * PTM annotation structure
- */
-export interface PTMAnnotation {
-  position: number;
-  residue: string;
-  modificationType: string;
-  mass: number;
-}
-
 /**
  * Add PTM annotations to protein data
  */
-export interface AddPTMResult {
-  annotatedData: number[][];
-  ptmAnnotations: Map<number, PTMAnnotation[]>;
-  totalPTMs: number;
-}
-
 export function addPTMAnnotations(
   data: number[][],
   ptmList: PTMAnnotation[]
@@ -1818,12 +1707,6 @@ export function addPTMAnnotations(
 /**
  * Remove PTM annotations from protein data
  */
-export interface RemovePTMResult {
-  cleanedData: number[][];
-  removedPTMs: PTMAnnotation[];
-  remainingPTMs: PTMAnnotation[];
-}
-
 export function removePTMAnnotations(
   data: number[][],
   currentPTMs: PTMAnnotation[],
@@ -1866,23 +1749,6 @@ export function removePTMAnnotations(
     remainingPTMs
   };
 }
-
-/**
- * Common PTM types and their mass shifts
- */
-export const COMMON_PTMS: Record<string, number> = {
-  'Phosphorylation': 79.9663,
-  'Acetylation': 42.0106,
-  'Methylation': 14.0157,
-  'Ubiquitination': 114.0429,
-  'Oxidation': 15.9949,
-  'Deamidation': 0.9840,
-  'Carbamidomethylation': 57.0215,
-  'Oxidation (M)': 15.9949,
-  'Phospho (STY)': 79.9663,
-  'Acetyl (K)': 42.0106,
-  'GlyGly (K)': 114.0429
-};
 
 // ===================================================================
 // CLUSTERING ALGORITHMS - COMPLETE IMPLEMENTATIONS
@@ -2486,39 +2352,6 @@ export function meanCenteringNormalization(data: number[][]): number[][] {
 // F(X) / 1D / PI TOOLBAR OPERATIONS
 // ===================================================================
 
-const EXPR_CONSTANTS: Record<string, number> = { pi: Math.PI, e: Math.E };
-
-const EXPR_PRECEDENCE: Record<string, [number, boolean]> = {
-  "+": [1, false],
-  "-": [1, false],
-  "*": [2, false],
-  "/": [2, false],
-  "^": [3, true],
-};
-
-interface ExprToken {
-  type: "num" | "ident" | "op" | "lparen" | "rparen" | "comma" | "end";
-  value: string;
-}
-
-const EXPR_FUNCTIONS: Record<string, (args: number[]) => number> = {
-  ln: (a) => Math.log(a[0]),
-  log10: (a) => Math.log10(a[0]),
-  log2: (a) => Math.log2(a[0]),
-  log: (a) => (a[1] ? Math.log(a[0]) / Math.log(a[1]) : Math.log10(a[0])),
-  sqrt: (a) => Math.sqrt(a[0]),
-  abs: (a) => Math.abs(a[0]),
-  exp: (a) => Math.exp(a[0]),
-  pow: (a) => Math.pow(a[0], a[1]),
-  min: (a) => Math.min(...a),
-  max: (a) => Math.max(...a),
-  sin: (a) => Math.sin(a[0]),
-  cos: (a) => Math.cos(a[0]),
-  tan: (a) => Math.tan(a[0]),
-  floor: (a) => Math.floor(a[0]),
-  ceil: (a) => Math.ceil(a[0]),
-};
-
 /** Tokenizes a mathematical expression in the variable `x`. */
 const tokenizeExpression = (input: string): ExprToken[] => {
   const tokens: ExprToken[] = [];
@@ -2735,17 +2568,6 @@ export function divideConstantBy(column: number[], constant: number): number[] {
 // F-TEST (Two-Sample Variance Comparison)
 // ===================================================================
 
-export interface FTestResult {
-  fStatistic: number;
-  pValue: number;
-  degreesOfFreedom1: number;
-  degreesOfFreedom2: number;
-  variance1: number;
-  variance2: number;
-  mean1: number;
-  mean2: number;
-}
-
 export function fTest(group1: number[], group2: number[]): FTestResult {
   const values1 = finiteNumbers(group1);
   const values2 = finiteNumbers(group2);
@@ -2795,14 +2617,6 @@ export function fTest(group1: number[], group2: number[]): FTestResult {
 // CHI-SQUARE TEST (Goodness of Fit)
 // ===================================================================
 
-export interface ChiSquareTestResult {
-  chiSquareStatistic: number;
-  pValue: number;
-  degreesOfFreedom: number;
-  observedFrequencies: number[];
-  expectedFrequencies: number[];
-  contributionToChi2: number[];
-}
 
 export function chiSquareTest(
   observedFrequencies: number[],
@@ -2856,14 +2670,6 @@ export function chiSquareTest(
 // ===================================================================
 // Z-SCORE OUTLIER DETECTION
 // ===================================================================
-
-export interface ZScoreOutlierResult {
-  isOutlier: boolean;
-  zScore: number;
-  value: number;
-  threshold: number;
-}
-
 export function detectZScoreOutliers(
   values: number[],
   threshold: number = 3
@@ -2891,17 +2697,6 @@ export function detectZScoreOutliers(
 // ===================================================================
 // IQR OUTLIER DETECTION
 // ===================================================================
-
-export interface IQROutlierResult {
-  isOutlier: boolean;
-  value: number;
-  q1: number;
-  q3: number;
-  iqr: number;
-  lowerBound: number;
-  upperBound: number;
-}
-
 export function detectIQROutliers(
   values: number[],
   multiplier: number = 1.5
@@ -2937,15 +2732,6 @@ export function detectIQROutliers(
 // ===================================================================
 // GRUBBS' TEST OUTLIER DETECTION
 // ===================================================================
-
-export interface GrubbsTestResult {
-  isOutlier: boolean;
-  grubbsStatistic: number;
-  criticalValue: number;
-  value: number;
-  index: number;
-}
-
 export function detectGrubbsOutliers(
   values: number[],
   alpha: number = 0.05

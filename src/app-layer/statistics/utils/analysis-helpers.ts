@@ -1,8 +1,9 @@
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { TableMatrix } from "@/domain/workflow/main.types";
 import * as ss from "simple-statistics";
+import { metadataColumnPrefix } from "@/app-layer/statistics/constants";
 
-const metadataColumnPrefix = "__";
+
 
 export const isMetadataColumn = (column: string) =>
   column.startsWith(metadataColumnPrefix);
