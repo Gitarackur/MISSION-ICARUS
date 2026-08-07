@@ -11,6 +11,7 @@ import {
 import { DisplayMode, PlotKind } from "../types";
 import { plotTypes } from "../constants";
 import { getSavedVisualizationPayload } from "@/domain/visualization/utils/main";
+import Plotly from "plotly.js-cartesian-dist-min";
 
 const toPngDataUrl = (base64: string) =>
   `data:image/png;base64,${base64.replace(/\s+/g, "").trim()}`;
@@ -213,6 +214,57 @@ const invokeRPlot = async (plotType: string, payload: unknown) => {
   return toPngDataUrl(base64);
 };
 
+// Rasterizes a Plotly figure JSON (as emitted by the F# renderer) to an SVG
+// data-URL using plotly.js in the Electron renderer. Kept out of the F# runtime
+// so the self-contained binary stays small; plotly.js handles rendering on the
+// client.
+const renderFSharpFigureSvg = async (figure: unknown): Promise<string> => {
+  const { data, layout, config } = figure as {
+    data: unknown[];
+    layout: { width?: unknown; height?: unknown };
+    config?: unknown;
+  };
+  const width = typeof layout?.width === "number" ? layout.width : 960;
+  const height = typeof layout?.height === "number" ? layout.height : 620;
+
+  const el = document.createElement("div");
+  el.style.position = "absolute";
+  el.style.left = "-99999px";
+  el.style.top = "0";
+  el.style.width = `${width}px`;
+  el.style.height = `${height}px`;
+  document.body.appendChild(el);
+
+  try {
+    await Plotly.newPlot(el, data as unknown[], layout as never, config as never);
+    return await Plotly.toImage(el, {
+      format: "svg",
+      width,
+      height,
+      scale: 1,
+    });
+  } finally {
+    Plotly.purge(el);
+    el.remove();
+  }
+};
+
+const invokeFSharpPlot = async (plotType: string, payload: unknown) => {
+  const figureJson = await window.electron.ipcRenderer.invoke("run-fsharp", {
+    args: [JSON.stringify({ plotType, payload })],
+  });
+
+  if (
+    typeof figureJson !== "string" ||
+    figureJson.trim().length === 0 ||
+    !figureJson.trim().startsWith("{")
+  ) {
+    throw new Error(`F# renderer returned an empty image for ${plotType}.`);
+  }
+
+  return renderFSharpFigureSvg(JSON.parse(figureJson));
+};
+
 const withDisplaySettings = <TPayload extends object>(
   payload: TPayload,
   settings?: Partial<VisualizationDisplaySettings>
@@ -272,6 +324,31 @@ export const invokeRPcaPlot = (
   payload: PcaPlotPayload,
   settings?: Partial<VisualizationDisplaySettings>
 ) => invokeRPlot("pca", withDisplaySettings(payload, settings));
+
+export const invokeFSharpBarPlot = (
+  payload: BarChartPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeFSharpPlot("bar", withDisplaySettings(payload, settings));
+export const invokeFSharpBoxPlot = (
+  payload: BoxPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeFSharpPlot("box", withDisplaySettings(payload, settings));
+export const invokeFSharpScatterPlot = (
+  payload: ScatterPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeFSharpPlot("scatter", withDisplaySettings(payload, settings));
+export const invokeFSharpHeatmap = (
+  payload: HeatmapPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeFSharpPlot("heatmap", withDisplaySettings(payload, settings));
+export const invokeFSharpVolcanoPlot = (
+  payload: VolcanoPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeFSharpPlot("volcano", withDisplaySettings(payload, settings));
+export const invokeFSharpPcaPlot = (
+  payload: PcaPlotPayload,
+  settings?: Partial<VisualizationDisplaySettings>
+) => invokeFSharpPlot("pca", withDisplaySettings(payload, settings));
 
 export const renderBarSvg = (
   payload: BarChartPayload,
@@ -903,7 +980,7 @@ export const isPcaPayload = (payload: unknown): payload is PcaPlotPayload =>
 
 export const buildRendererImage = async (
   visualization: VisualizationRecord | undefined,
-  renderer: "python" | "r",
+  renderer: "python" | "r" | "fsharp",
   settings: VisualizationDisplaySettings
 ) => {
   if (!visualization) return null;
@@ -913,45 +990,45 @@ export const buildRendererImage = async (
     case "bar":
     case "missing-values":
       if (isBarPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonBarPlot(payload, settings)
-          : invokeRBarPlot(payload, settings);
+        if (renderer === "python") return invokePythonBarPlot(payload, settings);
+        if (renderer === "r") return invokeRBarPlot(payload, settings);
+        return invokeFSharpBarPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the bar renderer.");
     case "box":
     case "qc":
       if (isBoxPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonBoxPlot(payload, settings)
-          : invokeRBoxPlot(payload, settings);
+        if (renderer === "python") return invokePythonBoxPlot(payload, settings);
+        if (renderer === "r") return invokeRBoxPlot(payload, settings);
+        return invokeFSharpBoxPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the box renderer.");
     case "scatter":
       if (isScatterPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonScatterPlot(payload, settings)
-          : invokeRScatterPlot(payload, settings);
+        if (renderer === "python") return invokePythonScatterPlot(payload, settings);
+        if (renderer === "r") return invokeRScatterPlot(payload, settings);
+        return invokeFSharpScatterPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the scatter renderer.");
     case "heatmap":
       if (isHeatmapPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonHeatmap(payload, settings)
-          : invokeRHeatmap(payload, settings);
+        if (renderer === "python") return invokePythonHeatmap(payload, settings);
+        if (renderer === "r") return invokeRHeatmap(payload, settings);
+        return invokeFSharpHeatmap(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the heatmap renderer.");
     case "volcano":
       if (isVolcanoPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonVolcanoPlot(payload, settings)
-          : invokeRVolcanoPlot(payload, settings);
+        if (renderer === "python") return invokePythonVolcanoPlot(payload, settings);
+        if (renderer === "r") return invokeRVolcanoPlot(payload, settings);
+        return invokeFSharpVolcanoPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the volcano renderer.");
     case "pca":
       if (isPcaPayload(payload)) {
-        return renderer === "python"
-          ? invokePythonPcaPlot(payload, settings)
-          : invokeRPcaPlot(payload, settings);
+        if (renderer === "python") return invokePythonPcaPlot(payload, settings);
+        if (renderer === "r") return invokeRPcaPlot(payload, settings);
+        return invokeFSharpPcaPlot(payload, settings);
       }
       throw new Error("Saved plot payload is not compatible with the PCA renderer.");
     default:
