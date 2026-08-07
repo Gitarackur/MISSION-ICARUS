@@ -5,8 +5,9 @@ import {
   LIMMA_CONTROL_COLUMNS_KEY,
   LIMMA_ADJUSTMENT_METHOD_KEY,
   LIMMA_DEFAULT_ADJUSTMENT_METHOD,
+  COMMON_PTMS,
+  PJ_MODES,
 } from "@/app-layer/statistics/constants";
-import { COMMON_PTMS } from "@/app-layer/statistics/utils/statistical-engine";
 import {
   downloadTextFile,
   serializeActiveMatrix,
@@ -8369,28 +8370,6 @@ export const NoUiFound = ({ actionId }: { actionId: StatisticalAction }) => (
 /*---------------------------------------------------
 Pj
 ---------------------------------------------------*/
-
-const PJ_MODES = [
-  {
-    id: "pi-divide",
-    label: "Pj: π ÷ value",
-    description:
-      "Appends a new column for each selected column equal to π divided by each value (mirrors Pi Divide).",
-  },
-  {
-    id: "clustering",
-    label: "Pj Cluster",
-    description:
-      "Runs K-Means (k=3) over the selected columns and appends a cluster-assignment column based on Pj.",
-  },
-  {
-    id: "stub",
-    label: "Pj (placeholder)",
-    description:
-      "A placeholder view, ready to be replaced by a full Pj implementation.",
-  },
-] as const;
-
 export const Pj = ({
   dataColumns,
   actionId,
@@ -8454,7 +8433,7 @@ export const Pj = ({
               type="button"
               className={`w-full text-left px-3 py-2 rounded-md border transition-colors ${
                 mode === option.id
-                  ? "border-blue-500 bg-blue-50"
+                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900 dark:text-white"
                   : "border-gray-300 hover:border-blue-400"
               }`}
               onClick={() => setMode(option.id)}
