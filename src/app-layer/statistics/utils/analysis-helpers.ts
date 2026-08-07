@@ -1,8 +1,9 @@
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { TableMatrix } from "@/domain/workflow/main.types";
 import * as ss from "simple-statistics";
+import { metadataColumnPrefix } from "@/app-layer/statistics/constants";
 
-const metadataColumnPrefix = "__";
+
 
 export const isMetadataColumn = (column: string) =>
   column.startsWith(metadataColumnPrefix);
@@ -87,6 +88,20 @@ export const parseStringMetadata = (
   const metadata = data.get(key);
   const value = Array.isArray(metadata) ? metadata[0] : undefined;
   return typeof value === "string" && value.length > 0 ? value : fallback;
+};
+
+export const parseStringArrayMetadata = (
+  data: ProteinRow[] | Map<string, TableMatrix>,
+  key: string,
+  fallback: string[]
+): string[] => {
+  if (!(data instanceof Map) || !data.has(key)) return fallback;
+  const metadata = data.get(key);
+  if (!Array.isArray(metadata)) return fallback;
+  const values = metadata.filter(
+    (value): value is string => typeof value === "string" && value.length > 0
+  );
+  return values.length > 0 ? values : fallback;
 };
 
 export const quantile = (values: number[], probability: number) => {
