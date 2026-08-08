@@ -7,11 +7,11 @@ import { AppSettingsProvider } from "@/ui/settings/settings-provider"
 const AppRouter = () => {
   return (
     <ThemeProvider>
-      <ModalProvider>
-        <AppSettingsProvider>
+      <AppSettingsProvider>
+        <ModalProvider>
           <IcarusApp />
-        </AppSettingsProvider>
-      </ModalProvider>
+        </ModalProvider>
+      </AppSettingsProvider>
     </ThemeProvider>
   )
 }

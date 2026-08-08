@@ -1,3 +1,4 @@
+import { jStat } from "jstat";
 import {
   StatisticalAction,
   StatisticalAnalysisResult,
@@ -816,7 +817,8 @@ export const runStatisticalAnalysis = (
       }
     }
 
-    case "k-means-clustering": {
+    case "k-means-clustering":
+    case "k-means-clustering-run": {
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for K-Means");
@@ -848,7 +850,8 @@ export const runStatisticalAnalysis = (
       }
     }
 
-    case "hierarchical-clustering": {
+    case "hierarchical-clustering":
+    case "hierarchical-clustering-run": {
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for Hierarchical Clustering");
@@ -935,6 +938,63 @@ export const runStatisticalAnalysis = (
         break;
       } catch (error) {
         console.error("Z-Score normalization error:", error);
+        throw error;
+      }
+    }
+
+    case "z": {
+      try {
+        const zTransformed = zScoreNormalization(numericData);
+        results = zTransformed;
+        newColumnNames = numericColumns.map((col) => `${col}_z`);
+        break;
+      } catch (error) {
+        console.error("Z transformation error:", error);
+        throw error;
+      }
+    }
+
+    case "2d": {
+      try {
+        if (numericData.length < 2) {
+          throw new Error("2D requires at least two numeric columns");
+        }
+
+        const pcaResult = performPCA(numericData, 2);
+        results = pcaResult.transformed_data;
+        newColumnNames = ["PC1_2d", "PC2_2d"];
+        break;
+      } catch (error) {
+        console.error("2D projection error:", error);
+        throw error;
+      }
+    }
+
+    case "pm": {
+      try {
+        const muValues: number[] = [];
+        const pValues: number[] = [];
+
+        numericData.forEach((columnData) => {
+          const values = finiteValues(columnData);
+          const n = values.length;
+          const mu = n > 0 ? mean(values) : NaN;
+          const sd = n > 1 ? stddev(values) : NaN;
+          let pValue = NaN;
+          if (Number.isFinite(mu) && Number.isFinite(sd) && sd !== 0) {
+            const tStat = mu / (sd / Math.sqrt(n));
+            pValue = 2 * (1 - jStat.studentt.cdf(Math.abs(tStat), n - 1));
+            pValue = Math.min(1, Math.max(0, pValue));
+          }
+          muValues.push(mu);
+          pValues.push(Number.isFinite(pValue) ? pValue : NaN);
+        });
+
+        results = [muValues, pValues];
+        newColumnNames = ["mu", "p-value"];
+        break;
+      } catch (error) {
+        console.error("pμ test error:", error);
         throw error;
       }
     }

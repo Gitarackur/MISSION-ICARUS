@@ -10,9 +10,20 @@ import {
 } from "@/app-layer/statistics/constants";
 import {
   downloadTextFile,
+  extensionFor,
   serializeActiveMatrix,
   toFilenameSlug,
+  EXPORT_FORMAT_INFO,
+  type ExportFormat,
 } from "@/app-layer/shared/exporter";
+import { useAppSettings } from "@/ui/settings/use-app-settings";
+import { Button } from "@/ui/design-system/Button";
+import { Checkbox } from "@/ui/design-system/Checkbox";
+import { exportSheetStyles } from "@/ui/views/settings/variants/settings.variants";
+import {
+  DELIMITER_LABELS,
+  type CsvDelimiter,
+} from "@/ui/settings/settings.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import {
   StatisticalAction,
@@ -21,6 +32,16 @@ import {
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import MultiSelect from "@/ui/design-system/Select/Multi/select";
 import SingleSelect from "@/ui/design-system/Select/select";
+import {
+  FileJson,
+  FileSpreadsheet,
+  FileText,
+  FileType2,
+  Braces,
+  Table2,
+  Database,
+  Download,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 // Common styles for consistency
@@ -6628,6 +6649,211 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
   );
 };
 
+// --------------------------------------------------- 
+// 2D - TWO-DIMENSIONAL PCA PROJECTION
+// --------------------------------------------------- 
+
+export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
+  actionId,
+  allColumnarData,
+  onSuccess,
+  onError,
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+
+  const availableColumns = useMemo(() => {
+    const columnNames = Array.from(allColumnarData.keys());
+    return columnNames.filter(col => !col.startsWith('__'));
+  }, [allColumnarData]);
+
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runTwoD = () => {
+    setError(null);
+
+    const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
+
+    if (columnsToUse.length < 2) {
+      setError("2D requires at least two feature columns.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      columnsToUse.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`2D failed: ${errorMessage}`);
+      console.error("2D failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>2D Projection</h1>
+      <p className={descriptionClass}>
+        Projects the selected features into a two-dimensional space (PC1, PC2)
+        using principal component analysis for visualization and analysis.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="2d-columns"
+            label="Select Features"
+            placeholder="Select columns for 2D projection (leave empty for all)..."
+            options={availableColumns.map((curr) => ({ 
+              value: curr, 
+              label: curr, 
+              disabled: false 
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText={`${availableColumns.length} features available. Requires at least two.`}
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What the 2D projection does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• Reduces the data to its two most informative principal components</li>
+            <li>• Produces PC1 and PC2 columns for plotting and exploration</li>
+            <li>• Preserves the most variance in a single 2D view</li>
+            <li>• Requires at least two numeric feature columns</li>
+          </ul>
+        </div>
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          onClick={runTwoD}
+        >
+          Compute 2D Projection
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// --------------------------------------------------- 
+// pμ - P-VALUE / MEAN TEST
+// --------------------------------------------------- 
+
+export const PmuTest: React.FC<StatisticalComponentProps> = ({
+  actionId,
+  dataColumns,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+
+  const runPmuTest = () => {
+    setError(null);
+
+    if (selectedColumns.length === 0) {
+      setError("Please select at least one numeric column.");
+      onError?.();
+      return;
+    }
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+
+      selectedColumns.forEach((column) => {
+        const values = allColumnarData.get(column);
+        if (values) filteredData.set(column, values);
+      });
+
+      if (filteredData.size === 0) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      const result = performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
+      setError(`pμ test failed: ${errorMessage}`);
+      console.error("pμ test failed:", err);
+      onError?.();
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>pμ Test</h1>
+      <p className={descriptionClass}>
+        For each selected column, computes the mean (μ) and a two-sided p-value
+        from a one-sample t-test against zero.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="pmu-columns"
+            label="Select Columns"
+            placeholder="Select data columns to test..."
+            options={numericColumns.map((column) => ({
+              value: column,
+              label: column,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText="Choose the numeric columns to compute μ and p-value for"
+          />
+        </div>
+
+        <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+          <p className="text-sm font-medium text-blue-900">What the pμ test does:</p>
+          <ul className="text-xs text-blue-800 mt-2 space-y-1">
+            <li>• μ is the column mean of the selected values</li>
+            <li>• The p-value comes from a one-sample t-test compared to 0</li>
+            <li>• Helps assess whether a column differs significantly from zero</li>
+            <li>• Outputs a μ column and a p-value column</li>
+          </ul>
+        </div>
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={selectedColumns.length === 0}
+          onClick={runPmuTest}
+        >
+          Run pμ Test
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // ===================================================================
 // NORMALIZATION OPERATIONS
 // ===================================================================
@@ -7741,8 +7967,163 @@ export const WgcnaAnalysis = ({
 );
 
 /*---------------------------------------------------
-SAVE DATA
-----------------------------------------------------*/
+SAVE DATA + EXPORT CSV
+Mirrors the export spreadsheet (settings) implementation:
+format cards, delimiter, and header/metadata options.
+---------------------------------------------------*/
+
+const EXPORT_FORMATS = Object.keys(EXPORT_FORMAT_INFO) as ExportFormat[];
+
+const FORMAT_ICONS: Record<ExportFormat, typeof FileJson> = {
+  json: FileJson,
+  csv: FileSpreadsheet,
+  tsv: FileType2,
+  txt: FileText,
+  xml: Braces,
+  md: Table2,
+  sql: Database,
+};
+
+const DELIMITER_FORMATS: ExportFormat[] = ["csv", "tsv", "txt"];
+
+const MatrixExportView: React.FC<{
+  dataColumns: TableColumns;
+  dataRows: ProteinRow[];
+  defaultFormat: ExportFormat;
+  successMessage: string;
+}> = ({ dataColumns, dataRows, defaultFormat, successMessage }) => {
+  const styles = exportSheetStyles();
+  const {
+    settings,
+    setDelimiter,
+    setIncludeHeaders,
+    setIncludeMetadataColumns,
+  } = useAppSettings();
+  const [format, setFormat] = useState<ExportFormat>(defaultFormat);
+  const [fileName, setFileName] = useState("my_data");
+  const [done, setDone] = useState(false);
+
+  const showDelimiter = DELIMITER_FORMATS.includes(format);
+  const showHeadersAndFlags = format !== "json" && format !== "xml";
+
+  const delimiterOptions = (
+    Object.keys(DELIMITER_LABELS) as CsvDelimiter[]
+  ).map((key) => ({ value: key, label: DELIMITER_LABELS[key] }));
+
+  const handleExport = () => {
+    try {
+      const file = serializeActiveMatrix(dataRows, dataColumns, format, {
+        delimiter: settings.delimiter,
+        includeHeaders: settings.includeHeaders,
+        includeMetadataColumns: settings.includeMetadataColumns,
+      });
+      const stem = toFilenameSlug(fileName.trim() || "my_data");
+      downloadTextFile(`${stem}.${extensionFor(format)}`, file.mime, file.content);
+      setDone(true);
+    } catch (err) {
+      console.error("Export failed:", err);
+      setDone(false);
+    }
+  };
+
+  return (
+    <div className={styles.container()}>
+      <section className={styles.section()}>
+        <h3 className={styles.sectionTitle()}>Format</h3>
+        <div className={styles.grid()}>
+          {EXPORT_FORMATS.map((fmt) => {
+            const Icon = FORMAT_ICONS[fmt];
+            const info = EXPORT_FORMAT_INFO[fmt];
+            const active = format === fmt;
+            const s = exportSheetStyles({ active });
+            return (
+              <button
+                key={fmt}
+                type="button"
+                onClick={() => setFormat(fmt)}
+                className={s.formatOption()}
+                title={info.description}
+              >
+                <Icon className={s.formatIcon()} />
+                <span className={s.formatLabel()}>{info.label}</span>
+                <span className={s.formatDescription()}>
+                  {info.description}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className={styles.section()}>
+        <label htmlFor="export-file-name" className={labelClass}>
+          File Name
+        </label>
+        <input
+          type="text"
+          id="export-file-name"
+          value={fileName}
+          onChange={(e) => setFileName(e.target.value)}
+          placeholder="my_data"
+          className={inputClass}
+        />
+      </section>
+
+      {showDelimiter && (
+        <section className={styles.section()}>
+          <SingleSelect
+            value={settings.delimiter}
+            onChange={(value) =>
+              value && setDelimiter(value as CsvDelimiter)
+            }
+            options={delimiterOptions}
+            label="Delimiter"
+            placeholder="Choose delimiter"
+            searchable={false}
+          />
+        </section>
+      )}
+
+      {showHeadersAndFlags && (
+        <section className={styles.section()}>
+          <h3 className={styles.sectionTitle()}>Options</h3>
+          <div className="flex flex-col gap-3">
+            <Checkbox
+              checked={settings.includeHeaders}
+              onChange={(event) =>
+                setIncludeHeaders(event.target.checked)
+              }
+              label="Include header row"
+            />
+            <Checkbox
+              checked={settings.includeMetadataColumns}
+              onChange={(event) =>
+                setIncludeMetadataColumns(event.target.checked)
+              }
+              label="Include metadata columns"
+            />
+          </div>
+        </section>
+      )}
+
+      {done && (
+        <div className="text-green-600 text-sm">{successMessage}</div>
+      )}
+
+      <div className={styles.actionRow()}>
+        <Button
+          variant="primary"
+          className={styles.exportButton()}
+          onClick={handleExport}
+          disabled={dataRows.length === 0}
+        >
+          <Download className={styles.buttonIcon()} />
+          Export {dataRows.length} rows
+        </Button>
+      </div>
+    </div>
+  );
+};
 
 export const SaveData = ({
   dataColumns,
@@ -7750,56 +8131,20 @@ export const SaveData = ({
 }: {
   dataColumns: TableColumns;
   dataRows: ProteinRow[];
-}) => {
-  const [fileName, setFileName] = useState("my_data");
-  const [saved, setSaved] = useState(false);
-
-  const handleSave = () => {
-    try {
-      const file = serializeActiveMatrix(dataRows, dataColumns, "json", {
-        includeHeaders: true,
-      });
-      const stem = toFilenameSlug(fileName.trim() || "my_data");
-      downloadTextFile(`${stem}.json`, file.mime, file.content);
-      setSaved(true);
-    } catch (err) {
-      console.error("Save Data failed:", err);
-      setSaved(false);
-    }
-  };
-
-  return (
-    <div className={containerClass}>
-      <h1 className={headingClass}>Save Data</h1>
-      <p className={descriptionClass}>Saves the current data to a JSON file.</p>
-      <div className="mb-6">
-        <label htmlFor="save-file-name" className={labelClass}>
-          File Name
-        </label>
-        <input
-          type="text"
-          id="save-file-name"
-          value={fileName}
-          onChange={(e) => setFileName(e.target.value)}
-          placeholder="my_data"
-          className={inputClass}
-        />
-      </div>
-      {saved && (
-        <p className="text-green-600 text-sm mb-4">Data saved successfully</p>
-      )}
-      <div className="flex justify-end">
-        <button className={buttonClass} onClick={handleSave}>
-          Save
-        </button>
-      </div>
-    </div>
-  );
-};
-
-/*---------------------------------------------------
-EXPORT CSV
----------------------------------------------------*/
+}) => (
+  <div className={containerClass}>
+    <h1 className={headingClass}>Save Data</h1>
+    <p className={descriptionClass}>
+      Saves the current matrix to a downloadable file (JSON by default).
+    </p>
+    <MatrixExportView
+      dataColumns={dataColumns}
+      dataRows={dataRows}
+      defaultFormat="json"
+      successMessage="Data saved successfully"
+    />
+  </div>
+);
 
 export const ExportCsv = ({
   dataColumns,
@@ -7807,56 +8152,20 @@ export const ExportCsv = ({
 }: {
   dataColumns: TableColumns;
   dataRows: ProteinRow[];
-}) => {
-  const [fileName, setFileName] = useState("my_data");
-  const [exported, setExported] = useState(false);
-
-  const handleExport = () => {
-    try {
-      const file = serializeActiveMatrix(dataRows, dataColumns, "csv", {
-        includeHeaders: true,
-      });
-      const stem = toFilenameSlug(fileName.trim() || "my_data");
-      downloadTextFile(`${stem}.csv`, file.mime, file.content);
-      setExported(true);
-    } catch (err) {
-      console.error("Export CSV failed:", err);
-      setExported(false);
-    }
-  };
-
-  return (
-    <div className={containerClass}>
-      <h1 className={headingClass}>Export CSV</h1>
-      <p className={descriptionClass}>
-        Exports the current dataset to a CSV file.
-      </p>
-      <div className="mb-6">
-        <label htmlFor="export-csv-name" className={labelClass}>
-          File Name
-        </label>
-        <input
-          type="text"
-          id="export-csv-name"
-          value={fileName}
-          onChange={(e) => setFileName(e.target.value)}
-          placeholder="my_data"
-          className={inputClass}
-        />
-      </div>
-      {exported && (
-        <div className="text-green-600 text-sm mb-4">
-          CSV exported successfully
-        </div>
-      )}
-      <div className="flex justify-end">
-        <button className={buttonClass} onClick={handleExport}>
-          Export
-        </button>
-      </div>
-    </div>
-  );
-};
+}) => (
+  <div className={containerClass}>
+    <h1 className={headingClass}>Export CSV</h1>
+    <p className={descriptionClass}>
+      Exports the current dataset to a CSV file (or pick another format below).
+    </p>
+    <MatrixExportView
+      dataColumns={dataColumns}
+      dataRows={dataRows}
+      defaultFormat="csv"
+      successMessage="CSV exported successfully"
+    />
+  </div>
+);
 
 
 /*---------------------------------------------------

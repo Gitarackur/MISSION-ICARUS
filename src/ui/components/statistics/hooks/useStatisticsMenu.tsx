@@ -82,6 +82,8 @@ import {
   PiMultiply,
   PiDivide,
   Pj,
+  TwoDEmbedding,
+  PmuTest,
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
@@ -1019,6 +1021,7 @@ case 'delete-row':
         content = <PathwayAnalysis />;
         break;
         case 'k-means-clustering':
+        case 'k-means-clustering-run':
           content = (
             <KMeansClustering 
               dataColumns={dataColumns} 
@@ -1038,6 +1041,7 @@ case 'delete-row':
           break;
         
         case 'hierarchical-clustering':
+        case 'hierarchical-clustering-run':
           content = (
             <HierarchicalClustering 
               dataColumns={dataColumns} 
@@ -1380,6 +1384,60 @@ case 'delete-row':
       case "pj":
         content = (
           <Pj
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "z":
+        content = (
+          <ZScoreNormalization
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "2d":
+        content = (
+          <TwoDEmbedding
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => {
+              closeModal();
+              onError?.();
+            }}
+          />
+        );
+        break;
+      case "pm":
+        content = (
+          <PmuTest
             dataColumns={dataColumns}
             actionId={actionId}
             dataRows={dataRows}
