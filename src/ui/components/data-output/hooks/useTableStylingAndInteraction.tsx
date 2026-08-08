@@ -8,6 +8,30 @@ import {
   getNumericCellState,
 } from "@/domain/shared/number-parsing";
 
+class LazyColumnarData extends Map<string, TableMatrix> {
+  constructor(
+    private readonly rows: ProteinRow[],
+    columns: TableColumns
+  ) {
+    // Statistics components use Map#get/has/keys. Registering only the keys
+    // keeps that contract without retaining a second, column-oriented copy of
+    // every cell for the lifetime of the preview.
+    super(columns.map((column) => [column, []]));
+  }
+
+  override get(column: string): TableMatrix | undefined {
+    if (!super.has(column)) return undefined;
+
+    const values: TableMatrix = [];
+    this.rows.forEach((row) => {
+      if (Object.prototype.hasOwnProperty.call(row, column)) {
+        values.push(row[column] as string | number);
+      }
+    });
+    return values;
+  }
+}
+
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
@@ -21,19 +45,11 @@ export const useTableStylingAndInteraction = (
   const mapColumnType = useMemo(() => inferColumnTypes(originalDataRows), [originalDataRows])
 
   const allColumnarData = useMemo(() => {
-    const dataMap = new Map<string, TableMatrix>();
-    if (!originalDataRows.length || !columns.length) return dataMap;
+    if (!originalDataRows.length || !columns.length) {
+      return new Map<string, TableMatrix>();
+    }
 
-    columns.forEach(colName => {
-      const values: TableMatrix = [];
-      originalDataRows.forEach(row => {
-        if (Object.prototype.hasOwnProperty.call(row, colName)) {
-          values.push(row[colName] as string | number);
-        }
-      });
-      dataMap.set(colName, values);
-    });
-    return dataMap;
+    return new LazyColumnarData(originalDataRows, columns);
   }, [originalDataRows, columns]);
 
 

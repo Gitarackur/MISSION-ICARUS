@@ -15,8 +15,12 @@ import type {
   DeletionPlan,
   SessionDeletionResult,
 } from "@/app-layer/database/deletion";
+import { formatStorageBytes } from "@/app-layer/database/health/storage-health";
+import { STORAGE_WARNING_PERCENT } from "@/domain/storage/constants";
+import { mainViewStyles } from "./variants/main.variants";
 
 const IcarusApp: React.FC = () => {
+  const styles = mainViewStyles();
   const {
     activeMatrix,
     activeMatrixId,
@@ -30,9 +34,12 @@ const IcarusApp: React.FC = () => {
     handleDeleteVisualization,
     handleSessionClick,
     handleSessionCreate,
+    isPreparingMatrixView,
     isProcessing,
     isSheetOpen,
+    loadSessionForExport,
     matrices,
+    operationError,
     originalDataColumns,
     originalDataRows,
     saveActivityInWorkflow,
@@ -44,9 +51,11 @@ const IcarusApp: React.FC = () => {
     setActiveSession,
     setIsProcessing,
     setIsSheetOpen,
+    setOperationError,
     setSelectedDataColumns,
     setShowSession,
     showSession,
+    storageEstimate,
   } = useIcarusAppSession();
   const [activeProteomicsTab, setActiveProteomicsTab] =
     useState<tabTypes>("import");
@@ -54,6 +63,8 @@ const IcarusApp: React.FC = () => {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const { openModal, closeModal } = useModal();
+  const hasStoragePressure =
+    (storageEstimate?.percentUsed ?? 0) >= STORAGE_WARNING_PERCENT;
 
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
@@ -153,6 +164,30 @@ const IcarusApp: React.FC = () => {
 
   return (
     <div className="flex h-screen flex-col bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100">
+      {(operationError || hasStoragePressure) && (
+        <div
+          role="alert"
+          className={styles.storageAlert()}
+        >
+          <span>
+            {operationError ??
+              `Icarus is using ${formatStorageBytes(
+                storageEstimate?.usage ?? 0
+              )} of ${formatStorageBytes(
+                storageEstimate?.quota ?? 0
+              )} available storage. Export or remove unused sessions before importing another large dataset.`}
+          </span>
+          {operationError && (
+            <button
+              type="button"
+              className={styles.storageAlertDismiss()}
+              onClick={() => setOperationError(null)}
+            >
+              Dismiss
+            </button>
+          )}
+        </div>
+      )}
       <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
         <MatrixTab
           matrices={matrices}
@@ -169,7 +204,7 @@ const IcarusApp: React.FC = () => {
           onOpenExport={() => setIsExportOpen(true)}
         />
 
-        {activeMatrix ? (
+        {activeSession && activeMatrix && !isPreparingMatrixView ? (
           <>
             <ProteomicsAnalysisHomeView
               originalDataRows={originalDataRows}
@@ -199,6 +234,12 @@ const IcarusApp: React.FC = () => {
               onVisualizationDelete={requestVisualizationDeletion}
             />
           </>
+        ) : activeSession ? (
+          <div className={styles.matrixLoadState()}>
+            {isProcessing || isPreparingMatrixView
+              ? "Loading matrix data…"
+              : "This session does not contain a loadable matrix."}
+          </div>
         ) : (
           <div className="w-full">
             <CreateSession
@@ -220,13 +261,18 @@ const IcarusApp: React.FC = () => {
         />
       )}
 
-      <SettingsSheet isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
+      <SettingsSheet
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        storageEstimate={storageEstimate}
+      />
       <ExportSheet
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
         rows={originalDataRows}
         columns={originalDataColumns}
         session={activeSession}
+        loadSession={loadSessionForExport}
       />
     </div>
   );

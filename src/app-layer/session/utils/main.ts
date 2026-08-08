@@ -12,7 +12,6 @@ import {
 } from "@/domain/workflow/main.types";
 import {
   createMatrixDataSafe,
-  reconstructFromMatrix,
 } from "@/app-layer/shared/utils";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
 
@@ -86,15 +85,15 @@ export const generateActiveSessionWitNestedWorkflow = async ({
     // add workflow to session
     const sessionMap = session.addWorkflow(workflow);
 
-    const matrixId = await IcarusDBAdapter.saveMatrix({
+    const matrix: IcarusMatrix = {
       id: `icarus-matrix-${uuidv4()}`,
       createdAt: Date.now(),
       columns,
       data: rowsAs2dMatrix,
       createdByFirstActivity: true,
-    });
+    };
 
-    const activityId = await IcarusDBAdapter.saveActivity({
+    const activity: IcarusActivity = {
       id: `icarus-activity-${uuidv4()}`,
       timestamp: Date.now(),
       name: "load CSV",
@@ -103,41 +102,41 @@ export const generateActiveSessionWitNestedWorkflow = async ({
       inputMatrixReferences: null,
       inputParameters: {},
       outputColumnNames: [],
-      outputMatrixReference: matrixId,
+      outputMatrixReference: matrix.id,
       outputMetrics: {},
       pluginId: "",
-    });
+    };
 
-    const workflowId = await IcarusDBAdapter.saveWorkflow({
+    const workflowRecord = {
       id: workflow.id,
       createdAt: Date.now(),
       data: workflow,
-    });
-
-    // fetch existing session
-    const existingSession = await IcarusDBAdapter.getSessionById(sessionMap.id);
-
-    await IcarusDBAdapter.saveSession({
+    };
+    const persistedSession: IcarusSession = {
       id: sessionMap.id,
       name: sessionMap.name,
       date: sessionMap.date,
-      workflowIds: Array.from(
-        new Set([...(existingSession?.workflowIds ?? []), workflowId])
-      ),
-      matrixIds: Array.from(
-        new Set([...(existingSession?.matrixIds ?? []), matrixId])
-      ),
-      activityIds: Array.from(
-        new Set([...(existingSession?.activityIds ?? []), activityId])
-      ),
-      visualizationIds: existingSession?.visualizationIds ?? [],
+      workflowIds: [workflowRecord.id],
+      matrixIds: [matrix.id],
+      activityIds: [activity.id],
+      visualizationIds: [],
+    };
+
+    // The complete initial graph is committed atomically, so a failed matrix
+    // write cannot leave an orphan activity or partially-created session.
+    await IcarusDBAdapter.saveInitialSessionGraph({
+      session: persistedSession,
+      matrix,
+      activity,
+      workflow: workflowRecord,
     });
 
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithAllData(
-      sessionMap.id
+      sessionMap.id,
+      { matrixIds: [matrix.id] }
     );
 
-    return { sessionWithWorkflows, matrixId };
+    return { sessionWithWorkflows, matrixId: matrix.id };
   } catch (error) {
     throw new Error(`Error creating session: ${error}`);
   }
@@ -155,27 +154,39 @@ export const reconstructOriginalRowsAndColumnsFromSessionWorkflows = async (
   sessionId: string
 ) => {
   try {
-    const sessionWithWorkflows =
-      await IcarusDBAdapter.getSessionWithAllData(sessionId);
+    const sessionOverview = await IcarusDBAdapter.getSessionWithAllData(
+      sessionId,
+      { matrixPayloads: "none" }
+    );
 
-    if (!sessionWithWorkflows) {
+    if (!sessionOverview) {
       throw new Error(`Session with workflows not found: ${sessionId}`);
     }
 
-    // get TableMatrices and TableColumns from session workflows
-    const { rowsAs2dMatrix, columns } =
-      validateAndExtractWorkflowDataStrict(sessionWithWorkflows);
-
-    // parse that to original rows and columns
-    const result = reconstructFromMatrix({ rowsAs2dMatrix, columns });
-
-    if (!result) {
-      throw new Error("Failed to reconstruct data from matrix");
+    const selectedMatrixMetadata = [...sessionOverview.matrices].sort(
+      (left, right) => right.createdAt - left.createdAt
+    )[0];
+    if (!selectedMatrixMetadata) {
+      throw new Error(`Session ${sessionId} does not contain a matrix`);
     }
 
+    const selectedMatrix = await IcarusDBAdapter.getMatrixById(
+      selectedMatrixMetadata.id
+    );
+    if (!selectedMatrix) {
+      throw new Error(`Matrix ${selectedMatrixMetadata.id} was not found`);
+    }
+
+    const sessionWithWorkflows: IcarusSessionWithWorkflow = {
+      ...sessionOverview,
+      matrices: sessionOverview.matrices.map((matrix) =>
+        matrix.id === selectedMatrix.id ? selectedMatrix : matrix
+      ),
+    };
+
     return {
-      result,
       sessionWithWorkflows,
+      matrixId: selectedMatrix.id,
     };
   } catch (error) {
     throw new Error(`Error handling session click:", ${error}`);
@@ -199,28 +210,17 @@ export const saveActivityInSessionWorkflow = async (
 
     const newActivityId = `icarus-activity-${uuidv4()}`;
 
-    await IcarusDBAdapter.saveActivity({
+    await IcarusDBAdapter.saveActivityForSession(activeSession.id, {
       ...activity,
       inputMatrixReferences: activity.inputMatrixReferences,
       id: newActivityId,
       timestamp: Date.now(),
     });
 
-    const updatedActivityIds = [
-      ...(activeSession.activityIds ?? []),
-      newActivityId,
-    ];
-
-    await IcarusDBAdapter.updateSessionWorkflows({
-      sessionId: activeSession?.id,
-      workflowIds: activeSession.workflowIds,
-      activityIds: updatedActivityIds,
-      matrixIds: activeSession.matrixIds,
-      visualizationIds: activeSession.visualizationIds,
-    });
-
     // return refreshed session with all linked data
-    return await IcarusDBAdapter.getSessionWithAllData(activeSession.id);
+    return await IcarusDBAdapter.getSessionWithAllData(activeSession.id, {
+      matrixPayloads: "none",
+    });
   } catch (err) {
     throw new Error(`unable to save activity: ${String(err)}`);
   }
@@ -243,24 +243,19 @@ export const saveMatrixInSessionWorkflow = async (
 
     const newMatrixId = `icarus-matrix-${uuidv4()}`;
 
-    const matrixId = await IcarusDBAdapter.saveMatrix({
+    const matrixRecord: IcarusMatrix = {
       ...matrix,
       id: newMatrixId,
       createdAt: Date.now(),
-    });
-
-    const updatedMatrixIds = [...(activeSession.matrixIds ?? []), newMatrixId];
-
-    await IcarusDBAdapter.updateSessionWorkflows({
-      sessionId: activeSession?.id,
-      workflowIds: activeSession.workflowIds,
-      activityIds: activeSession.activityIds,
-      matrixIds: updatedMatrixIds,
-      visualizationIds: activeSession.visualizationIds,
-    });
+    };
+    const matrixId = await IcarusDBAdapter.saveMatrixForSession(
+      activeSession.id,
+      matrixRecord
+    );
 
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithAllData(
-      activeSession.id
+      activeSession.id,
+      { matrixIds: [matrixId] }
     );
 
     return {
@@ -307,11 +302,17 @@ export const deleteMatrixInSessionWorkflow = async (
 //
 //-------------------------------------------------------------------------------------------------------------------
 
-export const fetchAllDataForSession = async (activeSessionId: string) => {
+export const fetchAllDataForSession = async (
+  activeSessionId: string,
+  matrixIds?: string[]
+) => {
   try {
     if (!activeSessionId) throw new Error("unable to get session");
     const enriched =
-      await IcarusDBAdapter.getSessionWithAllData(activeSessionId);
+      await IcarusDBAdapter.getSessionWithAllData(
+        activeSessionId,
+        matrixIds ? { matrixIds } : undefined
+      );
     if (!enriched) throw new Error(`Session ${activeSessionId} not found`);
     return enriched;
   } catch (error) {
@@ -343,16 +344,14 @@ export const saveNewStatisticalActivityInWorkflow = async (
   } = params;
 
   try {
-    // save matrix
-    const newMatrixId = await IcarusDBAdapter.saveMatrix({
+    const newMatrix: IcarusMatrix = {
       columns: outputColumnNames || [],
       data: outputData || [],
       id: `icarus-matrix-${uuidv4()}`,
       createdAt: Date.now(),
-    });
+    };
 
-    // save activity
-    const newActivityId = await IcarusDBAdapter.saveActivity({
+    const newActivity: IcarusActivity = {
       id: `icarus-activity-${uuidv4()}`,
       name: `statistical analysis--${action}`,
       sourceMatrixId: sourceMatrixId || activeSession?.matrices?.[0]?.id,
@@ -360,31 +359,26 @@ export const saveNewStatisticalActivityInWorkflow = async (
       inputMatrixReferences,
       inputParameters,
       outputColumnNames,
-      outputMatrixReference: newMatrixId,
+      outputMatrixReference: newMatrix.id,
       outputMetrics,
       pluginId: "statistical-engine",
       timestamp: Date.now(),
+    };
+
+    await IcarusDBAdapter.saveStatisticalResultGraph({
+      sessionId: activeSession.id,
+      matrix: newMatrix,
+      activity: newActivity,
     });
 
-    const activityIds = [...(activeSession.activityIds ?? []), newActivityId];
-
-    const matrixIds = [...(activeSession.matrixIds ?? []), newMatrixId];
-
-    // store Id references in session
-    await IcarusDBAdapter.updateSessionWorkflows({
-      sessionId: activeSession?.id,
-      activityIds,
-      matrixIds,
-    });
-
-    // fetch all filled session values back
     const sessionWithWorkflows = await fetchAllDataForSession(
-      activeSession?.id
+      activeSession.id,
+      [newMatrix.id]
     );
 
     return {
       sessionWithWorkflows,
-      matrixId: newMatrixId,
+      matrixId: newMatrix.id,
     };
   } catch (err) {
     throw new Error(`${err}`);
@@ -419,7 +413,7 @@ export const saveNewVisualizationActivityInWorkflow = async (
       sourceMatrixId ||
       activeSession?.matrices?.[0]?.id;
 
-    const newActivityId = await IcarusDBAdapter.saveActivity({
+    const newActivity: IcarusActivity = {
       id: `icarus-activity-${uuidv4()}`,
       name: `visualization--${visualizationType}`,
       sourceMatrixId: sourceMatrixId || matrixReference,
@@ -439,36 +433,34 @@ export const saveNewVisualizationActivityInWorkflow = async (
       },
       pluginId: "visualization-engine",
       timestamp: Date.now(),
-    });
+    };
 
-    const newVisualizationId = await IcarusDBAdapter.saveVisualization({
+    const newVisualization = {
       id: `icarus-visualization-${uuidv4()}`,
-      createdByActivityId: newActivityId,
+      createdByActivityId: newActivity.id,
       createdAt: Date.now(),
       sourceMatrixId: sourceMatrixId || matrixReference,
       renderer,
       visualizationType,
       title,
       data,
-    });
+    };
 
-    await IcarusDBAdapter.updateSessionWorkflows({
+    await IcarusDBAdapter.saveVisualizationResultGraph({
       sessionId: activeSession.id,
-      workflowIds: activeSession.workflowIds,
-      activityIds: [...(activeSession.activityIds ?? []), newActivityId],
-      matrixIds: activeSession.matrixIds,
-      visualizationIds: [
-        ...(activeSession.visualizationIds ?? []),
-        newVisualizationId,
-      ],
+      activity: newActivity,
+      visualization: newVisualization,
     });
 
-    const sessionWithWorkflows = await fetchAllDataForSession(activeSession.id);
+    const sessionWithWorkflows = await fetchAllDataForSession(
+      activeSession.id,
+      matrixReference ? [matrixReference] : undefined
+    );
 
     return {
       sessionWithWorkflows,
-      activityId: newActivityId,
-      visualizationId: newVisualizationId,
+      activityId: newActivity.id,
+      visualizationId: newVisualization.id,
     };
   } catch (err) {
     throw new Error(`unable to save visualization activity: ${String(err)}`);

@@ -23,3 +23,13 @@ export const activityFloatingButton = tv({
   },
 });
 
+export const mainViewStyles = tv({
+  slots: {
+    storageAlert:
+      "flex items-center justify-between gap-4 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100",
+    storageAlertDismiss:
+      "rounded px-2 py-1 font-medium hover:bg-amber-100 dark:hover:bg-amber-900",
+    matrixLoadState:
+      "flex h-full min-h-80 items-center justify-center text-sm text-gray-500 dark:text-gray-400",
+  },
+});

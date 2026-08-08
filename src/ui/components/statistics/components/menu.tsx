@@ -362,6 +362,14 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
     allColumnarData,
   });
 
+  const runMenuAction = (result: Parameters<typeof onMenuAction>[0]) => {
+    void Promise.resolve(onMenuAction(result)).catch((error) => {
+      // Persistence errors are also surfaced by the session-level warning.
+      // Catch here to avoid an unhandled rejection from the modal callback.
+      console.error("Unable to save statistical result", error);
+    });
+  };
+
   const handleButtonClick = (item: StatisticsMenuItem) => {
     let newOpenDropdownId = null;
 
@@ -380,7 +388,7 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
       // call the handling of menu selection
       handleMenuSelection(item.id, (result) => {
         // emit the selection result values
-        onMenuAction(result);
+        runMenuAction(result);
       });
     }
   };
@@ -389,7 +397,7 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
     setOpenDropdownId(null);
     handleMenuSelection(actionId, (result) => {
       // emit the selection result values
-      onMenuAction(result);
+      runMenuAction(result);
     });
   };
 

@@ -14,6 +14,14 @@ export interface IcarusMatrix {
   columns: TableColumns;
   data: TableMatrices;
   createdByFirstActivity?: boolean;
+  /** Number of rows persisted for the matrix, available without loading data. */
+  rowCount?: number;
+  /** Number of columns persisted for the matrix, available without loading data. */
+  columnCount?: number;
+  /** Distinguishes a lightweight session entry from a hydrated matrix. */
+  payloadState?: "metadata" | "loaded";
+  /** Storage encoding used by the persistence adapter. */
+  storageFormat?: "legacy-object" | "columnar-chunks-v1";
 }
 
 export interface IMapMatrixData {

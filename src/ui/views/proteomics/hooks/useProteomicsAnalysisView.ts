@@ -1,7 +1,15 @@
-import { useIntensityDist } from "@/app-layer/proteins/useIntensityDist";
-import { useProteomicsStats } from "@/app-layer/proteins/useProteinStats";
-import { useVolcanoData } from "@/app-layer/proteins/useVolcanoStats";
+import { useEffect, useState } from "react";
+import {
+  computeProteomicsSummaryInWorker,
+} from "@/app-layer/proteins/proteomics-summary/proteomics-summary-client";
+import type { ProteomicsSummary } from "@/domain/proteins/index.types";
 import { ProteomicsAnalysisHomeViewProps } from "@/ui/views/proteomics/types/index.types";
+
+const EMPTY_SUMMARY: ProteomicsSummary = {
+  stats: null,
+  intensityDist: [],
+  volcanoData: [],
+};
 
 export const useProteomicsAnalysisView = ({
   originalDataColumns,
@@ -10,13 +18,30 @@ export const useProteomicsAnalysisView = ({
   ProteomicsAnalysisHomeViewProps,
   "originalDataColumns" | "originalDataRows"
 >) => {
-  const stats = useProteomicsStats(originalDataRows, originalDataColumns);
-  const volcanoData = useVolcanoData(originalDataRows);
-  const intensityDist = useIntensityDist(originalDataRows, originalDataColumns);
+  const [summary, setSummary] = useState<ProteomicsSummary>(EMPTY_SUMMARY);
 
-  return {
-    intensityDist,
-    stats,
-    volcanoData,
-  };
+  useEffect(() => {
+    let cancelled = false;
+    if (!originalDataRows.length) {
+      setSummary(EMPTY_SUMMARY);
+      return;
+    }
+
+    computeProteomicsSummaryInWorker(originalDataRows, originalDataColumns)
+      .then((result) => {
+        if (!cancelled) setSummary(result);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          console.error("Unable to calculate proteomics summary", error);
+          setSummary(EMPTY_SUMMARY);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [originalDataColumns, originalDataRows]);
+
+  return summary;
 };
