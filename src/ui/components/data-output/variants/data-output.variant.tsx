@@ -43,8 +43,8 @@ export const dataOutputStyles = tv({
     tableHeadCellBoolean: "cursor-pointer hover:bg-red-100 transition-colors duration-200 dark:hover:bg-red-950/40",
 
     // styles for the analysis instructions component
-    missingValue: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300",
-    invalidValue: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
+    missingValue: "bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-300",
+    invalidValue: "bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300",
     validValue: "bg-green-50 dark:bg-green-950/30",
     stringValue: "bg-yellow-50 dark:bg-yellow-950/30",
     booleanValue: "bg-red-50 dark:bg-red-950/30",
