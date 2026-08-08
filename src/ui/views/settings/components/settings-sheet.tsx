@@ -155,14 +155,14 @@ const SettingsSheet = ({
         <section className={panel.section()}>
           <h3 className={panel.sectionTitle()}>Local data storage</h3>
           {storageEstimate ? (
-            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
-              <div className="flex justify-between gap-4">
+            <div className={panel.storageDetails()}>
+              <div className={panel.storageUsage()}>
                 <span>{formatStorageBytes(storageEstimate.usage)} used</span>
                 <span>{formatStorageBytes(storageEstimate.quota)} quota</span>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+              <div className={panel.storageTrack()}>
                 <div
-                  className="h-full rounded-full bg-blue-600 transition-[width]"
+                  className={panel.storageProgress()}
                   style={{
                     width: `${Math.min(100, storageEstimate.percentUsed)}%`,
                   }}
@@ -178,7 +178,7 @@ const SettingsSheet = ({
               </p>
             </div>
           ) : (
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className={panel.storageUnavailable()}>
               Storage usage is unavailable in this environment.
             </p>
           )}

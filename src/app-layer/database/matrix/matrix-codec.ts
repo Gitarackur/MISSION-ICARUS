@@ -50,7 +50,7 @@ class MatrixCodec {
   private getWorker() {
     if (this.worker) return this.worker;
 
-    const worker = new Worker(new URL("./matrix-codec.worker.ts", import.meta.url), {
+    const worker = new Worker(new URL("../workers/matrix-codec.worker.ts", import.meta.url), {
       type: "module",
     });
     worker.onmessage = (event: MessageEvent<MatrixCodecWorkerResponse>) => {

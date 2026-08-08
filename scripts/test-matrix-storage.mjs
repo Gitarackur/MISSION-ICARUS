@@ -5,7 +5,10 @@ import { build } from "esbuild";
 const bundle = await build({
   entryPoints: [
     fileURLToPath(
-      new URL("../src/app-layer/database/matrix-storage.ts", import.meta.url)
+      new URL(
+        "../src/app-layer/database/matrix/matrix-storage.ts",
+        import.meta.url
+      )
     ),
   ],
   bundle: true,

@@ -200,7 +200,7 @@ const ExportSheet = ({
 
         <div className={styles.actionRow()}>
           {exportError && (
-            <p role="alert" className="text-sm text-red-600 dark:text-red-300">
+            <p role="alert" className={styles.error()}>
               {exportError}
             </p>
           )}

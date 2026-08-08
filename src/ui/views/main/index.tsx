@@ -17,8 +17,10 @@ import type {
 } from "@/app-layer/database/deletion";
 import { formatStorageBytes } from "@/app-layer/database/health/storage-health";
 import { STORAGE_WARNING_PERCENT } from "@/domain/storage/constants";
+import { mainViewStyles } from "./variants/main.variants";
 
 const IcarusApp: React.FC = () => {
+  const styles = mainViewStyles();
   const {
     activeMatrix,
     activeMatrixId,
@@ -165,7 +167,7 @@ const IcarusApp: React.FC = () => {
       {(operationError || hasStoragePressure) && (
         <div
           role="alert"
-          className="flex items-center justify-between gap-4 border-b border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-950 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100"
+          className={styles.storageAlert()}
         >
           <span>
             {operationError ??
@@ -178,7 +180,7 @@ const IcarusApp: React.FC = () => {
           {operationError && (
             <button
               type="button"
-              className="rounded px-2 py-1 font-medium hover:bg-amber-100 dark:hover:bg-amber-900"
+              className={styles.storageAlertDismiss()}
               onClick={() => setOperationError(null)}
             >
               Dismiss
@@ -233,7 +235,7 @@ const IcarusApp: React.FC = () => {
             />
           </>
         ) : activeSession ? (
-          <div className="flex h-full min-h-80 items-center justify-center text-sm text-gray-500 dark:text-gray-400">
+          <div className={styles.matrixLoadState()}>
             {isProcessing || isPreparingMatrixView
               ? "Loading matrix data…"
               : "This session does not contain a loadable matrix."}

@@ -6,7 +6,7 @@ const bundle = await build({
   entryPoints: [
     fileURLToPath(
       new URL(
-        "../src/app-layer/proteins/proteomics-summary.ts",
+        "../src/app-layer/proteins/proteomics-summary/proteomics-summary.ts",
         import.meta.url
       )
     ),

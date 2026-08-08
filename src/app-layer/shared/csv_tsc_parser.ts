@@ -517,7 +517,7 @@ class IcarusParser {
 const parser = new IcarusParser();
 
 function parseCSVFileInWorker<T>(file: File): Promise<ParsedCSVResult<T>> {
-  const worker = new Worker(new URL("./csv-parser.worker.ts", import.meta.url), {
+  const worker = new Worker(new URL("./workers/csv-parser.worker.ts", import.meta.url), {
     type: "module",
   });
 
