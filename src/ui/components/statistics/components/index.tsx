@@ -1438,6 +1438,7 @@ export const FilterByValue = ({
         outputParameters: {
           columns: selectedDataSets,
           calculationMethod: "filter_by_value",
+          granularity: "matrix-transform",
           resultType: "filtered_data",
           metadata: {
             calculationTimestamp: new Date().toISOString(),

@@ -256,7 +256,8 @@ assert.ok(totalVar > 0, "PCA explained variance nonzero");
 assert.ok(pca.explained_variance[0] / totalVar > 0.99, "PC1 dominates linear data");
 checks += 2;
 
-// New row-aligned actions extend the active matrix with their derived columns.
+// Row-aligned results extend the active matrix; aggregates and matrix
+// transforms remain standalone regardless of coincidental output dimensions.
 const sourceMatrix = {
   id: "source",
   createdAt: 1,
@@ -273,6 +274,7 @@ const selectedMatrix = new Map([
 ]);
 
 const zResult = engine.runStatisticalAnalysis("z", selectedMatrix);
+assert.equal(zResult.outputParameters.granularity, "row-aligned");
 const extendedZ = engine.composeStatisticalOutputMatrix(zResult, sourceMatrix);
 assert.deepEqual(extendedZ.columns, ["id", "a", "b", "a_z", "b_z"]);
 assert.equal(extendedZ.data.length, sourceMatrix.data.length);
@@ -319,6 +321,88 @@ assert.ok(
   "pμ output is row-aligned with the source matrix"
 );
 
+const normalizationResult = engine.runStatisticalAnalysis(
+  "normalization",
+  selectedMatrix
+);
+const extendedNormalization = engine.composeStatisticalOutputMatrix(
+  normalizationResult,
+  sourceMatrix
+);
+assert.equal(normalizationResult.outputParameters.granularity, "row-aligned");
+assert.equal(extendedNormalization.extendsSourceMatrix, true);
+assert.deepEqual(extendedNormalization.columns, [
+  "id",
+  "a",
+  "b",
+  "a_normalized",
+  "b_normalized",
+]);
+
+const oneDimensionalResult = engine.runStatisticalAnalysis(
+  "1d-normalize",
+  selectedMatrix
+);
+const extendedOneDimensional = engine.composeStatisticalOutputMatrix(
+  oneDimensionalResult,
+  sourceMatrix
+);
+assert.deepEqual(oneDimensionalResult.newly_created_columns, ["a_1d", "b_1d"]);
+assert.ok(
+  oneDimensionalResult.data.every(
+    (row) => row.length === oneDimensionalResult.newly_created_columns.length
+  ),
+  "row-aligned results contain only their derived columns"
+);
+assert.equal(extendedOneDimensional.extendsSourceMatrix, true);
+
+const oneRowSource = {
+  id: "one-row-source",
+  createdAt: 2,
+  columns: ["id", "a", "b"],
+  data: [["r1", 1, 3]],
+};
+const oneRowSelection = new Map([
+  ["a", [1]],
+  ["b", [3]],
+]);
+const aggregateMean = engine.runStatisticalAnalysis("mean", oneRowSelection);
+const standaloneMean = engine.composeStatisticalOutputMatrix(
+  aggregateMean,
+  oneRowSource
+);
+assert.equal(aggregateMean.outputParameters.granularity, "aggregate");
+assert.equal(
+  standaloneMean.extendsSourceMatrix,
+  false,
+  "aggregate output does not extend even when its single row matches the source"
+);
+
+const sortedResult = engine.runStatisticalAnalysis("sort-asc", selectedMatrix);
+const standaloneSort = engine.composeStatisticalOutputMatrix(
+  sortedResult,
+  sourceMatrix
+);
+assert.equal(sortedResult.outputParameters.granularity, "matrix-transform");
+assert.equal(
+  standaloneSort.extendsSourceMatrix,
+  false,
+  "a full-size matrix transform is not appended to the source rows"
+);
+
+const incompleteRowAlignedResult = {
+  ...zResult,
+  data: zResult.data.slice(0, 2),
+};
+assert.equal(
+  engine.composeStatisticalOutputMatrix(
+    incompleteRowAlignedResult,
+    sourceMatrix
+  ).extendsSourceMatrix,
+  false,
+  "a limited row-aligned result cannot extend the full source matrix"
+);
+
 const originalConsoleError = console.error;
 try {
   console.error = () => {};
@@ -337,7 +421,7 @@ try {
 } finally {
   console.error = originalConsoleError;
 }
-checks += 13;
+checks += 25;
 
 // ---------------------------------------------------------------------------
 // 8. Multiple-testing correction (BH + Bonferroni) & batch LIMMA

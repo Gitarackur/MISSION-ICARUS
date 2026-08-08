@@ -1,25 +1,11 @@
 import type {
-  StatisticalAction,
+  ComposedStatisticalMatrix,
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
 import type {
   IcarusMatrix,
   TableColumns,
-  TableMatrices,
 } from "@/domain/workflow/main.types";
-
-const MATRIX_EXTENDING_ACTIONS: ReadonlySet<StatisticalAction> = new Set([
-  "z",
-  "2d",
-  "pm",
-]);
-
-type ComposedStatisticalMatrix = {
-  columns: TableColumns;
-  data: TableMatrices;
-  derivedColumns: TableColumns;
-  extendsSourceMatrix: boolean;
-};
 
 const uniqueDerivedColumns = (
   sourceColumns: TableColumns,
@@ -47,35 +33,26 @@ export const composeStatisticalOutputMatrix = (
 ): ComposedStatisticalMatrix => {
   const derivedColumns = result.newly_created_columns;
   const derivedData = result.data;
+  const hasOneResultPerSourceRow =
+    sourceMatrix !== undefined &&
+    result.inputParameters.rowCount === sourceMatrix.data.length &&
+    derivedData.length === sourceMatrix.data.length;
+  const hasValidColumnShape = derivedData.every(
+    (row) => row.length === derivedColumns.length
+  );
+  const shouldExtend =
+    result.outputParameters.granularity === "row-aligned" &&
+    hasOneResultPerSourceRow &&
+    hasValidColumnShape &&
+    derivedColumns.length > 0;
 
-  if (!MATRIX_EXTENDING_ACTIONS.has(result.inputParameters.action)) {
+  if (!shouldExtend || !sourceMatrix) {
     return {
       columns: derivedColumns,
       data: derivedData,
       derivedColumns,
       extendsSourceMatrix: false,
     };
-  }
-
-  if (!sourceMatrix) {
-    throw new Error(
-      `Cannot extend the matrix for '${result.inputParameters.action}' without a source matrix`
-    );
-  }
-
-  if (derivedData.length !== sourceMatrix.data.length) {
-    throw new Error(
-      `Cannot extend matrix: statistical result has ${derivedData.length} rows but the source matrix has ${sourceMatrix.data.length}`
-    );
-  }
-
-  const invalidRow = derivedData.findIndex(
-    (row) => row.length !== derivedColumns.length
-  );
-  if (invalidRow !== -1) {
-    throw new Error(
-      `Cannot extend matrix: result row ${invalidRow + 1} has ${derivedData[invalidRow].length} values for ${derivedColumns.length} columns`
-    );
   }
 
   const appendedColumns = uniqueDerivedColumns(
