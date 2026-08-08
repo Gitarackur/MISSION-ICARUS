@@ -10,6 +10,7 @@ import {
   type MissingFilterMode,
   type OutlierFilterMethod,
   PTMAnnotation,
+  type StatisticalResultGranularity,
 } from "@/domain/statistics/index.types";
 import {
   correctForPurity,
@@ -119,6 +120,7 @@ export const runStatisticalAnalysis = (
       outputParameters: {
         columns: [],
         calculationMethod: action,
+        granularity: "aggregate",
         resultType: "empty",
         metadata: { error: "No numeric data to process" },
       },
@@ -132,6 +134,7 @@ export const runStatisticalAnalysis = (
   let newColumnNames: string[] = [];
   const calculationMethod = action;
   let inputParametersMetadata: Record<string, unknown> = {};
+  let resultGranularity: StatisticalResultGranularity = "aggregate";
 
   switch (action) {
     case "mean-values":
@@ -213,12 +216,14 @@ export const runStatisticalAnalysis = (
       break;
     }
     case "normalization": {
+      resultGranularity = "row-aligned";
       results = normalization(numericData);
       newColumnNames = numericColumns.map((col) => `${col}_normalized`);
       break;
     }
 
     case "impute-mean": {
+      resultGranularity = "row-aligned";
       // Impute each selected numeric column independently with its own mean
       const imputed = numericData.map((col) => imputeMeanColumn(col));
 
@@ -231,6 +236,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "impute-median": {
+      resultGranularity = "row-aligned";
       const imputedMedian = numericData.map((col) => imputeMedianColumn(col));
       results = imputedMedian;
       newColumnNames = numericColumns.map((c) => `${c}_imputed_median`);
@@ -238,6 +244,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "impute-knn": {
+      resultGranularity = "row-aligned";
       // If there are fewer than 2 selected columns we can't do KNN
       if (numericData.length < 2) {
         throw new Error(
@@ -272,6 +279,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "impute-zero": {
+      resultGranularity = "row-aligned";
       const imputedZero = numericData.map((col) => imputeZeroColumn(col));
       results = imputedZero;
       newColumnNames = numericColumns.map((c) => `${c}_imputed_zero`);
@@ -279,6 +287,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "moving-average": {
+      resultGranularity = "row-aligned";
       // Extract window size from data if it's a Map
       let windowSize = 5; // default
 
@@ -298,6 +307,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "rolling-stddev": {
+      resultGranularity = "row-aligned";
       // Extract window size from data if it's a Map
       let rollingWindowSize = 5; // default
 
@@ -379,6 +389,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "limma": {
+      resultGranularity = "row-aligned";
       // The UI sends the selected columns unchanged plus explicit group
       // membership via shared metadata-key constants (see
       // app-layer/statistics/constants.ts), so we never rely on a
@@ -446,6 +457,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "normalize-reporter-ions": {
+      resultGranularity = "row-aligned";
       try {
         if (numericData.length === 0) {
           throw new Error("No reporter ion data available for normalization");
@@ -467,6 +479,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "correct-for-purity": {
+      resultGranularity = "row-aligned";
       try {
         if (numericData.length === 0) {
           throw new Error(
@@ -486,12 +499,14 @@ export const runStatisticalAnalysis = (
     }
 
     case "box-plot": {
+      resultGranularity = "visualization";
       results = numericData;
       newColumnNames = numericColumns;
       break;
     }
 
     case "scatter-plot": {
+      resultGranularity = "visualization";
       if (numericData.length < 2) {
         throw new Error("Scatter plot requires at least two numeric columns");
       }
@@ -501,6 +516,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "heatmap": {
+      resultGranularity = "visualization";
       if (numericData.length < 2) {
         throw new Error("Heatmap requires at least two numeric columns");
       }
@@ -515,6 +531,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "volcano-plot": {
+      resultGranularity = "visualization";
       if (numericData.length < 2) {
         throw new Error(
           "Volcano plot requires fold-change and p-value columns",
@@ -527,6 +544,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "pca-plot": {
+      resultGranularity = "visualization";
       if (numericData.length < 2) {
         throw new Error("PCA plot requires at least two numeric columns");
       }
@@ -538,6 +556,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "sort-asc": {
+      resultGranularity = "matrix-transform";
       try {
         const sortResult = sortDataByColumn(numericData, 0, "asc");
         results = sortResult.sortedData;
@@ -550,6 +569,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "sort-desc": {
+      resultGranularity = "matrix-transform";
       try {
         const sortResult = sortDataByColumn(numericData, 0, "desc");
         results = sortResult.sortedData;
@@ -562,6 +582,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "transpose": {
+      resultGranularity = "matrix-transform";
       try {
         const transposed = transposeData(numericData);
         results = transposed;
@@ -577,6 +598,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "reorder-columns": {
+      resultGranularity = "matrix-transform";
       try {
         const reverseOrder = Array.from(
           { length: numericData.length },
@@ -593,6 +615,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "filter-columns-by-name": {
+      resultGranularity = "matrix-transform";
       try {
         const pattern = parseStringMetadata(data, "__pattern__", "");
         const rawMatch = parseStringMetadata(data, "__match_type__", "contains");
@@ -623,6 +646,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "filter-columns-by-type": {
+      resultGranularity = "matrix-transform";
       try {
         const rawType = parseStringMetadata(data, "__type__", "numeric");
         const targetType =
@@ -650,6 +674,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "pca-learning": {
+      resultGranularity = "row-aligned";
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for PCA");
@@ -680,7 +705,7 @@ export const runStatisticalAnalysis = (
         );
 
         newColumnNames = Array.from(
-          { length: numComponents },
+          { length: pcaResult.num_components },
           (_, i) => `PC${i + 1}`,
         );
         break;
@@ -691,6 +716,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "plsda-learning": {
+      resultGranularity = "row-aligned";
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for PLS-DA");
@@ -717,7 +743,7 @@ export const runStatisticalAnalysis = (
         const plsdaResult = performPLSDA(numericData, labels, numComponents);
         results = plsdaResult.transformed_data;
         newColumnNames = Array.from(
-          { length: numComponents },
+          { length: plsdaResult.num_components },
           (_, i) => `LV${i + 1}`,
         );
 
@@ -729,6 +755,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "tsne-learning": {
+      resultGranularity = "row-aligned";
       const numDimensions = parseNumberMetadata(data, "__num_dimensions__", 2);
       const perplexity = parseNumberMetadata(data, "__perplexity__", 30);
       const iterations = parseNumberMetadata(data, "__iterations__", 1000);
@@ -747,6 +774,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "add-ptm": {
+      resultGranularity = "row-aligned";
       try {
         // Check if data is a Map
         if (!(data instanceof Map)) {
@@ -784,6 +812,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "remove-ptm": {
+      resultGranularity = "row-aligned";
       try {
         // Check if data is a Map
         if (!(data instanceof Map)) {
@@ -819,6 +848,7 @@ export const runStatisticalAnalysis = (
 
     case "k-means-clustering":
     case "k-means-clustering-run": {
+      resultGranularity = "row-aligned";
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for K-Means");
@@ -852,6 +882,7 @@ export const runStatisticalAnalysis = (
 
     case "hierarchical-clustering":
     case "hierarchical-clustering-run": {
+      resultGranularity = "row-aligned";
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for Hierarchical Clustering");
@@ -883,6 +914,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "pca-analysis": {
+      resultGranularity = "row-aligned";
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for PCA Clustering");
@@ -914,7 +946,7 @@ export const runStatisticalAnalysis = (
 
         results = pcaResult.transformedData;
         newColumnNames = Array.from(
-          { length: numComponents },
+          { length: pcaResult.transformedData.length },
           (_, i) => `PC${i + 1}`,
         );
 
@@ -931,6 +963,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "z-score-norm": {
+      resultGranularity = "row-aligned";
       try {
         const normalizedData = zScoreNormalization(numericData);
         results = normalizedData;
@@ -943,6 +976,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "z": {
+      resultGranularity = "row-aligned";
       try {
         const zTransformed = zScoreNormalization(numericData);
         results = zTransformed;
@@ -955,6 +989,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "2d": {
+      resultGranularity = "row-aligned";
       try {
         if (numericData.length < 2) {
           throw new Error("2D requires at least two numeric columns");
@@ -974,6 +1009,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "pm": {
+      resultGranularity = "row-aligned";
       try {
         if (numericData.length < 2) {
           throw new Error("pμ requires at least two numeric columns");
@@ -1012,6 +1048,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "log-transform": {
+      resultGranularity = "row-aligned";
       try {
         if (!(data instanceof Map)) {
           throw new Error("Invalid data format for Log Transform");
@@ -1044,6 +1081,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "quantile-normalization": {
+      resultGranularity = "row-aligned";
       try {
         const normalizedData = quantileNormalization(numericData);
         results = normalizedData;
@@ -1056,6 +1094,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "mean-centering": {
+      resultGranularity = "row-aligned";
       try {
         const normalizedData = meanCenteringNormalization(numericData);
         results = normalizedData;
@@ -1068,6 +1107,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "fx-expression": {
+      resultGranularity = "row-aligned";
       const expression = parseStringMetadata(data, "__expression__", "");
       const target = parseStringMetadata(data, "__column__", "");
       const targetIndex = numericColumns.indexOf(target);
@@ -1078,12 +1118,13 @@ export const runStatisticalAnalysis = (
         numericData[targetIndex],
         expression
       );
-      results = numericData.map((col) => [...col]).concat([evaluated]);
-      newColumnNames = [...numericColumns, `${target}_f`];
+      results = [evaluated];
+      newColumnNames = [`${target}_f`];
       break;
     }
 
     case "fx-linear": {
+      resultGranularity = "row-aligned";
       const a = parseNumberMetadata(data, "__factor_a__", 1);
       const b = parseNumberMetadata(data, "__factor_b__", 0);
       const target = parseStringMetadata(data, "__column__", "");
@@ -1092,36 +1133,40 @@ export const runStatisticalAnalysis = (
         throw new Error(`Column '${target}' not found in selected columns`);
       }
       const mapped = fxLinear(numericData[targetIndex], a, b);
-      results = numericData.map((col) => [...col]).concat([mapped]);
-      newColumnNames = [...numericColumns, `${target}_linear`];
+      results = [mapped];
+      newColumnNames = [`${target}_linear`];
       break;
     }
 
     case "1d-normalize": {
+      resultGranularity = "row-aligned";
       const normalized = numericData.map((col) => normalize1D(col));
-      results = numericData.map((col) => [...col]).concat(normalized);
+      results = normalized;
       newColumnNames = numericColumns.map((col) => `${col}_1d`);
       break;
     }
 
     case "1d-index": {
+      resultGranularity = "row-aligned";
       const length = numericData[0]?.length ?? 0;
       const index = index1D(length);
-      results = numericData.map((col) => [...col]).concat([index]);
-      newColumnNames = [...numericColumns, "index_1d"];
+      results = [index];
+      newColumnNames = ["index_1d"];
       break;
     }
 
     case "pi-multiply": {
+      resultGranularity = "row-aligned";
       const mapped = numericData.map((col) => multiplyByConstant(col, Math.PI));
-      results = numericData.map((col) => [...col]).concat(mapped);
+      results = mapped;
       newColumnNames = numericColumns.map((col) => `${col}_pi`);
       break;
     }
 
     case "pi-divide": {
+      resultGranularity = "row-aligned";
       const mapped = numericData.map((col) => divideConstantBy(col, Math.PI));
-      results = numericData.map((col) => [...col]).concat(mapped);
+      results = mapped;
       newColumnNames = numericColumns.map((col) => `${col}_div_pi`);
       break;
     }
@@ -1129,16 +1174,17 @@ export const runStatisticalAnalysis = (
     case "pj": {
       const mode = parseStringMetadata(data, "__pj_mode__", "pi-divide");
       if (mode === "pi-divide") {
+        resultGranularity = "row-aligned";
         const mapped = numericData.map((col) => divideConstantBy(col, Math.PI));
-        results = numericData.map((col) => [...col]).concat(mapped);
+        results = mapped;
         newColumnNames = numericColumns.map((col) => `${col}_div_pi`);
       } else if (mode === "clustering") {
+        resultGranularity = "row-aligned";
         const kmeansResult = performKMeans(numericData, 3);
-        results = numericData.map((col) => [...col]).concat([
-          kmeansResult.clusterAssignments,
-        ]);
-        newColumnNames = [...numericColumns, "Pj_Cluster_Assignment"];
+        results = [kmeansResult.clusterAssignments];
+        newColumnNames = ["Pj_Cluster_Assignment"];
       } else {
+        resultGranularity = "matrix-transform";
         results = numericData.map((col) => [...col]);
         newColumnNames = numericColumns;
       }
@@ -1238,6 +1284,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "filter-by-missing": {
+      resultGranularity = "matrix-transform";
       const mode: MissingFilterMode =
         parseStringMetadata(data, "__mode__", "with-missing") ===
         "without-missing"
@@ -1249,6 +1296,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "filter-by-range": {
+      resultGranularity = "matrix-transform";
       const minValue = parseNumberMetadata(data, "__min__", 0);
       const maxValue = parseNumberMetadata(data, "__max__", 100);
       results = filterRowsByRange(numericData, minValue, maxValue);
@@ -1257,6 +1305,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "filter-by-outlier": {
+      resultGranularity = "matrix-transform";
       const methodRaw = parseStringMetadata(data, "__method__", "iqr");
       const method: OutlierFilterMethod =
         methodRaw === "z-score" || methodRaw === "grubbs" ? methodRaw : "iqr";
@@ -1266,6 +1315,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "add-column": {
+      resultGranularity = "row-aligned";
       // Column values come from the "__values__" sentinel; otherwise empty.
       const rawValues = data instanceof Map ? data.get("__values__") : undefined;
       const newValues = Array.isArray(rawValues)
@@ -1273,12 +1323,13 @@ export const runStatisticalAnalysis = (
         : "empty";
       const newName = parseStringMetadata(data, "__new_name__", "__new_column__");
       const addResult = addColumn(numericData, newValues);
-      results = addResult.updatedData;
-      newColumnNames = [...numericColumns, newName];
+      results = [addResult.updatedData[addResult.newColumnIndex]];
+      newColumnNames = [newName];
       break;
     }
 
     case "delete-column": {
+      resultGranularity = "matrix-transform";
       const target = parseStringMetadata(data, "__column__", "");
       const targetIndex = numericColumns.indexOf(target);
       if (targetIndex === -1) {
@@ -1290,6 +1341,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "rename-column": {
+      resultGranularity = "matrix-transform";
       const oldName = parseStringMetadata(data, "__old_name__", "");
       const newName = parseStringMetadata(data, "__new_name__", "");
       const oldIndex = numericColumns.indexOf(oldName);
@@ -1307,6 +1359,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "fill-column": {
+      resultGranularity = "matrix-transform";
       const target = parseStringMetadata(data, "__column__", "");
       const value = parseNumberMetadata(data, "__value__", 0);
       const targetIndex = numericColumns.indexOf(target);
@@ -1319,6 +1372,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "add-row": {
+      resultGranularity = "matrix-transform";
       const rowValues =
         data instanceof Map && Array.isArray(data.get("__values__"))
           ? (data.get("__values__") as number[])
@@ -1333,6 +1387,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "delete-row": {
+      resultGranularity = "matrix-transform";
       const rawIndices =
         data instanceof Map ? data.get("__indices__") : undefined;
       const indices = Array.isArray(rawIndices)
@@ -1347,6 +1402,7 @@ export const runStatisticalAnalysis = (
     }
 
     case "rename-row": {
+      resultGranularity = "matrix-transform";
       const index = parseNumberMetadata(data, "__index__", -1);
       const label = parseStringMetadata(data, "__label__", "");
       if (index < 0 || !label) {
@@ -1386,6 +1442,7 @@ export const runStatisticalAnalysis = (
     outputParameters: {
       columns: newColumnNames,
       calculationMethod,
+      granularity: resultGranularity,
       resultType: "statistical_summary",
       metadata: {
         calculationTimestamp: new Date().toISOString(),

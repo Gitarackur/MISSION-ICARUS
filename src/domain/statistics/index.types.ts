@@ -152,6 +152,12 @@ export interface PCAClusteringResult {
   num_components: number;
 }
 
+export type StatisticalResultGranularity =
+  | "aggregate"
+  | "row-aligned"
+  | "matrix-transform"
+  | "visualization";
+
 // statistical analysis result
 export interface StatisticalAnalysisResult {
   inputParameters: {
@@ -165,6 +171,7 @@ export interface StatisticalAnalysisResult {
   outputParameters: {
     columns: string[];
     calculationMethod: StatisticalAction;
+    granularity: StatisticalResultGranularity;
     resultType: string;
     metadata?: Record<string, unknown>;
   };
@@ -406,3 +413,11 @@ export interface TTestResult {
   std1: number;
   std2: number;
 }
+
+// Composed statistical matrix type for extending source matrices
+export type ComposedStatisticalMatrix = {
+  columns: TableColumns;
+  data: TableMatrices;
+  derivedColumns: TableColumns;
+  extendsSourceMatrix: boolean;
+};
