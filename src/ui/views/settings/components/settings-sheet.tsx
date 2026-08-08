@@ -2,15 +2,13 @@ import { Monitor, Moon, Sun, RotateCcw, Save } from "lucide-react";
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import { Button } from "@/ui/design-system/Button";
 import { Checkbox } from "@/ui/design-system/Checkbox";
+import { SelectionCard } from "@/ui/design-system/SelectionCard";
 import SingleSelect from "@/ui/design-system/Select/select";
 import { useThemeMode } from "@/ui/theme/use-theme-mode";
 import { useAppSettings } from "@/ui/settings/use-app-settings";
 import { DELIMITER_LABELS, EXPORT_SCOPE_LABELS } from "@/ui/settings/settings.types";
 import { EXPORT_FORMAT_INFO, ExportFormat } from "@/app-layer/shared/exporter";
-import {
-  settingsPanelStyles,
-  themeSwatchStyles,
-} from "../variants/settings.variants";
+import { settingsPanelStyles } from "../variants/settings.variants";
 import { settingsButtonStyles } from "../variants/settings-buttons.variants";
 import type { CsvDelimiter, ExportScope } from "@/ui/settings/settings.types";
 import type { ThemeMode } from "@/ui/theme/types";
@@ -24,23 +22,24 @@ const THEME_OPTIONS = [
 
 const ThemeModeControl = () => {
   const { mode, setMode } = useThemeMode();
-  const s = themeSwatchStyles();
 
   return (
-    <div className={s.grid()}>
+    <div
+      className="grid grid-cols-3 gap-2"
+      role="group"
+      aria-label="Color theme"
+    >
       {THEME_OPTIONS.map((option) => {
-        const activeStyles = themeSwatchStyles({ active: mode === option.value });
         const Icon = option.icon;
         return (
-          <button
+          <SelectionCard
             key={option.value}
-            type="button"
             onClick={() => setMode(option.value as ThemeMode)}
-            className={activeStyles.swatch()}
-          >
-            <Icon className={activeStyles.icon()} />
-            <span className={activeStyles.label()}>{option.label}</span>
-          </button>
+            selected={mode === option.value}
+            align="center"
+            icon={<Icon />}
+            label={option.label}
+          />
         );
       })}
     </div>
