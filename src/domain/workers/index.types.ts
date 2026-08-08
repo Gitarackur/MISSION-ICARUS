@@ -21,22 +21,30 @@ export interface IdentifiedWorkerResponse<T> extends WorkerResponse<T> {
   id: number;
 }
 
-export interface PendingWorkerJob {
-  worker: Worker;
-  reject: (error: Error) => void;
-}
-
 export interface PendingWorkerRequest {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
+  operationName: string;
 }
 
-export interface WorkerRequestOptions<TRequest, TResult> {
+export interface WorkerRequestOptions<TRequest> {
   createWorker: () => Worker;
   request: TRequest;
-  fallback: () => TResult | Promise<TResult>;
   failureMessage: string;
+  operationName: string;
   timeoutMs?: number;
+}
+
+export type WorkerFailureCode =
+  | "WORKER_TIMEOUT"
+  | "WORKER_UNAVAILABLE"
+  | "WORKER_FAILED";
+
+export interface WorkerFailureNotice {
+  code: WorkerFailureCode;
+  message: string;
+  operationName: string;
+  occurredAt: number;
 }
 
 export type MatrixCodecWorkerRequest =

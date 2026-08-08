@@ -19,14 +19,21 @@ export const useProteomicsAnalysisView = ({
   "originalDataColumns" | "originalDataRows"
 >) => {
   const [summary, setSummary] = useState<ProteomicsSummary>(EMPTY_SUMMARY);
+  const [summaryError, setSummaryError] = useState<string | null>(null);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [summaryAttempt, setSummaryAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     if (!originalDataRows.length) {
       setSummary(EMPTY_SUMMARY);
+      setSummaryError(null);
+      setIsSummaryLoading(false);
       return;
     }
 
+    setSummaryError(null);
+    setIsSummaryLoading(true);
     computeProteomicsSummaryInWorker(originalDataRows, originalDataColumns)
       .then((result) => {
         if (!cancelled) setSummary(result);
@@ -35,13 +42,26 @@ export const useProteomicsAnalysisView = ({
         if (!cancelled) {
           console.error("Unable to calculate proteomics summary", error);
           setSummary(EMPTY_SUMMARY);
+          setSummaryError(
+            error instanceof Error
+              ? error.message
+              : "The proteomics summary could not be calculated. Try again."
+          );
         }
+      })
+      .finally(() => {
+        if (!cancelled) setIsSummaryLoading(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, [originalDataColumns, originalDataRows]);
+  }, [originalDataColumns, originalDataRows, summaryAttempt]);
 
-  return summary;
+  return {
+    ...summary,
+    isSummaryLoading,
+    retrySummary: () => setSummaryAttempt((attempt) => attempt + 1),
+    summaryError,
+  };
 };

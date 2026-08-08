@@ -4,11 +4,8 @@ import type {
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
 import type { TableMatrix } from "@/domain/workflow/main.types";
-import type {
-  StatisticalAnalysisWorkerRequest,
-} from "@/domain/workers/index.types";
+import type { StatisticalAnalysisWorkerRequest } from "@/domain/workers/index.types";
 import { runWorkerRequest } from "@/app-layer/shared/workers/worker-client";
-import { runStatisticalAnalysis } from "../utils/statistical-action-runner";
 
 export const runStatisticalAnalysisInWorker = (
   action: StatisticalAction,
@@ -22,7 +19,7 @@ export const runStatisticalAnalysisInWorker = (
         { type: "module" }
       ),
     request,
-    fallback: () => runStatisticalAnalysis(action, data),
     failureMessage: "Statistical analysis failed",
+    operationName: "Statistical analysis",
   });
 };
