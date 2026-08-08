@@ -2,7 +2,7 @@
   "name": "mission-icarus",
   "author": "Gitarackur--Peter",
   "private": true,
-  "version": "0.0.122",
+  "version": "0.0.123",
   "type": "module",
   "scripts": {
     "prepare:python:scripts": "cd assets/scripts/python && pipenv install --dev && pipenv run prepare",
