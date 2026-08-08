@@ -3,6 +3,8 @@ import { TableColumns, TableMatrices } from "@/domain/workflow/main.types";
 
 export type ColumnType = 'number' | 'boolean' | 'string' | 'unknown';
 
+export type CSVDelimiterCandidate = "," | "\t" | ";" | "|" | "whitespace";
+
 export interface ColumnTypeInferenceOptions {
   minValidPercentage?: number; // Minimum percentage of valid (non-missing) values required
   allowedMissingValues?: string[]; // Custom missing value representations
@@ -29,4 +31,3 @@ export interface DataRowsAndColumns {
   rows: ProteinRow[]; 
   columns: TableColumns
 }
-

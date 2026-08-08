@@ -1,14 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
+import { isMatrixPayloadLoaded } from "@/app-layer/database/matrix-storage";
+import { useStorageHealth } from "@/app-layer/database/use-storage-health";
 import type {
   DeletionPlan,
   SessionDeletionResult,
 } from "@/app-layer/database/deletion";
 import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
 
-import { reconstructFromMatrix } from "@/app-layer/shared/utils";
+import { reconstructMatrixView } from "@/app-layer/shared/matrix-view";
 import {
   generateActiveSessionWitNestedWorkflow,
   reconstructOriginalRowsAndColumnsFromSessionWorkflows,
@@ -36,9 +38,24 @@ export const useIcarusAppSession = () => {
   );
   const [activeMatrixId, setActiveMatrixId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isPreparingMatrixView, setIsPreparingMatrixView] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [operationError, setOperationError] = useState<string | null>(null);
   const isUploadingRef = useRef(false);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
+  const { storageEstimate, refreshStorageEstimate } = useStorageHealth();
+
+  const reportOperationError = useCallback(
+    (context: string, error: unknown) => {
+      console.error(context, error);
+      setOperationError(
+        error instanceof Error
+          ? error.message
+          : `${context}. Please retry the operation.`
+      );
+    },
+    []
+  );
 
   const matrices = useMemo(
     () =>
@@ -49,7 +66,11 @@ export const useIcarusAppSession = () => {
   );
 
   const activeMatrix = useMemo(
-    () => matrices.find((matrix) => matrix.id === activeMatrixId),
+    () =>
+      matrices.find(
+        (matrix) =>
+          matrix.id === activeMatrixId && isMatrixPayloadLoaded(matrix)
+      ),
     [activeMatrixId, matrices]
   );
 
@@ -60,6 +81,40 @@ export const useIcarusAppSession = () => {
 
   useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
 
+  // Session aggregates contain lightweight metadata for inactive matrices.
+  // Hydrate only the selected payload and merge it into the existing graph.
+  useEffect(() => {
+    if (!activeSession || !activeMatrixId) return;
+    const selected = activeSession.matrices.find(
+      (matrix) => matrix.id === activeMatrixId
+    );
+    if (!selected || isMatrixPayloadLoaded(selected)) return;
+
+    let cancelled = false;
+    setIsProcessing(true);
+    IcarusDBAdapter.getMatrixById(activeMatrixId)
+      .then((matrix) => {
+        if (cancelled || !matrix) return;
+        setActiveSession((current) => {
+          if (!current || current.id !== activeSession.id) return current;
+          return {
+            ...current,
+            matrices: current.matrices.map((entry) =>
+              entry.id === matrix.id ? matrix : entry
+            ),
+          };
+        });
+      })
+      .catch((error) => reportOperationError("Unable to load matrix", error))
+      .finally(() => {
+        if (!cancelled) setIsProcessing(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMatrixId, activeSession, reportOperationError]);
+
   useEffect(() => {
     const toggleSidebar = () => setShowSession((value) => !value);
     window.addEventListener("toggle:sidebar", toggleSidebar);
@@ -67,22 +122,36 @@ export const useIcarusAppSession = () => {
   }, []);
 
   useEffect(() => {
-    if (!activeMatrix || isProcessing) return;
-
-    try {
-      const result = reconstructFromMatrix({
-        columns: activeMatrix.columns as TableColumns,
-        rowsAs2dMatrix: activeMatrix.data,
-      });
-      if (!result) throw new Error("Unable to load matrix into preview table");
-
-      setOriginalDataRows(result.rows as ProteinRow[]);
-      setOriginalDataColumns(result.columns);
-      setSelectedDataColumns(result.columns);
-    } catch (error) {
-      console.error("Error reconstructing matrix:", error);
+    if (!activeMatrix) {
+      setIsPreparingMatrixView(false);
+      return;
     }
-  }, [activeMatrix, isProcessing]);
+
+    let cancelled = false;
+    setIsPreparingMatrixView(true);
+    setOriginalDataRows([]);
+    setOriginalDataColumns([]);
+    setSelectedDataColumns([]);
+    reconstructMatrixView(activeMatrix)
+      .then((result) => {
+        if (cancelled) return;
+        setOriginalDataRows(result.rows as ProteinRow[]);
+        setOriginalDataColumns(result.columns);
+        setSelectedDataColumns(result.columns);
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          reportOperationError("Unable to prepare matrix preview", error);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsPreparingMatrixView(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeMatrix, reportOperationError]);
 
   const handleSessionCreate = async ({ rows, columns, name }: BareSession) => {
     isUploadingRef.current = true;
@@ -94,7 +163,7 @@ export const useIcarusAppSession = () => {
       setActiveMatrixId(matrixId);
       setActiveSession(sessionWithWorkflows);
     } catch (error) {
-      console.error("Error creating session:", error);
+      reportOperationError("Error creating session", error);
     } finally {
       isUploadingRef.current = false;
       setIsProcessing(false);
@@ -104,16 +173,13 @@ export const useIcarusAppSession = () => {
   const handleSessionClick = async (session: IcarusSession) => {
     setIsProcessing(true);
     try {
-      const { sessionWithWorkflows } =
+      const { sessionWithWorkflows, matrixId } =
         await reconstructOriginalRowsAndColumnsFromSessionWorkflows(session.id);
-      const lastMatrix = [...(sessionWithWorkflows?.matrices ?? [])]
-        .sort((a, b) => a.createdAt - b.createdAt)
-        .slice(-1)[0];
 
-      setActiveMatrixId(lastMatrix?.id);
+      setActiveMatrixId(matrixId);
       setActiveSession(sessionWithWorkflows);
     } catch (error) {
-      console.error("Error handling session click:", error);
+      reportOperationError("Error opening session", error);
     } finally {
       setIsProcessing(false);
     }
@@ -136,10 +202,21 @@ export const useIcarusAppSession = () => {
   };
 
   const applyDeletionResult = (result: SessionDeletionResult) => {
-    setActiveSession(result.session);
+    const loadedById = new Map(
+      (activeSession?.matrices ?? [])
+        .filter(isMatrixPayloadLoaded)
+        .map((matrix) => [matrix.id, matrix])
+    );
+    const mergedSession = {
+      ...result.session,
+      matrices: result.session.matrices.map(
+        (matrix) => loadedById.get(matrix.id) ?? matrix
+      ),
+    };
+    setActiveSession(mergedSession);
 
     if (result.plan.matrixIds.includes(activeMatrixId ?? "")) {
-      const nextMatrix = [...result.session.matrices].sort(
+      const nextMatrix = [...mergedSession.matrices].sort(
         (a, b) => b.createdAt - a.createdAt
       )[0];
       setActiveMatrixId(nextMatrix?.id ?? null);
@@ -151,7 +228,7 @@ export const useIcarusAppSession = () => {
       }
     }
 
-    return result;
+    return { ...result, session: mergedSession };
   };
 
   const getMatrixDeletionPlan = (matrixId: string) =>
@@ -228,15 +305,21 @@ export const useIcarusAppSession = () => {
   ) => {
     if (!activeSession) throw new Error("active session not present");
 
-    const { sessionWithWorkflows, matrixId } =
-      await saveNewStatisticalActivityInWorkflow(activeSession, params);
+    try {
+      const { sessionWithWorkflows, matrixId } =
+        await saveNewStatisticalActivityInWorkflow(activeSession, params);
 
-    if (!sessionWithWorkflows) {
-      throw new Error("Failed to create session with workflows");
+      if (!sessionWithWorkflows) {
+        throw new Error("Failed to create session with workflows");
+      }
+
+      setActiveSession(sessionWithWorkflows);
+      setActiveMatrixId(matrixId);
+      await refreshStorageEstimate();
+    } catch (error) {
+      reportOperationError("Unable to save analysis", error);
+      throw error;
     }
-
-    setActiveSession(sessionWithWorkflows);
-    setActiveMatrixId(matrixId);
   };
 
   const saveVisualizationInWorkflow = async (
@@ -244,16 +327,29 @@ export const useIcarusAppSession = () => {
   ) => {
     if (!activeSession) throw new Error("active session not present");
 
-    const { sessionWithWorkflows, visualizationId } =
-      await saveNewVisualizationActivityInWorkflow(activeSession, params);
+    try {
+      const { sessionWithWorkflows, visualizationId } =
+        await saveNewVisualizationActivityInWorkflow(activeSession, params);
 
-    if (!sessionWithWorkflows) {
-      throw new Error("Failed to save visualization in session");
+      if (!sessionWithWorkflows) {
+        throw new Error("Failed to save visualization in session");
+      }
+
+      setActiveSession(sessionWithWorkflows);
+      await refreshStorageEstimate();
+      return { visualizationId };
+    } catch (error) {
+      reportOperationError("Unable to save visualization", error);
+      throw error;
     }
-
-    setActiveSession(sessionWithWorkflows);
-    return { visualizationId };
   };
+
+  const loadSessionForExport = useCallback(async () => {
+    if (!activeSession) return null;
+    return IcarusDBAdapter.getSessionWithAllData(activeSession.id, {
+      matrixPayloads: "all",
+    });
+  }, [activeSession]);
 
   return {
     activeMatrix,
@@ -269,8 +365,11 @@ export const useIcarusAppSession = () => {
     handleSessionClick,
     handleSessionCreate,
     isProcessing,
+    isPreparingMatrixView,
     isSheetOpen,
+    loadSessionForExport,
     matrices,
+    operationError,
     originalDataColumns,
     originalDataRows,
     saveActivityInWorkflow,
@@ -282,8 +381,10 @@ export const useIcarusAppSession = () => {
     setActiveSession,
     setIsProcessing,
     setIsSheetOpen,
+    setOperationError,
     setSelectedDataColumns,
     setShowSession,
     showSession,
+    storageEstimate,
   };
 };

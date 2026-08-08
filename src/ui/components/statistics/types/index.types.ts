@@ -15,7 +15,7 @@ export type StatisticsMenuDropdownItem = {
 };
 
 export interface StatisticsMenuProps {
-  onMenuAction: (result: StatisticalAnalysisResult) => void;
+  onMenuAction: (result: StatisticalAnalysisResult) => void | Promise<void>;
   dataRows: ProteinRow[];
   dataColumns: TableColumns;
   allColumnarData: Map<string, TableMatrix>;
@@ -26,7 +26,6 @@ export type ProteinDataPanelProps = {
   stats?: Stats;
   intensityDist?: { sample: string; meanIntensity: number; count: number }[];
 };
-
 
 
 

@@ -21,6 +21,8 @@
     "test:deletion": "node scripts/test-deletion-planner.mjs",
     "test:statistics-validation": "node scripts/test-statistics-validation.mjs",
     "test:renderer-workers": "node scripts/test-renderer-workers.mjs",
+    "test:matrix-storage": "node scripts/test-matrix-storage.mjs",
+    "test:proteomics-summary": "node scripts/test-proteomics-summary.mjs",
     "test:sql-deletion": "node scripts/run-electron-node.mjs scripts/test-sql-deletion.mjs",
     "preview": "vite preview",
     "migrate": "ts-node src/database/cli.ts migrate",

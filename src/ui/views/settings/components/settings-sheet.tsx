@@ -13,6 +13,7 @@ import { settingsButtonStyles } from "../variants/settings-buttons.variants";
 import type { CsvDelimiter, ExportScope } from "@/ui/settings/settings.types";
 import type { ThemeMode } from "@/ui/theme/types";
 import type { SettingsViewProps } from "../types/index.types";
+import { formatStorageBytes } from "@/app-layer/database/storage-health";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: Sun },
@@ -46,7 +47,11 @@ const ThemeModeControl = () => {
   );
 };
 
-const SettingsSheet = ({ isOpen, onClose }: SettingsViewProps) => {
+const SettingsSheet = ({
+  isOpen,
+  onClose,
+  storageEstimate,
+}: SettingsViewProps) => {
   const panel = settingsPanelStyles();
   const buttonStyles = settingsButtonStyles();
   const {
@@ -145,6 +150,38 @@ const SettingsSheet = ({ isOpen, onClose }: SettingsViewProps) => {
             <RotateCcw className={buttonStyles.icon()} />
             Reset to defaults
           </Button>
+        </section>
+
+        <section className={panel.section()}>
+          <h3 className={panel.sectionTitle()}>Local data storage</h3>
+          {storageEstimate ? (
+            <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300">
+              <div className="flex justify-between gap-4">
+                <span>{formatStorageBytes(storageEstimate.usage)} used</span>
+                <span>{formatStorageBytes(storageEstimate.quota)} quota</span>
+              </div>
+              <div className="h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-800">
+                <div
+                  className="h-full rounded-full bg-blue-600 transition-[width]"
+                  style={{
+                    width: `${Math.min(100, storageEstimate.percentUsed)}%`,
+                  }}
+                />
+              </div>
+              <p>
+                {storageEstimate.percentUsed.toFixed(1)}% used · Storage is {" "}
+                {storageEstimate.persisted === null
+                  ? "unreported"
+                  : storageEstimate.persisted
+                    ? "persistent"
+                    : "best-effort"}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Storage usage is unavailable in this environment.
+            </p>
+          )}
         </section>
 
         <section className={panel.actionRow()}>

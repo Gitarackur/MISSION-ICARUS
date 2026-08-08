@@ -48,6 +48,7 @@ const ExportSheet = ({
   rows,
   columns,
   session,
+  loadSession,
 }: ExportViewProps) => {
   const styles = exportSheetStyles();
   const {
@@ -60,6 +61,8 @@ const ExportSheet = ({
   const [format, setFormat] = useState<ExportFormat>(
     settings.defaultExportFormat
   );
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const availableFormats = useMemo<ExportFormat[]>(
     () => (scope === "session" ? ["json"] : EXPORT_FORMATS),
@@ -71,28 +74,41 @@ const ExportSheet = ({
 
   const hasData = (scope === "session" && !!session) || rows.length > 0;
 
-  const handleExport = () => {
-    if (scope === "session") {
-      if (!session) return;
-      const filename = `icarus-${toFilenameSlug(session.name || "session")}.json`;
-      downloadTextFile(
-        filename,
-        "application/json",
-        JSON.stringify(buildSessionExport(session), null, 2)
-      );
+  const handleExport = async () => {
+    setExportError(null);
+    setIsExporting(true);
+    try {
+      if (scope === "session") {
+        const exportSession = (await loadSession?.()) ?? session;
+        if (!exportSession) return;
+        const filename = `icarus-${toFilenameSlug(
+          exportSession.name || "session"
+        )}.json`;
+        downloadTextFile(
+          filename,
+          "application/json",
+          JSON.stringify(buildSessionExport(exportSession), null, 2)
+        );
+        onClose();
+        return;
+      }
+
+      if (rows.length === 0) return;
+
+      const file = serializeActiveMatrix(rows, columns, format, {
+        delimiter: settings.delimiter,
+        includeHeaders: settings.includeHeaders,
+        includeMetadataColumns: settings.includeMetadataColumns,
+      });
+      downloadTextFile(file.filename, file.mime, file.content);
       onClose();
-      return;
+    } catch (error) {
+      setExportError(
+        error instanceof Error ? error.message : "Unable to export this data"
+      );
+    } finally {
+      setIsExporting(false);
     }
-
-    if (rows.length === 0) return;
-
-    const file = serializeActiveMatrix(rows, columns, format, {
-      delimiter: settings.delimiter,
-      includeHeaders: settings.includeHeaders,
-      includeMetadataColumns: settings.includeMetadataColumns,
-    });
-    downloadTextFile(file.filename, file.mime, file.content);
-    onClose();
   };
 
   const scopeOptions = (
@@ -183,14 +199,23 @@ const ExportSheet = ({
         )}
 
         <div className={styles.actionRow()}>
+          {exportError && (
+            <p role="alert" className="text-sm text-red-600 dark:text-red-300">
+              {exportError}
+            </p>
+          )}
           <Button
             variant="primary"
             className={styles.exportButton()}
             onClick={handleExport}
-            disabled={!hasData}
+            disabled={!hasData || isExporting}
           >
             <Download className={styles.buttonIcon()} />
-            Export {scope === "session" ? "session" : `${rows.length} rows`}
+            {isExporting
+              ? "Preparing export…"
+              : `Export ${
+                  scope === "session" ? "session" : `${rows.length} rows`
+                }`}
           </Button>
         </div>
       </div>

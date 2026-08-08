@@ -2,14 +2,15 @@ import {
   ColumnType,
   ParsedCSVResult,
   ColumnTypeInferenceOptions,
+  CSVDelimiterCandidate,
 } from "@/domain/shared/index.types";
+import type { CSVParserWorkerResponse } from "@/domain/workers/index.types";
+import { LARGE_CSV_SINGLE_PARSER_THRESHOLD_BYTES } from "@/domain/workers/constants";
 import {
   parseLocalizedNumber,
   toNumberIfPossible,
 } from "@/domain/shared/number-parsing";
 import Papa, { ParseResult } from "papaparse";
-
-type Delimiter = "," | "\t" | ";" | "|" | "whitespace";
 
 const DEFAULT_MISSING_VALUES = [
   "N/A",
@@ -23,7 +24,13 @@ const DEFAULT_MISSING_VALUES = [
   "",
 ];
 
-const DELIMITER_CANDIDATES: Delimiter[] = [",", "\t", ";", "|", "whitespace"];
+const DELIMITER_CANDIDATES: CSVDelimiterCandidate[] = [
+  ",",
+  "\t",
+  ";",
+  "|",
+  "whitespace",
+];
 
 const normalizeText = (text: string) =>
   text
@@ -55,7 +62,7 @@ const splitWhitespaceLine = (line: string) =>
 
 const splitDelimitedLine = (
   line: string,
-  delimiter: Exclude<Delimiter, "whitespace">
+  delimiter: Exclude<CSVDelimiterCandidate, "whitespace">
 ) => {
   const values: string[] = [];
   let current = "";
@@ -91,7 +98,7 @@ const splitDelimitedLine = (
 
 const parseDelimitedRecords = (
   text: string,
-  delimiter: Exclude<Delimiter, "whitespace">
+  delimiter: Exclude<CSVDelimiterCandidate, "whitespace">
 ) => {
   const records: string[][] = [];
   let row: string[] = [];
@@ -142,7 +149,7 @@ const parseDelimitedRecords = (
   return records;
 };
 
-const detectDelimiter = (lines: string[]): Delimiter => {
+const detectDelimiter = (lines: string[]): CSVDelimiterCandidate => {
   const sampleLines = lines
     .map((line) => line.trim())
     .filter((line) => line.length > 0 && !isCommentLine(line))
@@ -152,7 +159,7 @@ const detectDelimiter = (lines: string[]): Delimiter => {
     return ",";
   }
 
-  let bestDelimiter: Delimiter = ",";
+  let bestDelimiter: CSVDelimiterCandidate = ",";
   let bestScore = -1;
 
   for (const delimiter of DELIMITER_CANDIDATES) {
@@ -412,11 +419,30 @@ class IcarusParser {
   parseCSVFromFileNative = async <T>(
     file: File
   ): Promise<ParsedCSVResult<T>> => {
+    if (typeof Worker !== "undefined") {
+      try {
+        return await parseCSVFileInWorker<T>(file);
+      } catch (error) {
+        console.warn("CSV parser worker unavailable; parsing locally", error);
+      }
+    }
+
     const text = await file.text();
     return this.parseCSVFromText<T>(text);
   };
 
   parseCSVFromText = <T>(csvText: string): ParsedCSVResult<T> => {
+    // Keeping two complete parse candidates doubles peak memory. The native
+    // parser handles Icarus' supported delimiters and quoting rules, so large
+    // files use it directly and retain Papa as a failure fallback.
+    if (csvText.length >= LARGE_CSV_SINGLE_PARSER_THRESHOLD_BYTES) {
+      try {
+        return parseNativeText<T>(csvText);
+      } catch {
+        return parsePapaText<T>(csvText);
+      }
+    }
+
     const attempts: ParsedCSVResult<T>[] = [];
     const failures: string[] = [];
 
@@ -490,6 +516,26 @@ class IcarusParser {
 
 const parser = new IcarusParser();
 
+function parseCSVFileInWorker<T>(file: File): Promise<ParsedCSVResult<T>> {
+  const worker = new Worker(new URL("./csv-parser.worker.ts", import.meta.url), {
+    type: "module",
+  });
+
+  return new Promise((resolve, reject) => {
+    worker.onmessage = (event: MessageEvent<CSVParserWorkerResponse<T>>) => {
+      worker.terminate();
+      if (event.data.ok && event.data.result) resolve(event.data.result);
+      else reject(new Error(event.data.error ?? "CSV parser worker failed"));
+    };
+    worker.onerror = (event) => {
+      worker.terminate();
+      reject(new Error(event.message || "CSV parser worker failed"));
+    };
+    worker.postMessage({ file });
+  });
+}
+
 export const parseCSVFromFile = parser.parseCSVFromFileNative;
+export const parseCSVFromText = parser.parseCSVFromText;
 export const parse2DArray = parser.parse2DArrayNative2;
 export const inferColumnTypes = parser.inferColumnTypes.bind(parser);

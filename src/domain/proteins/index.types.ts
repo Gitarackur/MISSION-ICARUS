@@ -1,3 +1,8 @@
+import type {
+  IntensityDistribution,
+  VolcanoPoint,
+} from "@/domain/visualization/index.types";
+
 // src/types/protein.ts
 export interface ProteinRow {
   id?: number;
@@ -28,3 +33,9 @@ export type Stats = {
   coefficientOfVariation: number;
   missingValues: number;
 } | null;
+
+export interface ProteomicsSummary {
+  stats: Stats;
+  intensityDist: IntensityDistribution;
+  volcanoData: VolcanoPoint[];
+}

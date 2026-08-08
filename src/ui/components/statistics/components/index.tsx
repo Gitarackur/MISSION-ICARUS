@@ -106,7 +106,7 @@ const ColumnAnalysisRunner = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     setError(null);
 
     if (selectedColumns.length < minSelections) {
@@ -123,7 +123,7 @@ const ColumnAnalysisRunner = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("The analysis failed. Please check the selected columns.");
@@ -220,7 +220,7 @@ export const Count = ({
     setSelectedDataSets(values);
   };
 
-  const runCountCalc = () => {
+  const runCountCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -246,7 +246,7 @@ export const Count = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -330,7 +330,7 @@ export const CountMissing = ({
     setSelectedDataSets(values);
   };
 
-  const runCountMissingCalc = () => {
+  const runCountMissingCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -358,7 +358,7 @@ export const CountMissing = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -443,7 +443,7 @@ export const CountValid = ({
     setSelectedDataSets(values);
   };
 
-  const runCountValidCalc = () => {
+  const runCountValidCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -471,7 +471,7 @@ export const CountValid = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -556,7 +556,7 @@ export const MeanValues = ({
     setSelectedDataSets(values);
   };
 
-  const runMeanCalc = () => {
+  const runMeanCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -582,7 +582,7 @@ export const MeanValues = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -667,7 +667,7 @@ export const MedianValues = ({
     setSelectedDataSets(values);
   };
 
-  const runMedianCalc = () => {
+  const runMedianCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -693,7 +693,7 @@ export const MedianValues = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -779,7 +779,7 @@ export const Variance = ({
     setSelectedDataSets(values);
   };
 
-  const runVarianceCalc = () => {
+  const runVarianceCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -807,7 +807,7 @@ export const Variance = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -893,7 +893,7 @@ export const StdDevValues = ({
     setSelectedDataSets(values);
   };
 
-  const runStdDevCalc = () => {
+  const runStdDevCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -921,7 +921,7 @@ export const StdDevValues = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -1007,7 +1007,7 @@ export const Sum = ({
     setSelectedDataSets(values);
   };
 
-  const runSumCalc = () => {
+  const runSumCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -1033,7 +1033,7 @@ export const Sum = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -1118,7 +1118,7 @@ export const Product = ({
     setSelectedDataSets(values);
   };
 
-  const runProductCalc = () => {
+  const runProductCalc = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -1146,7 +1146,7 @@ export const Product = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -1563,7 +1563,7 @@ export const FilterByMissing = ({
   const [mode, setMode] = useState<string>("with-missing");
   const [error, setError] = useState<string | null>(null);
 
-  const runFilter = () => {
+  const runFilter = async () => {
     setError(null);
 
     if (!selectedColumn) {
@@ -1585,7 +1585,7 @@ export const FilterByMissing = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Filter operation.");
@@ -1674,7 +1674,7 @@ export const FilterByRange = ({
   const [maxValue, setMaxValue] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const runFilter = () => {
+  const runFilter = async () => {
     setError(null);
 
     if (!selectedColumn) {
@@ -1710,7 +1710,7 @@ export const FilterByRange = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Filter operation.");
@@ -1812,7 +1812,7 @@ export const FilterByOutlier = ({
   const [method, setMethod] = useState<string>("iqr");
   const [error, setError] = useState<string | null>(null);
 
-  const runFilter = () => {
+  const runFilter = async () => {
     setError(null);
 
     if (!selectedColumn) {
@@ -1834,7 +1834,7 @@ export const FilterByOutlier = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Filter operation.");
@@ -1921,7 +1921,7 @@ export const AddColumn = ({
   const [newColumnName, setNewColumnName] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const runAddColumn = () => {
+  const runAddColumn = async () => {
     setError(null);
 
     if (numericColumns.length === 0) {
@@ -1951,7 +1951,7 @@ export const AddColumn = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while adding the column.");
@@ -2020,7 +2020,7 @@ export const RenameColumn = ({
   const [newName, setNewName] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const runRename = () => {
+  const runRename = async () => {
     setError(null);
 
     if (!oldName) {
@@ -2048,7 +2048,7 @@ export const RenameColumn = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while renaming the column.");
@@ -2135,7 +2135,7 @@ export const DeleteColumn = ({
   const [selectedColumn, setSelectedColumn] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const runDelete = () => {
+  const runDelete = async () => {
     setError(null);
 
     if (!selectedColumn) {
@@ -2165,7 +2165,7 @@ export const DeleteColumn = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while deleting the column.");
@@ -2240,7 +2240,7 @@ export const FillColumn = ({
   const [fillValue, setFillValue] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
 
-  const runFill = () => {
+  const runFill = async () => {
     setError(null);
 
     if (!selectedColumn) {
@@ -2272,7 +2272,7 @@ export const FillColumn = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while filling the column.");
@@ -2368,7 +2368,7 @@ export const ImputeMean = ({
     setSelectedDataSets(values);
   };
 
-  const runImputation = () => {
+  const runImputation = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -2394,7 +2394,7 @@ export const ImputeMean = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -2467,7 +2467,7 @@ export const ImputeMedian = ({
     setSelectedDataSets(values);
   };
 
-  const runImputation = () => {
+  const runImputation = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -2494,7 +2494,7 @@ export const ImputeMedian = ({
       }
 
       // Trigger engine (ensure actionId maps to your engine's 'impute-median' case)
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError(
@@ -2576,7 +2576,7 @@ export const ImputeKnn = ({
     setSelectedDataSets(values);
   };
 
-  const runImputation = () => {
+  const runImputation = async () => {
     setError(null);
 
     if (selectedDataSets.length < 2) {
@@ -2610,7 +2610,7 @@ export const ImputeKnn = ({
       // Example (only if your engine supports it):
       // filteredData.set(`__knn_k__=${k}`, [] as unknown as TableMatrix);
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the KNN imputation. Please check your data.");
@@ -2702,7 +2702,7 @@ export const ImputeZero = ({
     setSelectedDataSets(values);
   };
 
-  const runImputation = () => {
+  const runImputation = async () => {
     setError(null);
 
     if (selectedDataSets.length === 0) {
@@ -2729,7 +2729,7 @@ export const ImputeZero = ({
       }
 
       // Trigger the engine (ensure actionId maps to your 'impute-zero' case)
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during Zero imputation. Please check your data.");
@@ -2799,7 +2799,7 @@ export const MovingAverage: React.FC<{
     setSelectedDataSets(values);
   };
 
-  const runMovingAverageCalc = () => {
+  const runMovingAverageCalc = async () => {
     setError(null);
     if (selectedDataSets.length === 0) {
       setError("Please select at least one column for the Moving Average calculation.");
@@ -2832,7 +2832,7 @@ export const MovingAverage: React.FC<{
       // Add window size as metadata (you might need to modify your engine to handle this)
       filteredData.set(`__window_size__`, [windowSize] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Moving Average calculation. Please check your data.");
@@ -2920,7 +2920,7 @@ export const RollingStdDev: React.FC<{
     setSelectedDataSets(values);
   };
 
-  const runRollingStdDevCalc = () => {
+  const runRollingStdDevCalc = async () => {
     setError(null);
     if (selectedDataSets.length === 0) {
       setError("Please select at least one column for the Rolling Standard Deviation calculation.");
@@ -2953,7 +2953,7 @@ export const RollingStdDev: React.FC<{
       // Add window size as metadata
       //filteredData.set(`__window_size__`, [windowSize] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Rolling Standard Deviation calculation. Please check your data.");
@@ -3038,7 +3038,7 @@ export const TTest: React.FC<{
   const [testType, setTestType] = useState<'two-sample' | 'paired'>('two-sample');
   const [error, setError] = useState<string | null>(null);
 
-  const runTTest = () => {
+  const runTTest = async () => {
     setError(null);
     
     if (group1Columns.length === 0 || group2Columns.length === 0) {
@@ -3073,7 +3073,7 @@ export const TTest: React.FC<{
       // Add test type as metadata
       filteredData.set(`__test_type__`, [testType] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the T-Test calculation. Please check your data.");
@@ -3166,7 +3166,7 @@ export const Anova: React.FC<{
   const [significanceLevel, setSignificanceLevel] = useState<number>(0.05);
   const [error, setError] = useState<string | null>(null);
 
-  const runANOVA = () => {
+  const runANOVA = async () => {
     setError(null);
     
     if (selectedGroups.length < 2) {
@@ -3193,7 +3193,7 @@ export const Anova: React.FC<{
       // Add significance level as metadata
       filteredData.set(`__alpha__`, [significanceLevel] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the ANOVA calculation. Please check your data.");
@@ -3278,7 +3278,7 @@ export const Limma: React.FC<{
   const [adjustmentMethod, setAdjustmentMethod] = useState<'BH' | 'bonferroni'>(LIMMA_DEFAULT_ADJUSTMENT_METHOD as 'BH' | 'bonferroni');
   const [error, setError] = useState<string | null>(null);
 
-  const runLIMMA = () => {
+  const runLIMMA = async () => {
     setError(null);
     
     if (treatmentColumns.length < 2 || controlColumns.length < 2) {
@@ -3315,7 +3315,7 @@ export const Limma: React.FC<{
       filteredData.set(LIMMA_CONTROL_COLUMNS_KEY, controlColumns as unknown as TableMatrix);
       filteredData.set(LIMMA_ADJUSTMENT_METHOD_KEY, [adjustmentMethod] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the LIMMA analysis. Please check your data.");
@@ -3416,7 +3416,7 @@ export const FoldChange: React.FC<{
   const [foldChangeThreshold, setFoldChangeThreshold] = useState<number>(2);
   const [error, setError] = useState<string | null>(null);
 
-  const runFoldChange = () => {
+  const runFoldChange = async () => {
     setError(null);
     
     if (treatmentColumns.length === 0 || controlColumns.length === 0) {
@@ -3452,7 +3452,7 @@ export const FoldChange: React.FC<{
       filteredData.set(`__log_scale__`, [logScale] as unknown as TableMatrix);
       filteredData.set(`__threshold__`, [foldChangeThreshold] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Fold Change calculation. Please check your data.");
@@ -3588,7 +3588,7 @@ export const NormalizeReporterIons: React.FC<{
     setSelectedChannels(values);
   };
 
-  const runNormalization = () => {
+  const runNormalization = async () => {
     setError(null);
     
     if (selectedChannels.length === 0) {
@@ -3614,7 +3614,7 @@ export const NormalizeReporterIons: React.FC<{
 
       filteredData.set(`__normalization_method__`, [normalizationMethod] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during reporter ion normalization. Please check your data.");
@@ -3720,7 +3720,7 @@ export const CorrectForPurity: React.FC<{
     setSelectedChannels(values);
   };
 
-  const runPurityCorrection = () => {
+  const runPurityCorrection = async () => {
     setError(null);
     
     if (selectedChannels.length === 0) {
@@ -3752,7 +3752,7 @@ export const CorrectForPurity: React.FC<{
 
       filteredData.set(`__reagent_type__`, [reagentType] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during purity correction. Please check your data.");
@@ -3984,7 +3984,7 @@ export const SortAscending: React.FC<{
   const [primarySortColumn, setPrimarySortColumn] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const runSortAsc = () => {
+  const runSortAsc = async () => {
     setError(null);
     
     if (selectedColumns.length === 0) {
@@ -4014,7 +4014,7 @@ export const SortAscending: React.FC<{
       filteredData.set(`__sort_column__`, [sortColumn] as unknown as TableMatrix);
       filteredData.set(`__sort_direction__`, ['asc'] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during sorting. Please check your data.");
@@ -4104,7 +4104,7 @@ export const SortDescending: React.FC<{
   const [primarySortColumn, setPrimarySortColumn] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const runSortDesc = () => {
+  const runSortDesc = async () => {
     setError(null);
     
     if (selectedColumns.length === 0) {
@@ -4134,7 +4134,7 @@ export const SortDescending: React.FC<{
       filteredData.set(`__sort_column__`, [sortColumn] as unknown as TableMatrix);
       filteredData.set(`__sort_direction__`, ['desc'] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during sorting. Please check your data.");
@@ -4223,7 +4223,7 @@ export const ReorderColumns: React.FC<{
   const [reorderMode, setReorderMode] = useState<string>('reverse');
   const [error, setError] = useState<string | null>(null);
 
-  const runReorder = () => {
+  const runReorder = async () => {
     setError(null);
     
     const columnsToReorder = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -4245,7 +4245,7 @@ export const ReorderColumns: React.FC<{
       
       filteredData.set(`__reorder_mode__`, [reorderMode] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during column reordering. Please check your data.");
@@ -4327,7 +4327,7 @@ export const Transpose: React.FC<{
   const [confirmTranspose, setConfirmTranspose] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
-  const runTranspose = () => {
+  const runTranspose = async () => {
     setError(null);
     
     if (!confirmTranspose) {
@@ -4353,7 +4353,7 @@ export const Transpose: React.FC<{
         }
       });
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during transposition. Please check your data.");
@@ -4478,7 +4478,7 @@ export const FilterColumnsByName: React.FC<{
     setPreviewColumns(matched);
   }, [searchPattern, matchType, caseSensitive, availableColumns]);
 
-  const runFilterByName = () => {
+  const runFilterByName = async () => {
     setError(null);
     
     if (!searchPattern) {
@@ -4508,7 +4508,7 @@ export const FilterColumnsByName: React.FC<{
       filteredData.set(`__match_type__`, [matchType] as unknown as TableMatrix);
       filteredData.set(`__case_sensitive__`, [caseSensitive] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during filtering. Please check your data.");
@@ -4655,7 +4655,7 @@ export const FilterColumnsByType: React.FC<{
     setPreviewColumns(matched);
   }, [filterType, availableColumns, allColumnarData]);
 
-  const runFilterByType = () => {
+  const runFilterByType = async () => {
     setError(null);
     
     if (previewColumns.length === 0) {
@@ -4677,7 +4677,7 @@ export const FilterColumnsByType: React.FC<{
       // Add filter parameters as metadata
       filteredData.set(`__filter_type__`, [filterType] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during filtering. Please check your data.");
@@ -4779,7 +4779,7 @@ export const AddRow: React.FC<{
   const [defaultValue, setDefaultValue] = useState<number>(0);
   const [error, setError] = useState<string | null>(null);
 
-  const runAddRow = () => {
+  const runAddRow = async () => {
     setError(null);
     
     if (numRowsToAdd <= 0) {
@@ -4809,7 +4809,7 @@ export const AddRow: React.FC<{
       filteredData.set(`__position__`, [position] as unknown as TableMatrix);
       filteredData.set(`__default_value__`, [defaultValue] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while adding rows. Please check your data.");
@@ -4920,7 +4920,7 @@ export const RenameRow: React.FC<{
     }
   }, [rowIndex, dataRows]);
 
-  const runRenameRow = () => {
+  const runRenameRow = async () => {
     setError(null);
     
     if (!newName.trim()) {
@@ -4943,7 +4943,7 @@ export const RenameRow: React.FC<{
       filteredData.set(`__new_name__`, [newName] as unknown as TableMatrix);
       filteredData.set(`__old_name__`, [currentName] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while renaming the row. Please check your data.");
@@ -5067,7 +5067,7 @@ export const DeleteRow: React.FC<{
     return [...new Set(indices)].sort((a, b) => a - b);
   };
 
-  const runDeleteRow = () => {
+  const runDeleteRow = async () => {
     setError(null);
     
     if (!confirmDelete) {
@@ -5110,7 +5110,7 @@ export const DeleteRow: React.FC<{
       filteredData.set(`__row_indices__`, indices as unknown as TableMatrix);
       filteredData.set(`__delete_count__`, [indices.length] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while deleting rows. Please check your data.");
@@ -5229,7 +5229,7 @@ export const PcaLearning: React.FC<{
   const [numComponents, setNumComponents] = useState<number>(2);
   const [error, setError] = useState<string | null>(null);
 
-  const runPCA = () => {
+  const runPCA = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -5257,7 +5257,7 @@ export const PcaLearning: React.FC<{
       
       filteredData.set(`__num_components__`, [numComponents] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -5361,7 +5361,7 @@ export const PlsdaLearning: React.FC<{
   const [labelColumn, setLabelColumn] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
-  const runPLSDA = () => {
+  const runPLSDA = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -5393,7 +5393,7 @@ export const PlsdaLearning: React.FC<{
       filteredData.set(`__num_components__`, [numComponents] as unknown as TableMatrix);
       filteredData.set(`__labels__`, labels);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -5509,7 +5509,7 @@ export const TsneLearning: React.FC<{
   const [iterations, setIterations] = useState<number>(1000);
   const [error, setError] = useState<string | null>(null);
 
-  const runTSNE = () => {
+  const runTSNE = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -5539,7 +5539,7 @@ export const TsneLearning: React.FC<{
       filteredData.set(`__perplexity__`, [perplexity] as unknown as TableMatrix);
       filteredData.set(`__iterations__`, [iterations] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -5719,7 +5719,7 @@ export const AddPtm: React.FC<{
     return [...new Set(indices)].sort((a, b) => a - b);
   };
 
-  const runAddPTM = () => {
+  const runAddPTM = async () => {
     setError(null);
     
     const positions = parseRowIndices(selectedRows);
@@ -5746,7 +5746,7 @@ export const AddPtm: React.FC<{
       filteredData.set(`__ptm_positions__`, positions as unknown as TableMatrix);
       filteredData.set(`__ptm_residue__`, [residueType] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -5918,7 +5918,7 @@ export const RemovePtm: React.FC<{
     return [...new Set(indices)].sort((a, b) => a - b);
   };
 
-  const runRemovePTM = () => {
+  const runRemovePTM = async () => {
     setError(null);
     
     if (!confirmRemoval) {
@@ -5960,7 +5960,7 @@ export const RemovePtm: React.FC<{
         filteredData.set(`__remove_ptm_types__`, ptmTypeOptions as unknown as TableMatrix);
       }
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6219,7 +6219,7 @@ export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
   const [maxIterations, setMaxIterations] = useState<number>(100);
   const [error, setError] = useState<string | null>(null);
 
-  const runKMeans = () => {
+  const runKMeans = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -6248,7 +6248,7 @@ export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
       filteredData.set('__k__', [k] as unknown as TableMatrix);
       filteredData.set('__max_iterations__', [maxIterations] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6367,7 +6367,7 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
   const [linkage, setLinkage] = useState<string>('average');
   const [error, setError] = useState<string | null>(null);
 
-  const runHierarchical = () => {
+  const runHierarchical = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -6396,7 +6396,7 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
       filteredData.set('__num_clusters__', [numClusters] as unknown as TableMatrix);
       filteredData.set('__linkage__', [linkage] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6520,7 +6520,7 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
   const [k, setK] = useState<number>(3);
   const [error, setError] = useState<string | null>(null);
 
-  const runPCAClustering = () => {
+  const runPCAClustering = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -6544,7 +6544,7 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
       filteredData.set('__perform_clustering__', [performClustering] as unknown as TableMatrix);
       filteredData.set('__k__', [k] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6673,7 +6673,7 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runTwoD = () => {
+  const runTwoD = async () => {
     setError(null);
 
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -6696,7 +6696,7 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
         }
       });
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6777,7 +6777,7 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runPmuTest = () => {
+  const runPmuTest = async () => {
     setError(null);
 
     if (selectedColumns.length === 0) {
@@ -6803,7 +6803,7 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6897,7 +6897,7 @@ export const ZScoreNormalization: React.FC<NormalizationComponentProps> = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runZScore = () => {
+  const runZScore = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -6917,7 +6917,7 @@ export const ZScoreNormalization: React.FC<NormalizationComponentProps> = ({
         }
       });
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -6998,7 +6998,7 @@ export const LogTransform: React.FC<NormalizationComponentProps> = ({
   const [pseudocount, setPseudocount] = useState<number>(1);
   const [error, setError] = useState<string | null>(null);
 
-  const runLogTransform = () => {
+  const runLogTransform = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7027,7 +7027,7 @@ export const LogTransform: React.FC<NormalizationComponentProps> = ({
       filteredData.set('__log_base__', [logBase] as unknown as TableMatrix);
       filteredData.set('__pseudocount__', [pseudocount] as unknown as TableMatrix);
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -7138,7 +7138,7 @@ export const QuantileNormalization: React.FC<NormalizationComponentProps> = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runQuantile = () => {
+  const runQuantile = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7158,7 +7158,7 @@ export const QuantileNormalization: React.FC<NormalizationComponentProps> = ({
         }
       });
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -7244,7 +7244,7 @@ export const MeanCentering: React.FC<NormalizationComponentProps> = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runMeanCentering = () => {
+  const runMeanCentering = async () => {
     setError(null);
     
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7264,7 +7264,7 @@ export const MeanCentering: React.FC<NormalizationComponentProps> = ({
         }
       });
       
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error occurred";
@@ -7392,7 +7392,7 @@ export const FTest: React.FC<{
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runFTest = () => {
+  const runFTest = async () => {
     setError(null);
 
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7418,7 +7418,7 @@ export const FTest: React.FC<{
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the F-Test calculation. Please check your data.");
@@ -7494,7 +7494,7 @@ export const ChiSquareTest: React.FC<{
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runChiSquareTest = () => {
+  const runChiSquareTest = async () => {
     setError(null);
 
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7520,7 +7520,7 @@ export const ChiSquareTest: React.FC<{
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during the Chi-Square test. Please check your data.");
@@ -7600,7 +7600,7 @@ export const ZScoreOutlier: React.FC<{
   const [threshold, setThreshold] = useState<number>(3);
   const [error, setError] = useState<string | null>(null);
 
-  const runZScoreOutlier = () => {
+  const runZScoreOutlier = async () => {
     setError(null);
 
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7626,7 +7626,7 @@ export const ZScoreOutlier: React.FC<{
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during Z-Score outlier detection. Please check your data.");
@@ -7722,7 +7722,7 @@ export const IQROutlier: React.FC<{
   const [multiplier, setMultiplier] = useState<number>(1.5);
   const [error, setError] = useState<string | null>(null);
 
-  const runIQROutlier = () => {
+  const runIQROutlier = async () => {
     setError(null);
 
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7748,7 +7748,7 @@ export const IQROutlier: React.FC<{
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during IQR outlier detection. Please check your data.");
@@ -7843,7 +7843,7 @@ export const GrubbsOutlier: React.FC<{
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runGrubbsOutlier = () => {
+  const runGrubbsOutlier = async () => {
     setError(null);
 
     const columnsToUse = selectedColumns.length > 0 ? selectedColumns : availableColumns;
@@ -7869,7 +7869,7 @@ export const GrubbsOutlier: React.FC<{
         return;
       }
 
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during Grubbs' test. Please check your data.");
@@ -8206,7 +8206,7 @@ export const FxExpression = ({
   const [expression, setExpression] = useState<string>("x^2 + 2*x + 1");
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     setError(null);
     if (!selectedColumn) {
       setError("Please select a column.");
@@ -8224,7 +8224,7 @@ export const FxExpression = ({
       if (values) filteredData.set(selectedColumn, values);
       filteredData.set("__column__", [selectedColumn]);
       filteredData.set("__expression__", [expression]);
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while evaluating the function.");
@@ -8307,7 +8307,7 @@ export const FxLinear = ({
   const [b, setB] = useState("0");
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     setError(null);
     if (!selectedColumn) {
       setError("Please select a column.");
@@ -8328,7 +8328,7 @@ export const FxLinear = ({
       filteredData.set("__column__", [selectedColumn]);
       filteredData.set("__factor_a__", [factorA]);
       filteredData.set("__factor_b__", [factorB]);
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while applying the linear mapping.");
@@ -8420,7 +8420,7 @@ export const OneDNormalize = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     setError(null);
     if (selectedColumns.length === 0) {
       setError("Please select at least one column.");
@@ -8438,7 +8438,7 @@ export const OneDNormalize = ({
         onError?.();
         return;
       }
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred during 1D normalization.");
@@ -8501,7 +8501,7 @@ export const OneDIndex = ({
     [dataColumns, dataRows]
   )];
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     try {
       const filteredData = new Map<string, TableMatrix>();
       numericColumns.forEach((column) => {
@@ -8512,7 +8512,7 @@ export const OneDIndex = ({
         onError?.();
         return;
       }
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       console.error("1D index failed:", err);
@@ -8563,7 +8563,7 @@ const PiColumnRunner = ({
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     setError(null);
     if (selectedColumns.length === 0) {
       setError("Please select at least one column.");
@@ -8581,7 +8581,7 @@ const PiColumnRunner = ({
         onError?.();
         return;
       }
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("An error occurred while applying Pi.");
@@ -8713,7 +8713,7 @@ export const Pj = ({
   const [mode, setMode] = useState<string>("pi-divide");
   const [error, setError] = useState<string | null>(null);
 
-  const runAnalysis = () => {
+  const runAnalysis = async () => {
     setError(null);
     if (mode === "stub") return;
     if (selectedColumns.length === 0) {
@@ -8733,7 +8733,7 @@ export const Pj = ({
         return;
       }
       filteredData.set("__pj_mode__", [mode] as unknown as TableMatrix);
-      const result = performAnalysis(actionId, filteredData);
+      const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
       setError("Pj operation failed.");
