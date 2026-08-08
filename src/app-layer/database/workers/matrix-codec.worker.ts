@@ -3,7 +3,7 @@
 import {
   decodeMatrix,
   encodeMatrix,
-} from "./matrix-storage";
+} from "../matrix/matrix-storage";
 import type { MatrixCodecWorkerRequest } from "@/domain/workers/index.types";
 
 const worker = self as DedicatedWorkerGlobalScope;

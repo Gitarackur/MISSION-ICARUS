@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import type { StatisticalAnalysisWorkerRequest } from "@/domain/workers/index.types";
-import { runStatisticalAnalysis } from "./utils/statistical-action-runner";
+import { runStatisticalAnalysis } from "../utils/statistical-action-runner";
 
 const worker = self as DedicatedWorkerGlobalScope;
 

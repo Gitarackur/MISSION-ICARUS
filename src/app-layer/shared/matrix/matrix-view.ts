@@ -4,7 +4,7 @@ import type {
   MatrixViewWorkerResponse,
   PendingWorkerJob,
 } from "@/domain/workers/index.types";
-import { reconstructFromMatrix } from "./utils";
+import { reconstructFromMatrix } from "../utils";
 
 let activeJob: PendingWorkerJob | null = null;
 
@@ -26,7 +26,7 @@ export const reconstructMatrixView = async (
     activeJob = null;
   }
   const worker = new Worker(
-    new URL("./matrix-view.worker.ts", import.meta.url),
+    new URL("../workers/matrix-view.worker.ts", import.meta.url),
     {
       type: "module",
     }

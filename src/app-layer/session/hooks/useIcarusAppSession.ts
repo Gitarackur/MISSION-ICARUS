@@ -2,15 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
-import { isMatrixPayloadLoaded } from "@/app-layer/database/matrix-storage";
-import { useStorageHealth } from "@/app-layer/database/use-storage-health";
+import { isMatrixPayloadLoaded } from "@/app-layer/database/matrix/matrix-storage";
+import { useStorageHealth } from "@/app-layer/database/hooks/use-storage-health";
 import type {
   DeletionPlan,
   SessionDeletionResult,
 } from "@/app-layer/database/deletion";
 import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
 
-import { reconstructMatrixView } from "@/app-layer/shared/matrix-view";
+import { reconstructMatrixView } from "@/app-layer/shared/matrix/matrix-view";
 import {
   generateActiveSessionWitNestedWorkflow,
   reconstructOriginalRowsAndColumnsFromSessionWorkflows,

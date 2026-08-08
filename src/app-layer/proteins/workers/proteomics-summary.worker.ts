@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 
 import type { ProteomicsSummaryWorkerRequest } from "@/domain/workers/index.types";
-import { computeProteomicsSummary } from "./proteomics-summary";
+import { computeProteomicsSummary } from "../proteomics-summary/proteomics-summary";
 
 const worker = self as DedicatedWorkerGlobalScope;
 

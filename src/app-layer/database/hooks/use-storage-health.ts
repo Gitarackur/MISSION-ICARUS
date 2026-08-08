@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   getStorageEstimate,
   requestPersistentStorage,
-} from "./storage-health";
+} from "../health/storage-health";
 import type { IcarusStorageEstimate } from "@/domain/storage/index.types";
 import {
   STORAGE_CHANGE_EVENT,

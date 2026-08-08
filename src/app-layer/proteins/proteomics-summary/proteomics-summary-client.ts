@@ -24,7 +24,7 @@ export const computeProteomicsSummaryInWorker = (
     activeJob = null;
   }
   const worker = new Worker(
-    new URL("./proteomics-summary.worker.ts", import.meta.url),
+    new URL("../workers/proteomics-summary.worker.ts", import.meta.url),
     { type: "module" }
   );
   return new Promise((resolve, reject) => {

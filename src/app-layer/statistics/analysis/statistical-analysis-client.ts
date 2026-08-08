@@ -8,7 +8,7 @@ import type {
   PendingWorkerJob,
   StatisticalAnalysisWorkerResponse,
 } from "@/domain/workers/index.types";
-import { runStatisticalAnalysis } from "./utils/statistical-action-runner";
+import { runStatisticalAnalysis } from "../utils/statistical-action-runner";
 
 let activeJob: PendingWorkerJob | null = null;
 
@@ -26,7 +26,7 @@ export const runStatisticalAnalysisInWorker = (
     activeJob = null;
   }
   const worker = new Worker(
-    new URL("./statistical-analysis.worker.ts", import.meta.url),
+    new URL("../workers/statistical-analysis.worker.ts", import.meta.url),
     { type: "module" }
   );
 

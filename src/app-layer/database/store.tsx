@@ -17,12 +17,12 @@ import {
   type DeletionPlan,
   type SessionDeletionResult,
 } from "./deletion";
-import { matrixCodec } from "./matrix-codec";
+import { matrixCodec } from "./matrix/matrix-codec";
 import {
   isChunkedMatrixRecord,
   toLoadedLegacyMatrix,
   toMatrixMetadataPlaceholder,
-} from "./matrix-storage";
+} from "./matrix/matrix-storage";
 import type {
   EncodedMatrix,
   InitialSessionGraph,
@@ -34,7 +34,7 @@ import type {
 import {
   announceStorageChange,
   asStorageWriteError,
-} from "./storage-health";
+} from "./health/storage-health";
 
 const orderedRecords = <T extends { id: string }>(ids: string[], rows: T[]) => {
   const byId = new Map(rows.map((row) => [row.id, row]));

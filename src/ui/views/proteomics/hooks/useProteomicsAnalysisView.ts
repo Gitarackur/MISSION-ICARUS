@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import {
   computeProteomicsSummaryInWorker,
-} from "@/app-layer/proteins/proteomics-summary-client";
+} from "@/app-layer/proteins/proteomics-summary/proteomics-summary-client";
 import type { ProteomicsSummary } from "@/domain/proteins/index.types";
 import { ProteomicsAnalysisHomeViewProps } from "@/ui/views/proteomics/types/index.types";
 

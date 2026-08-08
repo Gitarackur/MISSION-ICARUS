@@ -15,7 +15,7 @@ import type {
   DeletionPlan,
   SessionDeletionResult,
 } from "@/app-layer/database/deletion";
-import { formatStorageBytes } from "@/app-layer/database/storage-health";
+import { formatStorageBytes } from "@/app-layer/database/health/storage-health";
 import { STORAGE_WARNING_PERCENT } from "@/domain/storage/constants";
 
 const IcarusApp: React.FC = () => {

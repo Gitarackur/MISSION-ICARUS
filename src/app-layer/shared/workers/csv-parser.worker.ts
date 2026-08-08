@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { parseCSVFromText } from "./csv_tsc_parser";
+import { parseCSVFromText } from "../csv_tsc_parser";
 import type { CSVParserWorkerRequest } from "@/domain/workers/index.types";
 
 const worker = self as DedicatedWorkerGlobalScope;

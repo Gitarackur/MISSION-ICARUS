@@ -5,7 +5,7 @@ import {
 } from "@/domain/statistics/index.types";
 import { ProteinRow } from "@/domain/proteins/index.types";
 import { TableMatrix } from "@/domain/workflow/main.types";
-import { runStatisticalAnalysisInWorker } from "@/app-layer/statistics/statistical-analysis-client";
+import { runStatisticalAnalysisInWorker } from "@/app-layer/statistics/analysis/statistical-analysis-client";
 
 export const useStatisticalAnalysis = () => {
   const performAnalysis = useCallback(

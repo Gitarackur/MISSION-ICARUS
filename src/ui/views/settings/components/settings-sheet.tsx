@@ -13,7 +13,7 @@ import { settingsButtonStyles } from "../variants/settings-buttons.variants";
 import type { CsvDelimiter, ExportScope } from "@/ui/settings/settings.types";
 import type { ThemeMode } from "@/ui/theme/types";
 import type { SettingsViewProps } from "../types/index.types";
-import { formatStorageBytes } from "@/app-layer/database/storage-health";
+import { formatStorageBytes } from "@/app-layer/database/health/storage-health";
 
 const THEME_OPTIONS = [
   { value: "light", label: "Light", icon: Sun },
