@@ -363,11 +363,13 @@ const StatisticsMenu: React.FC<StatisticsMenuProps> = ({
   });
 
   const runMenuAction = (result: Parameters<typeof onMenuAction>[0]) => {
-    void Promise.resolve(onMenuAction(result)).catch((error) => {
-      // Persistence errors are also surfaced by the session-level warning.
-      // Catch here to avoid an unhandled rejection from the modal callback.
-      console.error("Unable to save statistical result", error);
-    });
+    void Promise.resolve()
+      .then(() => onMenuAction(result))
+      .catch((error) => {
+        // Persistence errors are also surfaced by the session-level warning.
+        // Catch here to avoid an unhandled rejection from the modal callback.
+        console.error("Unable to save statistical result", error);
+      });
   };
 
   const handleButtonClick = (item: StatisticsMenuItem) => {

@@ -31,10 +31,26 @@ export interface PendingWorkerRequest {
   reject: (error: Error) => void;
 }
 
+export interface WorkerRequestOptions<TRequest, TResult> {
+  createWorker: () => Worker;
+  request: TRequest;
+  fallback: () => TResult | Promise<TResult>;
+  failureMessage: string;
+  timeoutMs?: number;
+}
+
 export type MatrixCodecWorkerRequest =
   | { id: number; operation: "encode"; matrix: IcarusMatrix }
   | {
       id: number;
+      operation: "decode";
+      metadata: PersistedMatrixMetadata;
+      chunks: PersistedMatrixChunk[];
+    };
+
+export type MatrixCodecWorkerPayload =
+  | { operation: "encode"; matrix: IcarusMatrix }
+  | {
       operation: "decode";
       metadata: PersistedMatrixMetadata;
       chunks: PersistedMatrixChunk[];

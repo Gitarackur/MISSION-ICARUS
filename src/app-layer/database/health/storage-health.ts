@@ -12,11 +12,26 @@ export class IcarusStorageCapacityError extends Error {
   }
 }
 
-export const isQuotaExceededError = (error: unknown) => {
+const containsQuotaExceededError = (
+  error: unknown,
+  visited: Set<unknown>
+): boolean => {
   if (!error || typeof error !== "object") return false;
+  if (visited.has(error)) return false;
+  visited.add(error);
+
   const name = "name" in error ? String(error.name) : "";
-  return name === "QuotaExceededError" || name === "Dexie.QuotaExceededError";
+  if (name === "QuotaExceededError" || name === "Dexie.QuotaExceededError") {
+    return true;
+  }
+
+  return (
+    "inner" in error && containsQuotaExceededError(error.inner, visited)
+  );
 };
+
+export const isQuotaExceededError = (error: unknown) =>
+  containsQuotaExceededError(error, new Set());
 
 export const asStorageWriteError = (error: unknown) => {
   if (error instanceof IcarusStorageCapacityError) return error;

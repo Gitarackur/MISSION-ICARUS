@@ -68,7 +68,7 @@ export const computeProteomicsSummary = (
       const rawValue = row[column];
       const value = Number(rawValue || 0);
       if (value > 0 && Number.isFinite(value)) intensities.push(value);
-      if (!rawValue || value === 0) missingValues += 1;
+      else missingValues += 1;
     });
   });
 
@@ -108,7 +108,19 @@ export const computeProteomicsSummary = (
       Number(row.intensity_Control2 || 0) +
       Number(row.intensity_Control3 || 0);
     const x = safeLog2Ratio(numerator, denominator);
-    const pValue = Number(row.pValue) || 1e-300;
+    const pValueSource = row.pValue;
+    if (
+      pValueSource === null ||
+      pValueSource === undefined ||
+      String(pValueSource).trim() === ""
+    ) {
+      return [];
+    }
+    const rawPValue = Number(pValueSource);
+    if (!Number.isFinite(rawPValue) || rawPValue < 0 || rawPValue > 1) {
+      return [];
+    }
+    const pValue = Math.max(rawPValue, 1e-300);
     const y = -Math.log10(Math.max(pValue, 1e-300));
     if (!Number.isFinite(x) || !Number.isFinite(y)) return [];
 
@@ -117,7 +129,7 @@ export const computeProteomicsSummary = (
         x,
         y,
         protein: String(row.proteinId || row.id),
-        significant: Number(row.pValue) < 0.05 && Math.abs(x) > 1,
+        significant: pValue < 0.05 && Math.abs(x) > 1,
       },
     ];
   });

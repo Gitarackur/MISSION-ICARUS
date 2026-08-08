@@ -3,35 +3,11 @@ import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
+import { LazyColumnarData } from "@/app-layer/shared/lazy-columnar-data";
 import {
   formatNumericDisplayValue,
   getNumericCellState,
 } from "@/domain/shared/number-parsing";
-
-class LazyColumnarData extends Map<string, TableMatrix> {
-  constructor(
-    private readonly rows: ProteinRow[],
-    columns: TableColumns
-  ) {
-    // Statistics components use Map#get/has/keys. Registering only the keys
-    // keeps that contract without retaining a second, column-oriented copy of
-    // every cell for the lifetime of the preview.
-    super(columns.map((column) => [column, []]));
-  }
-
-  override get(column: string): TableMatrix | undefined {
-    if (!super.has(column)) return undefined;
-
-    const values: TableMatrix = [];
-    this.rows.forEach((row) => {
-      if (Object.prototype.hasOwnProperty.call(row, column)) {
-        values.push(row[column] as string | number);
-      }
-    });
-    return values;
-  }
-}
-
 
 export const useTableStylingAndInteraction = (
   originalDataRows: ProteinRow[],
