@@ -34,6 +34,8 @@ const bundle = await build({
         adjustPValues,
         limmaBatchAnalysis,
       } from "./src/app-layer/statistics/utils/statistical-engine.ts";
+      export { runStatisticalAnalysis } from "./src/app-layer/statistics/utils/statistical-action-runner.ts";
+      export { composeStatisticalOutputMatrix } from "./src/app-layer/statistics/utils/statistical-matrix-composer.ts";
     `,
     resolveDir: repositoryRoot,
     sourcefile: "statistics-validation-entry.ts",
@@ -253,6 +255,89 @@ const totalVar = pca.explained_variance.reduce((a, b) => a + b, 0);
 assert.ok(totalVar > 0, "PCA explained variance nonzero");
 assert.ok(pca.explained_variance[0] / totalVar > 0.99, "PC1 dominates linear data");
 checks += 2;
+
+// New row-aligned actions extend the active matrix with their derived columns.
+const sourceMatrix = {
+  id: "source",
+  createdAt: 1,
+  columns: ["id", "a", "b"],
+  data: [
+    ["r1", 1, 3],
+    ["r2", 3, 5],
+    ["r3", 5, 7],
+  ],
+};
+const selectedMatrix = new Map([
+  ["a", [1, 3, 5]],
+  ["b", [3, 5, 7]],
+]);
+
+const zResult = engine.runStatisticalAnalysis("z", selectedMatrix);
+const extendedZ = engine.composeStatisticalOutputMatrix(zResult, sourceMatrix);
+assert.deepEqual(extendedZ.columns, ["id", "a", "b", "a_z", "b_z"]);
+assert.equal(extendedZ.data.length, sourceMatrix.data.length);
+assert.deepEqual(
+  extendedZ.data.map((row) => row.slice(0, 3)),
+  sourceMatrix.data,
+  "z output preserves every source cell"
+);
+assert.ok(
+  extendedZ.data.every((row) => row.length === extendedZ.columns.length),
+  "z output appends one value per derived column"
+);
+
+const twoDResult = engine.runStatisticalAnalysis("2d", selectedMatrix);
+const extendedTwoD = engine.composeStatisticalOutputMatrix(
+  twoDResult,
+  sourceMatrix
+);
+assert.deepEqual(extendedTwoD.columns, [
+  "id",
+  "a",
+  "b",
+  "PC1_2d",
+  "PC2_2d",
+]);
+assert.equal(extendedTwoD.data.length, sourceMatrix.data.length);
+assert.ok(
+  extendedTwoD.data.every((row) => row.length === extendedTwoD.columns.length),
+  "2d output appends two row-aligned principal components"
+);
+
+const pmResult = engine.runStatisticalAnalysis("pm", selectedMatrix);
+assert.deepEqual(pmResult.newly_created_columns, ["mu", "p_value"]);
+assert.deepEqual(
+  pmResult.data.map((row) => row[0]),
+  [2, 4, 6],
+  "pμ means are calculated for each source row"
+);
+const extendedPm = engine.composeStatisticalOutputMatrix(pmResult, sourceMatrix);
+assert.deepEqual(extendedPm.columns, ["id", "a", "b", "mu", "p_value"]);
+assert.equal(extendedPm.data.length, sourceMatrix.data.length);
+assert.ok(
+  extendedPm.data.every((row) => row.length === extendedPm.columns.length),
+  "pμ output is row-aligned with the source matrix"
+);
+
+const originalConsoleError = console.error;
+try {
+  console.error = () => {};
+  assert.throws(
+    () =>
+      engine.runStatisticalAnalysis(
+        "2d",
+        new Map([
+          ["a", [1]],
+          ["b", [2]],
+        ])
+      ),
+    /at least two rows/,
+    "2d rejects a single-row matrix"
+  );
+} finally {
+  console.error = originalConsoleError;
+}
+checks += 13;
 
 // ---------------------------------------------------------------------------
 // 8. Multiple-testing correction (BH + Bonferroni) & batch LIMMA

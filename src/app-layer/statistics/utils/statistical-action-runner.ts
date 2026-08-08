@@ -959,6 +959,9 @@ export const runStatisticalAnalysis = (
         if (numericData.length < 2) {
           throw new Error("2D requires at least two numeric columns");
         }
+        if ((numericData[0]?.length ?? 0) < 2) {
+          throw new Error("2D requires at least two rows of data");
+        }
 
         const pcaResult = performPCA(numericData, 2);
         results = pcaResult.transformed_data;
@@ -972,26 +975,35 @@ export const runStatisticalAnalysis = (
 
     case "pm": {
       try {
+        if (numericData.length < 2) {
+          throw new Error("pμ requires at least two numeric columns");
+        }
+
         const muValues: number[] = [];
         const pValues: number[] = [];
+        const rowCount = numericData[0]?.length ?? 0;
 
-        numericData.forEach((columnData) => {
-          const values = finiteValues(columnData);
+        for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+          const values = finiteValues(
+            numericData.map((columnData) => columnData[rowIndex])
+          );
           const n = values.length;
           const mu = n > 0 ? mean(values) : NaN;
           const sd = n > 1 ? stddev(values) : NaN;
-          let pValue = NaN;
-          if (Number.isFinite(mu) && Number.isFinite(sd) && sd !== 0) {
+          let pValue = 1;
+          if (Number.isFinite(mu) && Number.isFinite(sd) && sd === 0) {
+            pValue = mu === 0 ? 1 : 0;
+          } else if (Number.isFinite(mu) && Number.isFinite(sd)) {
             const tStat = mu / (sd / Math.sqrt(n));
             pValue = 2 * (1 - jStat.studentt.cdf(Math.abs(tStat), n - 1));
             pValue = Math.min(1, Math.max(0, pValue));
           }
           muValues.push(mu);
-          pValues.push(Number.isFinite(pValue) ? pValue : NaN);
-        });
+          pValues.push(Number.isFinite(pValue) ? pValue : 1);
+        }
 
         results = [muValues, pValues];
-        newColumnNames = ["mu", "p-value"];
+        newColumnNames = ["mu", "p_value"];
         break;
       } catch (error) {
         console.error("pμ test error:", error);

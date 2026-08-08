@@ -1,24 +1,24 @@
 import { useCallback } from "react";
-import { StatisticalAnalysisResult } from "@/domain/statistics/index.types";
-import {
+import type { StatisticalAnalysisResult } from "@/domain/statistics/index.types";
+import type {
+  IcarusMatrix,
   IcarusVisualization,
   SaveStatisticalActivity,
 } from "@/domain/workflow/main.types";
-import {
-  SaveVisualizationInWorkflow,
-} from "@/app-layer/visualization/types";
+import type { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
 import {
   buildVisualizationActivityFromStatisticalResult,
   getVisualizationKindForStatisticalAction,
   isVisualizationStatisticalAction,
 } from "@/app-layer/statistics/utils/statistical-visualization";
+import { composeStatisticalOutputMatrix } from "@/app-layer/statistics/utils/statistical-matrix-composer";
 import { getVisualizationMatrixId } from "@/domain/visualization/utils/main";
 
 type UsePreviewMenuActionParams = {
   onVisualizationCreated?: (visualizationId: string) => void;
   saveActivityInWorkflow?: (activity: Partial<SaveStatisticalActivity>) => void;
   saveVisualizationInWorkflow?: SaveVisualizationInWorkflow;
-  sessionSourceMatrix?: { id: string } | null;
+  sessionSourceMatrix?: IcarusMatrix | null;
   visualizations?: IcarusVisualization[];
 };
 
@@ -32,12 +32,7 @@ export const usePreviewMenuAction = ({
   useCallback(
     async (result: StatisticalAnalysisResult) => {
       try {
-        const {
-          inputParameters,
-          newly_created_columns: outputColumns,
-          data: outputData,
-          outputParameters,
-        } = result;
+        const { inputParameters, outputParameters } = result;
 
         if (result === undefined) {
           return;
@@ -73,13 +68,26 @@ export const usePreviewMenuAction = ({
           return;
         }
 
-        saveActivityInWorkflow?.({
+        const composedMatrix = composeStatisticalOutputMatrix(
+          result,
+          sessionSourceMatrix ?? undefined
+        );
+
+        await saveActivityInWorkflow?.({
+          sourceMatrixId: sessionSourceMatrix?.id,
           inputColumnNames: inputParameters.columns,
           inputMatrixReferences: sessionSourceMatrix?.id,
           inputParameters,
-          outputColumnNames: outputColumns,
-          outputData,
-          outputMetrics: outputParameters,
+          outputColumnNames: composedMatrix.columns,
+          outputData: composedMatrix.data,
+          outputMetrics: {
+            ...outputParameters,
+            columns: composedMatrix.derivedColumns,
+            metadata: {
+              ...outputParameters.metadata,
+              extendsSourceMatrix: composedMatrix.extendsSourceMatrix,
+            },
+          },
           action: inputParameters.action || outputParameters.calculationMethod,
         });
       } catch (err) {

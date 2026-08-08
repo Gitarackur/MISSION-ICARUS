@@ -6655,16 +6655,18 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
 
 export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
   actionId,
+  dataColumns,
+  dataRows,
   allColumnarData,
   onSuccess,
   onError,
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
 
-  const availableColumns = useMemo(() => {
-    const columnNames = Array.from(allColumnarData.keys());
-    return columnNames.filter(col => !col.startsWith('__'));
-  }, [allColumnarData]);
+  const availableColumns = useMemo(
+    () => [...getNumericColumnsOptimized(dataColumns, dataRows)],
+    [dataColumns, dataRows]
+  );
 
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -6676,7 +6678,10 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
 
     if (columnsToUse.length < 2) {
       setError("2D requires at least two feature columns.");
-      onError?.();
+      return;
+    }
+    if (dataRows.length < 2) {
+      setError("2D requires at least two rows of data.");
       return;
     }
 
@@ -6774,8 +6779,12 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
     setError(null);
 
     if (selectedColumns.length === 0) {
-      setError("Please select at least one numeric column.");
-      onError?.();
+      setError("Please select at least two numeric columns.");
+      return;
+    }
+
+    if (selectedColumns.length < 2) {
+      setError("pμ requires at least two numeric columns.");
       return;
     }
 
@@ -6789,7 +6798,6 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
 
       if (filteredData.size === 0) {
         setError("No data found for the selected columns.");
-        onError?.();
         return;
       }
 
@@ -6807,8 +6815,8 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
     <div className={containerClass}>
       <h1 className={headingClass}>pμ Test</h1>
       <p className={descriptionClass}>
-        For each selected column, computes the mean (μ) and a two-sided p-value
-        from a one-sample t-test against zero.
+        For each matrix row, computes the mean (μ) and a two-sided p-value
+        across the selected columns using a one-sample t-test against zero.
       </p>
 
       <div className="space-y-4 mb-6">
@@ -6824,17 +6832,17 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
             }))}
             value={selectedColumns}
             onChange={setSelectedColumns}
-            helperText="Choose the numeric columns to compute μ and p-value for"
+            helperText="Choose at least two numeric columns to compute row-wise μ and p-value columns"
           />
         </div>
 
         <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
           <p className="text-sm font-medium text-blue-900">What the pμ test does:</p>
           <ul className="text-xs text-blue-800 mt-2 space-y-1">
-            <li>• μ is the column mean of the selected values</li>
+            <li>• μ is the row mean across the selected columns</li>
             <li>• The p-value comes from a one-sample t-test compared to 0</li>
-            <li>• Helps assess whether a column differs significantly from zero</li>
-            <li>• Outputs a μ column and a p-value column</li>
+            <li>• Helps assess whether each row differs significantly from zero</li>
+            <li>• Appends a μ column and a p-value column to the matrix</li>
           </ul>
         </div>
       </div>
@@ -6844,7 +6852,7 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
       <div className="flex justify-end">
         <button
           className={buttonClass}
-          disabled={selectedColumns.length === 0}
+          disabled={selectedColumns.length < 2}
           onClick={runPmuTest}
         >
           Run pμ Test
@@ -8002,6 +8010,7 @@ const MatrixExportView: React.FC<{
   const [format, setFormat] = useState<ExportFormat>(defaultFormat);
   const [fileName, setFileName] = useState("my_data");
   const [done, setDone] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   const showDelimiter = DELIMITER_FORMATS.includes(format);
   const showHeadersAndFlags = format !== "json" && format !== "xml";
@@ -8017,12 +8026,14 @@ const MatrixExportView: React.FC<{
         includeHeaders: settings.includeHeaders,
         includeMetadataColumns: settings.includeMetadataColumns,
       });
-      const stem = toFilenameSlug(fileName.trim() || "my_data");
+      const stem = toFilenameSlug(fileName.trim()) || "my_data";
       downloadTextFile(`${stem}.${extensionFor(format)}`, file.mime, file.content);
       setDone(true);
+      setExportError(null);
     } catch (err) {
       console.error("Export failed:", err);
       setDone(false);
+      setExportError(err instanceof Error ? err.message : "Export failed");
     }
   };
 
@@ -8108,6 +8119,11 @@ const MatrixExportView: React.FC<{
 
       {done && (
         <div className="text-green-600 text-sm">{successMessage}</div>
+      )}
+      {exportError && (
+        <div className="text-red-500 text-sm" role="alert">
+          {exportError}
+        </div>
       )}
 
       <div className={styles.actionRow()}>
