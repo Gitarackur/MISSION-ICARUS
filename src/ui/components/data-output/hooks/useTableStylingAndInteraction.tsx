@@ -48,15 +48,15 @@ export const useTableStylingAndInteraction = (
 
     if (isHeader) {
       if (isNumeric) {
-        className += styles.tableHeadCellNumeric();
+        className += ` ${styles.tableHeadCellNumeric()}`;
       }
 
       if (isString) {
-        className += styles.tableHeadCellString();
+        className += ` ${styles.tableHeadCellString()}`;
       }
 
       if (isBoolean) {
-        className += styles.tableHeadCellBoolean();
+        className += ` ${styles.tableHeadCellBoolean()}`;
       }
 
     } else if (isNumeric) {
@@ -64,17 +64,17 @@ export const useTableStylingAndInteraction = (
 
       if (numericState === "missing") {
         className +=
-          styles.missingValue();
+          ` ${styles.missingValue()}`;
       } else if (numericState === "invalid") {
         className +=
-          styles.invalidValue();
+          ` ${styles.invalidValue()}`;
       } else {
-        className += styles.validValue();
+        className += ` ${styles.validValue()}`;
       }
     } else if (isString) {
-      className += styles.stringValue();
+      className += ` ${styles.stringValue()}`;
     } else if (isBoolean) {
-      className += styles.booleanValue();
+      className += ` ${styles.booleanValue()}`;
     }
 
     return className;
