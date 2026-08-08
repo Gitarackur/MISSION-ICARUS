@@ -35,7 +35,19 @@ export const dataOutputStyles = tv({
 
     tableCellCheckboxContainer: "px-4 py-3 bg-gray-100 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300",
     clearAnalysisSelection: "px-3 py-1 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 transition-colors",
-    checkboxStyles: "rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+    checkboxStyles: "rounded border-gray-300 text-blue-600 focus:ring-blue-500",
+
+    // styles for the table cells based on their content type and state
+    tableHeadCellNumeric: "cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:hover:bg-blue-950/40",
+    tableHeadCellString: "cursor-pointer hover:bg-yellow-100 transition-colors duration-200 dark:hover:bg-yellow-950/40",
+    tableHeadCellBoolean: "cursor-pointer hover:bg-red-100 transition-colors duration-200 dark:hover:bg-red-950/40",
+
+    // styles for the analysis instructions component
+    missingValue: "bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300",
+    invalidValue: "bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300",
+    validValue: "bg-green-50 dark:bg-green-950/30",
+    stringValue: "bg-yellow-50 dark:bg-yellow-950/30",
+    booleanValue: "bg-red-50 dark:bg-red-950/30",
   },
   variants: {
     buttonDisabled: {

@@ -48,15 +48,15 @@ export const useTableStylingAndInteraction = (
 
     if (isHeader) {
       if (isNumeric) {
-        className += ' cursor-pointer hover:bg-blue-100 transition-colors duration-200 dark:hover:bg-blue-950/40';
+        className += styles.tableHeadCellNumeric();
       }
 
       if (isString) {
-        className += ' cursor-pointer hover:bg-yellow-100 transition-colors duration-200 dark:hover:bg-yellow-950/40';
+        className += styles.tableHeadCellString();
       }
 
       if (isBoolean) {
-        className += ' cursor-pointer hover:bg-red-100 transition-colors duration-200 dark:hover:bg-red-950/40';
+        className += styles.tableHeadCellBoolean();
       }
 
     } else if (isNumeric) {
@@ -64,17 +64,17 @@ export const useTableStylingAndInteraction = (
 
       if (numericState === "missing") {
         className +=
-          " bg-red-50 text-red-700 dark:bg-red-950/30 dark:text-red-300";
+          styles.missingValue();
       } else if (numericState === "invalid") {
         className +=
-          " bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300";
+          styles.invalidValue();
       } else {
-        className += ' bg-green-50 dark:bg-green-950/30';
+        className += styles.validValue();
       }
     } else if (isString) {
-      className += ' bg-yellow-50 dark:bg-yellow-950/30';
+      className += styles.stringValue();
     } else if (isBoolean) {
-      className += ' bg-red-50 dark:bg-red-950/30';
+      className += styles.booleanValue();
     }
 
     return className;

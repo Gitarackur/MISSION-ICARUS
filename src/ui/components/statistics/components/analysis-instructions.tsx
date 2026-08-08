@@ -5,9 +5,9 @@ import clsx from "clsx"
 
 const StatisticalAnalysisInstructions = () => {
   const columnStyles = (value: ColumnType) => clsx("rounded-full h-5 w-5 inline-block border-2 border-black", {
-    "bg-yellow-100": value === "string",
-    "bg-green-100": value === "number",
-    "bg-red-100": value === "boolean",
+    "bg-yellow-100 dark:bg-yellow-950/30": value === "string",
+    "bg-green-100 dark:bg-green-950/30": value === "number",
+    "bg-red-100 dark:bg-red-950/30": value === "boolean",
   })
   return (
     <div>
