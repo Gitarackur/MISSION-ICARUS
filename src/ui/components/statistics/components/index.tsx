@@ -19,6 +19,7 @@ import {
 import { useAppSettings } from "@/ui/settings/use-app-settings";
 import { Button } from "@/ui/design-system/Button";
 import { Checkbox } from "@/ui/design-system/Checkbox";
+import { SelectionCard } from "@/ui/design-system/SelectionCard";
 import { exportSheetStyles } from "@/ui/views/settings/variants/settings.variants";
 import {
   DELIMITER_LABELS,
@@ -8042,26 +8043,24 @@ const MatrixExportView: React.FC<{
     <div className={styles.container()}>
       <section className={styles.section()}>
         <h3 className={styles.sectionTitle()}>Format</h3>
-        <div className={styles.grid()}>
+        <div
+          className={styles.grid()}
+          role="group"
+          aria-label="Export format"
+        >
           {EXPORT_FORMATS.map((fmt) => {
             const Icon = FORMAT_ICONS[fmt];
             const info = EXPORT_FORMAT_INFO[fmt];
-            const active = format === fmt;
-            const s = exportSheetStyles({ active });
             return (
-              <button
+              <SelectionCard
                 key={fmt}
-                type="button"
                 onClick={() => setFormat(fmt)}
-                className={s.formatOption()}
+                selected={format === fmt}
+                icon={<Icon />}
+                label={info.label}
+                description={info.description}
                 title={info.description}
-              >
-                <Icon className={s.formatIcon()} />
-                <span className={s.formatLabel()}>{info.label}</span>
-                <span className={s.formatDescription()}>
-                  {info.description}
-                </span>
-              </button>
+              />
             );
           })}
         </div>
@@ -8751,26 +8750,22 @@ export const Pj = ({
       </p>
 
       <div className="mb-6">
-        <label className={labelClass}>Pj Operation</label>
-        <div className="space-y-2">
+        <span id="pj-operation-label" className={labelClass}>
+          Pj Operation
+        </span>
+        <div
+          className="space-y-2"
+          role="group"
+          aria-labelledby="pj-operation-label"
+        >
           {PJ_MODES.map((option) => (
-            <button
+            <SelectionCard
               key={option.id}
-              type="button"
-              className={`w-full text-left px-3 py-2 rounded-md border transition-colors ${
-                mode === option.id
-                  ? "border-blue-500 bg-blue-50 dark:bg-blue-900 dark:text-white"
-                  : "border-gray-300 hover:border-blue-400"
-              }`}
               onClick={() => setMode(option.id)}
-            >
-              <span className="block text-sm font-medium text-gray-800">
-                {option.label}
-              </span>
-              <span className="block text-xs text-gray-500">
-                {option.description}
-              </span>
-            </button>
+              selected={mode === option.id}
+              label={option.label}
+              description={option.description}
+            />
           ))}
         </div>
       </div>

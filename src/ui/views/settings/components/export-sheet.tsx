@@ -12,6 +12,7 @@ import {
 import SlidingSheet from "@/ui/design-system/Sheet/main";
 import { Button } from "@/ui/design-system/Button";
 import { Checkbox } from "@/ui/design-system/Checkbox";
+import { SelectionCard } from "@/ui/design-system/SelectionCard";
 import SingleSelect from "@/ui/design-system/Select/select";
 import { useAppSettings } from "@/ui/settings/use-app-settings";
 import { DELIMITER_LABELS, EXPORT_SCOPE_LABELS } from "@/ui/settings/settings.types";
@@ -125,26 +126,24 @@ const ExportSheet = ({
 
         <section className={styles.section()}>
           <h3 className={styles.sectionTitle()}>Format</h3>
-          <div className={styles.grid()}>
+          <div
+            className={styles.grid()}
+            role="group"
+            aria-label="Export format"
+          >
             {availableFormats.map((fmt) => {
               const Icon = FORMAT_ICONS[fmt];
               const info = EXPORT_FORMAT_INFO[fmt];
-              const active = format === fmt;
-              const s = exportSheetStyles({ active });
               return (
-                <button
+                <SelectionCard
                   key={fmt}
-                  type="button"
                   onClick={() => setFormat(fmt)}
-                  className={s.formatOption()}
+                  selected={format === fmt}
+                  icon={<Icon />}
+                  label={info.label}
+                  description={info.description}
                   title={info.description}
-                >
-                  <Icon className={s.formatIcon()} />
-                  <span className={s.formatLabel()}>{info.label}</span>
-                  <span className={s.formatDescription()}>
-                    {info.description}
-                  </span>
-                </button>
+                />
               );
             })}
           </div>
