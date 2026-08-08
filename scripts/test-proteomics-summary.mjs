@@ -65,6 +65,47 @@ const fallbackResult = computeProteomicsSummary(
 assert.equal(fallbackResult.stats.averageIntensity, 10);
 assert.deepEqual(fallbackResult.intensityDist, []);
 
+const invalidResult = computeProteomicsSummary(
+  [
+    {
+      proteinId: "invalid",
+      intensity_Sample1: "not-a-number",
+      intensity_Control1: 10,
+      pValue: undefined,
+    },
+  ],
+  ["intensity_Sample1", "intensity_Control1", "pValue"]
+);
+assert.equal(invalidResult.stats.missingValues, 1);
+assert.deepEqual(invalidResult.volcanoData, []);
+
+const missingPValueResult = computeProteomicsSummary(
+  [
+    {
+      proteinId: "missing-p",
+      intensity_Sample1: 100,
+      intensity_Control1: 10,
+      pValue: "",
+    },
+  ],
+  ["intensity_Sample1", "intensity_Control1", "pValue"]
+);
+assert.deepEqual(missingPValueResult.volcanoData, []);
+
+const zeroPValueResult = computeProteomicsSummary(
+  [
+    {
+      proteinId: "zero-p",
+      intensity_Sample1: 100,
+      intensity_Control1: 10,
+      pValue: 0,
+    },
+  ],
+  ["intensity_Sample1", "intensity_Control1", "pValue"]
+);
+assert.equal(zeroPValueResult.volcanoData[0].y, 300);
+assert.equal(zeroPValueResult.volcanoData[0].significant, true);
+
 assert.deepEqual(computeProteomicsSummary([], columns), {
   stats: null,
   intensityDist: [],

@@ -606,24 +606,24 @@ class DBAdapter {
     if (!session) return null;
 
     const requestedMatrixIds = options.matrixIds ?? [];
+    const sessionMatrixIds = session.matrixIds || [];
     const loadAllMatrices =
       options.matrixPayloads !== "none" && options.matrixIds === undefined;
     const [workflows, activities, matrixMetadata, visualizations] =
       await Promise.all([
         this.getWorkflowsByIds(session.workflowIds || []),
         this.getActivitiesByIds(session.activityIds || []),
-        this.getMatrixMetadataByIds(session.matrixIds || []),
+        this.getMatrixMetadataByIds(sessionMatrixIds),
         this.getVisualizationsByIds(session.visualizationIds || []),
       ]);
 
     let matrices = matrixMetadata;
     if (loadAllMatrices) {
-      matrices = await this.getMatricesByIds(session.matrixIds || []);
+      matrices = await this.getMatricesByIds(sessionMatrixIds);
     } else if (requestedMatrixIds.length) {
+      const sessionMatrixIdSet = new Set(sessionMatrixIds);
       const hydrated = await this.getMatricesByIds(
-        requestedMatrixIds.filter((matrixId) =>
-          session.matrixIds.includes(matrixId)
-        )
+        requestedMatrixIds.filter((matrixId) => sessionMatrixIdSet.has(matrixId))
       );
       const hydratedById = new Map(hydrated.map((matrix) => [matrix.id, matrix]));
       matrices = matrixMetadata.map(

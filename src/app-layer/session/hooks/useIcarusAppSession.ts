@@ -38,10 +38,12 @@ export const useIcarusAppSession = () => {
   );
   const [activeMatrixId, setActiveMatrixId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isHydratingMatrix, setIsHydratingMatrix] = useState(false);
   const [isPreparingMatrixView, setIsPreparingMatrixView] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
   const isUploadingRef = useRef(false);
+  const hydrationRequestIdRef = useRef(0);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
   const { storageEstimate, refreshStorageEstimate } = useStorageHealth();
 
@@ -84,14 +86,21 @@ export const useIcarusAppSession = () => {
   // Session aggregates contain lightweight metadata for inactive matrices.
   // Hydrate only the selected payload and merge it into the existing graph.
   useEffect(() => {
-    if (!activeSession || !activeMatrixId) return;
+    const requestId = ++hydrationRequestIdRef.current;
+    if (!activeSession || !activeMatrixId) {
+      setIsHydratingMatrix(false);
+      return;
+    }
     const selected = activeSession.matrices.find(
       (matrix) => matrix.id === activeMatrixId
     );
-    if (!selected || isMatrixPayloadLoaded(selected)) return;
+    if (!selected || isMatrixPayloadLoaded(selected)) {
+      setIsHydratingMatrix(false);
+      return;
+    }
 
     let cancelled = false;
-    setIsProcessing(true);
+    setIsHydratingMatrix(true);
     IcarusDBAdapter.getMatrixById(activeMatrixId)
       .then((matrix) => {
         if (cancelled || !matrix) return;
@@ -107,7 +116,9 @@ export const useIcarusAppSession = () => {
       })
       .catch((error) => reportOperationError("Unable to load matrix", error))
       .finally(() => {
-        if (!cancelled) setIsProcessing(false);
+        if (!cancelled && hydrationRequestIdRef.current === requestId) {
+          setIsHydratingMatrix(false);
+        }
       });
 
     return () => {
@@ -364,7 +375,7 @@ export const useIcarusAppSession = () => {
     handleDeleteVisualization,
     handleSessionClick,
     handleSessionCreate,
-    isProcessing,
+    isProcessing: isProcessing || isHydratingMatrix,
     isPreparingMatrixView,
     isSheetOpen,
     loadSessionForExport,

@@ -5,9 +5,11 @@ import type {
   PersistedMatrixMetadata,
 } from "@/domain/storage/index.types";
 import type {
+  MatrixCodecWorkerPayload,
   MatrixCodecWorkerResponse,
   PendingWorkerRequest,
 } from "@/domain/workers/index.types";
+import { WORKER_REQUEST_TIMEOUT_MS } from "@/domain/workers/constants";
 import {
   decodeMatrix,
   encodeMatrix,
@@ -65,17 +67,44 @@ class MatrixCodec {
     worker.onerror = (event) => {
       this.failWorker(new Error(event.message || "Matrix codec worker failed"));
     };
+    worker.onmessageerror = () => {
+      this.failWorker(
+        new Error("Matrix codec worker returned an invalid response")
+      );
+    };
     this.worker = worker;
     return worker;
   }
 
-  private request(payload: Record<string, unknown>) {
+  private request(payload: MatrixCodecWorkerPayload) {
     const worker = this.getWorker();
     const id = this.nextRequestId++;
 
     return new Promise<unknown>((resolve, reject) => {
-      this.pending.set(id, { resolve, reject });
-      worker.postMessage({ id, ...payload });
+      const timeout = globalThis.setTimeout(() => {
+        this.failWorker(
+          new Error("Matrix codec worker did not respond in time")
+        );
+      }, WORKER_REQUEST_TIMEOUT_MS);
+      const clearRequestTimeout = () => globalThis.clearTimeout(timeout);
+      this.pending.set(id, {
+        resolve: (value) => {
+          clearRequestTimeout();
+          resolve(value);
+        },
+        reject: (error) => {
+          clearRequestTimeout();
+          reject(error);
+        },
+      });
+
+      try {
+        worker.postMessage({ id, ...payload });
+      } catch (error) {
+        this.pending.delete(id);
+        clearRequestTimeout();
+        reject(error);
+      }
     });
   }
 
