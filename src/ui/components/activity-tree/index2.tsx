@@ -17,6 +17,10 @@ import {
 } from "@/domain/visualization/utils/main";
 import { Minus, Plus, RefreshCcw } from "lucide-react";
 import { wrapText } from "./utils/main";
+import {
+  getActivityMatrixId,
+  getActivityTreeSelection,
+} from "./utils/navigation";
 
 const getRendererLabel = (renderer?: IcarusVisualization["renderer"]) => {
   if (renderer === "recharts") {
@@ -41,6 +45,22 @@ const ActivityTree2 = ({
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const [isPanning, setIsPanning] = useState(false);
   const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
+  const handlersRef = useRef({
+    onClickOfInputButton,
+    onClickOfOutputButton,
+    onClickOfVisualizationButton,
+    onDeleteMatrix,
+    onDeleteActivity,
+    onDeleteVisualization,
+  });
+  handlersRef.current = {
+    onClickOfInputButton,
+    onClickOfOutputButton,
+    onClickOfVisualizationButton,
+    onDeleteMatrix,
+    onDeleteActivity,
+    onDeleteVisualization,
+  };
   const { resolvedMode } = useThemeMode();
   const isDarkMode = resolvedMode === "dark";
   const palette = useMemo(
@@ -123,6 +143,23 @@ const ActivityTree2 = ({
       return acc;
     }, new Map());
     const roots = buildActivityTree(activities);
+    const activateNode = (node: ActivityTreeNodeForD3) => {
+      const selection = getActivityTreeSelection(
+        node.activity,
+        visualizationsByActivity.get(node.activity.id) ?? []
+      );
+      if (!selection) return;
+
+      if (selection.kind === "visualization") {
+        handlersRef.current.onClickOfVisualizationButton?.(
+          selection.visualizationId,
+          selection.sourceMatrixId
+        );
+        return;
+      }
+
+      handlersRef.current.onClickOfOutputButton?.(selection.matrixId);
+    };
 
     const hierarchyRoots = roots.map((r) =>
       d3.hierarchy<ActivityTreeNodeForD3>(r, (d) => d.children)
@@ -227,10 +264,24 @@ const ActivityTree2 = ({
         .data(tree.descendants())
         .join("g")
         .attr("class", `node-${i}`)
+        .attr("role", "button")
+        .attr("tabindex", 0)
+        .attr("aria-label", (d) => `Open activity ${d.data.activity.name}`)
+        .style("cursor", "pointer")
         .attr(
           "transform",
           (d) => `translate(${d.x + treeXOffset},${d.y + 50})`
-        );
+        )
+        .on("click", (event: MouseEvent, d) => {
+          event.stopPropagation();
+          activateNode(d.data);
+        })
+        .on("keydown", (event: KeyboardEvent, d) => {
+          if (event.key !== "Enter" && event.key !== " ") return;
+          event.preventDefault();
+          event.stopPropagation();
+          activateNode(d.data);
+        });
 
       // Node background
       nodes
@@ -254,17 +305,12 @@ const ActivityTree2 = ({
           }
         })
         .attr("stroke", (d) => {
-          if (d.data.activity.outputMatrixReference === activeMatrixId) {
+          if (getActivityMatrixId(d.data.activity) === activeMatrixId) {
             return "red";
           }
           return palette.nodeStroke;
         })
-        .attr("stroke-width", 1.5)
-        .on("click", (event: MouseEvent, d) => {
-          event.stopPropagation();
-          d.data.activity.outputMatrixReference &&
-            onClickOfInputButton?.(d.data.activity.outputMatrixReference);
-        });
+        .attr("stroke-width", 1.5);
 
       // Activity name
       nodes
@@ -277,7 +323,7 @@ const ActivityTree2 = ({
         .text((d) => d.data.activity.name)
         .call(wrapText, 80);
 
-      if (onDeleteActivity) {
+      if (handlersRef.current.onDeleteActivity) {
         const activityDeleteButton = nodes
           .append("g")
           .attr("transform", `translate(${nodeWidth / 2 - 26}, ${-nodeHeight / 2 + 10})`)
@@ -287,13 +333,13 @@ const ActivityTree2 = ({
           .style("cursor", "pointer")
           .on("click", (event: MouseEvent, d) => {
             event.stopPropagation();
-            onDeleteActivity(d.data.activity.id);
+            handlersRef.current.onDeleteActivity?.(d.data.activity.id);
           })
           .on("keydown", (event: KeyboardEvent, d) => {
             if (event.key !== "Enter" && event.key !== " ") return;
             event.preventDefault();
             event.stopPropagation();
-            onDeleteActivity(d.data.activity.id);
+            handlersRef.current.onDeleteActivity?.(d.data.activity.id);
           });
 
         activityDeleteButton
@@ -318,7 +364,10 @@ const ActivityTree2 = ({
         const activityVisualizations =
           visualizationsByActivity.get(d.data.activity.id) ?? [];
 
-        if (!activityVisualizations.length || !onClickOfVisualizationButton) {
+        if (
+          !activityVisualizations.length ||
+          !handlersRef.current.onClickOfVisualizationButton
+        ) {
           return;
         }
 
@@ -347,7 +396,7 @@ const ActivityTree2 = ({
             .style("cursor", "pointer")
             .on("click", (event: MouseEvent) => {
               event.stopPropagation();
-              onClickOfVisualizationButton(
+              handlersRef.current.onClickOfVisualizationButton?.(
                 visualization.id,
                 sourceMatrixId ?? undefined
               );
@@ -363,14 +412,14 @@ const ActivityTree2 = ({
 
           button
             .append("text")
-            .attr("x", onDeleteVisualization ? 30 : 37)
+            .attr("x", handlersRef.current.onDeleteVisualization ? 30 : 37)
             .attr("y", 12)
             .attr("font-size", "9px")
             .attr("text-anchor", "middle")
             .attr("fill", palette.visualizationText)
             .text(formatAxisLabel(label, 11));
 
-          if (onDeleteVisualization) {
+          if (handlersRef.current.onDeleteVisualization) {
             const deleteButton = button
               .append("g")
               .attr("transform", "translate(57, 0)")
@@ -379,13 +428,13 @@ const ActivityTree2 = ({
               .attr("aria-label", `Delete visualization ${visualizationLabel}`)
               .on("click", (event: MouseEvent) => {
                 event.stopPropagation();
-                onDeleteVisualization(visualization.id);
+                handlersRef.current.onDeleteVisualization?.(visualization.id);
               })
               .on("keydown", (event: KeyboardEvent) => {
                 if (event.key !== "Enter" && event.key !== " ") return;
                 event.preventDefault();
                 event.stopPropagation();
-                onDeleteVisualization(visualization.id);
+                handlersRef.current.onDeleteVisualization?.(visualization.id);
               });
 
             deleteButton
@@ -444,7 +493,9 @@ const ActivityTree2 = ({
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
           d.data.activity.inputMatrixReferences &&
-            onClickOfInputButton?.(d.data.activity.inputMatrixReferences);
+            handlersRef.current.onClickOfInputButton?.(
+              d.data.activity.inputMatrixReferences
+            );
         });
 
       inputButton
@@ -457,14 +508,14 @@ const ActivityTree2 = ({
 
       inputButton
         .append("text")
-        .attr("x", onDeleteMatrix ? 32 : 40)
+        .attr("x", handlersRef.current.onDeleteMatrix ? 32 : 40)
         .attr("y", 14)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
         .attr("fill", palette.inputText)
         .text("⬇ Input");
 
-      if (onDeleteMatrix) {
+      if (handlersRef.current.onDeleteMatrix) {
         const inputDeleteButton = inputButton
           .filter((d) => Boolean(d.data.activity.inputMatrixReferences))
           .append("g")
@@ -478,7 +529,9 @@ const ActivityTree2 = ({
           .on("click", (event: MouseEvent, d) => {
             event.stopPropagation();
             if (d.data.activity.inputMatrixReferences) {
-              onDeleteMatrix(d.data.activity.inputMatrixReferences);
+              handlersRef.current.onDeleteMatrix?.(
+                d.data.activity.inputMatrixReferences
+              );
             }
           })
           .on("keydown", (event: KeyboardEvent, d) => {
@@ -486,7 +539,9 @@ const ActivityTree2 = ({
             event.preventDefault();
             event.stopPropagation();
             if (d.data.activity.inputMatrixReferences) {
-              onDeleteMatrix(d.data.activity.inputMatrixReferences);
+              handlersRef.current.onDeleteMatrix?.(
+                d.data.activity.inputMatrixReferences
+              );
             }
           });
 
@@ -516,7 +571,9 @@ const ActivityTree2 = ({
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
           d.data.activity.outputMatrixReference &&
-            onClickOfOutputButton?.(d.data.activity.outputMatrixReference);
+            handlersRef.current.onClickOfOutputButton?.(
+              d.data.activity.outputMatrixReference
+            );
         });
 
       outputButton
@@ -529,14 +586,14 @@ const ActivityTree2 = ({
 
       outputButton
         .append("text")
-        .attr("x", onDeleteMatrix ? 32 : 40)
+        .attr("x", handlersRef.current.onDeleteMatrix ? 32 : 40)
         .attr("y", 14)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
         .attr("fill", palette.outputText)
         .text("⬆ Output");
 
-      if (onDeleteMatrix) {
+      if (handlersRef.current.onDeleteMatrix) {
         const outputDeleteButton = outputButton
           .filter((d) => Boolean(d.data.activity.outputMatrixReference))
           .append("g")
@@ -550,7 +607,9 @@ const ActivityTree2 = ({
           .on("click", (event: MouseEvent, d) => {
             event.stopPropagation();
             if (d.data.activity.outputMatrixReference) {
-              onDeleteMatrix(d.data.activity.outputMatrixReference);
+              handlersRef.current.onDeleteMatrix?.(
+                d.data.activity.outputMatrixReference
+              );
             }
           })
           .on("keydown", (event: KeyboardEvent, d) => {
@@ -558,7 +617,9 @@ const ActivityTree2 = ({
             event.preventDefault();
             event.stopPropagation();
             if (d.data.activity.outputMatrixReference) {
-              onDeleteMatrix(d.data.activity.outputMatrixReference);
+              handlersRef.current.onDeleteMatrix?.(
+                d.data.activity.outputMatrixReference
+              );
             }
           });
 
@@ -610,12 +671,6 @@ const ActivityTree2 = ({
     }
   }, [
     sessionData,
-    onClickOfInputButton,
-    onClickOfOutputButton,
-    onClickOfVisualizationButton,
-    onDeleteActivity,
-    onDeleteMatrix,
-    onDeleteVisualization,
     palette,
     activeMatrixId,
   ]);

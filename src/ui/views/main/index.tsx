@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { flushSync } from "react-dom";
 import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import MatrixTab from "@/ui/components/header/matrix-tab";
@@ -18,6 +17,7 @@ import type {
 import { formatStorageBytes } from "@/app-layer/database/health/storage-health";
 import { STORAGE_WARNING_PERCENT } from "@/domain/storage/constants";
 import { mainViewStyles } from "./variants/main.variants";
+import { getVisualizationMatrixId } from "@/domain/visualization/utils/main";
 
 const IcarusApp: React.FC = () => {
   const styles = mainViewStyles();
@@ -75,27 +75,30 @@ const IcarusApp: React.FC = () => {
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
   const selectMatrix = (matrixId: string) => {
-    flushSync(() => {
-      setActiveProteomicsTab("import");
-      setActiveMatrixId(matrixId);
-      setActiveVisualizationId("");
-    });
+    setActiveProteomicsTab("import");
+    setActiveMatrixId(matrixId);
+    setActiveVisualizationId("");
   };
   const selectActivityMatrix = (matrixId: string) => {
-    selectMatrix(matrixId);
     closeActivitySheet();
+    selectMatrix(matrixId);
   };
   const selectVisualization = (
     visualizationId: string,
     sourceMatrixId?: string
   ) => {
-    if (sourceMatrixId) {
-      setActiveMatrixId(sourceMatrixId);
+    closeActivitySheet();
+    const visualization = activeSession?.visualizations.find(
+      (entry) => entry.id === visualizationId
+    );
+    const resolvedMatrixId =
+      sourceMatrixId ?? getVisualizationMatrixId(visualization);
+    if (resolvedMatrixId) {
+      setActiveMatrixId(resolvedMatrixId);
     }
 
     setActiveVisualizationId(visualizationId);
     setActiveProteomicsTab("visualization");
-    closeActivitySheet();
   };
   const toggleSidebar = () => setShowSession((value) => !value);
   const handleCreateSessionAndOpenImport = async (sessionData: Parameters<typeof handleSessionCreate>[0]) => {
