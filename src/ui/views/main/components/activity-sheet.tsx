@@ -5,6 +5,7 @@ import type { IcarusSessionWithWorkflow } from "@/domain/session";
 
 export function ActivitySheet({
   activeMatrixId,
+  activeVisualizationId,
   activeSession,
   isOpen,
   onClose,
@@ -15,6 +16,7 @@ export function ActivitySheet({
   onVisualizationDelete,
 }: {
   activeMatrixId: string | null;
+  activeVisualizationId: string | null;
   activeSession: IcarusSessionWithWorkflow | null;
   isOpen: boolean;
   onClose: () => void;
@@ -40,6 +42,7 @@ export function ActivitySheet({
         <ActivityTree2
           sessionData={activeSession}
           activeMatrixId={activeMatrixId}
+          activeVisualizationId={activeVisualizationId}
           onClickOfOutputButton={onMatrixSelect}
           onClickOfInputButton={onMatrixSelect}
           onClickOfVisualizationButton={onVisualizationSelect}

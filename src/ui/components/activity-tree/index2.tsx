@@ -7,7 +7,7 @@ import {
   buttonStyle,
 } from "./variants/activity.style.variant";
 import { DisplayedActivityTree } from "./types/activity-node.types";
-import { IcarusVisualization } from "@/domain/workflow/main.types";
+import { IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
 import { useThemeMode } from "@/ui/theme/use-theme-mode";
 import {
   formatAxisLabel,
@@ -18,7 +18,6 @@ import {
 import { Minus, Plus, RefreshCcw } from "lucide-react";
 import { wrapText } from "./utils/main";
 import {
-  getActivityMatrixId,
   getActivityTreeSelection,
 } from "./utils/navigation";
 
@@ -33,6 +32,7 @@ const getRendererLabel = (renderer?: IcarusVisualization["renderer"]) => {
 const ActivityTree2 = ({
   sessionData,
   activeMatrixId,
+  activeVisualizationId,
   onClickOfInputButton,
   onClickOfOutputButton,
   onClickOfVisualizationButton,
@@ -143,6 +143,25 @@ const ActivityTree2 = ({
       return acc;
     }, new Map());
     const roots = buildActivityTree(activities);
+
+    const activeVisualization = activeVisualizationId
+      ? sessionData.visualizations?.find(
+          (visualization) => visualization.id === activeVisualizationId
+        )
+      : undefined;
+
+    const isActivityActive = (activity: IcarusActivity) => {
+      if (activeVisualization?.createdByActivityId) {
+        return activity.id === activeVisualization.createdByActivityId;
+      }
+
+      if (activeMatrixId) {
+        return activity.outputMatrixReference === activeMatrixId;
+      }
+
+      return false;
+    };
+
     const activateNode = (node: ActivityTreeNodeForD3) => {
       const selection = getActivityTreeSelection(
         node.activity,
@@ -305,7 +324,7 @@ const ActivityTree2 = ({
           }
         })
         .attr("stroke", (d) => {
-          if (getActivityMatrixId(d.data.activity) === activeMatrixId) {
+          if (isActivityActive(d.data.activity)) {
             return "red";
           }
           return palette.nodeStroke;
@@ -673,6 +692,7 @@ const ActivityTree2 = ({
     sessionData,
     palette,
     activeMatrixId,
+    activeVisualizationId,
   ]);
 
   const handleZoomIn = () => {
@@ -779,7 +799,7 @@ const ActivityTree2 = ({
           <div>Click on ⬇ Input or ⬆ Output buttons to view matrices</div>
           <div>
             <span className=" text-red-600">Red border&nbsp;</span>
-            indicates the currently selected matrix in the main view
+            indicates the currently active matrix or visualization
           </div>
         </div>
       </div>

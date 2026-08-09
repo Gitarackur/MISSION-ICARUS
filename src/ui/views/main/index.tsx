@@ -273,6 +273,7 @@ const IcarusApp: React.FC = () => {
             />
             <ActivitySheet
               activeMatrixId={activeMatrixId}
+              activeVisualizationId={activeVisualizationId || null}
               activeSession={activeSession}
               isOpen={isSheetOpen}
               onClose={closeActivitySheet}
