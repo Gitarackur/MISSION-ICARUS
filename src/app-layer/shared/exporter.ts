@@ -348,15 +348,6 @@ export const buildSessionExport = (
     name: session.name,
     date: session.date,
   },
-  workflows: (session.workflows ?? []).map((workflow) => ({
-    id: workflow.id,
-    createdAt: workflow.createdAt,
-    matrices: serializeMatrices(workflow.data?.matrices ?? []),
-    activities: serializeActivities(workflow.data?.activities ?? []),
-    visualizations: serializeVisualizations(
-      workflow.data?.visualizations ?? []
-    ),
-  })),
   matrices: serializeMatrices(session.matrices ?? []),
   activities: serializeActivities(session.activities ?? []),
   visualizations: serializeVisualizations(session.visualizations ?? []),

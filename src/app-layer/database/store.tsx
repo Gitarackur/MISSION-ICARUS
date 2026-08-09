@@ -4,7 +4,6 @@ import type {
   IcarusActivity,
   IcarusMatrix,
   IcarusVisualization,
-  IcarusWorkflowRecord,
 } from "@/domain/workflow/main.types";
 
 import {
@@ -81,87 +80,10 @@ class DBAdapter {
     return result;
   }
 
-  async saveWorkflow(workflow: IcarusWorkflowRecord) {
-    try {
-      const result = await this.db.workflows.put(workflow);
-      announceStorageChange();
-      return result;
-    } catch (error) {
-      throw asStorageWriteError(error);
-    }
-  }
-
-  async getWorkflowById(id: string): Promise<IcarusWorkflowRecord | undefined> {
-    return this.db.workflows.get(id);
-  }
-
-  async getWorkflowsByIds(ids: string[]): Promise<IcarusWorkflowRecord[]> {
-    if (!ids.length) return [];
-    const rows = await this.db.workflows.where("id").anyOf(ids).toArray();
-    return orderedRecords(ids, rows);
-  }
-
-  async deleteWorkflow(id: string) {
-    const result = await this.db.workflows.delete(id);
-    announceStorageChange();
-    return result;
-  }
-
-  async updateWorkflow(id: string, changes: Partial<IcarusWorkflowRecord>) {
-    try {
-      const result = await this.db.workflows.update(id, changes);
-      announceStorageChange();
-      return result;
-    } catch (error) {
-      throw asStorageWriteError(error);
-    }
-  }
-
-  async updateSessionWorkflows({
-    sessionId,
-    workflowIds,
-    matrixIds,
-    activityIds,
-    visualizationIds,
-  }: {
-    sessionId: string;
-    workflowIds?: string[];
-    matrixIds?: string[];
-    activityIds?: string[];
-    visualizationIds?: string[];
-  }) {
-    try {
-      const result = await this.db.transaction(
-        "rw",
-        this.db.sessions,
-        async () => {
-          const session = await this.db.sessions.get(sessionId);
-          if (!session) throw new Error(`Session with id ${sessionId} not found`);
-
-          return this.db.sessions.put({
-            ...session,
-            workflowIds: mergeIds(session.workflowIds, workflowIds),
-            matrixIds: mergeIds(session.matrixIds, matrixIds),
-            activityIds: mergeIds(session.activityIds, activityIds),
-            visualizationIds: mergeIds(
-              session.visualizationIds,
-              visualizationIds
-            ),
-          });
-        }
-      );
-      announceStorageChange();
-      return result;
-    } catch (error) {
-      throw asStorageWriteError(error);
-    }
-  }
-
   async saveInitialSessionGraph({
     session,
     matrix,
     activity,
-    workflow,
   }: InitialSessionGraph) {
     const encoded = await matrixCodec.encode(matrix);
 
@@ -170,7 +92,6 @@ class DBAdapter {
         "rw",
         [
           this.db.sessions,
-          this.db.workflows,
           this.db.activities,
           this.db.matrices,
           this.db.matrixChunks,
@@ -178,7 +99,6 @@ class DBAdapter {
         async () => {
           await this.putEncodedMatrix(encoded);
           await this.db.activities.put(activity);
-          await this.db.workflows.put(workflow);
           await this.db.sessions.put(session);
         }
       );
@@ -299,16 +219,11 @@ class DBAdapter {
     }
   }
 
-  async deleteSessionWithWorkflows(sessionId: string) {
-    return this.deleteSessionWithAllData(sessionId);
-  }
-
   async deleteSessionWithAllData(sessionId: string) {
     const result = await this.db.transaction(
       "rw",
       [
         this.db.sessions,
-        this.db.workflows,
         this.db.activities,
         this.db.matrices,
         this.db.matrixChunks,
@@ -320,12 +235,10 @@ class DBAdapter {
 
         const normalizeIds = (ids?: (string | number)[]) =>
           (ids || []).map((id) => String(id));
-        const workflowIds = normalizeIds(session.workflowIds);
         const activityIds = normalizeIds(session.activityIds);
         const matrixIds = normalizeIds(session.matrixIds);
         const visualizationIds = normalizeIds(session.visualizationIds);
 
-        if (workflowIds.length) await this.db.workflows.bulkDelete(workflowIds);
         if (activityIds.length) await this.db.activities.bulkDelete(activityIds);
         if (matrixIds.length) {
           await this.deleteMatrixChunks(matrixIds);
@@ -492,7 +405,6 @@ class DBAdapter {
       "rw",
       [
         this.db.sessions,
-        this.db.workflows,
         this.db.activities,
         this.db.matrices,
         this.db.matrixChunks,
@@ -515,7 +427,6 @@ class DBAdapter {
           id: snapshot.id,
           name: snapshot.name,
           date: snapshot.date,
-          workflowIds: snapshot.workflowIds,
           matrixIds: snapshot.matrixIds.filter(
             (id) => !deletedMatrixIds.has(id)
           ),
@@ -609,13 +520,11 @@ class DBAdapter {
     const sessionMatrixIds = session.matrixIds || [];
     const loadAllMatrices =
       options.matrixPayloads !== "none" && options.matrixIds === undefined;
-    const [workflows, activities, matrixMetadata, visualizations] =
-      await Promise.all([
-        this.getWorkflowsByIds(session.workflowIds || []),
-        this.getActivitiesByIds(session.activityIds || []),
-        this.getMatrixMetadataByIds(sessionMatrixIds),
-        this.getVisualizationsByIds(session.visualizationIds || []),
-      ]);
+    const [activities, matrixMetadata, visualizations] = await Promise.all([
+      this.getActivitiesByIds(session.activityIds || []),
+      this.getMatrixMetadataByIds(sessionMatrixIds),
+      this.getVisualizationsByIds(session.visualizationIds || []),
+    ]);
 
     let matrices = matrixMetadata;
     if (loadAllMatrices) {
@@ -633,7 +542,6 @@ class DBAdapter {
 
     return {
       ...session,
-      workflows,
       activities,
       matrices,
       visualizations,

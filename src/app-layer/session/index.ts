@@ -1,11 +1,9 @@
 import { v4 as uuidv4 } from 'uuid';
-import IcarusWorkflow from "../algorithms/workflow";
 
 class IcarusSession {
     id: string
     name: string;
     date: Date | string;
-    workflow: IcarusWorkflow | null = null;
 
     constructor() {
         this.id = uuidv4();
@@ -18,11 +16,6 @@ class IcarusSession {
         });
     }
 
-    addWorkflow(workflow: IcarusWorkflow) {
-        this.workflow = workflow
-        return this.getSessionValues();
-    }
-
     changeSessionName(name: string) {
         this.name = name;
     }
@@ -31,8 +24,7 @@ class IcarusSession {
         return {
             id: this.id,
             name: this.name,
-            date: this.date,
-            workflow: this.workflow
+            date: this.date
         }
     }
 }

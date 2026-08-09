@@ -3,7 +3,6 @@ import type {
   IcarusActivity,
   IcarusMatrix,
   IcarusVisualization,
-  IcarusWorkflowRecord,
   TableMatrix,
 } from "@/domain/workflow/main.types";
 import {
@@ -76,7 +75,6 @@ export interface InitialSessionGraph {
   session: IcarusSession;
   matrix: IcarusMatrix;
   activity: IcarusActivity;
-  workflow: IcarusWorkflowRecord;
 }
 
 export interface StatisticalResultGraph {

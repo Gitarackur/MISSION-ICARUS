@@ -1,6 +1,6 @@
 import { ipcMain } from "electron";
 import type { IcarusSession } from "@/domain/session";
-import type { IcarusActivity, IcarusMatrix, IcarusVisualization, IcarusWorkflowRecord } from "@/domain/workflow/main.types";
+import type { IcarusActivity, IcarusMatrix, IcarusVisualization } from "@/domain/workflow/main.types";
 
 import type { DeletionPlan } from "@/app-layer/database/deletion";
 import type { IcarusDBAdapterType } from "../types/index.types";
@@ -79,42 +79,12 @@ export function setupDatabaseHandlers(IcarusDB: IcarusDBAdapterType) {
     }
   });
 
-  ipcMain.handle("db:getSessionWithWorkflows", async (_, id: string) => {
+  ipcMain.handle("db:getSessionWithAllData", async (_, id: string) => {
     try {
-      const session = icarusDB.getSessionWithWorkflows(id);
+      const session = icarusDB.getSessionWithAllData(id);
       return { success: true, data: session };
     } catch (error) {
-      console.error("Error getting session with workflows:", error);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  });
-
-  // Workflow handlers
-  ipcMain.handle(
-    "db:saveWorkflow",
-    async (_, workflow: IcarusWorkflowRecord) => {
-      try {
-        icarusDB.saveWorkflow(workflow);
-        return { success: true };
-      } catch (error) {
-        console.error("Error saving workflow:", error);
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : "Unknown error",
-        };
-      }
-    }
-  );
-
-  ipcMain.handle("db:getWorkflow", async (_, id: string) => {
-    try {
-      const workflow = icarusDB.getWorkflow(id);
-      return { success: true, data: workflow };
-    } catch (error) {
-      console.error("Error getting workflow:", error);
+      console.error("Error getting session data:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

@@ -2,7 +2,9 @@
 
 Icarus continues to use Dexie/IndexedDB as its renderer-side database. The
 session model remains reference-based: sessions store IDs, while matrices,
-activities, workflows, and visualizations are independent records.
+activities, and visualizations are independent records. The logical workflow is
+reconstructed from the references between those records rather than persisted
+as a separate, duplicative workflow object.
 
 ## Matrix storage
 

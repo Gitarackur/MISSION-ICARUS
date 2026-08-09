@@ -23,12 +23,13 @@ The current app is built around a few core ideas:
 
 ## Data Structure
 
-Icarus separates the **logical workflow graph** from the **physical matrix storage**. The renderer-side source of truth is a versioned Dexie/IndexedDB database containing `sessions`, `workflows`, `activities`, `matrices`, `matrixChunks`, and `visualizations`.
+Icarus separates the **logical workflow graph** from the **physical matrix storage**. The renderer-side source of truth is a versioned Dexie/IndexedDB database containing `sessions`, `activities`, `matrices`, `matrixChunks`, and `visualizations`. There is no persisted workflow record: the workflow is derived from the references between these normalized records.
 
 ### Workflow graph
 
-- **Sessions are lightweight ID registries.** `IcarusSession` stores ordered `workflowIds`, `activityIds`, `matrixIds`, and `visualizationIds`. `IcarusSessionWithWorkflow` is the hydrated aggregate assembled from those independent records.
+- **Sessions are lightweight ID registries.** Each session stores its metadata plus ordered `activityIds`, `matrixIds`, and `visualizationIds`. `getSessionWithAllData` hydrates those independent records into the aggregate consumed by the UI.
 - **Edges are identifier references.** An `IcarusActivity` consumes a matrix through `inputMatrixReferences` (currently one matrix ID), records provenance in `sourceMatrixId`, and may produce a matrix through `outputMatrixReference`. Statistical activities produce a new matrix; visualization activities instead own an `IcarusVisualization` through `createdByActivityId` and retain the source matrix ID.
+- **The workflow is a projection, not a stored object.** No `workflows` store or `workflowIds` session field is maintained. Database version 3 removes both from existing IndexedDB data without changing the linked activity, matrix, or visualization records.
 - **The graph is projected to a rooted forest for navigation.** `buildActivityTree` and `buildActivityTreeForNonD3` match each activity's input matrix ID to the activity that produced it. Activities without a matching producer become roots, while multiple activities consuming the same matrix become sibling branches. The resulting `{ activity, children, depth }` nodes drive the D3 and non-D3 activity trees.
 - **Graph mutations are dependency-aware.** Session creation, statistical results, and visualizations commit their records and session references atomically. Deletion planning follows matrix, activity, and visualization references, validates the cascade again at commit time, and preserves records still referenced by another session.
 
@@ -40,8 +41,6 @@ Icarus separates the **logical workflow graph** from the **physical matrix stora
 
 ```mermaid
 flowchart LR
-    S["IcarusSession<br/>ordered record IDs"] -.-> W[Workflow]
-
     subgraph G["Logical workflow graph"]
         M0[Source matrix] -->|inputMatrixReferences| A1[Statistical activity]
         A1 -->|outputMatrixReference| M1[Result matrix]
@@ -49,8 +48,11 @@ flowchart LR
         A2 -->|createdByActivityId| V[Visualization]
     end
 
+    S["Session<br/>activityIds, matrixIds,<br/>visualizationIds"]
     S -.-> M0
+    S -.-> M1
     S -.-> A1
+    S -.-> A2
     S -.-> V
 
     M0 -.->|payload| C0[Matrix chunks]
