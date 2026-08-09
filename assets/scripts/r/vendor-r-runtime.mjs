@@ -105,13 +105,17 @@ class RRuntimeVendor {
     return arch;
   }
 
+  rscriptExecutableName() {
+    return os.platform() === "win32" ? "Rscript.exe" : "Rscript";
+  }
+
   candidateRscripts() {
     if (process.env.RSCRIPT_PATH) {
       return [process.env.RSCRIPT_PATH];
     }
 
     if (os.platform() === "win32") {
-      return ["Rscript.exe"];
+      return [this.rscriptExecutableName()];
     }
 
     return [
@@ -502,7 +506,11 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
   }
 
   verifyBundledRuntimePackages(runtimeRoot) {
-    const bundledRscript = path.join(runtimeRoot, "bin", "Rscript");
+    const bundledRscript = path.join(
+      runtimeRoot,
+      "bin",
+      this.rscriptExecutableName()
+    );
 
     if (!existsSync(bundledRscript)) {
       throw new Error(`Bundled Rscript was not found: ${bundledRscript}`);
