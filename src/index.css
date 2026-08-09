@@ -11,6 +11,24 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+html {
+  background-color: #ffffff;
+  color-scheme: light;
+}
+
+html.dark {
+  background-color: #030712;
+  color-scheme: dark;
+}
+
+/* Temporarily added by the theme provider while a theme flip is being applied.
+   Forces every descendant transition off for one frame so the palette change
+   paints instantly instead of morphing (which flashed the old mode's colors). */
+.disable-theme-transitions,
+.disable-theme-transitions * {
+  transition: none !important;
+}
+
 * {
   box-sizing: border-box;
 }
