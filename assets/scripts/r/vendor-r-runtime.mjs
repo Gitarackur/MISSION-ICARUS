@@ -14,7 +14,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-class RRuntimeVendor {
+export const R_RUNTIME_DEPENDENCY_FIELDS = Object.freeze(["Depends", "Imports"]);
+
+export class RRuntimeVendor {
   constructor(options = {}) {
     this.__dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -380,6 +382,8 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
   }
 
   getRequiredPackagesWithDependencies(rscript) {
+    // LinkingTo dependencies provide headers at compile time; the bundled
+    // renderer only needs packages imported or loaded at runtime.
     const expression = `
       required <- c(${this.requiredPackages.map((pkg) => `"${pkg}"`).join(",")});
 
@@ -388,6 +392,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       deps <- tools::package_dependencies(
         required,
         db = installed,
+        which = c(${R_RUNTIME_DEPENDENCY_FIELDS.map((field) => `"${field}"`).join(", ")}),
         recursive = TRUE
       );
 
@@ -612,5 +617,11 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
   }
 }
 
-const vendor = new RRuntimeVendor();
-vendor.run();
+const scriptPath = fileURLToPath(import.meta.url);
+const isMainModule =
+  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(scriptPath);
+
+if (isMainModule) {
+  const vendor = new RRuntimeVendor();
+  vendor.run();
+}

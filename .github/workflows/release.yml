@@ -116,110 +116,13 @@ jobs:
       - name: Rebuild native modules
         run: npx electron-rebuild -f -w better-sqlite3
 
-      - name: Resolve renderer runtime target
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          PLATFORM=$(node -p "({darwin:'macos',win32:'windows',linux:'linux'})[process.platform]")
-          ARCH=$(node -p "process.arch")
-
-          case "$PLATFORM" in
-            macos)
-              PYTHON_RENDERER_NAME="commander.bin"
-              NATIVE_EXE_SUFFIX=""
-              RUNTIME_RID="osx-$ARCH"
-              ;;
-            windows)
-              PYTHON_RENDERER_NAME="commander.exe"
-              NATIVE_EXE_SUFFIX=".exe"
-              RUNTIME_RID="win-$ARCH"
-              ;;
-            linux)
-              PYTHON_RENDERER_NAME="commander"
-              NATIVE_EXE_SUFFIX=""
-              RUNTIME_RID="linux-$ARCH"
-              ;;
-            *)
-              echo "Unsupported release platform: $PLATFORM" >&2
-              exit 1
-              ;;
-          esac
-
-          echo "RUNTIME_PLATFORM=$PLATFORM" >> "$GITHUB_ENV"
-          echo "RUNTIME_ARCH=$ARCH" >> "$GITHUB_ENV"
-          echo "RUNTIME_RID=$RUNTIME_RID" >> "$GITHUB_ENV"
-          echo "PYTHON_RENDERER_NAME=$PYTHON_RENDERER_NAME" >> "$GITHUB_ENV"
-          echo "NATIVE_EXE_SUFFIX=$NATIVE_EXE_SUFFIX" >> "$GITHUB_ENV"
-
-      - name: Rebuild F# renderer runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          FSHARP_DIR="assets/runtime/fsharp/$RUNTIME_PLATFORM-$RUNTIME_ARCH"
-          FSHARP_RENDERER="$FSHARP_DIR/fsharp-plot$NATIVE_EXE_SUFFIX"
-
-          rm -rf "$FSHARP_DIR"
-          dotnet publish assets/scripts/fsharp/IcarusPlotRenderer/IcarusPlotRenderer.fsproj \
-            --configuration Release \
-            --runtime "$RUNTIME_RID" \
-            --self-contained \
-            /p:PublishSingleFile=true \
-            --output "$FSHARP_DIR"
-
-          test -s "$FSHARP_RENDERER"
-
-      - name: Rebuild Python renderer runtime
-        shell: bash
+      - name: Install Python renderer build tooling
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
-          PIPENV_VENV_IN_PROJECT: "1"
-        run: |
-          set -euo pipefail
+        run: python -m pip install "pipenv==2025.0.4"
 
-          PYTHON_BIN_DIR="assets/scripts/python/bin"
-          rm -f \
-            "$PYTHON_BIN_DIR/commander" \
-            "$PYTHON_BIN_DIR/commander.bin" \
-            "$PYTHON_BIN_DIR/commander.exe"
-          rm -rf \
-            assets/scripts/python/.nuitka-cache \
-            "$PYTHON_BIN_DIR/commander.build" \
-            "$PYTHON_BIN_DIR/commander.dist" \
-            "$PYTHON_BIN_DIR/commander.onefile-build"
-
-          python -m pip install "pipenv==2025.0.4"
-          (
-            cd assets/scripts/python
-            python -m pipenv sync --dev
-            python -m pipenv run prepare
-          )
-
-          test -s "$PYTHON_BIN_DIR/$PYTHON_RENDERER_NAME"
-
-          rm -rf \
-            assets/scripts/python/.venv \
-            assets/scripts/python/.nuitka-cache \
-            "$PYTHON_BIN_DIR/commander.build" \
-            "$PYTHON_BIN_DIR/commander.dist" \
-            "$PYTHON_BIN_DIR/commander.onefile-build"
-
-      - name: Rebuild R renderer runtime
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          R_DIR="assets/runtime/r/$RUNTIME_PLATFORM-$RUNTIME_ARCH"
-          R_RENDERER="$R_DIR/bin/Rscript$NATIVE_EXE_SUFFIX"
-
-          rm -rf "$R_DIR"
-          node assets/scripts/r/vendor-r-runtime.mjs --clean
-
-          test -s "$R_RENDERER"
-
-      - name: Smoke-test rebuilt renderer runtimes
-        run: npm run test:bundled-renderers
+      - name: Rebuild and smoke-test renderer runtimes
+        run: npm run prepare:renderer:runtimes -- --force
 
       - name: Prepare macOS notarization assets
         if: matrix.os == 'macos-latest'

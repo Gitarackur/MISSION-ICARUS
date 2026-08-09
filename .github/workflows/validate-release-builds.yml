@@ -1,0 +1,104 @@
+name: Validate Release Builds
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/release.yml"
+      - ".github/workflows/validate-release-builds.yml"
+      - "assets/scripts/**"
+      - "electron-builder.json5"
+      - "package.json"
+      - "package-lock.json"
+      - "scripts/prepare-renderer-runtimes.mjs"
+      - "scripts/test-bundled-renderer-runtimes.mjs"
+      - "scripts/test-renderer-runtime-preparation.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate-release-build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS arm64
+            os: macos-latest
+          - name: Linux x64
+            os: ubuntu-latest
+          - name: Windows x64
+            os: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Setup Python (Python plot renderer)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: assets/scripts/python/Pipfile.lock
+
+      - name: Setup .NET SDK (F# plot renderer)
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Setup R (R plot renderer)
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - name: Install R renderer packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::jsonlite
+            any::ggplot2
+            any::ragg
+
+      - name: Install Linux packaging dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fuse libarchive-tools
+
+      - name: Install application dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild native modules
+        run: npx electron-rebuild -f -w better-sqlite3
+
+      - name: Install Python renderer build tooling
+        env:
+          PIP_DISABLE_PIP_VERSION_CHECK: "1"
+        run: python -m pip install "pipenv==2025.0.4"
+
+      - name: Test renderer runtime preparation
+        run: npm run test:renderer-runtime-preparation
+
+      - name: Rebuild and smoke-test renderer runtimes
+        run: npm run prepare:renderer:runtimes -- --force
+
+      - name: Build macOS installer
+        if: runner.os == 'macOS'
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: npm run build -- --publish never
+
+      - name: Build Linux installer
+        if: runner.os == 'Linux'
+        run: npm run build:linux -- --publish never
+
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        run: npm run build:windows -- --publish never
