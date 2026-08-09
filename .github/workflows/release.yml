@@ -70,6 +70,7 @@ jobs:
     needs: create-release
     runs-on: ${{ matrix.os }}
     strategy:
+      fail-fast: false
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
 
@@ -83,105 +84,142 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Rebuild native modules
-        run: npx electron-rebuild -f -w better-sqlite3
+      - name: Setup Python (Python plot renderer)
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: assets/scripts/python/Pipfile.lock
 
       - name: Setup .NET SDK (F# plot renderer)
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: "10.0.x"
 
-      - name: Build bundled runtimes (best-effort)
+      - name: Setup R (R plot renderer)
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: release
+          use-public-rspm: true
+
+      - name: Install R renderer packages
+        uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          packages: |
+            any::jsonlite
+            any::ggplot2
+            any::ragg
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Rebuild native modules
+        run: npx electron-rebuild -f -w better-sqlite3
+
+      - name: Resolve renderer runtime target
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          PLATFORM=$(node -p "({darwin:'macos',win32:'windows',linux:'linux'})[process.platform]")
+          ARCH=$(node -p "process.arch")
+
+          case "$PLATFORM" in
+            macos)
+              PYTHON_RENDERER_NAME="commander.bin"
+              NATIVE_EXE_SUFFIX=""
+              RUNTIME_RID="osx-$ARCH"
+              ;;
+            windows)
+              PYTHON_RENDERER_NAME="commander.exe"
+              NATIVE_EXE_SUFFIX=".exe"
+              RUNTIME_RID="win-$ARCH"
+              ;;
+            linux)
+              PYTHON_RENDERER_NAME="commander"
+              NATIVE_EXE_SUFFIX=""
+              RUNTIME_RID="linux-$ARCH"
+              ;;
+            *)
+              echo "Unsupported release platform: $PLATFORM" >&2
+              exit 1
+              ;;
+          esac
+
+          echo "RUNTIME_PLATFORM=$PLATFORM" >> "$GITHUB_ENV"
+          echo "RUNTIME_ARCH=$ARCH" >> "$GITHUB_ENV"
+          echo "RUNTIME_RID=$RUNTIME_RID" >> "$GITHUB_ENV"
+          echo "PYTHON_RENDERER_NAME=$PYTHON_RENDERER_NAME" >> "$GITHUB_ENV"
+          echo "NATIVE_EXE_SUFFIX=$NATIVE_EXE_SUFFIX" >> "$GITHUB_ENV"
+
+      - name: Rebuild F# renderer runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          FSHARP_DIR="assets/runtime/fsharp/$RUNTIME_PLATFORM-$RUNTIME_ARCH"
+          FSHARP_RENDERER="$FSHARP_DIR/fsharp-plot$NATIVE_EXE_SUFFIX"
+
+          rm -rf "$FSHARP_DIR"
+          dotnet publish assets/scripts/fsharp/IcarusPlotRenderer/IcarusPlotRenderer.fsproj \
+            --configuration Release \
+            --runtime "$RUNTIME_RID" \
+            --self-contained \
+            /p:PublishSingleFile=true \
+            --output "$FSHARP_DIR"
+
+          test -s "$FSHARP_RENDERER"
+
+      - name: Rebuild Python renderer runtime
         shell: bash
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
           PIPENV_VENV_IN_PROJECT: "1"
         run: |
-          set +e
+          set -euo pipefail
 
-          PLATFORM=$(node -p "({darwin:'macos',win32:'windows',linux:'linux'})[process.platform]")
-          ARCH=$(node -p "process.arch")
-          RUNTIME_DIR="assets/runtime"
-          FSHARP_DIR="$RUNTIME_DIR/fsharp/$PLATFORM-$ARCH"
-          R_DIR="$RUNTIME_DIR/r/$PLATFORM-$ARCH"
+          PYTHON_BIN_DIR="assets/scripts/python/bin"
+          rm -f \
+            "$PYTHON_BIN_DIR/commander" \
+            "$PYTHON_BIN_DIR/commander.bin" \
+            "$PYTHON_BIN_DIR/commander.exe"
+          rm -rf \
+            assets/scripts/python/.nuitka-cache \
+            "$PYTHON_BIN_DIR/commander.build" \
+            "$PYTHON_BIN_DIR/commander.dist" \
+            "$PYTHON_BIN_DIR/commander.onefile-build"
 
-          case "$PLATFORM" in
-            macos)   COMMANDER_EXT="bin"; RID="osx-$ARCH" ;;
-            windows) COMMANDER_EXT="exe"; RID="win-$ARCH" ;;
-            linux)   COMMANDER_EXT="";   RID="linux-$ARCH" ;;
-            *)       RID="$PLATFORM-$ARCH" ;;
-          esac
+          python -m pip install "pipenv==2025.0.4"
+          (
+            cd assets/scripts/python
+            python -m pipenv sync --dev
+            python -m pipenv run prepare
+          )
 
-          built=0
-          notes=""
+          test -s "$PYTHON_BIN_DIR/$PYTHON_RENDERER_NAME"
 
-          echo "==> Building F# plot renderer ($RID)"
-          if command -v dotnet >/dev/null 2>&1; then
-            mkdir -p "$FSHARP_DIR"
-            dotnet publish assets/scripts/fsharp/IcarusPlotRenderer/IcarusPlotRenderer.fsproj \
-              -c Release -r "$RID" --self-contained \
-              /p:PublishSingleFile=true -o "$FSHARP_DIR" >/dev/null 2>&1
-            if [ -f "$FSHARP_DIR/fsharp-plot" ] || [ -f "$FSHARP_DIR/fsharp-plot.exe" ]; then
-              echo "    F# runtime OK: $FSHARP_DIR"
-              built=$((built + 1))
-            else
-              echo "    WARN: dotnet publish did not produce fsharp-plot; keeping existing asset."
-              notes="${notes}\n  - F# runtime: FAILED"
-            fi
-          else
-            echo "    WARN: dotnet not available; skipping F# runtime build."
-            notes="${notes}\n  - F# runtime: SKIPPED (no dotnet)"
-          fi
+          rm -rf \
+            assets/scripts/python/.venv \
+            assets/scripts/python/.nuitka-cache \
+            "$PYTHON_BIN_DIR/commander.build" \
+            "$PYTHON_BIN_DIR/commander.dist" \
+            "$PYTHON_BIN_DIR/commander.onefile-build"
 
-          echo "==> Building Python renderer (Nuitka)"
-          if command -v python3 >/dev/null 2>&1 && command -v pip3 >/dev/null 2>&1; then
-            (
-              cd assets/scripts/python || exit 1
-              python3 -m pip install --quiet --user pipenv >/dev/null 2>&1
-              export PATH="$HOME/.local/bin:$PATH"
-              if command -v pipenv >/dev/null 2>&1; then
-                pipenv sync --dev >/dev/null 2>&1 || pipenv install --dev >/dev/null 2>&1
-                pipenv run prepare >/dev/null 2>&1
-                code=$?
-                if [ -f "bin/commander.$COMMANDER_EXT" ]; then
-                  echo "    Python runtime OK: bin/commander.$COMMANDER_EXT"
-                  built=$((built + 1))
-                else
-                  echo "    WARN: Nuitka build finished (exit $code) but commander.$COMMANDER_EXT missing."
-                  notes="$notes\n  - Python runtime: FAILED (exit $code)"
-                fi
-              else
-                echo "    WARN: pipenv install failed; skipping Python runtime build."
-                notes="$notes\n  - Python runtime: SKIPPED (no pipenv)"
-              fi
-            )
-          else
-            echo "    WARN: python3/pip3 not available; skipping Python runtime build."
-            notes="$notes\n  - Python runtime: SKIPPED (no python3/pip3)"
-          fi
+      - name: Rebuild R renderer runtime
+        shell: bash
+        run: |
+          set -euo pipefail
 
-          echo "==> Building R runtime"
-          if command -v Rscript >/dev/null 2>&1 || [ -n "$RSCRIPT_PATH" ]; then
-            node assets/scripts/r/vendor-r-runtime.mjs --clean >/dev/null 2>&1
-            code=$?
-            if [ -f "$R_DIR/bin/Rscript" ] || [ -f "$R_DIR/bin/Rscript.exe" ]; then
-              echo "    R runtime OK: $R_DIR"
-              built=$((built + 1))
-            else
-              echo "    WARN: R runtime build finished (exit $code) but Rscript not found."
-              notes="$notes\n  - R runtime: FAILED (exit $code)"
-            fi
-          else
-            echo "    WARN: no system Rscript; skipping R runtime build."
-            notes="$notes\n  - R runtime: SKIPPED (no Rscript; install R or set RSCRIPT_PATH to enable)"
-          fi
+          R_DIR="assets/runtime/r/$RUNTIME_PLATFORM-$RUNTIME_ARCH"
+          R_RENDERER="$R_DIR/bin/Rscript$NATIVE_EXE_SUFFIX"
 
-          echo "==> Built $built/3 runtimes for $PLATFORM-$ARCH."
-          printf '%b\n' "$notes"
-          exit 0
+          rm -rf "$R_DIR"
+          node assets/scripts/r/vendor-r-runtime.mjs --clean
+
+          test -s "$R_RENDERER"
+
+      - name: Smoke-test rebuilt renderer runtimes
+        run: npm run test:bundled-renderers
 
       - name: Prepare macOS notarization assets
         if: matrix.os == 'macos-latest'

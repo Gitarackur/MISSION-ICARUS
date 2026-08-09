@@ -21,6 +21,7 @@
     "test:deletion": "node scripts/test-deletion-planner.mjs",
     "test:statistics-validation": "node scripts/test-statistics-validation.mjs",
     "test:renderer-workers": "node scripts/test-renderer-workers.mjs",
+    "test:bundled-renderers": "node scripts/test-bundled-renderer-runtimes.mjs",
     "test:matrix-storage": "node scripts/test-matrix-storage.mjs",
     "test:proteomics-summary": "node scripts/test-proteomics-summary.mjs",
     "test:lazy-columnar-data": "node scripts/test-lazy-columnar-data.mjs",
