@@ -23,33 +23,43 @@ The current app is built around a few core ideas:
 
 ## Data Structure
 
-The core workflow is modeled as a **Directed Acyclic Graph (DAG)**, but it is not stored as a first-class graph object. Edges are implicit references held as identifiers, and the DAG is materialized as a tree only when needed.
+Icarus separates the **logical workflow graph** from the **physical matrix storage**. The renderer-side source of truth is a versioned Dexie/IndexedDB database containing `sessions`, `workflows`, `activities`, `matrices`, `matrixChunks`, and `visualizations`.
 
-- **Implicit adjacency list (edge-list by reference).** Each `IcarusActivity` links an input matrix to an output matrix via `inputMatrixReference(s)` and `outputMatrixReference` string identifiers. Matrices, activities, and visualizations are persisted as flat records; no explicit adjacency list or graph type is kept on disk.
-- **DAG semantics.** Flow always moves forward (input → output) and never revisits a matrix, so the graph is acyclic.
-- **Projection to a rooted n-ary forest for display.** The activity tree builders (`buildActivityTree` / `buildActivityTreeForNonD3`) walk the references with an `outputMatrixMap`, group activities that share an input matrix under an `inputMatrixKey` node, assign a `depth`, and produce `{ activity, children, depth }` nodes. Duplicate/shared parents are collapsed here, so the persisted DAG loses some multi-parent structure in the rendered tree.
-- **Cascade traversal.** Deletion planning walks the same reference/cascade to compute dependent matrices, activities, and visualizations.
+### Workflow graph
 
-In short: an **implicit adjacency-list DAG** that is **materialized as a forest of n-ary trees** for rendering and dependency analysis.
+- **Sessions are lightweight ID registries.** `IcarusSession` stores ordered `workflowIds`, `activityIds`, `matrixIds`, and `visualizationIds`. `IcarusSessionWithWorkflow` is the hydrated aggregate assembled from those independent records.
+- **Edges are identifier references.** An `IcarusActivity` consumes a matrix through `inputMatrixReferences` (currently one matrix ID), records provenance in `sourceMatrixId`, and may produce a matrix through `outputMatrixReference`. Statistical activities produce a new matrix; visualization activities instead own an `IcarusVisualization` through `createdByActivityId` and retain the source matrix ID.
+- **The graph is projected to a rooted forest for navigation.** `buildActivityTree` and `buildActivityTreeForNonD3` match each activity's input matrix ID to the activity that produced it. Activities without a matching producer become roots, while multiple activities consuming the same matrix become sibling branches. The resulting `{ activity, children, depth }` nodes drive the D3 and non-D3 activity trees.
+- **Graph mutations are dependency-aware.** Session creation, statistical results, and visualizations commit their records and session references atomically. Deletion planning follows matrix, activity, and visualization references, validates the cascade again at commit time, and preserves records still referenced by another session.
+
+### Matrix storage
+
+- **Metadata and payloads are separate.** Inactive matrices can be loaded as metadata-only `IcarusMatrix` records (`rowCount`, `columnCount`, `payloadState`) and hydrated only when selected.
+- **Version 2 matrices are chunked.** Matrix metadata lives in `matrices`; row chunks live in `matrixChunks` under the compound key `[matrixId+chunkIndex]`. Entirely numeric chunk columns are stored as `Float64Array` buffers, while mixed or text columns use lossless value arrays.
+- **Encoding is worker-backed and backward compatible.** Web Workers encode and decode matrix chunks. Legacy version 1 matrix objects remain readable and are converted to the chunked format in a background transaction after a successful read.
 
 ```mermaid
 flowchart LR
-    S[IcarusSession] --> W[IcarusWorkflow]
-    S --> M0[Source Matrix]
+    S["IcarusSession<br/>ordered record IDs"] -.-> W[Workflow]
 
-    subgraph G[Activity DAG]
-        M0 -->|input reference| A1[Activity]
-        A1 -->|output reference| M1[Matrix]
-        M1 -->|input reference| A2[Activity]
-        A2 -->|output reference| M2[Matrix]
-        A2 -->|created by| V[Visualization]
+    subgraph G["Logical workflow graph"]
+        M0[Source matrix] -->|inputMatrixReferences| A1[Statistical activity]
+        A1 -->|outputMatrixReference| M1[Result matrix]
+        M1 -->|inputMatrixReferences| A2[Visualization activity]
+        A2 -->|createdByActivityId| V[Visualization]
     end
 
-    M1 -.-> AT[Activity Tree]
-    M2 -.-> AT
+    S -.-> M0
+    S -.-> A1
+    S -.-> V
+
+    M0 -.->|payload| C0[Matrix chunks]
+    M1 -.->|payload| C1[Matrix chunks]
+
+    G -->|project when rendered| AT[Rooted activity forest]
 ```
 
-`matrices`, `activities`, and `visualizations` are persisted as flat lists; the arrows above are identifier references (`*MatrixReference`), not stored node objects. The activity tree is a navigational projection of this graph.
+The solid arrows are logical data-flow relationships reconstructed from IDs; the records themselves remain flat. See [`docs/data-storage-architecture.md`](./docs/data-storage-architecture.md) for storage limits, hydration behavior, and large-dataset execution details.
 
 ---
 
