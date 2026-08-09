@@ -120,7 +120,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -138,7 +137,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -156,7 +154,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -175,7 +172,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -194,7 +190,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -212,7 +207,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -231,7 +225,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -249,7 +242,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -267,7 +259,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -285,7 +276,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -303,7 +293,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -321,7 +310,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -339,7 +327,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -357,7 +344,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -375,7 +361,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -393,7 +378,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -411,7 +395,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -429,7 +412,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -447,7 +429,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -465,7 +446,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -481,7 +461,6 @@ const useStatisticsMenu = ({
             onSuccess?.(result);
           }}
           onError={() => {
-            closeModal();
             onError?.();
           }}  />
         );
@@ -496,7 +475,6 @@ const useStatisticsMenu = ({
             onSuccess?.(result);
           }}
           onError={() => {
-            closeModal();
             onError?.();
           }}  />
         );
@@ -511,7 +489,6 @@ const useStatisticsMenu = ({
             onSuccess?.(result);
           }}
           onError={() => {
-            closeModal();
             onError?.();
           }}  />
         );
@@ -526,7 +503,6 @@ const useStatisticsMenu = ({
             onSuccess?.(result);
           }}
           onError={() => {
-            closeModal();
             onError?.();
           }}  />
         );
@@ -541,7 +517,6 @@ const useStatisticsMenu = ({
             onSuccess?.(result);
           }}
           onError={() => {
-            closeModal();
             onError?.();
           }}  />
         );
@@ -558,7 +533,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />;
@@ -575,7 +549,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />;
@@ -592,7 +565,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />;
@@ -609,7 +581,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />;
@@ -627,7 +598,6 @@ const useStatisticsMenu = ({
                     onSuccess?.(result);
                   }}
                   onError={() => {
-                    closeModal();
                     onError?.();
                   }}
                 />
@@ -646,7 +616,6 @@ const useStatisticsMenu = ({
                     onSuccess?.(result);
                   }}
                   onError={() => {
-                    closeModal();
                     onError?.();
                   }}
                 />
@@ -666,7 +635,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -684,7 +652,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -702,7 +669,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -720,7 +686,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -738,7 +703,6 @@ const useStatisticsMenu = ({
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -756,7 +720,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -775,7 +738,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -794,7 +756,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -813,7 +774,6 @@ const useStatisticsMenu = ({
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -835,7 +795,6 @@ const useStatisticsMenu = ({
                   onSuccess?.(result);
                 }}
                 onError={() => {
-                  closeModal();
                   onError?.();
                 }}
               />
@@ -854,7 +813,6 @@ const useStatisticsMenu = ({
                   onSuccess?.(result);
                 }}
                 onError={() => {
-                  closeModal();
                   onError?.();
                 }}
               />
@@ -873,7 +831,6 @@ const useStatisticsMenu = ({
         onSuccess?.(result);
       }}
       onError={() => {
-        closeModal();
         onError?.();
       }}
     />
@@ -892,7 +849,6 @@ case 'rename-row':
         onSuccess?.(result);
       }}
       onError={() => {
-        closeModal();
         onError?.();
       }}
     />
@@ -911,7 +867,6 @@ case 'delete-row':
         onSuccess?.(result);
       }}
       onError={() => {
-        closeModal();
         onError?.();
       }}
     />
@@ -930,7 +885,6 @@ case 'delete-row':
           onSuccess?.(result);
         }}
         onError={() => {
-          closeModal();
           onError?.();
         }}
       />
@@ -949,7 +903,6 @@ case 'delete-row':
           onSuccess?.(result);
         }}
         onError={() => {
-          closeModal();
           onError?.();
         }}
       />
@@ -968,7 +921,6 @@ case 'delete-row':
           onSuccess?.(result);
         }}
         onError={() => {
-          closeModal();
           onError?.();
         }}
       />
@@ -988,7 +940,6 @@ case 'delete-row':
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -1007,7 +958,6 @@ case 'delete-row':
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -1033,7 +983,6 @@ case 'delete-row':
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -1053,7 +1002,6 @@ case 'delete-row':
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -1072,7 +1020,6 @@ case 'delete-row':
                 onSuccess?.(result);
               }}
               onError={() => {
-                closeModal();
                 onError?.();
               }}
             />
@@ -1091,7 +1038,6 @@ case 'delete-row':
                   onSuccess?.(result);
                 }}
                 onError={() => {
-                  closeModal();
                   onError?.();
                 }}
               />
@@ -1110,7 +1056,6 @@ case 'delete-row':
                   onSuccess?.(result);
                 }}
                 onError={() => {
-                  closeModal();
                   onError?.();
                 }}
               />
@@ -1129,7 +1074,6 @@ case 'delete-row':
                   onSuccess?.(result);
                 }}
                 onError={() => {
-                  closeModal();
                   onError?.();
                 }}
               />
@@ -1148,7 +1092,6 @@ case 'delete-row':
                   onSuccess?.(result);
                 }}
                 onError={() => {
-                  closeModal();
                   onError?.();
                 }}
               />
@@ -1174,7 +1117,6 @@ case 'delete-row':
         onSuccess?.(result);
       }}
       onError={() => {
-        closeModal();
         onError?.();
       }}
     />;
@@ -1193,7 +1135,6 @@ case 'delete-row':
         onSuccess?.(result);
       }}
       onError={() => {
-        closeModal();
         onError?.();
       }}
     />;
@@ -1211,7 +1152,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1231,7 +1171,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1251,7 +1190,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1285,7 +1223,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1303,7 +1240,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1321,7 +1257,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1339,7 +1274,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1357,7 +1291,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1375,7 +1308,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1393,7 +1325,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1411,7 +1342,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1429,7 +1359,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />
@@ -1447,7 +1376,6 @@ case 'delete-row':
               onSuccess?.(result);
             }}
             onError={() => {
-              closeModal();
               onError?.();
             }}
           />

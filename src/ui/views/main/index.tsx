@@ -42,6 +42,7 @@ const IcarusApp: React.FC = () => {
     operationError,
     originalDataColumns,
     originalDataRows,
+    retryActiveMatrixProcessing,
     saveActivityInWorkflow,
     saveVisualizationInWorkflow,
     selectedDataColumns,
@@ -56,6 +57,8 @@ const IcarusApp: React.FC = () => {
     setShowSession,
     showSession,
     storageEstimate,
+    workerFailure,
+    setWorkerFailure,
   } = useIcarusAppSession();
   const [activeProteomicsTab, setActiveProteomicsTab] =
     useState<tabTypes>("import");
@@ -65,6 +68,9 @@ const IcarusApp: React.FC = () => {
   const { openModal, closeModal } = useModal();
   const hasStoragePressure =
     (storageEstimate?.percentUsed ?? 0) >= STORAGE_WARNING_PERCENT;
+  const canRetryActiveMatrixProcessing =
+    workerFailure?.operationName === "Matrix decoding" ||
+    workerFailure?.operationName === "Matrix preview preparation";
 
   const closeActivitySheet = () => setIsSheetOpen(false);
   const openActivitySheet = () => setIsSheetOpen(true);
@@ -164,6 +170,34 @@ const IcarusApp: React.FC = () => {
 
   return (
     <div className="flex h-screen flex-col bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100">
+      {workerFailure && (
+        <div role="alert" className={styles.workerFailureAlert()}>
+          <div className={styles.workerFailureContent()}>
+            <strong className={styles.workerFailureTitle()}>
+              {workerFailure.operationName} stopped
+            </strong>
+            <span>{workerFailure.message}</span>
+          </div>
+          <div className={styles.workerFailureActions()}>
+            {canRetryActiveMatrixProcessing && (
+              <button
+                type="button"
+                className={styles.workerFailureRetry()}
+                onClick={retryActiveMatrixProcessing}
+              >
+                Try again
+              </button>
+            )}
+            <button
+              type="button"
+              className={styles.workerFailureDismiss()}
+              onClick={() => setWorkerFailure(null)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       {(operationError || hasStoragePressure) && (
         <div
           role="alert"

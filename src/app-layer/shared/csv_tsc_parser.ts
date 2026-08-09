@@ -4,8 +4,9 @@ import {
   ColumnTypeInferenceOptions,
   CSVDelimiterCandidate,
 } from "@/domain/shared/index.types";
-import type { CSVParserWorkerResponse } from "@/domain/workers/index.types";
+import type { CSVParserWorkerRequest } from "@/domain/workers/index.types";
 import { LARGE_CSV_SINGLE_PARSER_THRESHOLD_BYTES } from "@/domain/workers/constants";
+import { runWorkerRequest } from "./workers/worker-client";
 import {
   parseLocalizedNumber,
   toNumberIfPossible,
@@ -418,18 +419,7 @@ class IcarusParser {
 
   parseCSVFromFileNative = async <T>(
     file: File
-  ): Promise<ParsedCSVResult<T>> => {
-    if (typeof Worker !== "undefined") {
-      try {
-        return await parseCSVFileInWorker<T>(file);
-      } catch (error) {
-        console.warn("CSV parser worker unavailable; parsing locally", error);
-      }
-    }
-
-    const text = await file.text();
-    return this.parseCSVFromText<T>(text);
-  };
+  ): Promise<ParsedCSVResult<T>> => parseCSVFileInWorker<T>(file);
 
   parseCSVFromText = <T>(csvText: string): ParsedCSVResult<T> => {
     // Keeping two complete parse candidates doubles peak memory. The native
@@ -517,21 +507,16 @@ class IcarusParser {
 const parser = new IcarusParser();
 
 function parseCSVFileInWorker<T>(file: File): Promise<ParsedCSVResult<T>> {
-  const worker = new Worker(new URL("./workers/csv-parser.worker.ts", import.meta.url), {
-    type: "module",
-  });
-
-  return new Promise((resolve, reject) => {
-    worker.onmessage = (event: MessageEvent<CSVParserWorkerResponse<T>>) => {
-      worker.terminate();
-      if (event.data.ok && event.data.result) resolve(event.data.result);
-      else reject(new Error(event.data.error ?? "CSV parser worker failed"));
-    };
-    worker.onerror = (event) => {
-      worker.terminate();
-      reject(new Error(event.message || "CSV parser worker failed"));
-    };
-    worker.postMessage({ file });
+  const request: CSVParserWorkerRequest = { file };
+  return runWorkerRequest<CSVParserWorkerRequest, ParsedCSVResult<T>>({
+    createWorker: () =>
+      new Worker(
+        new URL("./workers/csv-parser.worker.ts", import.meta.url),
+        { type: "module" }
+      ),
+    request,
+    failureMessage: "CSV parser worker failed",
+    operationName: "CSV import",
   });
 }
 

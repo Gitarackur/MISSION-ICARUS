@@ -2,11 +2,8 @@ import type {
   ProteinRow,
   ProteomicsSummary,
 } from "@/domain/proteins/index.types";
-import type {
-  ProteomicsSummaryWorkerRequest,
-} from "@/domain/workers/index.types";
+import type { ProteomicsSummaryWorkerRequest } from "@/domain/workers/index.types";
 import { runWorkerRequest } from "@/app-layer/shared/workers/worker-client";
-import { computeProteomicsSummary } from "./proteomics-summary";
 
 export const computeProteomicsSummaryInWorker = (
   rows: ProteinRow[],
@@ -20,7 +17,7 @@ export const computeProteomicsSummaryInWorker = (
         { type: "module" }
       ),
     request,
-    fallback: () => computeProteomicsSummary(rows, columns),
     failureMessage: "Summary calculation failed",
+    operationName: "Proteomics summary calculation",
   });
 };
