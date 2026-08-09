@@ -29,7 +29,7 @@ export default function ProteomicsAnalysisHomeView(
   const styles = proteomicsPagestyles();
   const {
     intensityDist,
-    isSummaryLoading,
+    // isSummaryLoading,
     retrySummary,
     stats,
     summaryError,
@@ -69,11 +69,11 @@ export default function ProteomicsAnalysisHomeView(
             </button>
           </div>
         )}
-        {isSummaryLoading && (
+        {/* {isSummaryLoading && (
           <div role="status" className={styles.workerStatus()}>
             Calculating the proteomics summary in the background…
           </div>
-        )}
+        )} */}
         {activeTab === "import" && (
           <div className={styles.sectionSpacing()}>
             <DataPreview

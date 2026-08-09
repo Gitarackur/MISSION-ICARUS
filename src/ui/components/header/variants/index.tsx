@@ -63,7 +63,7 @@ export const tabNavigationVariants = tv({
     active: {
       true: {
         tabButton:
-          "bg-white text-blue-600 border border-l-0 border-gray-300 z-20 -mb-[1px] shadow-md dark:border-gray-700 dark:bg-gray-900 dark:text-blue-300",
+          "z-20 -mb-[1px] border border-l-0 border-gray-300 bg-white text-blue-600 shadow-md dark:border-gray-700 dark:bg-gray-900 dark:text-blue-300",
         visualizationList: "border-blue-100 bg-blue-50/50 dark:border-blue-900/70 dark:bg-blue-950/40",
         visualizationButton:
           "bg-blue-100 text-blue-700 ring-1 ring-blue-300 dark:bg-blue-900/60 dark:text-blue-200 dark:ring-blue-700",

@@ -2,7 +2,7 @@ import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationLabel } from "@/domain/visualization/utils/main";
 import { tabNavigationVariants } from "./variants";
 import { BarChart3, X } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { useActiveTabVisibility } from "./hooks/useActiveTabVisibility";
 
 export const VisualizationTabButton = ({
   matrixId,
@@ -24,16 +24,7 @@ export const VisualizationTabButton = ({
     visualizationDeleteButton,
     visualizationTabWrapper,
   } = tabNavigationVariants({ active: isActive });
-  const tabRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!isActive) return;
-    tabRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, [isActive]);
+  const tabRef = useActiveTabVisibility<HTMLDivElement>(isActive);
 
   const label = getVisualizationLabel(visualization, index);
 
