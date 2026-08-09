@@ -1,6 +1,7 @@
 import {
   ReactNode,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useState,
 } from "react";
@@ -9,6 +10,7 @@ import { ThemeContext, ThemeContextValue } from "./theme-context";
 
 const THEME_STORAGE_KEY = "icarus.theme-mode";
 const THEME_MODES: ThemeMode[] = ["light", "dark", "system"];
+const THEME_FLIP_CLASS = "disable-theme-transitions";
 
 const getSystemTheme = (): ResolvedThemeMode =>
   window.matchMedia?.("(prefers-color-scheme: dark)").matches
@@ -40,12 +42,33 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     window.localStorage.setItem(THEME_STORAGE_KEY, mode);
   }, [mode]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const root = document.documentElement;
+
+    // Many components carry `transition-colors`/`transition-all`. A CSS
+    // transition's first painted frame renders the OLD color before morphing,
+    // which reads as a flash. Disabling transitions on the same recalc as the
+    // palette flip forces the theme to change in a single paint, then we
+    // re-enable transitions after that frame so hover/focus animations keep
+    // working normally.
+    root.classList.add(THEME_FLIP_CLASS);
     root.classList.toggle("dark", resolvedMode === "dark");
     root.dataset.theme = mode;
     root.dataset.resolvedTheme = resolvedMode;
     root.style.colorScheme = resolvedMode;
+
+    let cancelled = false;
+    const frame = requestAnimationFrame(() => {
+      if (cancelled) return;
+      requestAnimationFrame(() => {
+        if (cancelled) return;
+        root.classList.remove(THEME_FLIP_CLASS);
+      });
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
   }, [mode, resolvedMode]);
 
   const value = useMemo<ThemeContextValue>(
