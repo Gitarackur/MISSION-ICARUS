@@ -24,6 +24,8 @@ import {
   SaveVisualizationActivity,
   TableColumns,
 } from "@/domain/workflow/main.types";
+import { WORKER_FAILURE_EVENT } from "@/domain/workers/constants";
+import type { WorkerFailureNotice } from "@/domain/workers/index.types";
 
 export const useIcarusAppSession = () => {
   const [showSession, setShowSession] = useState(true);
@@ -42,6 +44,9 @@ export const useIcarusAppSession = () => {
   const [isPreparingMatrixView, setIsPreparingMatrixView] = useState(false);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
   const [operationError, setOperationError] = useState<string | null>(null);
+  const [workerFailure, setWorkerFailure] =
+    useState<WorkerFailureNotice | null>(null);
+  const [matrixProcessingAttempt, setMatrixProcessingAttempt] = useState(0);
   const isUploadingRef = useRef(false);
   const hydrationRequestIdRef = useRef(0);
   const sessions = useLiveQuery(() => db.sessions.toArray(), []);
@@ -82,6 +87,17 @@ export const useIcarusAppSession = () => {
   );
 
   useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
+
+  useEffect(() => {
+    const handleWorkerFailure = (event: Event) => {
+      setWorkerFailure(
+        (event as CustomEvent<WorkerFailureNotice>).detail
+      );
+    };
+    window.addEventListener(WORKER_FAILURE_EVENT, handleWorkerFailure);
+    return () =>
+      window.removeEventListener(WORKER_FAILURE_EVENT, handleWorkerFailure);
+  }, []);
 
   // Session aggregates contain lightweight metadata for inactive matrices.
   // Hydrate only the selected payload and merge it into the existing graph.
@@ -124,7 +140,12 @@ export const useIcarusAppSession = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeMatrixId, activeSession, reportOperationError]);
+  }, [
+    activeMatrixId,
+    activeSession,
+    matrixProcessingAttempt,
+    reportOperationError,
+  ]);
 
   useEffect(() => {
     const toggleSidebar = () => setShowSession((value) => !value);
@@ -162,7 +183,13 @@ export const useIcarusAppSession = () => {
     return () => {
       cancelled = true;
     };
-  }, [activeMatrix, reportOperationError]);
+  }, [activeMatrix, matrixProcessingAttempt, reportOperationError]);
+
+  const retryActiveMatrixProcessing = () => {
+    setWorkerFailure(null);
+    setOperationError(null);
+    setMatrixProcessingAttempt((attempt) => attempt + 1);
+  };
 
   const handleSessionCreate = async ({ rows, columns, name }: BareSession) => {
     isUploadingRef.current = true;
@@ -383,6 +410,7 @@ export const useIcarusAppSession = () => {
     operationError,
     originalDataColumns,
     originalDataRows,
+    retryActiveMatrixProcessing,
     saveActivityInWorkflow,
     saveVisualizationInWorkflow,
     selectedDataColumns,
@@ -397,5 +425,7 @@ export const useIcarusAppSession = () => {
     setShowSession,
     showSession,
     storageEstimate,
+    workerFailure,
+    setWorkerFailure,
   };
 };

@@ -27,10 +27,14 @@ export default function ProteomicsAnalysisHomeView(
     setSelectedDataColumns,
   } = props;
   const styles = proteomicsPagestyles();
-  const { intensityDist, stats, volcanoData } = useProteomicsAnalysisView({
-    originalDataColumns,
-    originalDataRows,
-  });
+  const {
+    intensityDist,
+    isSummaryLoading,
+    retrySummary,
+    stats,
+    summaryError,
+    volcanoData,
+  } = useProteomicsAnalysisView({ originalDataColumns, originalDataRows });
   const selectTab = (tab: typeof activeTab) => {
     setActiveTab(tab);
     if (tab !== "visualization") {
@@ -53,6 +57,23 @@ export default function ProteomicsAnalysisHomeView(
       </div>
 
       <div className={styles.contentPadding()}>
+        {summaryError && (
+          <div role="alert" className={styles.workerError()}>
+            <span className={styles.workerErrorText()}>{summaryError}</span>
+            <button
+              type="button"
+              className={styles.workerRetryButton()}
+              onClick={retrySummary}
+            >
+              Try again
+            </button>
+          </div>
+        )}
+        {isSummaryLoading && (
+          <div role="status" className={styles.workerStatus()}>
+            Calculating the proteomics summary in the background…
+          </div>
+        )}
         {activeTab === "import" && (
           <div className={styles.sectionSpacing()}>
             <DataPreview

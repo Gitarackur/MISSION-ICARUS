@@ -11,9 +11,12 @@ import type {
 } from "@/domain/workers/index.types";
 import { WORKER_REQUEST_TIMEOUT_MS } from "@/domain/workers/constants";
 import {
-  decodeMatrix,
-  encodeMatrix,
-} from "./matrix-storage";
+  createWorkerFailureError,
+  createWorkerTimeoutError,
+  createWorkerUnavailableError,
+  type WorkerExecutionError,
+} from "@/domain/workers/errors";
+import { announceWorkerFailure } from "@/app-layer/shared/workers/worker-events";
 
 class MatrixCodec {
   private worker: Worker | null = null;
@@ -21,55 +24,79 @@ class MatrixCodec {
   private readonly pending = new Map<number, PendingWorkerRequest>();
 
   async encode(matrix: IcarusMatrix): Promise<EncodedMatrix> {
-    if (typeof Worker === "undefined") return encodeMatrix(matrix);
-
-    try {
-      return (await this.request({ operation: "encode", matrix })) as EncodedMatrix;
-    } catch (error) {
-      console.warn("Matrix codec worker unavailable; encoding locally", error);
-      return encodeMatrix(matrix);
-    }
+    return (await this.request({ operation: "encode", matrix })) as EncodedMatrix;
   }
 
   async decode(
     metadata: PersistedMatrixMetadata,
     chunks: PersistedMatrixChunk[]
   ): Promise<IcarusMatrix> {
-    if (typeof Worker === "undefined") return decodeMatrix(metadata, chunks);
-
-    try {
-      return (await this.request({
-        operation: "decode",
-        metadata,
-        chunks,
-      })) as IcarusMatrix;
-    } catch (error) {
-      console.warn("Matrix codec worker unavailable; decoding locally", error);
-      return decodeMatrix(metadata, chunks);
-    }
+    return (await this.request({
+      operation: "decode",
+      metadata,
+      chunks,
+    })) as IcarusMatrix;
   }
 
-  private getWorker() {
+  private getWorker(operationName: string) {
     if (this.worker) return this.worker;
 
-    const worker = new Worker(new URL("../workers/matrix-codec.worker.ts", import.meta.url), {
-      type: "module",
-    });
+    if (typeof Worker === "undefined") {
+      const error = createWorkerUnavailableError(operationName);
+      announceWorkerFailure(error);
+      throw error;
+    }
+
+    let worker: Worker;
+    try {
+      worker = new Worker(
+        new URL("../workers/matrix-codec.worker.ts", import.meta.url),
+        { type: "module" }
+      );
+    } catch (cause) {
+      const error = createWorkerUnavailableError(
+        operationName,
+        cause
+      );
+      announceWorkerFailure(error);
+      throw error;
+    }
     worker.onmessage = (event: MessageEvent<MatrixCodecWorkerResponse>) => {
       const response = event.data;
       const pending = this.pending.get(response.id);
       if (!pending) return;
       this.pending.delete(response.id);
 
-      if (response.ok) pending.resolve(response.result);
-      else pending.reject(new Error(response.error ?? "Matrix codec failed"));
+      if (response.ok) {
+        pending.resolve(response.result);
+      } else {
+        const error = createWorkerFailureError(
+          pending.operationName,
+          response.error ?? "Matrix codec failed"
+        );
+        announceWorkerFailure(error);
+        pending.reject(error);
+      }
     };
     worker.onerror = (event) => {
-      this.failWorker(new Error(event.message || "Matrix codec worker failed"));
+      const pendingOperation =
+        this.pending.values().next().value?.operationName ?? operationName;
+      this.failWorker(
+        createWorkerFailureError(
+          pendingOperation,
+          event.message || "Matrix codec worker failed",
+          event.error
+        )
+      );
     };
     worker.onmessageerror = () => {
+      const pendingOperation =
+        this.pending.values().next().value?.operationName ?? operationName;
       this.failWorker(
-        new Error("Matrix codec worker returned an invalid response")
+        createWorkerFailureError(
+          pendingOperation,
+          "The matrix worker returned an invalid response."
+        )
       );
     };
     this.worker = worker;
@@ -77,13 +104,15 @@ class MatrixCodec {
   }
 
   private request(payload: MatrixCodecWorkerPayload) {
-    const worker = this.getWorker();
+    const operationName =
+      payload.operation === "encode" ? "Matrix encoding" : "Matrix decoding";
+    const worker = this.getWorker(operationName);
     const id = this.nextRequestId++;
 
     return new Promise<unknown>((resolve, reject) => {
       const timeout = globalThis.setTimeout(() => {
         this.failWorker(
-          new Error("Matrix codec worker did not respond in time")
+          createWorkerTimeoutError(operationName, WORKER_REQUEST_TIMEOUT_MS)
         );
       }, WORKER_REQUEST_TIMEOUT_MS);
       const clearRequestTimeout = () => globalThis.clearTimeout(timeout);
@@ -96,19 +125,27 @@ class MatrixCodec {
           clearRequestTimeout();
           reject(error);
         },
+        operationName,
       });
 
       try {
         worker.postMessage({ id, ...payload });
-      } catch (error) {
+      } catch (cause) {
         this.pending.delete(id);
         clearRequestTimeout();
+        const error = createWorkerFailureError(
+          operationName,
+          "The matrix request could not be sent to the worker.",
+          cause
+        );
+        announceWorkerFailure(error);
         reject(error);
       }
     });
   }
 
-  private failWorker(error: Error) {
+  private failWorker(error: WorkerExecutionError) {
+    announceWorkerFailure(error);
     this.worker?.terminate();
     this.worker = null;
     this.pending.forEach(({ reject }) => reject(error));

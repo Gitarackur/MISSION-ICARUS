@@ -3,31 +3,43 @@ import type {
   WorkerRequestOptions,
   WorkerResponse,
 } from "@/domain/workers/index.types";
+import {
+  createWorkerFailureError,
+  createWorkerTimeoutError,
+  createWorkerUnavailableError,
+} from "@/domain/workers/errors";
+import { announceWorkerFailure } from "./worker-events";
 
 export const runWorkerRequest = <TRequest, TResult>({
   createWorker,
   request,
-  fallback,
   failureMessage,
+  operationName,
   timeoutMs = WORKER_REQUEST_TIMEOUT_MS,
-}: WorkerRequestOptions<TRequest, TResult>): Promise<TResult> => {
-  if (typeof Worker === "undefined") return Promise.resolve(fallback());
+}: WorkerRequestOptions<TRequest>): Promise<TResult> => {
+  if (typeof Worker === "undefined") {
+    const error = createWorkerUnavailableError(operationName);
+    announceWorkerFailure(error);
+    return Promise.reject(error);
+  }
 
   return new Promise<TResult>((resolve, reject) => {
     let worker: Worker;
     try {
       worker = createWorker();
     } catch (error) {
-      reject(error);
+      const unavailableError = createWorkerUnavailableError(
+        operationName,
+        error
+      );
+      announceWorkerFailure(unavailableError);
+      reject(unavailableError);
       return;
     }
 
     let settled = false;
     const timeout = globalThis.setTimeout(() => {
-      settle(
-        reject,
-        new Error(`${failureMessage}: worker did not respond in time`)
-      );
+      fail(createWorkerTimeoutError(operationName, timeoutMs));
     }, timeoutMs);
 
     const settle = <TValue>(
@@ -41,28 +53,52 @@ export const runWorkerRequest = <TRequest, TResult>({
       complete(value);
     };
 
+    const fail = (error: ReturnType<typeof createWorkerFailureError>) => {
+      announceWorkerFailure(error);
+      settle(reject, error);
+    };
+
     worker.onmessage = (event: MessageEvent<WorkerResponse<TResult>>) => {
       if (event.data.ok && event.data.result !== undefined) {
         settle(resolve, event.data.result);
         return;
       }
-      settle(
-        reject,
-        new Error(event.data.error ?? failureMessage)
+      fail(
+        createWorkerFailureError(
+          operationName,
+          event.data.error ?? failureMessage
+        )
       );
     };
     worker.onerror = (event) => {
       event.preventDefault();
-      settle(reject, new Error(event.message || failureMessage));
+      fail(
+        createWorkerFailureError(
+          operationName,
+          event.message || failureMessage,
+          event.error
+        )
+      );
     };
     worker.onmessageerror = () => {
-      settle(reject, new Error(`${failureMessage}: invalid worker response`));
+      fail(
+        createWorkerFailureError(
+          operationName,
+          "The worker returned an invalid response."
+        )
+      );
     };
 
     try {
       worker.postMessage(request);
     } catch (error) {
-      settle(reject, error);
+      fail(
+        createWorkerFailureError(
+          operationName,
+          failureMessage,
+          error
+        )
+      );
     }
   });
 };
