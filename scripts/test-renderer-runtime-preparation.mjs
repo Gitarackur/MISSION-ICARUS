@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
 import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import {
   createFsharpPublishArgs,
   getRuntimeTarget,
 } from "./prepare-renderer-runtimes.mjs";
@@ -83,5 +91,25 @@ assert.doesNotMatch(
   /"LinkingTo"/,
   "compile-time LinkingTo packages must not be required in the bundled runtime"
 );
+
+const linuxRuntimeRoot = mkdtempSync(
+  path.join(os.tmpdir(), "icarus-linux-r-wrapper-")
+);
+
+try {
+  mkdirSync(path.join(linuxRuntimeRoot, "bin"));
+  rVendor.writeRscriptWrapper(linuxRuntimeRoot, "linux");
+  const linuxWrapper = readFileSync(
+    path.join(linuxRuntimeRoot, "bin", "Rscript"),
+    "utf8"
+  );
+
+  assert.match(linuxWrapper, /R_HOME_DIR=.*dirname/);
+  assert.match(linuxWrapper, /export LD_LIBRARY_PATH=/);
+  assert.doesNotMatch(linuxWrapper, /DYLD_LIBRARY_PATH/);
+  assert.match(linuxWrapper, /exec "\$R_HOME_DIR\/bin\/exec\/R"/);
+} finally {
+  rmSync(linuxRuntimeRoot, { recursive: true, force: true });
+}
 
 console.log("Renderer runtime preparation tests passed");

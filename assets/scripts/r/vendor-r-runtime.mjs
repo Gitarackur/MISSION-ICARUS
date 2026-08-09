@@ -318,8 +318,13 @@ export class RRuntimeVendor {
     }
   }
 
-  writeRscriptWrapper(runtimeRoot) {
+  writeRscriptWrapper(runtimeRoot, platform = os.platform()) {
     const wrapperPath = path.join(runtimeRoot, "bin", "Rscript");
+    const dynamicLibraryPathName =
+      platform === "darwin" ? "DYLD_LIBRARY_PATH" : "LD_LIBRARY_PATH";
+    const inheritedDynamicLibraryPath = `\${${dynamicLibraryPathName}:-}`;
+    const inheritedRLibs = "${R_LIBS:-}";
+    const inheritedRLibsUser = "${R_LIBS_USER:-}";
 
     const contents = `#!/bin/sh
 R_HOME_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -329,9 +334,9 @@ export R_SHARE_DIR="$R_HOME_DIR/share"
 export R_INCLUDE_DIR="$R_HOME_DIR/include"
 export R_DOC_DIR="$R_HOME_DIR/doc"
 
-export DYLD_LIBRARY_PATH="$R_HOME_DIR/lib:$DYLD_LIBRARY_PATH"
-export R_LIBS="$R_HOME_DIR/library:$R_LIBS"
-export R_LIBS_USER="$R_HOME_DIR/library:$R_LIBS_USER"
+export ${dynamicLibraryPathName}="$R_HOME_DIR/lib:${inheritedDynamicLibraryPath}"
+export R_LIBS="$R_HOME_DIR/library:${inheritedRLibs}"
+export R_LIBS_USER="$R_HOME_DIR/library:${inheritedRLibsUser}"
 
 if [ "$1" = "--version" ]; then
   exec "$R_HOME_DIR/bin/exec/R" --version
@@ -370,7 +375,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
     }
 
     this.patchShellWrappers(runtimeRoot);
-    this.writeRscriptWrapper(runtimeRoot);
+    this.writeRscriptWrapper(runtimeRoot, "darwin");
 
     for (const filePath of machOFiles) {
       try {
@@ -606,7 +611,14 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       this.targetRuntimeDir
     );
 
-    this.patchMacRuntime(this.targetRuntimeDir, rHome);
+    if (os.platform() === "darwin") {
+      this.patchMacRuntime(this.targetRuntimeDir, rHome);
+    } else if (os.platform() === "linux") {
+      // The stock Linux Rscript binary has a compiled-in R_HOME and ignores a
+      // relocated R_HOME environment value. Invoke the copied R executable
+      // relative to the bundled runtime instead.
+      this.writeRscriptWrapper(this.targetRuntimeDir, "linux");
+    }
 
     this.verifyBundledRuntimePackages(this.targetRuntimeDir);
 
