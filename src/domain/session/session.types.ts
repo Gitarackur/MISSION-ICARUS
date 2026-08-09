@@ -4,7 +4,6 @@ import {
   IcarusActivity,
   IcarusMatrix,
   IcarusVisualization,
-  IcarusWorkflowRecord,
 } from "@/domain/workflow/main.types";
 
 export type BareSession = {
@@ -18,7 +17,6 @@ export interface IcarusSession {
   id: string;
   name: string;
   date: Date | string;
-  workflowIds: string[];
   activityIds: string[];
   matrixIds: string[];
   visualizationIds: string[];
@@ -26,7 +24,6 @@ export interface IcarusSession {
 
 // Session enriched with its linked records
 export interface IcarusSessionWithWorkflow extends IcarusSession {
-  workflows: IcarusWorkflowRecord[];
   activities: IcarusActivity[];
   matrices: IcarusMatrix[];
   visualizations: IcarusVisualization[];

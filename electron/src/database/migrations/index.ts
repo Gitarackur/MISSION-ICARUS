@@ -195,5 +195,32 @@ export function setupMigrations(db: Database.Database): MigrationRunner {
     }
   });
 
+  migrationRunner.addMigration({
+    version: 9,
+    name: 'remove_redundant_workflows',
+    up: (db) => {
+      db.prepare('DROP TABLE IF EXISTS workflows').run();
+
+      const sessionColumns = db.prepare(`PRAGMA table_info(sessions)`).all() as { name: string }[];
+      if (sessionColumns.some((column) => column.name === 'workflowIds')) {
+        db.prepare(`ALTER TABLE sessions DROP COLUMN workflowIds`).run();
+      }
+    },
+    down: (db) => {
+      const sessionColumns = db.prepare(`PRAGMA table_info(sessions)`).all() as { name: string }[];
+      if (!sessionColumns.some((column) => column.name === 'workflowIds')) {
+        db.prepare(`ALTER TABLE sessions ADD COLUMN workflowIds TEXT DEFAULT '[]'`).run();
+      }
+
+      db.prepare(`
+        CREATE TABLE IF NOT EXISTS workflows (
+          id TEXT PRIMARY KEY,
+          createdAt INTEGER NOT NULL,
+          data BLOB NOT NULL
+        )
+      `).run();
+    }
+  });
+
   return migrationRunner;
 }

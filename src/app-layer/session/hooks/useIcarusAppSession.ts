@@ -224,7 +224,7 @@ export const useIcarusAppSession = () => {
   };
 
   const handleDeleteSession = async (id: string) => {
-    await IcarusDBAdapter.deleteSessionWithWorkflows(id);
+    await IcarusDBAdapter.deleteSessionWithAllData(id);
     if (activeSession?.id === id) {
       setActiveSession(null);
       setOriginalDataRows([]);

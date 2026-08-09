@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { nodeVariants, treeVariants } from "./variants/activity.style.variant";
 import { ActivityTreeNodeForNonD3 } from "@/domain/tree/tree.types";
 import {
@@ -119,7 +119,6 @@ const ActivityTree3 = ({
   onClickOfInputButton,
   onClickOfOutputButton,
 }: DisplayedActivityTree) => {
-  const [selectedWorkflow, setSelectedWorkflow] = useState(0);
   const treeStyles = treeVariants();
 
   const activities = useMemo(
@@ -150,35 +149,13 @@ const ActivityTree3 = ({
         <div className={treeStyles.headerContent()}>
           <div>
             <h2 className={treeStyles.title()}>{sessionData.name}</h2>
-            <p className={treeStyles.subtitle()}>
-              {sessionData.workflows?.[0]?.id}
-            </p>
+            <p className={treeStyles.subtitle()}>{sessionData.id}</p>
             <div className={treeStyles.stats()}>
               <span className={treeStyles.statBadge()}>
                 {activities.length} Activities
               </span>
-              {sessionData.workflows && (
-                <span className={treeStyles.statBadge()}>
-                  {sessionData.workflows.length} Workflow
-                  {sessionData.workflows.length !== 1 ? "s" : ""}
-                </span>
-              )}
             </div>
           </div>
-
-          {sessionData.workflows?.length > 1 && (
-            <select
-              value={selectedWorkflow}
-              onChange={(e) => setSelectedWorkflow(Number(e.target.value))}
-              className={treeStyles.select()}
-            >
-              {sessionData.workflows.map((_, i) => (
-                <option key={i} value={i}>
-                  Workflow {i + 1}
-                </option>
-              ))}
-            </select>
-          )}
         </div>
       </div>
 

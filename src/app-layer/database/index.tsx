@@ -1,6 +1,6 @@
 import Dexie, { Table } from 'dexie';
 import type { IcarusSession } from "@/domain/session";
-import type { IcarusActivity, IcarusVisualization, IcarusWorkflowRecord } from "@/domain/workflow/main.types";
+import type { IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
 import type {
   PersistedMatrixChunk,
   PersistedMatrixRecord,
@@ -8,12 +8,11 @@ import type {
 
 
 
-const VERSION_NUMBER = 2;
+const VERSION_NUMBER = 3;
 
 
 
 export class IcarusDB extends Dexie {
-  workflows!: Table<IcarusWorkflowRecord, string>;
   sessions!: Table<IcarusSession, string>;
   matrices!: Table<PersistedMatrixRecord, string>;
   matrixChunks!: Table<PersistedMatrixChunk, [string, number]>;
@@ -32,7 +31,7 @@ export class IcarusDB extends Dexie {
 
     // Existing v1 matrix objects remain valid. They are converted to the
     // chunked representation lazily after a successful read.
-    this.version(VERSION_NUMBER).stores({
+    this.version(2).stores({
       workflows: "id,createdAt",
       sessions: "id,name,date",
       matrices: "id,createdAt,createdByFirstActivity,storageFormat",
@@ -42,6 +41,18 @@ export class IcarusDB extends Dexie {
       visualizations:
         "id,createdAt,createdByActivityId,sourceMatrixId,renderer,visualizationType",
     });
+
+    this.version(VERSION_NUMBER)
+      .stores({ workflows: null })
+      .upgrade((transaction) =>
+        transaction
+          .table<IcarusSession, string>("sessions")
+          .toCollection()
+          .modify((session) => {
+            delete (session as IcarusSession & { workflowIds?: string[] })
+              .workflowIds;
+          })
+      );
   }
 }
 

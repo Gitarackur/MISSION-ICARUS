@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useMemo } from 'react';
 import { activityStyleVariants } from './variants/activity.style.variant.tsx';
 import TreeNode from './tree-node.tsx';
 import { generateIcarusActivityNode } from '@/app-layer/algorithms/tree/index.ts';
@@ -16,7 +16,6 @@ const ActivityTree = ({
   // sourceMatrixId
   const sourceMatrixId = useMemo(() => sessionData?.matrices?.[0]?.id, [sessionData?.matrices])
 
-  const [selectedWorkflow, setSelectedWorkflow] = useState(0);
   const activities = useMemo(() => sessionData.activities, [sessionData.activities])
 
   const activityTree = useMemo(() => {
@@ -35,17 +34,6 @@ const ActivityTree = ({
             {sessionData.name} • {activityTree.length} groups • {activities.length} activities
           </div>
         </div>
-        {sessionData.workflows.length > 1 && (
-          <select
-            value={selectedWorkflow}
-            onChange={e => setSelectedWorkflow(Number(e.target.value))}
-            className={styles.layoutSelect()}
-          >
-            {sessionData.workflows.map((_, i) => (
-              <option key={i} value={i}>Workflow {i + 1}</option>
-            ))}
-          </select>
-        )}
       </div>
 
       <div className={styles.layoutContent()}>

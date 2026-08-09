@@ -2,7 +2,6 @@ import { v4 as uuidv4 } from "uuid";
 import { StrictValidationResult } from "@/domain/shared/index.types";
 import IcarusSessionEntity from "..";
 import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
-import IcarusWorkflow from "@/app-layer/algorithms/workflow";
 import { BareSession } from "@/domain/session";
 import {
   IcarusActivity,
@@ -79,11 +78,7 @@ export const generateActiveSessionWitNestedWorkflow = async ({
       name || `Test Session - ${Math.random() * 6 + 1}`
     );
 
-    // create icarus workflow
-    const workflow = new IcarusWorkflow();
-
-    // add workflow to session
-    const sessionMap = session.addWorkflow(workflow);
+    const sessionMap = session.getSessionValues();
 
     const matrix: IcarusMatrix = {
       id: `icarus-matrix-${uuidv4()}`,
@@ -107,16 +102,10 @@ export const generateActiveSessionWitNestedWorkflow = async ({
       pluginId: "",
     };
 
-    const workflowRecord = {
-      id: workflow.id,
-      createdAt: Date.now(),
-      data: workflow,
-    };
     const persistedSession: IcarusSession = {
       id: sessionMap.id,
       name: sessionMap.name,
       date: sessionMap.date,
-      workflowIds: [workflowRecord.id],
       matrixIds: [matrix.id],
       activityIds: [activity.id],
       visualizationIds: [],
@@ -128,7 +117,6 @@ export const generateActiveSessionWitNestedWorkflow = async ({
       session: persistedSession,
       matrix,
       activity,
-      workflow: workflowRecord,
     });
 
     const sessionWithWorkflows = await IcarusDBAdapter.getSessionWithAllData(

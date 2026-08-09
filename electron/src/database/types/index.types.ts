@@ -1,5 +1,5 @@
 import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
-import type { IcarusWorkflowRecord, IcarusMatrix, IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
+import type { IcarusMatrix, IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
 
 import type {
   DeletionPlan,
@@ -11,9 +11,7 @@ export type IcarusDBAdapterType = {
   getSession(id: string): IcarusSession | null;
   getAllSessions(): IcarusSession[];
   deleteSession(id: string): void;
-  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflow | null;
-  saveWorkflow(workflow: IcarusWorkflowRecord): void;
-  getWorkflow(id: string): IcarusWorkflowRecord | null;
+  getSessionWithAllData(id: string): IcarusSessionWithWorkflow | null;
   saveMatrix(matrix: IcarusMatrix): void;
   getMatrix(id: string): IcarusMatrix | null;
   saveActivity(activity: IcarusActivity): void;

@@ -34,15 +34,9 @@ const createDatabase = () => {
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
       date TEXT NOT NULL,
-      workflowIds TEXT DEFAULT '[]',
       activityIds TEXT DEFAULT '[]',
       matrixIds TEXT DEFAULT '[]',
       visualizationIds TEXT DEFAULT '[]'
-    );
-    CREATE TABLE workflows (
-      id TEXT PRIMARY KEY,
-      createdAt INTEGER NOT NULL,
-      data BLOB NOT NULL
     );
     CREATE TABLE matrices (
       id TEXT PRIMARY KEY,
@@ -144,7 +138,6 @@ const seed = (database) => {
     id: "session",
     name: "SQL deletion test",
     date: "2026-08-04",
-    workflowIds: [],
     matrixIds: matrices.map(({ id }) => id),
     activityIds: activities.map(({ id }) => id),
     visualizationIds: [visualization.id],
@@ -246,7 +239,6 @@ const seed = (database) => {
     id: "shared-session",
     name: "Shared legacy record",
     date: "2026-08-04",
-    workflowIds: [],
     matrixIds: ["m1"],
     activityIds: [],
     visualizationIds: [],

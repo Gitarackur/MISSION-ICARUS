@@ -122,17 +122,3 @@ export interface IcarusPlugin {
   createdAt?: string;
   metadata: unknown;
 }
-
-// Persisted workflow aggregate. `data` is the workflow graph instance.
-export interface IcarusWorkflowData {
-  id: string;
-  matrices: IcarusMatrix[];
-  activities: IcarusActivity[];
-  visualizations: IcarusVisualization[];
-}
-
-export interface IcarusWorkflowRecord {
-  id: string;
-  createdAt: number;
-  data: IcarusWorkflowData;
-}

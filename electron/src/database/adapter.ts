@@ -1,6 +1,6 @@
 import type { Database as DatabaseType } from "better-sqlite3";
 import type { IcarusSession, IcarusSessionWithWorkflow } from "@/domain/session";
-import type { IcarusWorkflowRecord, IcarusMatrix, IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
+import type { IcarusMatrix, IcarusActivity, IcarusVisualization } from "@/domain/workflow/main.types";
 
 import {
   assertDeletionPlanIntegrity,
@@ -25,7 +25,6 @@ export class IcarusDBAdapter {
 
   // SESSION METHODS
   saveSession(session: IcarusSession): void {
-    const workflowIds = JSON.stringify(session.workflowIds || []);
     const activityIds = JSON.stringify(session.activityIds || []);
     const matrixIds = JSON.stringify(session.matrixIds || []);
     const visualizationIds = JSON.stringify(session.visualizationIds || []);
@@ -37,15 +36,14 @@ export class IcarusDBAdapter {
     this.db
       .prepare(
         `
-        INSERT OR REPLACE INTO sessions (id, name, date, workflowIds, activityIds, matrixIds, visualizationIds)
-        VALUES (@id, @name, @date, @workflowIds, @activityIds, @matrixIds, @visualizationIds)
+        INSERT OR REPLACE INTO sessions (id, name, date, activityIds, matrixIds, visualizationIds)
+        VALUES (@id, @name, @date, @activityIds, @matrixIds, @visualizationIds)
       `
       )
       .run({
         id: session.id,
         name: session.name,
         date,
-        workflowIds,
         activityIds,
         matrixIds,
         visualizationIds,
@@ -58,13 +56,11 @@ export class IcarusDBAdapter {
       .get(id) as
       | (Omit<
           IcarusSession,
-          | "workflowIds"
           | "activityIds"
           | "matrixIds"
           | "visualizationIds"
           | "date"
         > & {
-          workflowIds: string;
           activityIds: string;
           matrixIds: string;
           visualizationIds: string;
@@ -77,7 +73,6 @@ export class IcarusDBAdapter {
     return {
       ...row,
       date: new Date(row.date),
-      workflowIds: JSON.parse(row.workflowIds),
       activityIds: JSON.parse(row.activityIds),
       matrixIds: JSON.parse(row.matrixIds),
       visualizationIds: JSON.parse(row.visualizationIds),
@@ -88,11 +83,6 @@ export class IcarusDBAdapter {
     const session = this.getSession(id);
     if (session) {
       // Clean up related records
-      if (session.workflowIds?.length) {
-        for (const wid of session.workflowIds) {
-          this.deleteWorkflow(wid);
-        }
-      }
       if (session.activityIds?.length) {
         for (const aid of session.activityIds) {
           this.deleteActivity(aid);
@@ -116,13 +106,11 @@ export class IcarusDBAdapter {
     const rows = this.db.prepare(`SELECT * FROM sessions`).all() as Array<
       Omit<
         IcarusSession,
-        | "workflowIds"
         | "activityIds"
         | "matrixIds"
         | "visualizationIds"
         | "date"
       > & {
-        workflowIds: string;
         activityIds: string;
         matrixIds: string;
         visualizationIds: string;
@@ -133,20 +121,15 @@ export class IcarusDBAdapter {
     return rows.map((s) => ({
       ...s,
       date: new Date(s.date),
-      workflowIds: JSON.parse(s.workflowIds),
       activityIds: JSON.parse(s.activityIds),
       matrixIds: JSON.parse(s.matrixIds),
       visualizationIds: JSON.parse(s.visualizationIds),
     }));
   }
 
-  getSessionWithWorkflows(id: string): IcarusSessionWithWorkflow | null {
+  getSessionWithAllData(id: string): IcarusSessionWithWorkflow | null {
     const session = this.getSession(id);
     if (!session) return null;
-
-    const workflows: IcarusWorkflowRecord[] = session.workflowIds
-      .map((wid) => this.getWorkflow(wid))
-      .filter((wf): wf is IcarusWorkflowRecord => !!wf);
 
     const activities: IcarusActivity[] = session.activityIds
       .map((aid) => this.getActivity(aid))
@@ -162,45 +145,10 @@ export class IcarusDBAdapter {
 
     return {
       ...session,
-      workflows,
       activities,
       matrices,
       visualizations,
     };
-  }
-
-  // WORKFLOW METHODS
-  saveWorkflow(workflow: IcarusWorkflowRecord): void {
-    const serialized = Buffer.from(JSON.stringify(workflow.data), "utf-8");
-    this.db
-      .prepare(
-        `
-        INSERT OR REPLACE INTO workflows (id, createdAt, data)
-        VALUES (@id, @createdAt, @data)
-      `
-      )
-      .run({
-        id: workflow.id,
-        createdAt: workflow.createdAt,
-        data: serialized,
-      });
-  }
-
-  getWorkflow(id: string): IcarusWorkflowRecord | null {
-    const row = this.db
-      .prepare(`SELECT * FROM workflows WHERE id = ?`)
-      .get(id) as { id: string; createdAt: number; data: Buffer } | undefined;
-
-    if (!row) return null;
-    return {
-      id: row.id,
-      createdAt: row.createdAt,
-      data: JSON.parse(row.data.toString("utf-8")),
-    };
-  }
-
-  deleteWorkflow(id: string): void {
-    this.db.prepare(`DELETE FROM workflows WHERE id = ?`).run(id);
   }
 
   // MATRIX METHODS
@@ -408,7 +356,7 @@ export class IcarusDBAdapter {
   private getDeletionSnapshot(
     sessionId: string
   ): IcarusSessionWithWorkflow {
-    const session = this.getSessionWithWorkflows(sessionId);
+    const session = this.getSessionWithAllData(sessionId);
     if (!session) throw new Error(`Session with id ${sessionId} not found`);
     return session;
   }
@@ -457,7 +405,6 @@ export class IcarusDBAdapter {
         id: snapshot.id,
         name: snapshot.name,
         date: snapshot.date,
-        workflowIds: snapshot.workflowIds,
         matrixIds: snapshot.matrixIds.filter(
           (id) => !deletedMatrixIds.has(id)
         ),
