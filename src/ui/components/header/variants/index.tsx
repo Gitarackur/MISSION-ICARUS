@@ -28,7 +28,9 @@ export const headerVariants = tv({
 export const tabNavigationVariants = tv({
   slots: {
     tabList:
-      "z-30 sticky left-0 right-0 top-0 flex w-full overflow-x-auto overflow-y-hidden border-b border-gray-200 bg-white pt-0 dark:border-gray-700 dark:bg-gray-950",
+      "sticky left-0 right-0 top-0 z-30 flex w-full items-stretch justify-between overflow-hidden border-b border-gray-200 bg-white pt-0 dark:border-gray-700 dark:bg-gray-950",
+    tabScroller:
+      "flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth border-x border-gray-300 [scrollbar-width:thin] dark:border-gray-700",
     tabButton: [
       "relative",
       "min-w-[160px]",
@@ -49,9 +51,13 @@ export const tabNavigationVariants = tv({
       "cursor-pointer",
     ],
     visualizationList:
-      "flex max-w-[220px] flex-shrink-0 items-center gap-1 overflow-x-auto border-l px-2",
+      "flex min-w-0 max-w-[240px] shrink-0 items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth border-l px-2 [scrollbar-width:thin]",
     visualizationButton:
       "flex h-6 w-7 flex-shrink-0 items-center justify-center rounded text-[11px] font-medium transition-colors",
+    visualizationTabWrapper:
+      "flex shrink-0 items-center rounded ring-1 ring-gray-200 dark:ring-gray-700",
+    visualizationDeleteButton:
+      "flex h-6 w-5 items-center justify-center rounded-r text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300",
   },
   variants: {
     active: {
@@ -78,7 +84,7 @@ export const tabNavigationVariants = tv({
 export const matrixTabVariants = tv({
   slots: {
     wrapper:
-      "flex min-w-[260px] max-w-[420px] items-stretch border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900",
+      "flex min-w-[260px] max-w-[440px] shrink-0 items-stretch border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900",
   },
   variants: {
     active: {

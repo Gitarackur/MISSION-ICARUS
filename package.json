@@ -26,6 +26,7 @@
     "test:lazy-columnar-data": "node scripts/test-lazy-columnar-data.mjs",
     "test:storage-health": "node scripts/test-storage-health.mjs",
     "test:browser-worker-client": "node scripts/test-browser-worker-client.mjs",
+    "test:activity-navigation": "node scripts/test-activity-navigation.mjs",
     "test:sql-deletion": "node scripts/run-electron-node.mjs scripts/test-sql-deletion.mjs",
     "preview": "vite preview",
     "migrate": "ts-node src/database/cli.ts migrate",

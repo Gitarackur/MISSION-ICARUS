@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { Download, Settings, Trash2 } from "lucide-react";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationsForMatrix } from "@/domain/visualization/utils/main";
@@ -24,7 +24,7 @@ const MatrixTab = ({
   onOpenSettings,
   onOpenExport,
 }: MatrixTabProps) => {
-  const { tabList } = tabNavigationVariants();
+  const { tabList, tabScroller } = tabNavigationVariants();
   const s = headerVariants();
 
   const handleExport = useCallback(
@@ -42,7 +42,7 @@ const MatrixTab = ({
   );
 
   return (
-    <div className={`${tabList()} justify-between items-stretch`}>
+    <div className={tabList()}>
       <button
         type="button"
         onClick={toggleSidebar}
@@ -56,7 +56,7 @@ const MatrixTab = ({
         />
       </button>
 
-      <div className="flex w-full overflow-x-auto overflow-y-hidden border-x border-gray-300 dark:border-gray-700">
+      <div className={tabScroller()}>
         {matrices.map((matrix) => (
           <MatrixTabGroup
             key={matrix.id}
@@ -114,9 +114,20 @@ const MatrixTabGroup = ({
     active: isActive,
   });
   const { wrapper } = matrixTabVariants({ active: isActive });
+  const groupRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isActive) return;
+    groupRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "nearest",
+      inline: "nearest",
+    });
+  }, [isActive]);
 
   return (
     <div
+      ref={groupRef}
       className={wrapper()}
       aria-label={`${matrix.id} matrix tab group`}
       onClick={() => onMatrixSelect(matrix.id)}

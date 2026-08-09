@@ -3,6 +3,14 @@ import type { IcarusSessionWithWorkflow } from "@/domain/session";
 import { ActivityTreeNode, ActivityTreeNodeForNonD3 } from "@/domain/tree/tree.types";
 import { TableColumns } from "@/domain/workflow/main.types";
 
+export type ActivityTreeSelection =
+  | { kind: "matrix"; matrixId: string }
+  | {
+      kind: "visualization";
+      visualizationId: string;
+      sourceMatrixId?: string;
+    };
+
 export interface ActivityMatrixModal {
   title: string;
   tableColumns: TableColumns | null;
