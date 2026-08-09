@@ -86,7 +86,13 @@ export const useIcarusAppSession = () => {
     [matrices]
   );
 
-  useEffect(() => setIsSheetOpen(!!activeSession), [activeSession]);
+  const lastSessionIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    const sessionId = activeSession?.id ?? null;
+    if (sessionId === lastSessionIdRef.current) return;
+    lastSessionIdRef.current = sessionId;
+    setIsSheetOpen(!!activeSession);
+  }, [activeSession]);
 
   useEffect(() => {
     const handleWorkerFailure = (event: Event) => {
