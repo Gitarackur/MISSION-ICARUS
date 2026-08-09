@@ -18,6 +18,7 @@ import { formatStorageBytes } from "@/app-layer/database/health/storage-health";
 import { STORAGE_WARNING_PERCENT } from "@/domain/storage/constants";
 import { mainViewStyles } from "./variants/main.variants";
 import { getVisualizationMatrixId } from "@/domain/visualization/utils/main";
+import { IcarusSession } from "@/domain/session/session.types";
 
 const IcarusApp: React.FC = () => {
   const styles = mainViewStyles();
@@ -73,16 +74,20 @@ const IcarusApp: React.FC = () => {
     workerFailure?.operationName === "Matrix preview preparation";
 
   const closeActivitySheet = () => setIsSheetOpen(false);
+  
   const openActivitySheet = () => setIsSheetOpen(true);
+
   const selectMatrix = (matrixId: string) => {
-    setActiveProteomicsTab("import");
     setActiveMatrixId(matrixId);
     setActiveVisualizationId("");
   };
+
   const selectActivityMatrix = (matrixId: string) => {
     closeActivitySheet();
     selectMatrix(matrixId);
+    setActiveProteomicsTab("import");
   };
+
   const selectVisualization = (
     visualizationId: string,
     sourceMatrixId?: string
@@ -100,12 +105,19 @@ const IcarusApp: React.FC = () => {
     setActiveVisualizationId(visualizationId);
     setActiveProteomicsTab("visualization");
   };
+
   const toggleSidebar = () => setShowSession((value) => !value);
+
   const handleCreateSessionAndOpenImport = async (sessionData: Parameters<typeof handleSessionCreate>[0]) => {
     setActiveProteomicsTab("import");
     setActiveVisualizationId("");
     await handleSessionCreate(sessionData);
   };
+
+  const onSessionClick = (session: IcarusSession) => {
+    setActiveProteomicsTab("import");
+    handleSessionClick(session);
+  }
 
   const requestDeletion = async (
     loadPlan: () => Promise<DeletionPlan>,
@@ -292,7 +304,7 @@ const IcarusApp: React.FC = () => {
         <Sidebar
           sessions={sessions}
           activeSession={activeSession}
-          onSessionClick={handleSessionClick}
+          onSessionClick={onSessionClick}
           onCreateSession={() => setActiveSession(null)}
           onDeleteSession={handleDeleteSession}
         />

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo } from "react";
 import { Download, Settings, Trash2 } from "lucide-react";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationsForMatrix } from "@/domain/visualization/utils/main";
@@ -10,6 +10,7 @@ import {
 } from "./variants";
 import { VisualizationTabButton } from "./visualization-tab";
 import { MatrixTabProps, MatrixTabGroupProps } from "./types/index.types";
+import { useActiveTabVisibility } from "./hooks/useActiveTabVisibility";
 
 const MatrixTab = ({
   matrices,
@@ -114,16 +115,7 @@ const MatrixTabGroup = ({
     active: isActive,
   });
   const { wrapper } = matrixTabVariants({ active: isActive });
-  const groupRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    if (!isActive) return;
-    groupRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "nearest",
-    });
-  }, [isActive]);
+  const groupRef = useActiveTabVisibility<HTMLDivElement>(isActive);
 
   return (
     <div
