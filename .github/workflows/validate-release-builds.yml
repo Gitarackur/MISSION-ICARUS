@@ -55,7 +55,9 @@ jobs:
       - name: Setup R (R plot renderer)
         uses: r-lib/actions/setup-r@v2
         with:
-          r-version: release
+          # Keep the bundled renderer reproducible across all runner images.
+          # R 4.6.1 currently access-violates while loading ragg on Windows.
+          r-version: "4.5.1"
           use-public-rspm: true
 
       - name: Install R renderer packages
@@ -65,6 +67,12 @@ jobs:
             any::jsonlite
             any::ggplot2
             any::ragg
+
+      - name: Verify R renderer packages
+        run: >-
+          Rscript -e 'packages <- c("jsonlite", "ggplot2", "ragg");
+          stopifnot(all(vapply(packages, requireNamespace, logical(1), quietly = TRUE)));
+          cat("R renderer packages loaded successfully\n")'
 
       - name: Install Linux packaging dependencies
         if: runner.os == 'Linux'
