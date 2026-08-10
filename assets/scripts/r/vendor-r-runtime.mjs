@@ -4,6 +4,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -29,6 +30,8 @@ export class RRuntimeVendor {
     this.rootDir = options.rootDir ?? path.resolve(this.__dirname, "../../..");
 
     this.requiredPackages = options.requiredPackages ?? ["jsonlite", "ggplot2", "ragg"];
+
+    this.runProcess = options.runProcess ?? execFileSync;
 
     this.shouldClean =
       options.shouldClean ?? process.argv.includes("--clean");
@@ -130,10 +133,20 @@ export class RRuntimeVendor {
   }
 
   runR(rscript, expression) {
-    return execFileSync(rscript, ["-e", expression], {
-      encoding: "utf8",
-      env: process.env,
-    }).trim();
+    const temporaryDirectory = mkdtempSync(
+      path.join(os.tmpdir(), "icarus-r-vendor-")
+    );
+    const scriptPath = path.join(temporaryDirectory, "expression.R");
+
+    try {
+      writeFileSync(scriptPath, `${expression}\n`);
+      return this.runProcess(rscript, [scriptPath], {
+        encoding: "utf8",
+        env: process.env,
+      }).trim();
+    } finally {
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
   }
 
   assertPackages(rscript) {

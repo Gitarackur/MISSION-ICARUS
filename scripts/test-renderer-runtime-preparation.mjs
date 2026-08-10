@@ -82,6 +82,19 @@ class CapturingRRuntimeVendor extends RRuntimeVendor {
   }
 }
 
+let capturedRScript;
+const transportVendor = new RRuntimeVendor({
+  runProcess: (_command, args) => {
+    assert.equal(args.length, 1);
+    assert.match(args[0], /expression\.R$/);
+    capturedRScript = readFileSync(args[0], "utf8");
+    return "transport-ok\n";
+  },
+});
+
+assert.equal(transportVendor.runR("Rscript", "cat('transport-ok')"), "transport-ok");
+assert.equal(capturedRScript, "cat('transport-ok')\n");
+
 const rVendor = new CapturingRRuntimeVendor();
 rVendor.getRequiredPackagesWithDependencies("Rscript");
 
