@@ -91,7 +91,6 @@ def build_args(mode: str) -> list[str]:
         "nuitka",
         f"--mode={mode}",
         "--static-libpython=no",
-        "--disable-ccache",
         "--assume-yes-for-downloads",
         f"--output-dir={OUTPUT_DIR}",
         f"--output-filename={output_filename}",

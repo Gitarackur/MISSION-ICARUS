@@ -17,6 +17,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: validate-release-builds-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate-release-build:
     name: ${{ matrix.name }}
@@ -39,6 +43,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: npm
 
       - name: Setup Python (Python plot renderer)
         uses: actions/setup-python@v5
@@ -90,6 +95,14 @@ jobs:
         env:
           PIP_DISABLE_PIP_VERSION_CHECK: "1"
         run: python -m pip install "pipenv==2025.0.4"
+
+      - name: Restore Nuitka compiler cache
+        uses: actions/cache@v4
+        with:
+          path: assets/scripts/python/.nuitka-cache
+          key: nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-${{ hashFiles('assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py') }}
+          restore-keys: |
+            nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-
 
       - name: Test renderer runtime preparation
         run: npm run test:renderer-runtime-preparation

@@ -79,6 +79,12 @@ export const getRendererBuildOrder = (nodePlatform = process.platform) =>
     ? ["fsharp", "r", "python"]
     : ["fsharp", "python", "r"];
 
+export const getPythonTransientBuildStatePaths = (pythonBinDirectory) => [
+  path.join(pythonBinDirectory, "commander.build"),
+  path.join(pythonBinDirectory, "commander.dist"),
+  path.join(pythonBinDirectory, "commander.onefile-build"),
+];
+
 const walkFiles = (
   directory,
   predicate = () => true,
@@ -284,17 +290,19 @@ const createDefinitions = (target, force) => {
         const executableCandidates = force
           ? ["commander", "commander.bin", "commander.exe"]
           : [target.pythonExecutableName];
-        const buildStatePaths = [
-          path.join(pythonRoot, ".nuitka-cache"),
-          path.join(pythonBinDirectory, "commander.build"),
-          path.join(pythonBinDirectory, "commander.dist"),
-          path.join(pythonBinDirectory, "commander.onefile-build"),
-        ];
+        const nuitkaCachePath = path.join(pythonRoot, ".nuitka-cache");
+        const transientBuildStatePaths =
+          getPythonTransientBuildStatePaths(pythonBinDirectory);
 
         for (const executableName of executableCandidates) {
           removePath(path.join(pythonBinDirectory, executableName));
         }
-        for (const buildStatePath of buildStatePaths) removePath(buildStatePath);
+        for (const buildStatePath of transientBuildStatePaths) {
+          removePath(buildStatePath);
+        }
+        if (process.env.ICARUS_CLEAN_NUITKA_CACHE === "1") {
+          removePath(nuitkaCachePath);
+        }
 
         const pythonEnvironment = {
           ...process.env,
@@ -319,7 +327,9 @@ const createDefinitions = (target, force) => {
           );
         } finally {
           removePath(path.join(pythonRoot, ".venv"));
-          for (const buildStatePath of buildStatePaths) removePath(buildStatePath);
+          for (const buildStatePath of transientBuildStatePaths) {
+            removePath(buildStatePath);
+          }
         }
       },
     },
