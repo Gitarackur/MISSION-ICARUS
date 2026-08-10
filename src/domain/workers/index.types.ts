@@ -1,4 +1,4 @@
-import type { IcarusMatrix, TableMatrices, TableMatrix } from "@/domain/workflow/main.types";
+import type { IcarusMatrix, TableMatrices } from "@/domain/workflow/main.types";
 import type { ParsedCSVResult, DataRowsAndColumns } from "@/domain/shared/index.types";
 import type { ProteinRow, ProteomicsSummary } from "@/domain/proteins/index.types";
 import type {
@@ -89,9 +89,35 @@ export interface ProteomicsSummaryWorkerRequest {
 export type ProteomicsSummaryWorkerResponse = WorkerResponse<ProteomicsSummary>;
 
 export interface StatisticalAnalysisWorkerRequest {
+  id: number;
   action: StatisticalAction;
-  data: ProteinRow[] | Map<string, TableMatrix>;
+  data: StatisticalAnalysisPayload;
 }
 
-export type StatisticalAnalysisWorkerResponse =
-  WorkerResponse<StatisticalAnalysisResult>;
+/** Columnar statistics input that is sent to the worker with transferable
+ *  Float64 buffers instead of being structured-cloned on the main thread. */
+export interface StatisticalColumnarPayload {
+  kind: "columns";
+  columnNames: string[];
+  /** Original length of each column (columns are ragged). */
+  lengths: number[];
+  /** Number of padded rows per column in the flattened buffer. */
+  rowCount: number;
+  /** Column-major flattened numeric values (each column padded to rowCount). */
+  numeric: Float64Array;
+  /** Columns that cannot be represented losslessly as numbers (e.g. strings). */
+  plainEntries: Array<{ name: string; values: (string | number)[] }>;
+}
+
+export type StatisticalAnalysisPayload =
+  | ProteinRow[]
+  | StatisticalColumnarPayload;
+
+export interface StatisticalAnalysisWorkerResponse
+  extends WorkerResponse<StatisticalAnalysisResult> {
+  id: number;
+  /** Present when the result `data` matrix was transferred as a buffer. */
+  dataLengths?: number[];
+  dataRowCount?: number;
+  dataFlat?: Float64Array;
+}
