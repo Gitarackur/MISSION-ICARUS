@@ -74,6 +74,11 @@ export const createFsharpPublishArgs = ({
   outputDirectory,
 ];
 
+export const getRendererBuildOrder = (nodePlatform = process.platform) =>
+  nodePlatform === "win32"
+    ? ["fsharp", "r", "python"]
+    : ["fsharp", "python", "r"];
+
 const walkFiles = (
   directory,
   predicate = () => true,
@@ -240,7 +245,7 @@ const createDefinitions = (target, force) => {
     scriptPath,
   ];
 
-  return [
+  const definitions = [
     {
       key: "fsharp",
       label: "F# renderer",
@@ -345,6 +350,11 @@ const createDefinitions = (target, force) => {
       },
     },
   ];
+
+  const buildOrder = getRendererBuildOrder(target.nodePlatform);
+  return definitions.sort(
+    (left, right) => buildOrder.indexOf(left.key) - buildOrder.indexOf(right.key)
+  );
 };
 
 const readManifest = (manifestPath) => {
@@ -360,6 +370,22 @@ const writeManifest = (manifestPath, manifest) => {
   const temporaryPath = `${manifestPath}.${process.pid}.tmp`;
   writeFileSync(temporaryPath, `${JSON.stringify(manifest, null, 2)}\n`);
   renameSync(temporaryPath, manifestPath);
+};
+
+const smokeTestRendererRuntimes = (rendererKeys = []) => {
+  const rendererArguments = rendererKeys.flatMap((rendererKey) => [
+    "--renderer",
+    rendererKey,
+  ]);
+
+  runCommand(
+    process.execPath,
+    [
+      path.join(repositoryRoot, "scripts", "test-bundled-renderer-runtimes.mjs"),
+      ...rendererArguments,
+    ],
+    { label: "Bundled renderer runtime smoke tests" }
+  );
 };
 
 const prepareRendererRuntimes = ({ force = false } = {}) => {
@@ -404,8 +430,17 @@ const prepareRendererRuntimes = ({ force = false } = {}) => {
 
   removePath(manifestPath);
 
+  const smokeTestedRenderers = new Set();
+
   for (const { definition, current } of buildStates) {
     if (current) continue;
+
+    // On Windows, the memory-heavy Nuitka compile leaves host R unstable on
+    // GitHub runners. Vendor and exercise R before starting that compile.
+    if (target.nodePlatform === "win32" && definition.key === "python") {
+      smokeTestRendererRuntimes(["r"]);
+      smokeTestedRenderers.add("r");
+    }
 
     console.log(`\nRebuilding ${definition.label}...`);
     definition.build();
@@ -433,10 +468,10 @@ const prepareRendererRuntimes = ({ force = false } = {}) => {
   }
 
   try {
-    runCommand(
-      process.execPath,
-      [path.join(repositoryRoot, "scripts", "test-bundled-renderer-runtimes.mjs")],
-      { label: "Bundled renderer runtime smoke tests" }
+    smokeTestRendererRuntimes(
+      definitions
+        .map((definition) => definition.key)
+        .filter((rendererKey) => !smokeTestedRenderers.has(rendererKey))
     );
   } catch (error) {
     removePath(manifestPath);

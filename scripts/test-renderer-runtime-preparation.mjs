@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   createFsharpPublishArgs,
+  getRendererBuildOrder,
   getRuntimeTarget,
 } from "./prepare-renderer-runtimes.mjs";
 import {
@@ -53,6 +54,9 @@ assert.equal(
   false,
   "MSBuild properties must not use slash-prefixed syntax under Git Bash"
 );
+
+assert.deepEqual(getRendererBuildOrder("win32"), ["fsharp", "r", "python"]);
+assert.deepEqual(getRendererBuildOrder("linux"), ["fsharp", "python", "r"]);
 
 assert.deepEqual(getRuntimeTarget("darwin", "arm64"), {
   nodePlatform: "darwin",
