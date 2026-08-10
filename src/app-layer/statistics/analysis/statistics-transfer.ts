@@ -7,18 +7,7 @@ import type {
   StatisticalAnalysisPayload,
   StatisticalColumnarPayload,
 } from "@/domain/workers/index.types";
-
-/** Prefer transferring numeric columns as Float64 buffers over structured
- *  cloning: cloning a large Map on the sending (main) thread blocks the UI,
- *  whereas transferring an ArrayBuffer is zero-copy and off the main thread.
- */
-
-export type NumericMatrixEnvelope = {
-  lengths: number[];
-  rowCount: number;
-  flat: Float64Array;
-  transfer: ArrayBuffer[];
-};
+import { NumericMatrixEnvelope } from "@/domain/statistics/index.types";
 
 export const isColumnarInput = (
   payload: StatisticalAnalysisPayload

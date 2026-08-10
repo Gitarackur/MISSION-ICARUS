@@ -38,6 +38,8 @@ import {
   MultipleImputationResult,
   MiceMethod,
   MiceColumnSummary,
+  FoldChangeResult,
+  OLSFit,
 } from "@/domain/statistics/index.types";
 import { EPSILON, EXPR_CONSTANTS, EXPR_FUNCTIONS, EXPR_PRECEDENCE } from "@/app-layer/statistics/constants";
 
@@ -360,17 +362,6 @@ function chiSquareSample(rng: () => number, degreesOfFreedom: number): number {
   return 2 * gammaSample(rng, degreesOfFreedom / 2);
 }
 
-type OLSFit = {
-  intercept: number;
-  coefficients: number[];
-  residualStd: number;
-  /** Full [intercept, ...coefficients] vector for posterior computations. */
-  betaFull: number[];
-  /** Predictor covariance (XtX + ridge)^-1; null when singular. */
-  covariance: number[][] | null;
-  residualDegreesOfFreedom: number;
-  residualSumSquares: number;
-};
 
 /**
  * Ordinary least squares fit of `target` on the standardized predictor
@@ -983,14 +974,6 @@ export function oneWayANOVA(groups: number[][]): ANOVAResult {
 }
 
 // Fold Change calculation
-export interface FoldChangeResult {
-  foldChange: number;
-  log2FoldChange: number;
-  mean1: number;
-  mean2: number;
-  ratio: number;
-}
-
 export function calculateFoldChange(
   group1: number[],
   group2: number[]

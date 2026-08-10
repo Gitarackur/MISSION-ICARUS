@@ -458,3 +458,41 @@ export interface MultipleImputationResult {
   imputedCount: number;
   iterationsPerformed: number;
 }
+
+// Fold Change result type
+export interface FoldChangeResult {
+  foldChange: number;
+  log2FoldChange: number;
+  mean1: number;
+  mean2: number;
+  ratio: number;
+}
+
+
+/** Prefer transferring numeric columns as Float64 buffers over structured
+ *  cloning: cloning a large Map on the sending (main) thread blocks the UI,
+ *  whereas transferring an ArrayBuffer is zero-copy and off the main thread.
+ */
+
+export type NumericMatrixEnvelope = {
+  lengths: number[];
+  rowCount: number;
+  flat: Float64Array;
+  transfer: ArrayBuffer[];
+};
+
+
+// Ordinary Least Squares (OLS) regression fit result type
+
+export type OLSFit = {
+  intercept: number;
+  coefficients: number[];
+  residualStd: number;
+  /** Full [intercept, ...coefficients] vector for posterior computations. */
+  betaFull: number[];
+  /** Predictor covariance (XtX + ridge)^-1; null when singular. */
+  covariance: number[][] | null;
+  residualDegreesOfFreedom: number;
+  residualSumSquares: number;
+};
+
