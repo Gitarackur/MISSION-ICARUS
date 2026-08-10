@@ -67,6 +67,7 @@ export type StatisticalAction =
   | "impute-mean"
   | "impute-median"
   | "impute-knn"
+  | "impute-multiple"
   | "impute-zero"
   | "moving-average"
   | "rolling-stddev"
@@ -421,3 +422,39 @@ export type ComposedStatisticalMatrix = {
   derivedColumns: TableColumns;
   extendsSourceMatrix: boolean;
 };
+
+// ===================================================================
+// MULTIPLE IMPUTATION (MICE + Rubin's rules)
+// ===================================================================
+
+// Imputation engine used by multiple imputation.
+export type MiceMethod = "pmm" | "regression";
+
+// Per-column pooled estimates (Rubin's rules) across the m imputed datasets.
+export interface MiceColumnSummary {
+  columnName: string;
+  observedCount: number;
+  missingCount: number;
+  missingRatio: number;
+  qbar: number;
+  withinVariance: number;
+  betweenVariance: number;
+  totalVariance: number;
+  relativeIncreaseVariance: number;
+  fractionMissingInfo: number;
+  nu: number;
+}
+
+// Full multiple imputation result object.
+export interface MultipleImputationResult {
+  method: MiceMethod;
+  m: number;
+  maxIterations: number;
+  seed?: number;
+  pooledData: number[][];
+  imputedDatasets: number[][][];
+  columnSummaries: MiceColumnSummary[];
+  missingCount: number;
+  imputedCount: number;
+  iterationsPerformed: number;
+}

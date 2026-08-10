@@ -80,6 +80,7 @@ const IcarusApp: React.FC = () => {
   const selectMatrix = (matrixId: string) => {
     setActiveMatrixId(matrixId);
     setActiveVisualizationId("");
+    setActiveProteomicsTab("import");
   };
 
   const selectActivityMatrix = (matrixId: string) => {

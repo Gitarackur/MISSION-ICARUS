@@ -69,6 +69,9 @@ assets/scripts/python/bin/commander.dist/
 assets/scripts/python/bin/commander.onefile-build/
 assets/scripts/python/.nuitka-cache/
 
+# The Python renderer binary is rebuilt by CI, so it is not tracked
+assets/scripts/python/bin/commander.bin
+
 # Hide Nuitka crash logs
 assets/scripts/python/nuitka-crash-*.log
 assets/scripts/python/nuitka-crash-*.xml

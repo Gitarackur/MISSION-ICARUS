@@ -30,6 +30,7 @@ const bundle = await build({
         imputeMeanColumn,
         imputeMedianColumn,
         knnImputeTarget,
+        multipleImputationMice,
         performPCA,
         adjustPValues,
         limmaBatchAnalysis,
@@ -479,6 +480,103 @@ assert.equal(shortBatch[1].pValue, NaN, "gene with <2 replicates yields NaN p-va
 assert.equal(shortBatch[1].adjustedPValue, NaN, "gene with <2 replicates yields NaN adjusted p");
 assert.ok(Number.isFinite(shortBatch[0].pValue), "valid gene still computed");
 checks += 3;
+
+// ---------------------------------------------------------------------------
+// 9. Multiple imputation (MICE + Rubin's rules)
+// ---------------------------------------------------------------------------
+// Fully observed data: no missing cells -> pooled output equals the input and
+// every imputed dataset equals the input.
+const completeData = [
+  [1, 2, 3, 4, 5],
+  [2, 4, 6, 8, 10],
+];
+const completeMi = engine.multipleImputationMice(completeData, "pmm", 5, 10, 7);
+assert.equal(completeMi.missingCount, 0, "fully observed data has no missing cells");
+assert.equal(completeMi.imputedCount, 0, "fully observed data imputes nothing");
+assert.equal(completeMi.iterationsPerformed, 0, "no iteration cycles for complete data");
+assert.ok(approxArr(completeMi.pooledData[0], completeData[0]), "pooled column preserved");
+assert.equal(completeMi.imputedDatasets.length, 5, "m complete datasets are returned");
+checks += 5;
+
+// Determinism: a fixed seed reproduces the pooled dataset exactly.
+const missingData = [
+  [1, 2, NaN, 4, 5],
+  [2, 4, 6, NaN, 10],
+  [3, 6, 9, 12, 15],
+];
+const miA = engine.multipleImputationMice(missingData, "pmm", 5, 10, 42);
+const miB = engine.multipleImputationMice(missingData, "pmm", 5, 10, 42);
+assert.deepEqual(miA.pooledData, miB.pooledData, "seeded runs are reproducible");
+assert.deepEqual(miA.imputedDatasets, miB.imputedDatasets, "seeded datasets reproducible");
+checks += 2;
+
+// Observed values are never altered by imputation and every missing cell is
+// filled in the pooled dataset.
+for (let j = 0; j < missingData.length; j++) {
+  for (let i = 0; i < missingData[j].length; i++) {
+    if (Number.isFinite(missingData[j][i])) {
+      assert.equal(miA.pooledData[j][i], missingData[j][i], `observed cell ${j},${i} preserved`);
+    } else {
+      assert.ok(Number.isFinite(miA.pooledData[j][i]), `missing cell ${j},${i} is imputed`);
+    }
+  }
+}
+checks += 1;
+
+// PMM donors are drawn from observed values only, so the pooled imputation
+// must stay within the observed range of each column.
+for (let j = 0; j < missingData.length; j++) {
+  const observed = missingData[j].filter(Number.isFinite);
+  const lo = Math.min(...observed);
+  const hi = Math.max(...observed);
+  for (let i = 0; i < missingData[j].length; i++) {
+    if (!Number.isFinite(missingData[j][i])) {
+      const value = miA.pooledData[j][i];
+      assert.ok(
+        value >= lo && value <= hi,
+        `pmm pooled cell ${j},${i} within observed range [${lo}, ${hi}]`
+      );
+    }
+  }
+}
+checks += 1;
+
+// The exact linear structure (col1 = col3/3, col2 = 2*col1) must be recovered
+// by the pooled estimate when using the regression method (PMM cannot emit a
+// value that was never observed, so donor-based recovery is bounded by the
+// observed range).
+const miLin = engine.multipleImputationMice(missingData, "regression", 20, 20, 7);
+assert.ok(
+  Math.abs(miLin.pooledData[0][2] - 3) / 3 < 0.05,
+  "col1 = col3/3 recovered by regression imputation"
+);
+assert.ok(
+  Math.abs(miLin.pooledData[1][3] - 8) / 8 < 0.05,
+  "col2 = 2*col1 recovered by regression imputation"
+);
+checks += 2;
+
+// Rubin's summaries: shape, counts, and within/between variance structure.
+assert.equal(miA.columnSummaries.length, 3, "one summary per column");
+assert.equal(miA.columnSummaries[0].missingCount, 1, "column 0 has one missing cell");
+assert.ok(Number.isFinite(miA.columnSummaries[0].qbar), "qbar is finite");
+assert.ok(miA.columnSummaries[0].betweenVariance >= 0, "between-imputation variance non-negative");
+assert.ok(miA.columnSummaries[0].totalVariance >= 0, "total variance non-negative");
+assert.ok(miA.columnSummaries[0].fractionMissingInfo <= 1, "FMI bounded by 1");
+checks += 6;
+
+// Validation and method clamping.
+assert.throws(
+  () => engine.multipleImputationMice([[1, NaN]], "pmm", 3),
+  /at least 2 columns/,
+  "rejects single-column input"
+);
+const regressionMi = engine.multipleImputationMice(missingData, "regression", 2, 4, 11);
+assert.equal(regressionMi.method, "regression", "regression method honored");
+assert.equal(regressionMi.m, 2, "m clamped/set to 2");
+assert.equal(regressionMi.imputedDatasets.length, 2, "two datasets produced");
+assert.ok(Number.isFinite(regressionMi.pooledData[0][2]), "regression pooled cell finite");
+checks += 5;
 
 // ---------------------------------------------------------------------------
 console.log(`\nStatistics validation passed (${checks} checks vs library references)\n`);

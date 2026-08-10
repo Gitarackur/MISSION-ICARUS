@@ -2774,6 +2774,224 @@ export const ImputeZero = ({
 
 
 // --------------------------------------------------- 
+// MULTIPLE IMPUTATION (MICE + Rubin's rules)
+// --------------------------------------------------- 
+
+export const ImputeMultiple = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [imputations, setImputations] = useState<number>(5);
+  const [maxIterations, setMaxIterations] = useState<number>(10);
+  const [method, setMethod] = useState<string>("pmm");
+  const [useSeed, setUseSeed] = useState<boolean>(false);
+  const [seed, setSeed] = useState<number>(42);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runImputation = async () => {
+    setError(null);
+
+    if (selectedDataSets.length < 2) {
+      setError(
+        "Multiple imputation requires at least two columns (target + >=1 predictor)."
+      );
+      onError?.();
+      return;
+    }
+
+    const m = Math.max(2, Math.floor(imputations) || 5);
+    const iterations = Math.max(1, Math.floor(maxIterations) || 10);
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size < 2) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      filteredData.set("__imputations__", [m]);
+      filteredData.set("__max_iterations__", [iterations]);
+      filteredData.set("__method__", [method]);
+      filteredData.set("__use_seed__", [useSeed ? "true" : "false"]);
+      filteredData.set("__seed__", [Math.round(seed) || 42]);
+
+      const result = await performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError(
+        "An error occurred during multiple imputation. Please check your data."
+      );
+      console.error("Multiple imputation failed:", err);
+      onError?.();
+    }
+  };
+
+  const isRunButtonDisabled = selectedDataSets.length < 2;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Multiple Imputation</h1>
+      <p className={descriptionClass}>
+        Imputes missing values by chained equations (MICE), generating multiple
+        complete datasets and pooling them with Rubin&apos;s rules to account for
+        imputation uncertainty.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <MultiSelect
+          id="impute-multiple-columns"
+          label={`Select Columns`}
+          placeholder="Select at least two numeric columns..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={selectedDataSets}
+          onChange={handleColumnSelection}
+          helperText="Each column is imputed one at a time using the others as predictors"
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="impute-multiple-m" className={labelClass}>
+              Number of imputations (m)
+            </label>
+            <input
+              type="number"
+              id="impute-multiple-m"
+              min={2}
+              step={1}
+              value={imputations}
+              onChange={(e) =>
+                setImputations(parseInt(e.target.value || "5", 10))
+              }
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="impute-multiple-iterations"
+              className={labelClass}
+            >
+              Max iterations per imputation
+            </label>
+            <input
+              type="number"
+              id="impute-multiple-iterations"
+              min={1}
+              step={1}
+              value={maxIterations}
+              onChange={(e) =>
+                setMaxIterations(parseInt(e.target.value || "10", 10))
+              }
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="impute-multiple-method" className={labelClass}>
+            Imputation method
+          </label>
+          <SingleSelect
+            id="impute-multiple-method"
+            placeholder="Select a method..."
+            options={[
+              {
+                value: "pmm",
+                label: "Predictive Mean Matching",
+                description: "Draws from observed donors (distribution-preserving)",
+              },
+              {
+                value: "regression",
+                label: "Bayesian Regression",
+                description: "Linear model + residual noise",
+              },
+            ]}
+            defaultValue=""
+            value={method}
+            onChange={(value) => setMethod(value as string)}
+            showDescriptions
+          />
+        </div>
+
+        <div className="flex flex-wrap sm:grid-cols-2 gap-4">
+          <div className="w-full">
+            <Checkbox
+              id="impute-multiple-use-seed"
+              checked={useSeed}
+              onChange={(e) => setUseSeed(e.target.checked)}
+              label="Use fixed random seed (reproducible)"
+            />
+          </div>
+
+          {useSeed && (
+            <div className="w-full">
+              <label htmlFor="impute-multiple-seed" className={labelClass}>
+                Seed
+              </label>
+              <input
+                type="number"
+                id="impute-multiple-seed"
+                step={1}
+                value={seed}
+                onChange={(e) => setSeed(parseInt(e.target.value || "42", 10))}
+                className={inputClass}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <button
+          className={buttonClass}
+          disabled={isRunButtonDisabled}
+          onClick={runImputation}
+        >
+          Run Imputation
+        </button>
+      </div>
+    </div>
+  );
+};
+
+
+// --------------------------------------------------- 
 // MOVING AVERAGE - TIME SERIES
 // --------------------------------------------------- 
 

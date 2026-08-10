@@ -255,6 +255,7 @@ const dropdownData: Record<string, StatisticsMenuDropdownItem[]> = {
     { id: "impute-mean", label: "Mean Imputation" },
     { id: "impute-median", label: "Median Imputation" },
     { id: "impute-knn", label: "KNN Imputation" },
+    { id: "impute-multiple", label: "Multiple Imputation" },
     { id: "impute-zero", label: "Zero Imputation" },
   ],
   timeSeries: [
