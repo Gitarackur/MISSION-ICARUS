@@ -1,0 +1,58 @@
+name: Prepare bundled renderer runtimes
+
+description: |
+  Restores the Nuitka compiler cache and the previously prepared renderer
+  runtime artifacts, then rebuilds and smoke-tests any renderer whose sources
+  have changed. Most commits do not touch renderer sources, so the cached
+  artifacts are reused and the expensive F#/Python/R builds are skipped.
+
+inputs:
+  force:
+    description: Rebuild every renderer runtime from scratch, ignoring freshness.
+    required: false
+    default: "false"
+  run-preparation-tests:
+    description: Run the renderer runtime preparation unit tests first.
+    required: false
+    default: "true"
+  smoke-test:
+    description: Smoke-test the bundled renderer runtimes after preparation.
+    required: false
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - name: Restore Nuitka compiler cache
+      uses: actions/cache@v4
+      with:
+        path: assets/scripts/python/.nuitka-cache
+        key: nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-${{ hashFiles('assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py') }}
+        restore-keys: |
+          nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-
+
+    - name: Restore prepared renderer runtimes
+      id: renderer-runtimes
+      uses: actions/cache@v4
+      with:
+        path: |
+          .cache/renderer-runtimes
+          assets/runtime
+          assets/scripts/python/bin
+        key: renderer-runtimes-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('assets/scripts/python/Pipfile', 'assets/scripts/python/Pipfile.lock', 'assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py', 'assets/scripts/fsharp/IcarusPlotRenderer/**/*.fs', 'assets/scripts/fsharp/IcarusPlotRenderer/**/*.fsproj', 'assets/scripts/r/vendor-r-runtime.mjs', 'scripts/prepare-renderer-runtimes.mjs') }}
+        restore-keys: |
+          renderer-runtimes-v1-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Test renderer runtime preparation
+      if: inputs.run-preparation-tests == 'true'
+      shell: bash
+      run: npm run test:renderer-runtime-preparation
+
+    - name: Rebuild and smoke-test renderer runtimes
+      shell: bash
+      run: npm run prepare:renderer:runtimes ${{ inputs.force == 'true' && '-- --force' || '' }}
+
+    - name: Smoke-test bundled renderer runtimes
+      if: inputs.smoke-test == 'true'
+      shell: bash
+      run: npm run test:bundled-renderers

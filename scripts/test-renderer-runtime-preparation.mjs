@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   createFsharpPublishArgs,
+  getPythonTransientBuildStatePaths,
   getRendererBuildOrder,
   getRuntimeTarget,
 } from "./prepare-renderer-runtimes.mjs";
@@ -19,7 +20,7 @@ import {
 
 const windowsTarget = getRuntimeTarget("win32", "x64");
 
-assert.deepEqual(windowsTarget, {
+assert.deepEqual(windowsTarget.toJSON(), {
   nodePlatform: "win32",
   arch: "x64",
   platform: "windows",
@@ -58,7 +59,33 @@ assert.equal(
 assert.deepEqual(getRendererBuildOrder("win32"), ["fsharp", "r", "python"]);
 assert.deepEqual(getRendererBuildOrder("linux"), ["fsharp", "python", "r"]);
 
-assert.deepEqual(getRuntimeTarget("darwin", "arm64"), {
+const pythonRoot = path.join("assets", "scripts", "python");
+const pythonBinDirectory = path.join(pythonRoot, "bin");
+const transientPythonBuildStatePaths =
+  getPythonTransientBuildStatePaths(pythonBinDirectory);
+
+assert.deepEqual(transientPythonBuildStatePaths, [
+  path.join(pythonBinDirectory, "commander.build"),
+  path.join(pythonBinDirectory, "commander.dist"),
+  path.join(pythonBinDirectory, "commander.onefile-build"),
+]);
+assert.equal(
+  transientPythonBuildStatePaths.includes(path.join(pythonRoot, ".nuitka-cache")),
+  false,
+  "force rebuilds must preserve Nuitka's content-addressed compiler cache"
+);
+
+const nuitkaBuildScript = readFileSync(
+  path.join(pythonRoot, "build_nuitka.py"),
+  "utf8"
+);
+assert.doesNotMatch(
+  nuitkaBuildScript,
+  /--disable-ccache/,
+  "the renderer build must keep Nuitka's compiler cache enabled"
+);
+
+assert.deepEqual(getRuntimeTarget("darwin", "arm64").toJSON(), {
   nodePlatform: "darwin",
   arch: "arm64",
   platform: "macos",
