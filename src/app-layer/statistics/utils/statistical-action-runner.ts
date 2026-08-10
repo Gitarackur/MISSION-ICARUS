@@ -11,6 +11,7 @@ import {
   type OutlierFilterMethod,
   PTMAnnotation,
   type StatisticalResultGranularity,
+  type MiceMethod,
 } from "@/domain/statistics/index.types";
 import {
   correctForPurity,
@@ -18,6 +19,7 @@ import {
   imputeMedianColumn,
   imputeZeroColumn,
   knnImputeTarget,
+  multipleImputationMice,
   mean,
   median,
   movingAverage,
@@ -134,6 +136,7 @@ export const runStatisticalAnalysis = (
   let newColumnNames: string[] = [];
   const calculationMethod = action;
   let inputParametersMetadata: Record<string, unknown> = {};
+  let outputParametersMetadata: Record<string, unknown> = {};
   let resultGranularity: StatisticalResultGranularity = "aggregate";
 
   switch (action) {
@@ -275,6 +278,66 @@ export const runStatisticalAnalysis = (
 
       // name each produced column after the original column + suffix
       newColumnNames = numericColumns.map((col) => `${col}_imputed_knn`);
+      break;
+    }
+
+    case "impute-multiple": {
+      resultGranularity = "row-aligned";
+      // Clamp computational bounds: m x maxIterations is bounded here (the
+      // engine only enforces a floor) so scripted metadata can never trigger a
+      // pathological run.
+      const m = Math.min(
+        50,
+        Math.max(2, parseNumberMetadata(data, "__imputations__", 5)),
+      );
+      const maxIterations = Math.min(
+        100,
+        Math.max(1, parseNumberMetadata(data, "__max_iterations__", 10)),
+      );
+      const useSeed =
+        parseStringMetadata(data, "__use_seed__", "false") === "true";
+      const seed = Math.round(
+        parseNumberMetadata(data, "__seed__", Date.now()),
+      );
+      const rawMethod = parseStringMetadata(data, "__method__", "pmm");
+      const method: MiceMethod =
+        rawMethod === "regression" ? "regression" : "pmm";
+
+      const multipleImputation = multipleImputationMice(
+        numericData,
+        method,
+        m,
+        maxIterations,
+        useSeed ? seed : undefined,
+      );
+
+      // Pooled complete dataset becomes the appended columns; per-imputation
+      // datasets and Rubin's-rule estimates are surfaced as metadata. Cells
+      // that never received a finite draw stay non-finite here; the general
+      // presentation sanitizer handles them downstream.
+      results = multipleImputation.pooledData.map((column) => [...column]);
+      newColumnNames = numericColumns.map((col) => `${col}_mi`);
+
+      const columnSummaries = multipleImputation.columnSummaries.map(
+        (summary, index) => ({
+          ...summary,
+          columnName: numericColumns[index] ?? summary.columnName,
+        }),
+      );
+
+      outputParametersMetadata = {
+        imputationMethod: method,
+        imputations: multipleImputation.m,
+        maxIterations: multipleImputation.maxIterations,
+        iterationCycleUsed: multipleImputation.iterationsPerformed,
+        missingCount: multipleImputation.missingCount,
+        imputedCount: multipleImputation.imputedCount,
+        unimputedCount:
+          multipleImputation.missingCount - multipleImputation.imputedCount,
+        deterministicSeed: useSeed ? seed : null,
+        columnsPooled: columnSummaries.map((summary) => summary.columnName),
+        columnRubinSummary: columnSummaries,
+      };
       break;
     }
 
@@ -1447,6 +1510,7 @@ export const runStatisticalAnalysis = (
       metadata: {
         calculationTimestamp: new Date().toISOString(),
         resultCount: transposedResults.length,
+        ...outputParametersMetadata,
       },
     },
   };

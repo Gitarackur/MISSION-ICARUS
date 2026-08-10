@@ -35,6 +35,11 @@ import {
   AddPTMResult,
   ANOVAResult,
   TTestResult,
+  MultipleImputationResult,
+  MiceMethod,
+  MiceColumnSummary,
+  FoldChangeResult,
+  OLSFit,
 } from "@/domain/statistics/index.types";
 import { EPSILON, EXPR_CONSTANTS, EXPR_FUNCTIONS, EXPR_PRECEDENCE } from "@/app-layer/statistics/constants";
 
@@ -223,6 +228,590 @@ export function imputeZeroColumn(col: number[]): number[] {
   return col.map((x) => (Number.isFinite(x) ? x : 0));
 }
 
+/* ============================================================
+ * MULTIPLE IMPUTATION - MICE (Chained Equations) + Rubin's rules
+ * ============================================================ */
+
+/**
+ * Deterministic seeded PRNG (mulberry32). Used so multiple imputation runs
+ * are reproducible when a seed is supplied.
+ */
+function mulberry32(seed: number): () => number {
+  let state = seed >>> 0;
+  return () => {
+    state |= 0;
+    state = (state + 0x6d2b79f5) | 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Standard normal sample via Box-Muller transform (uses the given PRNG). */
+function gaussianSample(rng: () => number, mean = 0, std = 1): number {
+  let u = 0;
+  let v = 0;
+  while (u === 0) u = rng();
+  while (v === 0) v = rng();
+  const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+  return mean + z * std;
+}
+
+/** Fisher-Yates shuffle with a seeded PRNG. */
+function seededShuffle<T>(values: T[], rng: () => number): T[] {
+  const shuffled = [...values];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/** Solve an N x N linear system A x = b by Gaussian elimination with pivoting. */
+function solveLinearSystem(A: number[][], b: number[]): number[] {
+  const n = A.length;
+  const M = A.map((row, index) => [...row, b[index]]);
+
+  for (let col = 0; col < n; col++) {
+    let pivotRow = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(M[r][col]) > Math.abs(M[pivotRow][col])) pivotRow = r;
+    }
+    if (Math.abs(M[pivotRow][col]) < 1e-12) return new Array(n).fill(0);
+    [M[col], M[pivotRow]] = [M[pivotRow], M[col]];
+
+    const pivot = M[col][col];
+    for (let c = col; c <= n; c++) M[col][c] /= pivot;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = M[r][col];
+      for (let c = col; c <= n; c++) M[r][c] -= factor * M[col][c];
+    }
+  }
+
+  return M.map((row) => row[n]);
+}
+
+/** Gauss-Jordan matrix inversion; returns null when the matrix is singular. */
+function invertMatrix(matrix: number[][]): number[][] | null {
+  const n = matrix.length;
+  const aug = matrix.map((row, i) => [
+    ...row,
+    ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)),
+  ]);
+  for (let col = 0; col < n; col++) {
+    let pivotRow = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(aug[r][col]) > Math.abs(aug[pivotRow][col])) pivotRow = r;
+    }
+    if (Math.abs(aug[pivotRow][col]) < 1e-12) return null;
+    [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
+    const pivot = aug[col][col];
+    for (let c = 0; c < 2 * n; c++) aug[col][c] /= pivot;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = aug[r][col];
+      for (let c = 0; c < 2 * n; c++) aug[r][c] -= factor * aug[col][c];
+    }
+  }
+  return aug.map((row) => row.slice(n));
+}
+
+/** Cholesky factorization (lower triangle L with matrix = L L^T). */
+function choleskyDecompose(matrix: number[][]): number[][] {
+  const n = matrix.length;
+  const lower = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = matrix[i][j];
+      for (let k = 0; k < j; k++) sum -= lower[i][k] * lower[j][k];
+      if (i === j) {
+        lower[i][j] = Math.sqrt(sum > 0 ? sum : 0);
+      } else {
+        lower[i][j] = sum / (lower[j][j] || 1);
+      }
+    }
+  }
+  return lower;
+}
+
+/** Gamma draw via the Marsaglia-Tsang method (shape > 0, default scale 1). */
+function gammaSample(rng: () => number, shape: number, scale = 1): number {
+  if (shape < 1) {
+    return gammaSample(rng, shape + 1, scale) * Math.pow(rng(), 1 / shape);
+  }
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    const x = gaussianSample(rng);
+    const v = 1 + c * x;
+    if (v <= 0) continue;
+    const cubed = v * v * v;
+    const u = rng();
+    if (
+      u < 1 - 0.0331 * x * x * x * x ||
+      Math.log(u) < 0.5 * x * x + d * (1 - cubed + Math.log(cubed))
+    ) {
+      return scale * d * cubed;
+    }
+  }
+}
+
+/** Chi-square draw used for the scaled-inverse-chi-square residual prior. */
+function chiSquareSample(rng: () => number, degreesOfFreedom: number): number {
+  return 2 * gammaSample(rng, degreesOfFreedom / 2);
+}
+
+
+/**
+ * Ordinary least squares fit of `target` on the standardized predictor
+ * columns. Predictor means/stds are returned so predictions can be computed on
+ * the same centered/scaled scale.
+ */
+function olsFit(
+  targetObs: number[],
+  predictorObs: number[][],
+): OLSFit & { means: number[]; stds: number[] } {
+  const predictorCount = predictorObs.length;
+  const standardize = (column: number[]) => {
+    const valid = column.filter(Number.isFinite);
+    const location = valid.length ? ss.mean(valid) : 0;
+    const scale =
+      valid.length > 1 ? Math.abs(ss.sampleStandardDeviation(valid)) : 1;
+    return { location, scale: scale > 0 ? scale : 1 };
+  };
+
+  const summary = predictorObs.map((column) => standardize(column));
+  const designRows: number[][] = targetObs.map((_, rowPos) => [
+    1,
+    ...predictorObs.map((column, p) => {
+      const { location, scale } = summary[p];
+      return (column[rowPos] - location) / scale;
+    }),
+  ]);
+
+  const p = predictorCount;
+  const A: number[][] = Array.from({ length: p + 1 }, () =>
+    new Array(p + 1).fill(0),
+  );
+  const rhs: number[] = new Array(p + 1).fill(0);
+  const n = targetObs.length;
+
+  for (let row = 0; row < n; row++) {
+    const x = designRows[row];
+    for (let a = 0; a <= p; a++) {
+      rhs[a] += x[a] * targetObs[row];
+      for (let c = 0; c <= p; c++) A[a][c] += x[a] * x[c];
+    }
+  }
+
+  // Ridge stabilization keeps the normal equations invertible when predictors
+  // are (near-)collinear; the intercept is not penalized.
+  for (let a = 1; a <= p; a++) A[a][a] += 1e-4;
+
+  const beta = solveLinearSystem(A, rhs);
+  let residualSquares = 0;
+  for (let row = 0; row < n; row++) {
+    let predicted = 0;
+    const x = designRows[row];
+    for (let a = 0; a <= p; a++) predicted += beta[a] * x[a];
+    const residual = targetObs[row] - predicted;
+    residualSquares += residual * residual;
+  }
+
+  const degreesOfFreedom = n - (p + 1);
+  const residualStd =
+    degreesOfFreedom > 0 ? Math.sqrt(residualSquares / degreesOfFreedom) : 0;
+
+  return {
+    intercept: beta[0],
+    coefficients: beta.slice(1),
+    residualStd: Number.isFinite(residualStd) ? residualStd : 0,
+    means: summary.map((s) => s.location),
+    stds: summary.map((s) => s.scale),
+    betaFull: beta,
+    covariance: invertMatrix(A),
+    residualDegreesOfFreedom: degreesOfFreedom,
+    residualSumSquares: residualSquares,
+  };
+}
+
+/** Evaluate a fitted OLS model for one row of standardized predictors. */
+function olsPredict(
+  fit: OLSFit & { means: number[]; stds: number[] },
+  rawPredictors: number[],
+): number {
+  let predicted = fit.intercept;
+  for (let p = 0; p < fit.coefficients.length; p++) {
+    const v = rawPredictors[p];
+    if (!Number.isFinite(v)) return NaN;
+    predicted += fit.coefficients[p] * ((v - fit.means[p]) / fit.stds[p]);
+  }
+  return predicted;
+}
+
+/**
+ * Multiple imputation via chained equations (MICE). Generates `m` complete
+ * column-major datasets, imputing missing values one column at a time using
+ * either predictive mean matching (`pmm`, default) or Bayesian linear
+ * regression (`regression`). The regression step draws the residual variance
+ * and regression coefficients from their scaled-inverse-chi-square /
+ * multivariate-normal posteriors before adding residual noise; PMM samples
+ * uniformly from the `k` closest observed donors (bounded k). Pooled point
+ * estimates are combined with Rubin's rules.
+ */
+export function multipleImputationMice(
+  data: number[][],
+  method: MiceMethod = "pmm",
+  m = 5,
+  maxIterations = 10,
+  seed?: number,
+): MultipleImputationResult {
+  if (!data || data.length < 2) {
+    throw new Error(
+      "Multiple imputation requires at least 2 columns (target + >=1 predictor).",
+    );
+  }
+
+  const clampedM = Math.max(2, Math.floor(m));
+  const clampedIterations = Math.max(1, Math.floor(maxIterations));
+  const rng = mulberry32(seed ?? Date.now());
+  const columnCount = data.length;
+  const rowCount = Math.max(...data.map((column) => column.length));
+
+  const missingCount = data.reduce(
+    (total, column) =>
+      total +
+      column.slice(0, rowCount).filter((value) => !Number.isFinite(value)).length,
+    0,
+  );
+
+  if (missingCount === 0) {
+    const pooledData = data.map((column) => [...column]);
+    const imputedDatasets = Array.from({ length: clampedM }, () =>
+      pooledData.map((column) => [...column]),
+    );
+    const columnSummaries: MiceColumnSummary[] = pooledData.map(
+      (column, index) => {
+        const finite = column.filter(Number.isFinite);
+        const columnMean = finite.length ? ss.mean(finite) : NaN;
+        const columnVariance =
+          finite.length > 1 ? ss.sampleVariance(finite) : 0;
+        return {
+          columnName: `column_${index + 1}`,
+          observedCount: finite.length,
+          missingCount: 0,
+          missingRatio: 0,
+          qbar: Number.isFinite(columnMean) ? columnMean : 0,
+          withinVariance: finite.length > 0 ? columnVariance / finite.length : 0,
+          betweenVariance: 0,
+          totalVariance: finite.length > 0 ? columnVariance / finite.length : 0,
+          relativeIncreaseVariance: 0,
+          fractionMissingInfo: 0,
+          nu: finite.length - 1,
+        };
+      },
+    );
+    return {
+      method,
+      m: clampedM,
+      maxIterations: clampedIterations,
+      seed,
+      pooledData,
+      imputedDatasets,
+      columnSummaries,
+      missingCount: 0,
+      imputedCount: 0,
+      iterationsPerformed: 0,
+    };
+  }
+
+  // Track which rows are missing per column.
+  const missingIndices: number[][] = data.map((_, j) => {
+    const indices: number[] = [];
+    for (let i = 0; i < rowCount; i++) {
+      if (!Number.isFinite(data[j][i])) indices.push(i);
+    }
+    return indices;
+  });
+
+  // Initial fill: column mean (or 0 for fully-missing columns).
+  const initialFill = data.map((_, j) => {
+    const finite = data[j].filter(Number.isFinite);
+    return finite.length ? ss.mean(finite) : 0;
+  });
+
+  const imputedDatasets: number[][][] = [];
+  let iterationsPerformed = 0;
+
+  for (let datasetIndex = 0; datasetIndex < clampedM; datasetIndex++) {
+    const work = data.map((column, j) => {
+      const filled = [...column];
+      for (const i of missingIndices[j]) filled[i] = initialFill[j];
+      return filled;
+    });
+
+    for (let iteration = 0; iteration < clampedIterations; iteration++) {
+      iterationsPerformed = Math.max(iterationsPerformed, iteration + 1);
+      const columnOrder = seededShuffle(
+        Array.from({ length: columnCount }, (_, j) => j),
+        rng,
+      );
+
+      for (const j of columnOrder) {
+        const missing = missingIndices[j];
+        if (missing.length === 0) continue;
+
+        // Predictor columns: every column except j must be finite for a row
+        // to contribute to the regression (complete-row case only).
+        const predictorIndices = Array.from(
+          { length: columnCount },
+          (_, k) => k,
+        ).filter((k) => k !== j);
+
+        const observedRows: number[] = [];
+        for (let i = 0; i < rowCount; i++) {
+          if (!Number.isFinite(data[j][i])) continue;
+          let complete = true;
+          for (const k of predictorIndices) {
+            if (!Number.isFinite(work[k][i])) {
+              complete = false;
+              break;
+            }
+          }
+          if (complete) observedRows.push(i);
+        }
+
+        if (observedRows.length < 2) continue;
+
+        const predictorObs = predictorIndices.map((k) =>
+          observedRows.map((i) => work[k][i] as number),
+        );
+        const targetObs = observedRows.map((i) => work[j][i] as number);
+        const fit = olsFit(targetObs, predictorObs);
+
+        // Pre-compute observed predicted values for PMM donor pool.
+        let observedPredictions: { predicted: number; value: number }[] = [];
+        if (method === "pmm") {
+          observedPredictions = observedRows
+            .map((i) => ({
+              predicted: olsPredict(
+                fit,
+                predictorIndices.map((k) => work[k][i] as number),
+              ),
+              value: work[j][i] as number,
+            }))
+            .filter((entry) => Number.isFinite(entry.predicted));
+        }
+
+        const donorPool = Math.min(5, observedPredictions.length);
+
+        // One posterior draw over (residual variance, coefficients) per column
+        // per iteration, reused across that column's missing cells.
+        let posterior: { sigma: number; betaFull: number[] } | null = null;
+        if (method === "regression" && fit.covariance) {
+          const degreesOfFreedom = fit.residualDegreesOfFreedom;
+          if (degreesOfFreedom > 0 && fit.residualSumSquares > 0) {
+            const chiSquared = chiSquareSample(rng, degreesOfFreedom);
+            const posteriorSigma =
+              chiSquared > 0
+                ? fit.residualStd * Math.sqrt(degreesOfFreedom / chiSquared)
+                : fit.residualStd;
+            const lower = choleskyDecompose(fit.covariance);
+            // One shared standard-normal vector per posterior draw keeps the
+            // cross-coefficient covariance: shift = posteriorSigma * L z.
+            const posteriorDeviates = lower.map(() => gaussianSample(rng));
+            const shifts = lower.map(
+              (row) =>
+                row.reduce((sum, value, k) => sum + value * posteriorDeviates[k], 0) *
+                posteriorSigma,
+            );
+            posterior = {
+              sigma: posteriorSigma,
+              betaFull: fit.betaFull.map((betaValue, idx) => betaValue + (shifts[idx] ?? 0)),
+            };
+          }
+        }
+
+        for (const i of missing) {
+          let predictorsFinite = true;
+          const rawPredictors = predictorIndices.map((k) => work[k][i] as number);
+          for (const value of rawPredictors) {
+            if (!Number.isFinite(value)) {
+              predictorsFinite = false;
+              break;
+            }
+          }
+          if (!predictorsFinite) continue;
+
+          if (method === "regression") {
+            let predicted = olsPredict(fit, rawPredictors);
+            let residualStd = fit.residualStd;
+            if (posterior) {
+              predicted = [
+                1,
+                ...rawPredictors.map((v, p) => (v - fit.means[p]) / fit.stds[p]),
+              ].reduce(
+                (sum: number, x, idx) => sum + x * posterior.betaFull[idx],
+                0,
+              );
+              residualStd = posterior.sigma;
+            }
+            if (Number.isFinite(predicted)) {
+              work[j][i] = gaussianSample(rng, predicted, residualStd);
+            }
+          } else {
+            const predicted = olsPredict(fit, rawPredictors);
+            if (!Number.isFinite(predicted) || donorPool === 0) continue;
+
+            // Keep only the k closest donors (bounded memory, no full sort).
+            const ranked: { predicted: number; value: number }[] = [];
+            for (const entry of observedPredictions) {
+              const distance = Math.abs(entry.predicted - predicted);
+              let position = ranked.length;
+              while (
+                position > 0 &&
+                Math.abs(ranked[position - 1].predicted - predicted) > distance
+              ) {
+                position--;
+              }
+              if (position < donorPool) {
+                ranked.splice(position, 0, entry);
+                if (ranked.length > donorPool) ranked.pop();
+              }
+            }
+            if (ranked.length === 0) continue;
+
+            // Uniform draw from the closest donors.
+            work[j][i] = ranked[Math.floor(rng() * ranked.length)].value;
+          }
+        }
+      }
+    }
+
+    imputedDatasets.push(
+      work.map((column) => column.map((value) => (Number.isFinite(value) ? value : NaN))),
+    );
+  }
+
+  // Pool the m datasets cell-by-cell (Rubin's point estimate for each cell).
+  const pooledData: number[][] = data.map((_, j) => {
+    const pooled: number[] = [];
+    for (let i = 0; i < rowCount; i++) {
+      const values: number[] = [];
+      for (let t = 0; t < clampedM; t++) {
+        const value = imputedDatasets[t][j][i];
+        if (Number.isFinite(value)) values.push(value);
+      }
+      pooled.push(values.length ? values.reduce((a, b) => a + b, 0) / values.length : NaN);
+    }
+    return pooled;
+  });
+
+  // Per-column Rubin's rules summaries.
+  const columnSummaries: MiceColumnSummary[] = data.map((_, j) => {
+    const estimates: number[] = [];
+    const standardErrors: number[] = [];
+    for (let t = 0; t < clampedM; t++) {
+      const finite = imputedDatasets[t][j].filter(Number.isFinite);
+      if (!finite.length) {
+        estimates.push(NaN);
+        standardErrors.push(0);
+        continue;
+      }
+      const columnMean = ss.mean(finite);
+      const columnVariance =
+        finite.length > 1 ? ss.sampleVariance(finite) : 0;
+      estimates.push(columnMean);
+      standardErrors.push(columnVariance / finite.length);
+    }
+
+    const finiteEstimates = estimates.filter(Number.isFinite);
+    if (!finiteEstimates.length) {
+      return {
+        columnName: `column_${j + 1}`,
+        observedCount: 0,
+        missingCount: missingIndices[j].length,
+        missingRatio: 1,
+        qbar: 0,
+        withinVariance: 0,
+        betweenVariance: 0,
+        totalVariance: 0,
+        relativeIncreaseVariance: 0,
+        fractionMissingInfo: 1,
+        nu: 0,
+      };
+    }
+
+    const qbar = ss.mean(finiteEstimates);
+    const uBar = ss.mean(
+      standardErrors.filter((value) => Number.isFinite(value)),
+    );
+    const b =
+      clampedM > 1
+        ? finiteEstimates.reduce(
+            (sum, q) => sum + (q - qbar) * (q - qbar),
+            0,
+          ) /
+          (clampedM - 1)
+        : 0;
+
+    const totalVariance =
+      uBar + b + (clampedM > 1 ? b / clampedM : 0);
+    const relativeIncreaseVariance =
+      uBar > 0 && clampedM > 1 ? ((1 + 1 / clampedM) * b) / uBar : 0;
+
+    // Rubin's fraction of missing information (lambda).
+    const lambda =
+      totalVariance > 0
+        ? ((1 + 1 / clampedM) * b) / totalVariance
+        : 0;
+    const dfOld =
+      clampedM > 1 && lambda > 0
+        ? (clampedM - 1) / (lambda * lambda)
+        : clampedM - 1;
+    const completeCaseCount =
+      data[j].filter(Number.isFinite).length + missingIndices[j].length;
+    const nuComplete = Math.max(1, completeCaseCount - 1);
+    const dfObs = ((nuComplete + 1) / (nuComplete + 3)) * nuComplete * (1 - lambda);
+    const nu = dfOld + dfObs > 0 ? 1 / (1 / dfOld + 1 / dfObs) : 0;
+
+    return {
+      columnName: `column_${j + 1}`,
+      observedCount: data[j].filter(Number.isFinite).length,
+      missingCount: missingIndices[j].length,
+      missingRatio: rowCount > 0 ? missingIndices[j].length / rowCount : 0,
+      qbar,
+      withinVariance: uBar,
+      betweenVariance: b,
+      totalVariance,
+      relativeIncreaseVariance,
+      fractionMissingInfo: lambda,
+      nu,
+    };
+  });
+
+  let imputedCount = 0;
+  missingIndices.forEach((indices, j) => {
+    imputedCount += indices.filter((i) => {
+      return Number.isFinite(pooledData[j][i]);
+    }).length;
+  });
+
+  return {
+    method,
+    m: clampedM,
+    maxIterations: clampedIterations,
+    seed,
+    pooledData,
+    imputedDatasets,
+    columnSummaries,
+    missingCount,
+    imputedCount,
+    iterationsPerformed,
+  };
+}
+
 // Calculate moving average for time series data
 export function movingAverage(
   values: number[],
@@ -388,14 +977,6 @@ export function oneWayANOVA(groups: number[][]): ANOVAResult {
 }
 
 // Fold Change calculation
-export interface FoldChangeResult {
-  foldChange: number;
-  log2FoldChange: number;
-  mean1: number;
-  mean2: number;
-  ratio: number;
-}
-
 export function calculateFoldChange(
   group1: number[],
   group2: number[]

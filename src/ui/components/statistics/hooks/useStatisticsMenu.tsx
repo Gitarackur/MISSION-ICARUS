@@ -26,6 +26,7 @@ import {
   ImputeMean,
   ImputeMedian,
   ImputeKnn,
+  ImputeMultiple,
   ImputeZero,
   MovingAverage,
   RollingStdDev,
@@ -481,6 +482,20 @@ const useStatisticsMenu = ({
         break;
       case "impute-zero":
         content = (<ImputeZero dataColumns={dataColumns} 
+          actionId={actionId} 
+          dataRows={dataRows}
+          allColumnarData={allColumnarData}
+          onSuccess={(result) => {
+            closeModal();
+            onSuccess?.(result);
+          }}
+          onError={() => {
+            onError?.();
+          }}  />
+        );
+        break;
+      case "impute-multiple":
+        content = (<ImputeMultiple dataColumns={dataColumns} 
           actionId={actionId} 
           dataRows={dataRows}
           allColumnarData={allColumnarData}

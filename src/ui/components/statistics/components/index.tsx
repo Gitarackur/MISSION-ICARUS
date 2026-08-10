@@ -57,6 +57,46 @@ const buttonClass =
 const dangerButtonClass =
   "px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors";
 
+// Analysis submit button with inline loading state. It awaits the supplied
+// handler so the button reflects the in-flight web-worker computation and
+// returns to normal when the analysis settles (success or error display).
+const AnalysisSubmitButton = ({
+  children,
+  disabled = false,
+  onClick,
+  busyLabel = "Analyzing…",
+}: {
+  children: React.ReactNode;
+  disabled?: boolean;
+  onClick: () => void | Promise<void>;
+  busyLabel?: string;
+}) => {
+  const [isRunning, setIsRunning] = useState(false);
+
+  const handleClick = async () => {
+    if (isRunning || disabled) return;
+    setIsRunning(true);
+    try {
+      await onClick();
+    } catch {
+      // The owning component surfaces the error in its error area.
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      className={buttonClass}
+      onClick={handleClick}
+      disabled={disabled || isRunning}
+    >
+      {isRunning ? busyLabel : children}
+    </button>
+  );
+};
+
 type StatisticalComponentProps = {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
@@ -171,13 +211,12 @@ const ColumnAnalysisRunner = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={selectedColumns.length < minSelections}
           onClick={runAnalysis}
         >
           {buttonLabel}
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -284,13 +323,12 @@ export const Count = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runCountCalc}
         >
           Run Count
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -397,13 +435,12 @@ export const CountMissing = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runCountMissingCalc}
         >
           Run Count Missing
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -510,13 +547,12 @@ export const CountValid = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runCountValidCalc}
         >
           Run Count Valid
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -621,13 +657,12 @@ export const MeanValues = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runMeanCalc}
         >
           Calculate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -733,13 +768,12 @@ export const MedianValues = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runMedianCalc}
         >
           Calculate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -847,13 +881,12 @@ export const Variance = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runVarianceCalc}
         >
           Calculate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -961,13 +994,12 @@ export const StdDevValues = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runStdDevCalc}
         >
           Calculate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1072,13 +1104,12 @@ export const Sum = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runSumCalc}
         >
           Calculate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1185,13 +1216,12 @@ export const Product = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runProductCalc}
         >
           Calculate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1522,13 +1552,12 @@ export const FilterByValue = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runFilterCalc}
         >
           Filter
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1632,13 +1661,12 @@ export const FilterByMissing = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!selectedColumn}
           onClick={runFilter}
         >
           Filter
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1771,13 +1799,12 @@ export const FilterByRange = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!selectedColumn || !minValue.trim() || !maxValue.trim()}
           onClick={runFilter}
         >
           Filter
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1881,13 +1908,12 @@ export const FilterByOutlier = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!selectedColumn}
           onClick={runFilter}
         >
           Filter
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -1983,13 +2009,12 @@ export const AddColumn = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!newColumnName.trim()}
           onClick={runAddColumn}
         >
           Add Column
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -2095,13 +2120,12 @@ export const RenameColumn = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!oldName || !newName.trim()}
           onClick={runRename}
         >
           Rename
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -2321,13 +2345,12 @@ export const FillColumn = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!selectedColumn || fillValue.trim() === ""}
           onClick={runFill}
         >
           Fill Column
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -2427,7 +2450,7 @@ export const ImputeMean = ({
     </div>
     {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
     <div className="flex justify-end">
-      <button className={buttonClass} onClick={runImputation}>Run Imputation</button>
+      <AnalysisSubmitButton onClick={runImputation}>Run Imputation</AnalysisSubmitButton>
     </div>
   </div>
 );
@@ -2531,9 +2554,9 @@ export const ImputeMedian = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button className={buttonClass} onClick={runImputation}>
+        <AnalysisSubmitButton onClick={runImputation}>
           Run Imputation
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -2659,9 +2682,9 @@ export const ImputeKnn = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button className={buttonClass} onClick={runImputation}>
+        <AnalysisSubmitButton onClick={runImputation}>
           Run Imputation
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -2764,9 +2787,235 @@ export const ImputeZero = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button className={buttonClass} onClick={runImputation}>
+        <AnalysisSubmitButton onClick={runImputation}>
           Run Imputation
-        </button>
+        </AnalysisSubmitButton>
+      </div>
+    </div>
+  );
+};
+
+
+// --------------------------------------------------- 
+// MULTIPLE IMPUTATION (MICE + Rubin's rules)
+// --------------------------------------------------- 
+
+export const ImputeMultiple = ({
+  dataColumns,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
+}: {
+  dataColumns: TableColumns;
+  actionId: StatisticalAction;
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis } = useStatisticalAnalysis();
+  const numericColumnsSet = useMemo(
+    () => getNumericColumnsOptimized(dataColumns, dataRows),
+    [dataColumns, dataRows]
+  );
+  const numericColumns = [...numericColumnsSet];
+
+  const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
+  const [imputations, setImputations] = useState<number>(5);
+  const [maxIterations, setMaxIterations] = useState<number>(10);
+  const [method, setMethod] = useState<string>("pmm");
+  const [useSeed, setUseSeed] = useState<boolean>(false);
+  const [seed, setSeed] = useState<number>(42);
+  const [error, setError] = useState<string | null>(null);
+  const [isImputing, setIsImputing] = useState(false);
+
+  const handleColumnSelection = (values: string[]) => {
+    setSelectedDataSets(values);
+  };
+
+  const runImputation = async () => {
+    if (isImputing) return;
+    setError(null);
+    setIsImputing(true);
+
+    if (selectedDataSets.length < 2) {
+      setError(
+        "Multiple imputation requires at least two columns (target + >=1 predictor)."
+      );
+      onError?.();
+      setIsImputing(false);
+      return;
+    }
+
+    const m = Math.min(50, Math.max(2, Math.floor(imputations) || 5));
+    const iterations = Math.min(
+      100,
+      Math.max(1, Math.floor(maxIterations) || 10)
+    );
+
+    try {
+      const filteredData = new Map<string, TableMatrix>();
+      selectedDataSets.forEach((column) => {
+        if (allColumnarData.has(column)) {
+          filteredData.set(column, allColumnarData.get(column)!);
+        }
+      });
+
+      if (filteredData.size < 2) {
+        setError("No data found for the selected columns.");
+        onError?.();
+        return;
+      }
+
+      filteredData.set("__imputations__", [m]);
+      filteredData.set("__max_iterations__", [iterations]);
+      filteredData.set("__method__", [method]);
+      filteredData.set("__use_seed__", [useSeed ? "true" : "false"]);
+      filteredData.set("__seed__", [Math.round(seed) || 42]);
+
+      const result = await performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (err) {
+      setError(
+        "An error occurred during multiple imputation. Please check your data."
+      );
+      console.error("Multiple imputation failed:", err);
+      onError?.();
+    } finally {
+      setIsImputing(false);
+    }
+  };
+
+  const isRunButtonDisabled = selectedDataSets.length < 2;
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>Multiple Imputation</h1>
+      <p className={descriptionClass}>
+        Imputes missing values by chained equations (MICE), generating multiple
+        complete datasets and pooling them with Rubin&apos;s rules to account for
+        imputation uncertainty.
+      </p>
+
+      <div className="space-y-4 mb-6">
+        <MultiSelect
+          id="impute-multiple-columns"
+          label={`Select Columns`}
+          placeholder="Select at least two numeric columns..."
+          options={numericColumns.map((curr) => ({
+            value: curr,
+            label: curr,
+            disabled: false,
+          }))}
+          value={selectedDataSets}
+          onChange={handleColumnSelection}
+          helperText="Each column is imputed one at a time using the others as predictors"
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="impute-multiple-m" className={labelClass}>
+              Number of imputations (m)
+            </label>
+            <input
+              type="number"
+              id="impute-multiple-m"
+              min={2}
+              step={1}
+              value={imputations}
+              onChange={(e) =>
+                setImputations(parseInt(e.target.value || "5", 10))
+              }
+              className={inputClass}
+            />
+          </div>
+
+          <div>
+            <label
+              htmlFor="impute-multiple-iterations"
+              className={labelClass}
+            >
+              Max iterations per imputation
+            </label>
+            <input
+              type="number"
+              id="impute-multiple-iterations"
+              min={1}
+              step={1}
+              value={maxIterations}
+              onChange={(e) =>
+                setMaxIterations(parseInt(e.target.value || "10", 10))
+              }
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label htmlFor="impute-multiple-method" className={labelClass}>
+            Imputation method
+          </label>
+          <SingleSelect
+            id="impute-multiple-method"
+            placeholder="Select a method..."
+            options={[
+              {
+                value: "pmm",
+                label: "Predictive Mean Matching",
+                description: "Draws from observed donors (distribution-preserving)",
+              },
+              {
+                value: "regression",
+                label: "Bayesian Regression",
+                description: "Linear model + residual noise",
+              },
+            ]}
+            defaultValue=""
+            value={method}
+            onChange={(value) => setMethod(value as string)}
+            showDescriptions
+          />
+        </div>
+
+        <div className="flex flex-wrap sm:grid-cols-2 gap-4">
+          <div className="w-full">
+            <Checkbox
+              id="impute-multiple-use-seed"
+              checked={useSeed}
+              onChange={(e) => setUseSeed(e.target.checked)}
+              label="Use fixed random seed (reproducible)"
+            />
+          </div>
+
+          {useSeed && (
+            <div className="w-full">
+              <label htmlFor="impute-multiple-seed" className={labelClass}>
+                Seed
+              </label>
+              <input
+                type="number"
+                id="impute-multiple-seed"
+                step={1}
+                value={seed}
+                onChange={(e) => setSeed(parseInt(e.target.value || "42", 10))}
+                className={inputClass}
+              />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end">
+        <AnalysisSubmitButton
+          disabled={isRunButtonDisabled || isImputing}
+          onClick={runImputation}
+        >
+          Run Imputation
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -2882,13 +3131,12 @@ export const MovingAverage: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runMovingAverageCalc}
         >
           Calculate Moving Average
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3003,13 +3251,12 @@ export const RollingStdDev: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runRollingStdDevCalc}
         >
           Calculate Rolling Std Dev
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3133,13 +3380,12 @@ export const TTest: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runTTest}
         >
           Run T-Test
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3244,13 +3490,12 @@ export const Anova: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runANOVA}
         >
           Run ANOVA
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3381,13 +3626,12 @@ export const Limma: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runLIMMA}
         >
           Run LIMMA Analysis
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3529,13 +3773,12 @@ export const FoldChange: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runFoldChange}
         >
           Calculate Fold Change
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3664,13 +3907,12 @@ export const NormalizeReporterIons: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runNormalization}
         >
           Normalize Reporter Ions
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -3818,13 +4060,12 @@ export const CorrectForPurity: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runPurityCorrection}
         >
           Apply Purity Correction
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4067,13 +4308,12 @@ export const SortAscending: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runSortAsc}
         >
           Sort Ascending
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4187,13 +4427,12 @@ export const SortDescending: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runSortDesc}
         >
           Sort Descending
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4292,12 +4531,11 @@ export const ReorderColumns: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runReorder}
         >
           Reorder Columns
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4408,13 +4646,12 @@ export const Transpose: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runTranspose}
         >
           Transpose Data
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4593,13 +4830,12 @@ export const FilterColumnsByName: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runFilterByName}
         >
           Apply Filter
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4738,13 +4974,12 @@ export const FilterColumnsByType: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={isRunButtonDisabled}
           onClick={runFilterByType}
         >
           Apply Filter
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -4879,12 +5114,11 @@ export const AddRow: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runAddRow}
         >
           Add {numRowsToAdd} Row{numRowsToAdd !== 1 ? 's' : ''}
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -5004,13 +5238,12 @@ export const RenameRow: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!newName.trim()}
           onClick={runRenameRow}
         >
           Rename Row
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -5182,13 +5415,12 @@ export const DeleteRow: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!confirmDelete || previewIndices.length === 0}
           onClick={runDeleteRow}
         >
           Delete {previewIndices.length} Row{previewIndices.length !== 1 ? 's' : ''}
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -5319,12 +5551,11 @@ export const PcaLearning: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runPCA}
         >
           Run PCA
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -5465,13 +5696,12 @@ export const PlsdaLearning: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!labelColumn}
           onClick={runPLSDA}
         >
           Run PLS-DA
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -5641,12 +5871,11 @@ export const TsneLearning: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runTSNE}
         >
           Run t-SNE
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -5848,13 +6077,12 @@ export const AddPtm: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={parsedPositions.length === 0}
           onClick={runAddPTM}
         >
           Add PTM to {parsedPositions.length} Protein{parsedPositions.length !== 1 ? 's' : ''}
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6085,13 +6313,12 @@ export const RemovePtm: React.FC<{
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!confirmRemoval || (removalMode === 'by-type' && selectedPTMTypes.length === 0)}
           onClick={runRemovePTM}
         >
           Remove PTM Annotations
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6333,12 +6560,11 @@ export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runKMeans}
         >
           Run K-Means Clustering
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6485,12 +6711,11 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runHierarchical}
         >
           Run Hierarchical Clustering
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6640,12 +6865,11 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runPCAClustering}
         >
           Run PCA {performClustering && '+ K-Means'}
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6745,12 +6969,11 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runTwoD}
         >
           Compute 2D Projection
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6852,13 +7075,12 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={selectedColumns.length < 2}
           onClick={runPmuTest}
         >
           Run pμ Test
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -6965,12 +7187,11 @@ export const ZScoreNormalization: React.FC<NormalizationComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runZScore}
         >
           Apply Z-Score Normalization
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -7107,12 +7328,11 @@ export const LogTransform: React.FC<NormalizationComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runLogTransform}
         >
           Apply Log Transform
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -7213,12 +7433,11 @@ export const QuantileNormalization: React.FC<NormalizationComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runQuantile}
         >
           Apply Quantile Normalization
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -7312,12 +7531,11 @@ export const MeanCentering: React.FC<NormalizationComponentProps> = ({
       {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
       
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           onClick={runMeanCentering}
         >
           Apply Mean Centering
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -7464,9 +7682,9 @@ export const FTest: React.FC<{
         {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
         <div className="flex justify-end">
-          <button className={buttonClass} onClick={runFTest}>
+          <AnalysisSubmitButton onClick={runFTest}>
             Run F-Test
-          </button>
+          </AnalysisSubmitButton>
         </div>
       </div>
     </div>
@@ -7566,9 +7784,9 @@ export const ChiSquareTest: React.FC<{
         {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
         <div className="flex justify-end">
-          <button className={buttonClass} onClick={runChiSquareTest}>
+          <AnalysisSubmitButton onClick={runChiSquareTest}>
             Run Chi-Square Test
-          </button>
+          </AnalysisSubmitButton>
         </div>
       </div>
     </div>
@@ -7691,9 +7909,9 @@ export const ZScoreOutlier: React.FC<{
         {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
         <div className="flex justify-end">
-          <button className={buttonClass} onClick={runZScoreOutlier}>
+          <AnalysisSubmitButton onClick={runZScoreOutlier}>
             Detect Outliers
-          </button>
+          </AnalysisSubmitButton>
         </div>
       </div>
     </div>
@@ -7813,9 +8031,9 @@ export const IQROutlier: React.FC<{
         {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
         <div className="flex justify-end">
-          <button className={buttonClass} onClick={runIQROutlier}>
+          <AnalysisSubmitButton onClick={runIQROutlier}>
             Detect Outliers
-          </button>
+          </AnalysisSubmitButton>
         </div>
       </div>
     </div>
@@ -7916,9 +8134,9 @@ export const GrubbsOutlier: React.FC<{
         {error && <div className="text-red-500 text-sm mb-4 p-3 bg-red-50 border border-red-200 rounded">{error}</div>}
 
         <div className="flex justify-end">
-          <button className={buttonClass} onClick={runGrubbsOutlier}>
+          <AnalysisSubmitButton onClick={runGrubbsOutlier}>
             Detect Outliers
-          </button>
+          </AnalysisSubmitButton>
         </div>
       </div>
     </div>
@@ -8271,13 +8489,12 @@ export const FxExpression = ({
       </div>
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!selectedColumn}
           onClick={runAnalysis}
         >
           Evaluate
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -8386,13 +8603,12 @@ export const FxLinear = ({
       </div>
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={!selectedColumn}
           onClick={runAnalysis}
         >
           Map
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -8470,13 +8686,12 @@ export const OneDNormalize = ({
       </div>
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={selectedColumns.length === 0}
           onClick={runAnalysis}
         >
           Normalize
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -8528,13 +8743,12 @@ export const OneDIndex = ({
         matrix.
       </p>
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={numericColumns.length === 0}
           onClick={runAnalysis}
         >
           Add Index
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -8617,13 +8831,12 @@ const PiColumnRunner = ({
       </div>
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={selectedColumns.length === 0}
           onClick={runAnalysis}
         >
           Apply
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );
@@ -8789,13 +9002,12 @@ export const Pj = ({
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
       <div className="flex justify-end">
-        <button
-          className={buttonClass}
+        <AnalysisSubmitButton
           disabled={mode === "stub" || selectedColumns.length === 0}
           onClick={runAnalysis}
         >
           Apply
-        </button>
+        </AnalysisSubmitButton>
       </div>
     </div>
   );

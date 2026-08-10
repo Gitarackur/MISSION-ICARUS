@@ -67,6 +67,7 @@ export type StatisticalAction =
   | "impute-mean"
   | "impute-median"
   | "impute-knn"
+  | "impute-multiple"
   | "impute-zero"
   | "moving-average"
   | "rolling-stddev"
@@ -421,3 +422,77 @@ export type ComposedStatisticalMatrix = {
   derivedColumns: TableColumns;
   extendsSourceMatrix: boolean;
 };
+
+// ===================================================================
+// MULTIPLE IMPUTATION (MICE + Rubin's rules)
+// ===================================================================
+
+// Imputation engine used by multiple imputation.
+export type MiceMethod = "pmm" | "regression";
+
+// Per-column pooled estimates (Rubin's rules) across the m imputed datasets.
+export interface MiceColumnSummary {
+  columnName: string;
+  observedCount: number;
+  missingCount: number;
+  missingRatio: number;
+  qbar: number;
+  withinVariance: number;
+  betweenVariance: number;
+  totalVariance: number;
+  relativeIncreaseVariance: number;
+  fractionMissingInfo: number;
+  nu: number;
+}
+
+// Full multiple imputation result object.
+export interface MultipleImputationResult {
+  method: MiceMethod;
+  m: number;
+  maxIterations: number;
+  seed?: number;
+  pooledData: number[][];
+  imputedDatasets: number[][][];
+  columnSummaries: MiceColumnSummary[];
+  missingCount: number;
+  imputedCount: number;
+  iterationsPerformed: number;
+}
+
+// Fold Change result type
+export interface FoldChangeResult {
+  foldChange: number;
+  log2FoldChange: number;
+  mean1: number;
+  mean2: number;
+  ratio: number;
+}
+
+
+/** Prefer transferring numeric columns as Float64 buffers over structured
+ *  cloning: cloning a large Map on the sending (main) thread blocks the UI,
+ *  whereas transferring an ArrayBuffer is zero-copy and off the main thread.
+ */
+
+export type NumericMatrixEnvelope = {
+  lengths: number[];
+  rowCount: number;
+  flat: Float64Array;
+  transfer: ArrayBuffer[];
+};
+
+
+// Ordinary Least Squares (OLS) regression fit result type
+
+export type OLSFit = {
+  intercept: number;
+  coefficients: number[];
+  residualStd: number;
+  /** Full [intercept, ...coefficients] vector for posterior computations. */
+  betaFull: number[];
+  /** Predictor covariance (XtX + ridge)^-1; null when singular. */
+  covariance: number[][] | null;
+  residualDegreesOfFreedom: number;
+  residualSumSquares: number;
+};
+
