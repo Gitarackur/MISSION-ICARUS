@@ -618,10 +618,13 @@ export function multipleImputationMice(
                 ? fit.residualStd * Math.sqrt(degreesOfFreedom / chiSquared)
                 : fit.residualStd;
             const lower = choleskyDecompose(fit.covariance);
-            const shifts = lower.map((row) =>
-              row.reduce((sum, value) => {
-                return sum + value * gaussianSample(rng);
-              }, 0) * posteriorSigma,
+            // One shared standard-normal vector per posterior draw keeps the
+            // cross-coefficient covariance: shift = posteriorSigma * L z.
+            const posteriorDeviates = lower.map(() => gaussianSample(rng));
+            const shifts = lower.map(
+              (row) =>
+                row.reduce((sum, value, k) => sum + value * posteriorDeviates[k], 0) *
+                posteriorSigma,
             );
             posterior = {
               sigma: posteriorSigma,
