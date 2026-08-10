@@ -4,6 +4,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -14,7 +15,9 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-class RRuntimeVendor {
+export const R_RUNTIME_DEPENDENCY_FIELDS = Object.freeze(["Depends", "Imports"]);
+
+export class RRuntimeVendor {
   constructor(options = {}) {
     this.__dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -27,6 +30,8 @@ class RRuntimeVendor {
     this.rootDir = options.rootDir ?? path.resolve(this.__dirname, "../../..");
 
     this.requiredPackages = options.requiredPackages ?? ["jsonlite", "ggplot2", "ragg"];
+
+    this.runProcess = options.runProcess ?? execFileSync;
 
     this.shouldClean =
       options.shouldClean ?? process.argv.includes("--clean");
@@ -128,10 +133,20 @@ class RRuntimeVendor {
   }
 
   runR(rscript, expression) {
-    return execFileSync(rscript, ["-e", expression], {
-      encoding: "utf8",
-      env: process.env,
-    }).trim();
+    const temporaryDirectory = mkdtempSync(
+      path.join(os.tmpdir(), "icarus-r-vendor-")
+    );
+    const scriptPath = path.join(temporaryDirectory, "expression.R");
+
+    try {
+      writeFileSync(scriptPath, `${expression}\n`);
+      return this.runProcess(rscript, [scriptPath], {
+        encoding: "utf8",
+        env: process.env,
+      }).trim();
+    } finally {
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+    }
   }
 
   assertPackages(rscript) {
@@ -316,8 +331,13 @@ class RRuntimeVendor {
     }
   }
 
-  writeRscriptWrapper(runtimeRoot) {
+  writeRscriptWrapper(runtimeRoot, platform = os.platform()) {
     const wrapperPath = path.join(runtimeRoot, "bin", "Rscript");
+    const dynamicLibraryPathName =
+      platform === "darwin" ? "DYLD_LIBRARY_PATH" : "LD_LIBRARY_PATH";
+    const inheritedDynamicLibraryPath = `\${${dynamicLibraryPathName}:-}`;
+    const inheritedRLibs = "${R_LIBS:-}";
+    const inheritedRLibsUser = "${R_LIBS_USER:-}";
 
     const contents = `#!/bin/sh
 R_HOME_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -327,9 +347,9 @@ export R_SHARE_DIR="$R_HOME_DIR/share"
 export R_INCLUDE_DIR="$R_HOME_DIR/include"
 export R_DOC_DIR="$R_HOME_DIR/doc"
 
-export DYLD_LIBRARY_PATH="$R_HOME_DIR/lib:$DYLD_LIBRARY_PATH"
-export R_LIBS="$R_HOME_DIR/library:$R_LIBS"
-export R_LIBS_USER="$R_HOME_DIR/library:$R_LIBS_USER"
+export ${dynamicLibraryPathName}="$R_HOME_DIR/lib:${inheritedDynamicLibraryPath}"
+export R_LIBS="$R_HOME_DIR/library:${inheritedRLibs}"
+export R_LIBS_USER="$R_HOME_DIR/library:${inheritedRLibsUser}"
 
 if [ "$1" = "--version" ]; then
   exec "$R_HOME_DIR/bin/exec/R" --version
@@ -368,7 +388,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
     }
 
     this.patchShellWrappers(runtimeRoot);
-    this.writeRscriptWrapper(runtimeRoot);
+    this.writeRscriptWrapper(runtimeRoot, "darwin");
 
     for (const filePath of machOFiles) {
       try {
@@ -380,6 +400,8 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
   }
 
   getRequiredPackagesWithDependencies(rscript) {
+    // LinkingTo dependencies provide headers at compile time; the bundled
+    // renderer only needs packages imported or loaded at runtime.
     const expression = `
       required <- c(${this.requiredPackages.map((pkg) => `"${pkg}"`).join(",")});
 
@@ -388,6 +410,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       deps <- tools::package_dependencies(
         required,
         db = installed,
+        which = c(${R_RUNTIME_DEPENDENCY_FIELDS.map((field) => `"${field}"`).join(", ")}),
         recursive = TRUE
       );
 
@@ -601,7 +624,14 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       this.targetRuntimeDir
     );
 
-    this.patchMacRuntime(this.targetRuntimeDir, rHome);
+    if (os.platform() === "darwin") {
+      this.patchMacRuntime(this.targetRuntimeDir, rHome);
+    } else if (os.platform() === "linux") {
+      // The stock Linux Rscript binary has a compiled-in R_HOME and ignores a
+      // relocated R_HOME environment value. Invoke the copied R executable
+      // relative to the bundled runtime instead.
+      this.writeRscriptWrapper(this.targetRuntimeDir, "linux");
+    }
 
     this.verifyBundledRuntimePackages(this.targetRuntimeDir);
 
@@ -612,5 +642,11 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
   }
 }
 
-const vendor = new RRuntimeVendor();
-vendor.run();
+const scriptPath = fileURLToPath(import.meta.url);
+const isMainModule =
+  process.argv[1] && path.resolve(process.argv[1]) === path.resolve(scriptPath);
+
+if (isMainModule) {
+  const vendor = new RRuntimeVendor();
+  vendor.run();
+}

@@ -27,6 +27,15 @@ const pythonExecutableName =
       ? "commander.bin"
       : "commander";
 const nativeExecutableSuffix = process.platform === "win32" ? ".exe" : "";
+const requestedRenderers = new Set(
+  process.argv.flatMap((argument, index, arguments_) =>
+    argument === "--renderer" && arguments_[index + 1]
+      ? [arguments_[index + 1]]
+      : []
+  )
+);
+const shouldTestRenderer = (rendererKey) =>
+  requestedRenderers.size === 0 || requestedRenderers.has(rendererKey);
 
 const pythonExecutable = path.join(
   repositoryRoot,
@@ -100,111 +109,137 @@ const parseWorkerResponse = (output, label) => {
   );
 };
 
-assertArtifact(pythonExecutable, "Python renderer");
-assertArtifact(fsharpExecutable, "F# renderer");
-assertArtifact(rExecutable, "R runtime");
+if (shouldTestRenderer("python")) {
+  assertArtifact(pythonExecutable, "Python renderer");
+}
+if (shouldTestRenderer("fsharp")) {
+  assertArtifact(fsharpExecutable, "F# renderer");
+}
+if (shouldTestRenderer("r")) {
+  assertArtifact(rExecutable, "R runtime");
+}
 
-const pythonTempRoot = mkdtempSync(path.join(os.tmpdir(), "icarus-python-smoke-"));
+if (shouldTestRenderer("python")) {
+  const pythonTempRoot = mkdtempSync(
+    path.join(os.tmpdir(), "icarus-python-smoke-")
+  );
 
-try {
-  const pythonOutput = runProcess({
-    command: pythonExecutable,
-    args: ["--worker"],
+  try {
+    const pythonOutput = runProcess({
+      command: pythonExecutable,
+      args: ["--worker"],
+      input: `${JSON.stringify({
+        id: 1,
+        command: "heatmap",
+        payload: {
+          matrix: [
+            [1, 0],
+            [0, 1],
+          ],
+          row_labels: ["A", "B"],
+          col_labels: ["A", "B"],
+          title: "Runtime smoke test",
+          displaySettings: { plotWidth: 640, plotHeight: 400 },
+        },
+      })}\n`,
+      env: {
+        ...process.env,
+        TMPDIR: pythonTempRoot,
+        TEMP: pythonTempRoot,
+        TMP: pythonTempRoot,
+        MPLCONFIGDIR: path.join(pythonTempRoot, "matplotlib"),
+        XDG_CACHE_HOME: path.join(pythonTempRoot, "cache"),
+        FONTCONFIG_PATH: path.join(pythonTempRoot, "fontconfig"),
+        MPLBACKEND: "Agg",
+      },
+      label: "Python renderer worker",
+    });
+    parseWorkerResponse(pythonOutput, "Python renderer worker");
+  } finally {
+    rmSync(pythonTempRoot, { recursive: true, force: true });
+  }
+}
+
+if (shouldTestRenderer("fsharp")) {
+  const fsharpTempDir = mkdtempSync(
+    path.join(os.tmpdir(), "icarus-fsharp-smoke-")
+  );
+  const fsharpPayloadPath = path.join(fsharpTempDir, "payload.json");
+
+  try {
+    writeFileSync(
+      fsharpPayloadPath,
+      JSON.stringify({
+        plotType: "heatmap",
+        payload: {
+          matrix: [
+            [1, 0],
+            [0, 1],
+          ],
+          row_labels: ["A", "B"],
+          col_labels: ["A", "B"],
+          title: "Runtime smoke test",
+        },
+      })
+    );
+    const fsharpOutput = runProcess({
+      command: fsharpExecutable,
+      args: [fsharpPayloadPath],
+      label: "F# renderer",
+    });
+    const figure = JSON.parse(fsharpOutput);
+    assert.equal(
+      figure.data?.[0]?.type,
+      "heatmap",
+      "F# renderer returned the wrong trace"
+    );
+  } finally {
+    rmSync(fsharpTempDir, { recursive: true, force: true });
+  }
+}
+
+if (shouldTestRenderer("r")) {
+  const rLibrary = path.join(rRuntimeRoot, "library");
+  const rOutput = runProcess({
+    command: rExecutable,
+    args: [
+      path.join(repositoryRoot, "assets", "scripts", "r", "plot_r_worker.r"),
+      path.join(repositoryRoot, "assets", "scripts", "r", "plot_r.r"),
+    ],
     input: `${JSON.stringify({
       id: 1,
-      command: "heatmap",
-      payload: {
-        matrix: [
-          [1, 0],
-          [0, 1],
-        ],
-        row_labels: ["A", "B"],
-        col_labels: ["A", "B"],
-        title: "Runtime smoke test",
-        displaySettings: { plotWidth: 640, plotHeight: 400 },
-      },
+      payload: JSON.stringify({
+        plotType: "bar",
+        payload: {
+          categories: ["A", "B"],
+          series: [{ name: "Values", values: [1, 2] }],
+          title: "Runtime smoke test",
+          displaySettings: { plotWidth: 640, plotHeight: 400 },
+        },
+      }),
     })}\n`,
     env: {
       ...process.env,
-      TMPDIR: pythonTempRoot,
-      TEMP: pythonTempRoot,
-      TMP: pythonTempRoot,
-      MPLCONFIGDIR: path.join(pythonTempRoot, "matplotlib"),
-      XDG_CACHE_HOME: path.join(pythonTempRoot, "cache"),
-      FONTCONFIG_PATH: path.join(pythonTempRoot, "fontconfig"),
-      MPLBACKEND: "Agg",
+      PATH: [path.join(rRuntimeRoot, "bin"), process.env.PATH]
+        .filter(Boolean)
+        .join(path.delimiter),
+      R_HOME: rRuntimeRoot,
+      R_DOC_DIR: path.join(rRuntimeRoot, "doc"),
+      R_INCLUDE_DIR: path.join(rRuntimeRoot, "include"),
+      R_SHARE_DIR: path.join(rRuntimeRoot, "share"),
+      R_LIBS: rLibrary,
+      R_LIBS_USER: rLibrary,
+      R_LIBS_SITE: rLibrary,
     },
-    label: "Python renderer worker",
+    label: "R renderer worker",
   });
-  parseWorkerResponse(pythonOutput, "Python renderer worker");
-} finally {
-  rmSync(pythonTempRoot, { recursive: true, force: true });
+  parseWorkerResponse(rOutput, "R renderer worker");
 }
 
-const fsharpTempDir = mkdtempSync(path.join(os.tmpdir(), "icarus-fsharp-smoke-"));
-const fsharpPayloadPath = path.join(fsharpTempDir, "payload.json");
-
-try {
-  writeFileSync(
-    fsharpPayloadPath,
-    JSON.stringify({
-      plotType: "heatmap",
-      payload: {
-        matrix: [
-          [1, 0],
-          [0, 1],
-        ],
-        row_labels: ["A", "B"],
-        col_labels: ["A", "B"],
-        title: "Runtime smoke test",
-      },
-    })
-  );
-  const fsharpOutput = runProcess({
-    command: fsharpExecutable,
-    args: [fsharpPayloadPath],
-    label: "F# renderer",
-  });
-  const figure = JSON.parse(fsharpOutput);
-  assert.equal(figure.data?.[0]?.type, "heatmap", "F# renderer returned the wrong trace");
-} finally {
-  rmSync(fsharpTempDir, { recursive: true, force: true });
-}
-
-const rLibrary = path.join(rRuntimeRoot, "library");
-const rOutput = runProcess({
-  command: rExecutable,
-  args: [
-    path.join(repositoryRoot, "assets", "scripts", "r", "plot_r_worker.r"),
-    path.join(repositoryRoot, "assets", "scripts", "r", "plot_r.r"),
-  ],
-  input: `${JSON.stringify({
-    id: 1,
-    payload: JSON.stringify({
-      plotType: "bar",
-      payload: {
-        categories: ["A", "B"],
-        series: [{ name: "Values", values: [1, 2] }],
-        title: "Runtime smoke test",
-        displaySettings: { plotWidth: 640, plotHeight: 400 },
-      },
-    }),
-  })}\n`,
-  env: {
-    ...process.env,
-    PATH: [path.join(rRuntimeRoot, "bin"), process.env.PATH]
-      .filter(Boolean)
-      .join(path.delimiter),
-    R_HOME: rRuntimeRoot,
-    R_DOC_DIR: path.join(rRuntimeRoot, "doc"),
-    R_INCLUDE_DIR: path.join(rRuntimeRoot, "include"),
-    R_SHARE_DIR: path.join(rRuntimeRoot, "share"),
-    R_LIBS: rLibrary,
-    R_LIBS_USER: rLibrary,
-    R_LIBS_SITE: rLibrary,
-  },
-  label: "R renderer worker",
-});
-parseWorkerResponse(rOutput, "R renderer worker");
-
-console.log(`Bundled renderer runtime smoke tests passed (${runtimeKey})`);
+const testedRendererLabel =
+  requestedRenderers.size === 0
+    ? "all renderers"
+    : [...requestedRenderers].join(", ");
+console.log(
+  `Bundled renderer runtime smoke tests passed (${runtimeKey}: ${testedRendererLabel})`
+);

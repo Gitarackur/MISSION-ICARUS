@@ -225,6 +225,13 @@ npx tsc --noEmit
 npm run build
 ```
 
+Desktop packaging fingerprints the Python, R, and F# renderer sources and
+generated executables before it runs. Missing or stale runtimes for the current
+platform are rebuilt and smoke-tested automatically; unchanged runtimes are
+reused. Rebuilding requires
+Python 3.13 with Pipenv, R with `jsonlite`, `ggplot2`, and `ragg`, and the .NET 10
+SDK.
+
 ---
 
 ## Notes
