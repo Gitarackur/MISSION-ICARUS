@@ -232,9 +232,12 @@ reused. Rebuilding requires
 Python 3.13 with Pipenv, R with `jsonlite`, `ggplot2`, and `ragg`, and the .NET 10
 SDK. Nuitka's content-addressed compiler cache is retained between Python
 renderer rebuilds; set `ICARUS_CLEAN_NUITKA_CACHE=1` for a completely cold
-compiler rebuild. GitHub Actions persists that cache separately for each OS,
-architecture, Python dependency lock, and renderer source revision while still
-force-rebuilding and smoke-testing the final runtime artifacts.
+compiler rebuild. GitHub Actions persists the compiler cache separately for
+each OS, architecture, Python dependency lock, and renderer source revision,
+and additionally caches the prepared runtime artifacts keyed by renderer
+sources. Unchanged renderers are skipped so routine builds reuse the cached
+executables; every build still smoke-tests the bundled runtimes, and a manual
+`workflow_dispatch` with `force_rebuild` restores a fully fresh rebuild.
 
 ---
 

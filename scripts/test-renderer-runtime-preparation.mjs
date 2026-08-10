@@ -20,7 +20,7 @@ import {
 
 const windowsTarget = getRuntimeTarget("win32", "x64");
 
-assert.deepEqual(windowsTarget, {
+assert.deepEqual(windowsTarget.toJSON(), {
   nodePlatform: "win32",
   arch: "x64",
   platform: "windows",
@@ -85,7 +85,7 @@ assert.doesNotMatch(
   "the renderer build must keep Nuitka's compiler cache enabled"
 );
 
-assert.deepEqual(getRuntimeTarget("darwin", "arm64"), {
+assert.deepEqual(getRuntimeTarget("darwin", "arm64").toJSON(), {
   nodePlatform: "darwin",
   arch: "arm64",
   platform: "macos",

@@ -3,6 +3,7 @@ name: Validate Release Builds
 on:
   pull_request:
     paths:
+      - ".github/actions/**"
       - ".github/workflows/release.yml"
       - ".github/workflows/validate-release-builds.yml"
       - "assets/scripts/**"
@@ -40,44 +41,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup Python (Python plot renderer)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-          cache: pip
-          cache-dependency-path: assets/scripts/python/Pipfile.lock
-
-      - name: Setup .NET SDK (F# plot renderer)
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: "10.0.x"
-
-      - name: Setup R (R plot renderer)
-        uses: r-lib/actions/setup-r@v2
-        with:
-          # Keep the bundled renderer reproducible across all runner images.
-          # R 4.6.1 currently access-violates while loading ragg on Windows.
-          r-version: "4.5.1"
-          use-public-rspm: true
-
-      - name: Install R renderer packages
-        uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          packages: |
-            any::jsonlite
-            any::ggplot2
-            any::ragg
-
-      - name: Verify R renderer packages
-        run: >-
-          Rscript -e 'packages <- c("jsonlite", "ggplot2", "ragg");
-          stopifnot(all(vapply(packages, requireNamespace, logical(1), quietly = TRUE)));
-          cat("R renderer packages loaded successfully\n")'
+      - name: Setup renderer build environment
+        uses: ./.github/actions/setup-renderer-environment
 
       - name: Install Linux packaging dependencies
         if: runner.os == 'Linux'
@@ -85,30 +50,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fuse libarchive-tools
 
-      - name: Install application dependencies
-        run: npm ci --ignore-scripts
-
-      - name: Rebuild native modules
-        run: npx electron-rebuild -f -w better-sqlite3
-
-      - name: Install Python renderer build tooling
-        env:
-          PIP_DISABLE_PIP_VERSION_CHECK: "1"
-        run: python -m pip install "pipenv==2025.0.4"
-
-      - name: Restore Nuitka compiler cache
-        uses: actions/cache@v4
-        with:
-          path: assets/scripts/python/.nuitka-cache
-          key: nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-${{ hashFiles('assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py') }}
-          restore-keys: |
-            nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-
-
-      - name: Test renderer runtime preparation
-        run: npm run test:renderer-runtime-preparation
-
-      - name: Rebuild and smoke-test renderer runtimes
-        run: npm run prepare:renderer:runtimes -- --force
+      - name: Prepare renderer runtimes
+        uses: ./.github/actions/prepare-renderer-runtimes
 
       - name: Build macOS installer
         if: runner.os == 'macOS'
