@@ -236,7 +236,8 @@ compiler rebuild. GitHub Actions persists the compiler cache separately for
 each OS, architecture, Python dependency lock, and renderer source revision,
 and additionally caches the prepared runtime artifacts keyed by renderer
 sources. Unchanged renderers are skipped so routine builds reuse the cached
-executables; every build still smoke-tests the bundled runtimes, and a manual
+executables. Rebuilt runtimes are always smoke-tested, and CI smoke-tests the
+bundled runtimes on every run even when all renderers are cached. A manual
 `workflow_dispatch` with `force_rebuild` restores a fully fresh rebuild.
 
 ---
