@@ -87,6 +87,7 @@ const AnalysisSubmitButton = ({
 
   return (
     <button
+      type="button"
       className={buttonClass}
       onClick={handleClick}
       disabled={disabled || isRunning}
@@ -2828,24 +2829,31 @@ export const ImputeMultiple = ({
   const [useSeed, setUseSeed] = useState<boolean>(false);
   const [seed, setSeed] = useState<number>(42);
   const [error, setError] = useState<string | null>(null);
+  const [isImputing, setIsImputing] = useState(false);
 
   const handleColumnSelection = (values: string[]) => {
     setSelectedDataSets(values);
   };
 
   const runImputation = async () => {
+    if (isImputing) return;
     setError(null);
+    setIsImputing(true);
 
     if (selectedDataSets.length < 2) {
       setError(
         "Multiple imputation requires at least two columns (target + >=1 predictor)."
       );
       onError?.();
+      setIsImputing(false);
       return;
     }
 
-    const m = Math.max(2, Math.floor(imputations) || 5);
-    const iterations = Math.max(1, Math.floor(maxIterations) || 10);
+    const m = Math.min(50, Math.max(2, Math.floor(imputations) || 5));
+    const iterations = Math.min(
+      100,
+      Math.max(1, Math.floor(maxIterations) || 10)
+    );
 
     try {
       const filteredData = new Map<string, TableMatrix>();
@@ -2875,6 +2883,8 @@ export const ImputeMultiple = ({
       );
       console.error("Multiple imputation failed:", err);
       onError?.();
+    } finally {
+      setIsImputing(false);
     }
   };
 
@@ -3001,7 +3011,7 @@ export const ImputeMultiple = ({
 
       <div className="flex justify-end">
         <AnalysisSubmitButton
-          disabled={isRunButtonDisabled}
+          disabled={isRunButtonDisabled || isImputing}
           onClick={runImputation}
         >
           Run Imputation

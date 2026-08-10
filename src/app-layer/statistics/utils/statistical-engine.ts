@@ -290,10 +290,86 @@ function solveLinearSystem(A: number[][], b: number[]): number[] {
   return M.map((row) => row[n]);
 }
 
+/** Gauss-Jordan matrix inversion; returns null when the matrix is singular. */
+function invertMatrix(matrix: number[][]): number[][] | null {
+  const n = matrix.length;
+  const aug = matrix.map((row, i) => [
+    ...row,
+    ...Array.from({ length: n }, (_, j) => (i === j ? 1 : 0)),
+  ]);
+  for (let col = 0; col < n; col++) {
+    let pivotRow = col;
+    for (let r = col + 1; r < n; r++) {
+      if (Math.abs(aug[r][col]) > Math.abs(aug[pivotRow][col])) pivotRow = r;
+    }
+    if (Math.abs(aug[pivotRow][col]) < 1e-12) return null;
+    [aug[col], aug[pivotRow]] = [aug[pivotRow], aug[col]];
+    const pivot = aug[col][col];
+    for (let c = 0; c < 2 * n; c++) aug[col][c] /= pivot;
+    for (let r = 0; r < n; r++) {
+      if (r === col) continue;
+      const factor = aug[r][col];
+      for (let c = 0; c < 2 * n; c++) aug[r][c] -= factor * aug[col][c];
+    }
+  }
+  return aug.map((row) => row.slice(n));
+}
+
+/** Cholesky factorization (lower triangle L with matrix = L L^T). */
+function choleskyDecompose(matrix: number[][]): number[][] {
+  const n = matrix.length;
+  const lower = Array.from({ length: n }, () => new Array(n).fill(0));
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j <= i; j++) {
+      let sum = matrix[i][j];
+      for (let k = 0; k < j; k++) sum -= lower[i][k] * lower[j][k];
+      if (i === j) {
+        lower[i][j] = Math.sqrt(sum > 0 ? sum : 0);
+      } else {
+        lower[i][j] = sum / (lower[j][j] || 1);
+      }
+    }
+  }
+  return lower;
+}
+
+/** Gamma draw via the Marsaglia-Tsang method (shape > 0, default scale 1). */
+function gammaSample(rng: () => number, shape: number, scale = 1): number {
+  if (shape < 1) {
+    return gammaSample(rng, shape + 1, scale) * Math.pow(rng(), 1 / shape);
+  }
+  const d = shape - 1 / 3;
+  const c = 1 / Math.sqrt(9 * d);
+  for (;;) {
+    const x = gaussianSample(rng);
+    const v = 1 + c * x;
+    if (v <= 0) continue;
+    const cubed = v * v * v;
+    const u = rng();
+    if (
+      u < 1 - 0.0331 * x * x * x * x ||
+      Math.log(u) < 0.5 * x * x + d * (1 - cubed + Math.log(cubed))
+    ) {
+      return scale * d * cubed;
+    }
+  }
+}
+
+/** Chi-square draw used for the scaled-inverse-chi-square residual prior. */
+function chiSquareSample(rng: () => number, degreesOfFreedom: number): number {
+  return 2 * gammaSample(rng, degreesOfFreedom / 2);
+}
+
 type OLSFit = {
   intercept: number;
   coefficients: number[];
   residualStd: number;
+  /** Full [intercept, ...coefficients] vector for posterior computations. */
+  betaFull: number[];
+  /** Predictor covariance (XtX + ridge)^-1; null when singular. */
+  covariance: number[][] | null;
+  residualDegreesOfFreedom: number;
+  residualSumSquares: number;
 };
 
 /**
@@ -362,6 +438,10 @@ function olsFit(
     residualStd: Number.isFinite(residualStd) ? residualStd : 0,
     means: summary.map((s) => s.location),
     stds: summary.map((s) => s.scale),
+    betaFull: beta,
+    covariance: invertMatrix(A),
+    residualDegreesOfFreedom: degreesOfFreedom,
+    residualSumSquares: residualSquares,
   };
 }
 
@@ -383,8 +463,11 @@ function olsPredict(
  * Multiple imputation via chained equations (MICE). Generates `m` complete
  * column-major datasets, imputing missing values one column at a time using
  * either predictive mean matching (`pmm`, default) or Bayesian linear
- * regression with residual noise (`regression`). Pooled point estimates are
- * combined with Rubin's rules.
+ * regression (`regression`). The regression step draws the residual variance
+ * and regression coefficients from their scaled-inverse-chi-square /
+ * multivariate-normal posteriors before adding residual noise; PMM samples
+ * uniformly from the `k` closest observed donors (bounded k). Pooled point
+ * estimates are combined with Rubin's rules.
  */
 export function multipleImputationMice(
   data: number[][],
@@ -478,7 +561,7 @@ export function multipleImputationMice(
     });
 
     for (let iteration = 0; iteration < clampedIterations; iteration++) {
-      iterationsPerformed++;
+      iterationsPerformed = Math.max(iterationsPerformed, iteration + 1);
       const columnOrder = seededShuffle(
         Array.from({ length: columnCount }, (_, j) => j),
         rng,
@@ -532,6 +615,30 @@ export function multipleImputationMice(
 
         const donorPool = Math.min(5, observedPredictions.length);
 
+        // One posterior draw over (residual variance, coefficients) per column
+        // per iteration, reused across that column's missing cells.
+        let posterior: { sigma: number; betaFull: number[] } | null = null;
+        if (method === "regression" && fit.covariance) {
+          const degreesOfFreedom = fit.residualDegreesOfFreedom;
+          if (degreesOfFreedom > 0 && fit.residualSumSquares > 0) {
+            const chiSquared = chiSquareSample(rng, degreesOfFreedom);
+            const posteriorSigma =
+              chiSquared > 0
+                ? fit.residualStd * Math.sqrt(degreesOfFreedom / chiSquared)
+                : fit.residualStd;
+            const lower = choleskyDecompose(fit.covariance);
+            const shifts = lower.map((row) =>
+              row.reduce((sum, value) => {
+                return sum + value * gaussianSample(rng);
+              }, 0) * posteriorSigma,
+            );
+            posterior = {
+              sigma: posteriorSigma,
+              betaFull: fit.betaFull.map((betaValue, idx) => betaValue + (shifts[idx] ?? 0)),
+            };
+          }
+        }
+
         for (const i of missing) {
           let predictorsFinite = true;
           const rawPredictors = predictorIndices.map((k) => work[k][i] as number);
@@ -544,36 +651,45 @@ export function multipleImputationMice(
           if (!predictorsFinite) continue;
 
           if (method === "regression") {
-            const predicted = olsPredict(fit, rawPredictors);
+            let predicted = olsPredict(fit, rawPredictors);
+            let residualStd = fit.residualStd;
+            if (posterior) {
+              predicted = [
+                1,
+                ...rawPredictors.map((v, p) => (v - fit.means[p]) / fit.stds[p]),
+              ].reduce(
+                (sum: number, x, idx) => sum + x * posterior.betaFull[idx],
+                0,
+              );
+              residualStd = posterior.sigma;
+            }
             if (Number.isFinite(predicted)) {
-              work[j][i] = gaussianSample(rng, predicted, fit.residualStd);
+              work[j][i] = gaussianSample(rng, predicted, residualStd);
             }
           } else {
             const predicted = olsPredict(fit, rawPredictors);
             if (!Number.isFinite(predicted) || donorPool === 0) continue;
 
-            const ranked = [...observedPredictions]
-              .sort(
-                (a, b) => Math.abs(a.predicted - predicted) - Math.abs(b.predicted - predicted),
-              )
-              .slice(0, donorPool);
-
-            // Weighted draw favoring the closest donors.
-            const weights = ranked.map((entry) => {
-              const distance = Math.abs(entry.predicted - predicted) + 1e-9;
-              return 1 / distance;
-            });
-            const totalWeight = weights.reduce((sum, w) => sum + w, 0);
-            let draw = rng() * totalWeight;
-            let chosen = ranked[ranked.length - 1].value;
-            for (let d = 0; d < ranked.length; d++) {
-              draw -= weights[d];
-              if (draw <= 0) {
-                chosen = ranked[d].value;
-                break;
+            // Keep only the k closest donors (bounded memory, no full sort).
+            const ranked: { predicted: number; value: number }[] = [];
+            for (const entry of observedPredictions) {
+              const distance = Math.abs(entry.predicted - predicted);
+              let position = ranked.length;
+              while (
+                position > 0 &&
+                Math.abs(ranked[position - 1].predicted - predicted) > distance
+              ) {
+                position--;
+              }
+              if (position < donorPool) {
+                ranked.splice(position, 0, entry);
+                if (ranked.length > donorPool) ranked.pop();
               }
             }
-            work[j][i] = chosen;
+            if (ranked.length === 0) continue;
+
+            // Uniform draw from the closest donors.
+            work[j][i] = ranked[Math.floor(rng() * ranked.length)].value;
           }
         }
       }
@@ -660,10 +776,9 @@ export function multipleImputationMice(
       clampedM > 1 && lambda > 0
         ? (clampedM - 1) / (lambda * lambda)
         : clampedM - 1;
-    const observedCount = finiteEstimates.length
-      ? (data[j].filter(Number.isFinite).length + (missingIndices[j].length || 0))
-      : 1;
-    const nuComplete = Math.max(1, observedCount - 1);
+    const completeCaseCount =
+      data[j].filter(Number.isFinite).length + missingIndices[j].length;
+    const nuComplete = Math.max(1, completeCaseCount - 1);
     const dfObs = ((nuComplete + 1) / (nuComplete + 3)) * nuComplete * (1 - lambda);
     const nu = dfOld + dfObs > 0 ? 1 / (1 / dfOld + 1 / dfObs) : 0;
 
@@ -683,8 +798,10 @@ export function multipleImputationMice(
   });
 
   let imputedCount = 0;
-  missingIndices.forEach((indices) => {
-    imputedCount += indices.length;
+  missingIndices.forEach((indices, j) => {
+    imputedCount += indices.filter((i) => {
+      return Number.isFinite(pooledData[j][i]);
+    }).length;
   });
 
   return {

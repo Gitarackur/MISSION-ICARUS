@@ -283,10 +283,16 @@ export const runStatisticalAnalysis = (
 
     case "impute-multiple": {
       resultGranularity = "row-aligned";
-      const m = Math.max(2, parseNumberMetadata(data, "__imputations__", 5));
-      const maxIterations = Math.max(
-        1,
-        parseNumberMetadata(data, "__max_iterations__", 10),
+      // Clamp computational bounds: m x maxIterations is bounded here (the
+      // engine only enforces a floor) so scripted metadata can never trigger a
+      // pathological run.
+      const m = Math.min(
+        50,
+        Math.max(2, parseNumberMetadata(data, "__imputations__", 5)),
+      );
+      const maxIterations = Math.min(
+        100,
+        Math.max(1, parseNumberMetadata(data, "__max_iterations__", 10)),
       );
       const useSeed =
         parseStringMetadata(data, "__use_seed__", "false") === "true";
@@ -306,10 +312,10 @@ export const runStatisticalAnalysis = (
       );
 
       // Pooled complete dataset becomes the appended columns; per-imputation
-      // datasets and Rubin's-rule estimates are surfaced as metadata.
-      results = multipleImputation.pooledData.map((column) =>
-        column.map((value) => (Number.isFinite(value) ? value : 0)),
-      );
+      // datasets and Rubin's-rule estimates are surfaced as metadata. Cells
+      // that never received a finite draw stay non-finite here; the general
+      // presentation sanitizer handles them downstream.
+      results = multipleImputation.pooledData.map((column) => [...column]);
       newColumnNames = numericColumns.map((col) => `${col}_mi`);
 
       const columnSummaries = multipleImputation.columnSummaries.map(
@@ -326,6 +332,8 @@ export const runStatisticalAnalysis = (
         iterationCycleUsed: multipleImputation.iterationsPerformed,
         missingCount: multipleImputation.missingCount,
         imputedCount: multipleImputation.imputedCount,
+        unimputedCount:
+          multipleImputation.missingCount - multipleImputation.imputedCount,
         deterministicSeed: useSeed ? seed : null,
         columnsPooled: columnSummaries.map((summary) => summary.columnName),
         columnRubinSummary: columnSummaries,

@@ -98,6 +98,8 @@ export interface StatisticalAnalysisWorkerRequest {
  *  Float64 buffers instead of being structured-cloned on the main thread. */
 export interface StatisticalColumnarPayload {
   kind: "columns";
+  /** Key order of the source Map, preserved across transfer. */
+  order: string[];
   columnNames: string[];
   /** Original length of each column (columns are ragged). */
   lengths: number[];
@@ -117,7 +119,9 @@ export interface StatisticalAnalysisWorkerResponse
   extends WorkerResponse<StatisticalAnalysisResult> {
   id: number;
   /** Present when the result `data` matrix was transferred as a buffer. */
-  dataLengths?: number[];
-  dataRowCount?: number;
-  dataFlat?: Float64Array;
+  dataMatrix?: {
+    lengths: number[];
+    rowCount: number;
+    flat: Float64Array;
+  };
 }

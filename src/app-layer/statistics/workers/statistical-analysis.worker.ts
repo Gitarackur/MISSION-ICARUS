@@ -4,6 +4,8 @@ import type {
   StatisticalAnalysisWorkerRequest,
   StatisticalAnalysisWorkerResponse,
 } from "@/domain/workers/index.types";
+import type { StatisticalAnalysisResult } from "@/domain/statistics/index.types";
+import type { TableMatrices } from "@/domain/workflow/main.types";
 import { runStatisticalAnalysis } from "../utils/statistical-action-runner";
 import {
   encodeStatisticalResultData,
@@ -26,13 +28,22 @@ worker.onmessage = (event: MessageEvent<StatisticalAnalysisWorkerRequest>) => {
     const dataEnvelope = result.data
       ? encodeStatisticalResultData(result.data)
       : null;
+    // When the result matrix is transferred as a buffer, exclude it from the
+    // message payload (it would otherwise be structured-cloned redundantly);
+    // the client rehydrates it from the envelope before resolving.
+    let resultPayload = result;
+    if (dataEnvelope && dataEnvelope.transfer.length) {
+      const payloadWithoutMatrix: Omit<StatisticalAnalysisResult, "data"> = {
+        ...result,
+      };
+      delete (payloadWithoutMatrix as { data?: TableMatrices }).data;
+      resultPayload = payloadWithoutMatrix as StatisticalAnalysisResult;
+    }
     response = {
       ok: true,
       id: request.id,
-      result,
-      dataLengths: dataEnvelope?.lengths,
-      dataRowCount: dataEnvelope?.rowCount,
-      dataFlat: dataEnvelope?.flat,
+      result: resultPayload,
+      dataMatrix: dataEnvelope ?? undefined,
     };
     if (dataEnvelope && dataEnvelope.transfer.length) {
       worker.postMessage(response, dataEnvelope.transfer as Transferable[]);

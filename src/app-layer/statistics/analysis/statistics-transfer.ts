@@ -55,6 +55,7 @@ export const encodeStatisticalInput = (
     return {
       payload: {
         kind: "columns",
+        order: [...data.keys()],
         columnNames: [],
         lengths: [],
         rowCount: 0,
@@ -76,6 +77,7 @@ export const encodeStatisticalInput = (
   return {
     payload: {
       kind: "columns",
+      order: [...data.keys()],
       columnNames: numericNames,
       lengths: numericLengths,
       rowCount,
@@ -86,12 +88,14 @@ export const encodeStatisticalInput = (
   };
 };
 
-/** Rebuild the exact column Map inside the worker. */
+/** Rebuild the exact column Map inside the worker, preserving source order. */
 export const rehydrateStatisticalInput = (
   payload: StatisticalColumnarPayload
 ): Map<string, TableMatrix> => {
   const map = new Map<string, TableMatrix>();
-  const { columnNames, lengths, rowCount, numeric, plainEntries } = payload;
+  const { columnNames, lengths, rowCount, numeric, plainEntries, order } = payload;
+
+  const numericLookup = new Map<string, number[]>();
   columnNames.forEach((name, index) => {
     const length = lengths[index];
     const values = new Array<number>(length);
@@ -99,9 +103,26 @@ export const rehydrateStatisticalInput = (
     for (let row = 0; row < length; row++) {
       values[row] = numeric[base + row];
     }
-    map.set(name, values);
+    numericLookup.set(name, values);
   });
-  plainEntries.forEach((entry) => map.set(entry.name, [...entry.values]));
+
+  const plainLookup = new Map<string, (string | number)[]>();
+  plainEntries.forEach((entry) => plainLookup.set(entry.name, [...entry.values]));
+
+  const orderedNames =
+    order && order.length
+      ? order
+      : [...columnNames, ...plainEntries.map((entry) => entry.name)];
+  for (const name of orderedNames) {
+    const numericValues = numericLookup.get(name);
+    if (numericValues) {
+      map.set(name, numericValues);
+      continue;
+    }
+    const plainValues = plainLookup.get(name);
+    if (plainValues) map.set(name, plainValues);
+  }
+
   return map;
 };
 

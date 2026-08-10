@@ -49,9 +49,18 @@ class StatisticalAnalysisClient {
       const worker = this.getWorker(operationName);
 
       const timeout = globalThis.setTimeout(() => {
-        this.failWorker(
-          createWorkerTimeoutError(operationName, WORKER_REQUEST_TIMEOUT_MS)
+        // Reject only the request whose timer expired. The serial worker may
+        // still be processing queued requests, so they are preserved: no
+        // global worker teardown is triggered here.
+        const entry = this.pending.get(request.id);
+        this.pending.delete(request.id);
+        if (!entry) return;
+        const error = createWorkerTimeoutError(
+          operationName,
+          WORKER_REQUEST_TIMEOUT_MS
         );
+        announceWorkerFailure(error);
+        entry.reject(error);
       }, WORKER_REQUEST_TIMEOUT_MS);
       const clearRequestTimeout = () => globalThis.clearTimeout(timeout);
 
@@ -123,12 +132,18 @@ class StatisticalAnalysisClient {
       }
 
       const result = response.result;
-      if (result && response.dataFlat) {
-        result.data = rehydrateStatisticalResultData({
-          lengths: response.dataLengths ?? [],
-          rowCount: response.dataRowCount ?? 0,
-          flat: response.dataFlat,
-        });
+      if (!result) {
+        pending.reject(
+          createWorkerFailureError(
+            pending.operationName,
+            "Statistical analysis returned no result"
+          )
+        );
+        return;
+      }
+
+      if (response.dataMatrix) {
+        result.data = rehydrateStatisticalResultData(response.dataMatrix);
       }
       pending.resolve(result);
     };

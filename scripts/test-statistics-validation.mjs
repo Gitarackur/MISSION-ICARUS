@@ -573,10 +573,41 @@ assert.throws(
 );
 const regressionMi = engine.multipleImputationMice(missingData, "regression", 2, 4, 11);
 assert.equal(regressionMi.method, "regression", "regression method honored");
-assert.equal(regressionMi.m, 2, "m clamped/set to 2");
+assert.equal(regressionMi.m, 2, "m honored when it equals the minimum");
 assert.equal(regressionMi.imputedDatasets.length, 2, "two datasets produced");
 assert.ok(Number.isFinite(regressionMi.pooledData[0][2]), "regression pooled cell finite");
-checks += 5;
+const clampedMi = engine.multipleImputationMice(missingData, "pmm", 1, 0, 11);
+assert.equal(clampedMi.m, 2, "m below the minimum is clamped to 2");
+assert.equal(clampedMi.maxIterations, 1, "maxIterations below the minimum is clamped to 1");
+checks += 7;
+
+// The runner clamps metadata-derived parameters to explicit upper bounds so
+// scripted metadata cannot trigger unbounded synchronous chains.
+const clampedRunnerInput = new Map();
+clampedRunnerInput.set("col_a", [1, 2, NaN, 4, 5]);
+clampedRunnerInput.set("col_b", [2, NaN, 6, 8, 10]);
+clampedRunnerInput.set("__imputations__", [5000]);
+clampedRunnerInput.set("__max_iterations__", [500]);
+clampedRunnerInput.set("__method__", ["pmm"]);
+const clampedRunnerResult = engine.runStatisticalAnalysis(
+  "impute-multiple",
+  clampedRunnerInput
+);
+assert.equal(
+  clampedRunnerResult.outputParameters.metadata.imputations,
+  50,
+  "runner clamps m to its upper bound"
+);
+assert.equal(
+  clampedRunnerResult.outputParameters.metadata.maxIterations,
+  100,
+  "runner clamps maxIterations to its upper bound"
+);
+assert.ok(
+  clampedRunnerResult.outputParameters.metadata.unimputedCount >= 0,
+  "unimputed count is non-negative"
+);
+checks += 3;
 
 // ---------------------------------------------------------------------------
 console.log(`\nStatistics validation passed (${checks} checks vs library references)\n`);
