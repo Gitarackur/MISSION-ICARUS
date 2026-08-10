@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { AlertTriangle, LoaderCircle, Trash2 } from "lucide-react";
 import type { IcarusSession } from "@/domain/session";
+import deleteSessionModalStyles from "./variants/delete-session-modal.variants";
 
 export function SessionDeletionConfirmation({
   session,
@@ -11,6 +12,7 @@ export function SessionDeletionConfirmation({
   onCancel: () => void;
   onConfirm: () => Promise<void>;
 }) {
+  const styles = deleteSessionModalStyles();
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState("");
   const recordCount =
@@ -34,15 +36,15 @@ export function SessionDeletionConfirmation({
   };
 
   return (
-    <div className="space-y-5">
-      <div className="rounded-lg border border-red-300 bg-red-50 p-4 text-red-950 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100">
-        <div className="flex items-start gap-3">
-          <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600 dark:text-red-400" />
-          <div className="space-y-2">
-            <p className="font-semibold">
+    <div className={styles.container()}>
+      <div className={styles.warningBlock()}>
+        <div className={styles.warningContent()}>
+          <AlertTriangle className={styles.warningIcon()} />
+          <div className={styles.warningBody()}>
+            <p className={styles.warningTitle()}>
               Delete this session and all of its data?
             </p>
-            <p className="text-sm leading-6">
+            <p className={styles.warningText()}>
               Deleting a session permanently removes its matrices, activities,
               and saved visualizations in one atomic operation. This cannot be
               undone.
@@ -52,59 +54,46 @@ export function SessionDeletionConfirmation({
       </div>
 
       <div>
-        <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
-          Session
-        </div>
-        <code className="mt-1 block break-all rounded bg-gray-100 px-3 py-2 text-xs dark:bg-gray-800">
+        <div className={styles.label()}>Session</div>
+        <code className={styles.sessionName()}>
           {session.name || session.id}
         </code>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 text-center text-sm">
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="text-lg font-semibold">{session.matrixIds.length}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Matrices
-          </div>
+      <div className={styles.statsGrid()}>
+        <div className={styles.statCard()}>
+          <div className={styles.statValue()}>{session.matrixIds.length}</div>
+          <div className={styles.statLabel()}>Matrices</div>
         </div>
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="text-lg font-semibold">
-            {session.activityIds.length}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Activities
-          </div>
+        <div className={styles.statCard()}>
+          <div className={styles.statValue()}>{session.activityIds.length}</div>
+          <div className={styles.statLabel()}>Activities</div>
         </div>
-        <div className="rounded-md border border-gray-200 p-3 dark:border-gray-700">
-          <div className="text-lg font-semibold">
+        <div className={styles.statCard()}>
+          <div className={styles.statValue()}>
             {session.visualizationIds.length}
           </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            Visualizations
-          </div>
+          <div className={styles.statLabel()}>Visualizations</div>
         </div>
       </div>
 
-      <p className="text-sm text-gray-600 dark:text-gray-300">
+      <p className={styles.recordCount()}>
         {recordCount} {recordCount === 1 ? "record" : "records"} will be
         removed in one atomic operation. This cannot be undone.
       </p>
 
       {error && (
-        <div
-          role="alert"
-          className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
-        >
+        <div role="alert" className={styles.errorAlert()}>
           {error}
         </div>
       )}
 
-      <div className="flex justify-end gap-3 border-t border-gray-200 pt-4 dark:border-gray-700">
+      <div className={styles.actions()}>
         <button
           type="button"
           onClick={onCancel}
           disabled={isDeleting}
-          className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-gray-700 dark:hover:bg-gray-800"
+          className={styles.cancelButton()}
         >
           Cancel
         </button>
@@ -112,12 +101,12 @@ export function SessionDeletionConfirmation({
           type="button"
           onClick={confirm}
           disabled={isDeleting}
-          className="flex items-center gap-2 rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+          className={styles.deleteButton()}
         >
           {isDeleting ? (
-            <LoaderCircle className="h-4 w-4 animate-spin" />
+            <LoaderCircle className={styles.buttonIcon()} />
           ) : (
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className={styles.buttonIcon()} />
           )}
           {isDeleting ? "Deleting…" : "Delete session"}
         </button>
