@@ -8,6 +8,7 @@ import { tabTypes } from "@/ui/views/proteomics/types/index.types";
 import { ActivitySheet } from "./components/activity-sheet";
 import { useModal } from "@/ui/design-system/Modal/context";
 import { DeletionConfirmation } from "@/ui/components/deletion/deletion-confirmation";
+import { SessionDeletionConfirmation } from "@/ui/components/session/modals/delete-session-modal";
 import SettingsSheet from "@/ui/views/settings/components/settings-sheet";
 import ExportSheet from "@/ui/views/settings/components/export-sheet";
 import type {
@@ -184,6 +185,23 @@ const IcarusApp: React.FC = () => {
       (plan) => handleDeleteVisualization(visualizationId, plan)
     );
 
+  const requestSessionDeletion = (sessionId: string) => {
+    const session = sessions?.find((item) => item.id === sessionId);
+    if (!session) return;
+
+    openModal(
+      <SessionDeletionConfirmation
+        session={session}
+        onCancel={() => closeModal()}
+        onConfirm={async () => {
+          await handleDeleteSession(sessionId);
+          closeModal();
+        }}
+      />,
+      "Delete session"
+    );
+  };
+
   return (
     <div className="flex h-screen flex-col bg-white text-gray-800 dark:bg-gray-950 dark:text-gray-100">
       {workerFailure && (
@@ -308,7 +326,7 @@ const IcarusApp: React.FC = () => {
           activeSession={activeSession}
           onSessionClick={onSessionClick}
           onCreateSession={() => setActiveSession(null)}
-          onDeleteSession={handleDeleteSession}
+          onDeleteSession={requestSessionDeletion}
         />
       )}
 
