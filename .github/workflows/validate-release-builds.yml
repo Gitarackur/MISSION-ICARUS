@@ -14,6 +14,17 @@ on:
       - "scripts/test-bundled-renderer-runtimes.mjs"
       - "scripts/test-renderer-runtime-preparation.mjs"
   workflow_dispatch:
+    inputs:
+      force_rebuild:
+        description: Force a full renderer runtime rebuild instead of reusing cached runtimes.
+        type: boolean
+        required: false
+        default: false
+      clean_nuitka_cache:
+        description: Delete the Nuitka compiler cache before rebuilding for a fully cold Python compiler run (most useful with force_rebuild).
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -52,6 +63,9 @@ jobs:
 
       - name: Prepare renderer runtimes
         uses: ./.github/actions/prepare-renderer-runtimes
+        with:
+          force: ${{ github.event.inputs.force_rebuild || 'false' }}
+          clean-nuitka-cache: ${{ github.event.inputs.clean_nuitka_cache || 'false' }}
 
       - name: Build macOS installer
         if: runner.os == 'macOS'

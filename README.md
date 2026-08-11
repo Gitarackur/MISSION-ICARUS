@@ -238,7 +238,9 @@ and additionally caches the prepared runtime artifacts keyed by renderer
 sources. Unchanged renderers are skipped so routine builds reuse the cached
 executables. Rebuilt runtimes are always smoke-tested, and CI smoke-tests the
 bundled runtimes on every run even when all renderers are cached. A manual
-`workflow_dispatch` with `force_rebuild` restores a fully fresh rebuild.
+`workflow_dispatch` with `force_rebuild` restores a fully fresh rebuild; checking
+`clean_nuitka_cache` at the same time also wipes Nuitka's compiler cache so the
+Python renderer is rebuilt with a fully cold C compiler.
 
 ---
 

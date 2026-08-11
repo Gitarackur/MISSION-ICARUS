@@ -11,6 +11,10 @@ inputs:
     description: Rebuild every renderer runtime from scratch, ignoring freshness.
     required: false
     default: "false"
+  clean-nuitka-cache:
+    description: Delete the Nuitka compiler cache before rebuilding so the Python renderer binaries are produced by a fully cold compiler run. Only meaningful when a rebuild actually runs (combine with force).
+    required: false
+    default: "false"
   run-preparation-tests:
     description: Run the renderer runtime preparation unit tests first.
     required: false
@@ -50,6 +54,8 @@ runs:
 
     - name: Rebuild and smoke-test renderer runtimes
       shell: bash
+      env:
+        ICARUS_CLEAN_NUITKA_CACHE: ${{ inputs.clean-nuitka-cache == 'true' && '1' || '0' }}
       run: npm run prepare:renderer:runtimes ${{ inputs.force == 'true' && '-- --force' || '' }}
 
     - name: Smoke-test bundled renderer runtimes
