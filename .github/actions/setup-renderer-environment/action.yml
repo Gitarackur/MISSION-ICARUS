@@ -55,6 +55,9 @@ runs:
     - name: Install R renderer and statistics packages
       uses: r-lib/actions/setup-r-dependencies@v2
       with:
+        # Runtime packaging only needs Depends, Imports, and LinkingTo.
+        # Installing all Suggests introduces a limma <-> vsn solver cycle.
+        dependencies: '"hard"'
         packages: |
           any::jsonlite
           any::ggplot2

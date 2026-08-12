@@ -85,6 +85,21 @@ assert.doesNotMatch(
   "the renderer build must keep Nuitka's compiler cache enabled"
 );
 
+const rendererEnvironmentAction = readFileSync(
+  path.join(
+    ".github",
+    "actions",
+    "setup-renderer-environment",
+    "action.yml"
+  ),
+  "utf8"
+);
+assert.match(
+  rendererEnvironmentAction,
+  /dependencies:\s*['"]?"hard"['"]?/,
+  "R package setup must exclude optional dependencies that create solver cycles"
+);
+
 assert.deepEqual(getRuntimeTarget("darwin", "arm64").toJSON(), {
   nodePlatform: "darwin",
   arch: "arm64",
