@@ -19,7 +19,11 @@ import {
   encodeStatisticalInput,
   rehydrateStatisticalResultData,
 } from "./statistics-transfer";
-import { heavyStatisticalAnalysisClient } from "./heavy-statistical-analysis-client";
+import {
+  heavyStatisticalAnalysisClient,
+  shouldRunInPython,
+  shouldRunInR,
+} from "./heavy-statistical-analysis-client";
 
 type StatisticalProgressCallback = (
   progress?: number,
@@ -198,12 +202,52 @@ export const runStatisticalAnalysisInWorker = (
   data: ProteinRow[] | Map<string, TableMatrix>,
   onProgress?: StatisticalProgressCallback
 ): Promise<StatisticalAnalysisResult> => {
-  if (action === "impute-multiple" && data instanceof Map) {
-    return heavyStatisticalAnalysisClient.isAvailable().then((available) =>
-      available
-        ? heavyStatisticalAnalysisClient.runMice(data, onProgress)
-        : statisticalAnalysisClient.run(action, data, onProgress)
-    );
+  if (shouldRunInR(action)) {
+    const runFallback = () =>
+      statisticalAnalysisClient.run(action, data, onProgress);
+    return heavyStatisticalAnalysisClient
+      .isAvailable("r", action)
+      .then((available) => {
+        if (!available) {
+          if (action === "wgcna-analysis") {
+            throw new Error(
+              "WGCNA requires the bundled R runtime and WGCNA package."
+            );
+          }
+          return runFallback();
+        }
+        return heavyStatisticalAnalysisClient
+          .runR(action, data, onProgress)
+          .catch((error: unknown) => {
+            const message = error instanceof Error ? error.message : String(error);
+            if (/cancelled/i.test(message) || action === "wgcna-analysis") {
+              throw error;
+            }
+            console.warn(
+              "R LIMMA backend failed; using the TypeScript compatibility implementation.",
+              error
+            );
+            return runFallback();
+          });
+      });
+  }
+  if (shouldRunInPython(action, data)) {
+    const runFallback = () =>
+      statisticalAnalysisClient.run(action, data, onProgress);
+    return heavyStatisticalAnalysisClient.isAvailable("python").then((available) => {
+      if (!available) return runFallback();
+      return heavyStatisticalAnalysisClient
+        .runPython(action, data, onProgress)
+        .catch((error: unknown) => {
+          const message = error instanceof Error ? error.message : String(error);
+          if (/cancelled/i.test(message)) throw error;
+          console.warn(
+            `Scientific Python backend failed for ${action}; using the TypeScript fallback.`,
+            error
+          );
+          return runFallback();
+        });
+    });
   }
   return statisticalAnalysisClient.run(action, data, onProgress);
 };

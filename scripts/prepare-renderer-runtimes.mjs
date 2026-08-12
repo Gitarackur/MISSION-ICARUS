@@ -486,7 +486,14 @@ class RRendererBuilder extends RendererBuilder {
   }
 
   get sourceFiles() {
-    return [R_VENDOR_SCRIPT, scriptPath];
+    return [
+      R_VENDOR_SCRIPT,
+      ...walkFiles(
+        path.join(repositoryRoot, "assets", "scripts", "r"),
+        (filePath) => filePath.endsWith(".r")
+      ),
+      scriptPath,
+    ];
   }
 
   get artifactPath() {

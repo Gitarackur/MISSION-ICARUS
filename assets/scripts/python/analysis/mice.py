@@ -3,6 +3,7 @@ from __future__ import annotations
 import math
 import os
 import threading
+from contextlib import nullcontext
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from typing import Callable, Optional
@@ -337,7 +338,17 @@ def run_mice(payload: dict, emit_progress: ProgressCallback) -> dict:
     within_variances = np.zeros((imputations, column_count), dtype=np.float64)
     seed_sequences = np.random.SeedSequence(seed).spawn(imputations)
 
-    with ThreadPoolExecutor(
+    try:
+        from threadpoolctl import threadpool_limits
+
+        native_thread_limit = threadpool_limits(limits=1)
+    except ImportError:
+        native_thread_limit = nullcontext()
+
+    # Each MICE chain already runs in parallel. Limit BLAS inside this region
+    # to one native thread per chain to prevent nested oversubscription, while
+    # allowing PCA/clustering jobs in the same warm process to use native cores.
+    with native_thread_limit, ThreadPoolExecutor(
         max_workers=worker_count,
         thread_name_prefix="icarus-mice",
     ) as executor:
@@ -379,6 +390,10 @@ def run_mice(payload: dict, emit_progress: ProgressCallback) -> dict:
         out=np.full_like(pooled_sum, np.nan),
         where=pooled_count > 0,
     )
+    # A target with fewer than two observations cannot support a regression
+    # or donor model. Keep those missing cells missing instead of leaking the
+    # zero-valued initialization into the pooled result.
+    pooled[(finite_counts < 2)[:, None] & missing_mask] = np.nan
     pooled[~missing_mask] = data[~missing_mask]
     pooled.astype("<f8", copy=False).tofile(output_path)
 

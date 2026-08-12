@@ -8183,49 +8183,122 @@ WGCNA ANALYSIS
 
 export const WgcnaAnalysis = ({
   dataColumns,
-  // actionId,
+  actionId,
+  dataRows,
+  allColumnarData,
+  onSuccess,
+  onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-}) => (
-  <div className={containerClass}>
-    <h1 className={headingClass}>WGCNA Analysis</h1>
-    <p className={descriptionClass}>
-      Runs a Weighted Gene Co-expression Network Analysis (WGCNA).
-    </p>
-    <div className="space-y-4 mb-6">
-      <div>
-        <MultiSelect
-          id="wgcna-columns"
-          label={`Select Columns for Analysis`}
-          placeholder="Select data columns to analyze..."
-          options={dataColumns.map((curr) => ({
-            value: curr,
-            label: curr,
-            disabled: false,
-          }))}
-          defaultValue={[]}
-          onChange={(values) => console.log(values)}
-          helperText="Choose the numeric columns you want to include in your analysis"
-        />
+  dataRows: ProteinRow[];
+  allColumnarData: Map<string, TableMatrix>;
+  onSuccess?: (result: StatisticalAnalysisResult) => void;
+  onError?: () => void;
+}) => {
+  const { performAnalysis, cancelAnalysis, progress } = useStatisticalAnalysis();
+  const numericColumns = useMemo(
+    () => [...getNumericColumnsOptimized(dataColumns, dataRows)],
+    [dataColumns, dataRows]
+  );
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [softThreshold, setSoftThreshold] = useState(6);
+  const [error, setError] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+
+  const runWgcna = async () => {
+    if (selectedColumns.length < 4 || running) {
+      setError("Select at least four numeric sample columns for WGCNA.");
+      return;
+    }
+    setError(null);
+    setRunning(true);
+    try {
+      const filteredData = buildSelectedColumnData(
+        selectedColumns,
+        allColumnarData
+      );
+      filteredData.set("__soft_threshold__", [softThreshold]);
+      const result = await performAnalysis(actionId, filteredData);
+      onSuccess?.(result);
+    } catch (runError) {
+      setError(
+        runError instanceof Error
+          ? runError.message
+          : "WGCNA failed. Check the selected variables and R runtime."
+      );
+      onError?.();
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className={containerClass}>
+      <h1 className={headingClass}>WGCNA Analysis</h1>
+      <p className={descriptionClass}>
+        Runs Weighted Gene Co-expression Network Analysis in the persistent R
+        scientific worker.
+      </p>
+      <div className="space-y-4 mb-6">
+        <div>
+          <MultiSelect
+            id="wgcna-columns"
+            label="Select Sample Columns"
+            placeholder="Select data columns to analyze..."
+            options={numericColumns.map((column) => ({
+              value: column,
+              label: column,
+              disabled: false,
+            }))}
+            value={selectedColumns}
+            onChange={setSelectedColumns}
+            helperText="Choose at least four samples; data rows are treated as genes or measured features"
+          />
+        </div>
+        <div>
+          <label htmlFor="wgcna-soft-threshold" className={labelClass}>
+            Soft Threshold
+          </label>
+          <input
+            type="number"
+            id="wgcna-soft-threshold"
+            min={1}
+            max={30}
+            value={softThreshold}
+            onChange={(event) =>
+              setSoftThreshold(
+                Math.max(1, Math.min(30, Number(event.target.value) || 6))
+              )
+            }
+            className={inputClass}
+          />
+        </div>
       </div>
-      <div>
-        <label htmlFor="wgcna-soft-threshold" className={labelClass}>
-          Soft Threshold
-        </label>
-        <input
-          type="number"
-          id="wgcna-soft-threshold"
-          defaultValue="6"
-          className={inputClass}
-        />
+
+      {running && progress && (
+        <div className="mb-4 text-sm text-gray-600" aria-live="polite">
+          {progress.detail ?? "Running WGCNA…"}
+        </div>
+      )}
+      {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
+
+      <div className="flex justify-end gap-2">
+        {running && (
+          <button type="button" className={dangerButtonClass} onClick={cancelAnalysis}>
+            Cancel
+          </button>
+        )}
+        <AnalysisSubmitButton
+          disabled={selectedColumns.length < 4 || running}
+          onClick={runWgcna}
+        >
+          {running ? "Running WGCNA…" : "Run WGCNA"}
+        </AnalysisSubmitButton>
       </div>
     </div>
-    <div className="flex justify-end">
-      <button className={buttonClass}>Run WGCNA</button>
-    </div>
-  </div>
-);
+  );
+};
 
 /*---------------------------------------------------
 SAVE DATA + EXPORT CSV

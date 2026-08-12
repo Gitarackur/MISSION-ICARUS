@@ -29,7 +29,13 @@ export class RRuntimeVendor {
      */
     this.rootDir = options.rootDir ?? path.resolve(this.__dirname, "../../..");
 
-    this.requiredPackages = options.requiredPackages ?? ["jsonlite", "ggplot2", "ragg"];
+    this.requiredPackages = options.requiredPackages ?? [
+      "jsonlite",
+      "ggplot2",
+      "ragg",
+      "limma",
+      "WGCNA",
+    ];
 
     this.runProcess = options.runProcess ?? execFileSync;
 
@@ -401,7 +407,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
 
   getRequiredPackagesWithDependencies(rscript) {
     // LinkingTo dependencies provide headers at compile time; the bundled
-    // renderer only needs packages imported or loaded at runtime.
+    // renderer/statistics runtime only needs packages imported or loaded at runtime.
     const expression = `
       required <- c(${this.requiredPackages.map((pkg) => `"${pkg}"`).join(",")});
 

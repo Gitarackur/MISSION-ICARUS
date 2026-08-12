@@ -22,6 +22,8 @@
     "test:deletion": "node scripts/test-deletion-planner.mjs",
     "test:statistics-validation": "node scripts/test-statistics-validation.mjs",
     "test:python-statistics-worker": "node scripts/test-python-statistics-worker.mjs",
+    "test:python-scientific-worker": "node scripts/test-python-scientific-worker.mjs",
+    "test:r-statistics-worker": "node scripts/test-r-statistics-worker.mjs",
     "test:renderer-workers": "node scripts/test-renderer-workers.mjs",
     "test:bundled-renderers": "node scripts/test-bundled-renderer-runtimes.mjs",
     "test:renderer-runtime-preparation": "node scripts/test-renderer-runtime-preparation.mjs",

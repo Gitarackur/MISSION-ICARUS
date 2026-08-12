@@ -123,6 +123,13 @@ assert.equal(transportVendor.runR("Rscript", "cat('transport-ok')"), "transport-
 assert.equal(capturedRScript, "cat('transport-ok')\n");
 
 const rVendor = new CapturingRRuntimeVendor();
+assert.deepEqual(rVendor.requiredPackages, [
+  "jsonlite",
+  "ggplot2",
+  "ragg",
+  "limma",
+  "WGCNA",
+]);
 rVendor.getRequiredPackagesWithDependencies("Rscript");
 
 assert.match(

@@ -1,42 +1,27 @@
 import { app } from "electron";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import type {
   HeavyStatisticsRequest,
   HeavyStatisticsResponse,
-  PythonScientificAction,
+  RScientificAction,
 } from "../../../src/domain/statistics/index.types";
 import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,
 } from "../core/PersistentJsonWorker";
-import {
-  isPythonRuntimeAvailable,
-  resolvePythonWorkerLaunch,
-} from "../python/python-runtime";
+import { resourcePath } from "../core/utils";
+import EmbeddedRManager from "../r/r-manager";
 
 type ScientificManifest = Pick<
   HeavyStatisticsResponse,
   "outputColumnNames" | "outputRowCount" | "granularity" | "metadata"
 > & { outputColumnCount: number };
 
-const PYTHON_ACTIONS = new Set<PythonScientificAction>([
-  "impute-multiple",
-  "impute-knn",
-  "pca-learning",
-  "pca-plot",
-  "pca-analysis",
-  "2d",
-  "plsda-learning",
-  "tsne-learning",
-  "k-means-clustering",
-  "k-means-clustering-run",
-  "hierarchical-clustering",
-  "hierarchical-clustering-run",
-  "heatmap",
-  "quantile-normalization",
-]);
+const REQUIRED_PACKAGE: Record<RScientificAction, string> = {
+  limma: "limma",
+  "wgcna-analysis": "WGCNA",
+};
 
 const toFloat64Array = (value: unknown): Float64Array => {
   if (value instanceof Float64Array) return value;
@@ -53,40 +38,14 @@ const toFloat64Array = (value: unknown): Float64Array => {
   throw new Error("The statistical matrix must be a Float64Array.");
 };
 
-const validateRequest = (request: HeavyStatisticsRequest) => {
-  if (!PYTHON_ACTIONS.has(request?.action as PythonScientificAction)) {
-    throw new Error("Unsupported out-of-process statistical action.");
-  }
-  if (!request.jobId || typeof request.jobId !== "string") {
-    throw new Error("A statistical job id is required.");
-  }
-  const { columnNames, lengths, rowCount } = request.matrix;
-  if (!Array.isArray(columnNames) || columnNames.length < 1) {
-    throw new Error("Scientific analysis requires at least one column.");
-  }
-  if (!Number.isInteger(rowCount) || rowCount < 1) {
-    throw new Error("The statistical matrix row count is invalid.");
-  }
-  if (
-    !Array.isArray(lengths) ||
-    lengths.length !== columnNames.length ||
-    lengths.some((length) => !Number.isInteger(length) || length < 0 || length > rowCount)
-  ) {
-    throw new Error("The statistical matrix column lengths are invalid.");
-  }
-};
-
-export class PythonStatisticsManager {
+export class RStatisticsManager {
+  private readonly runtime = new EmbeddedRManager();
   private worker: PersistentJsonWorker | null = null;
   private readonly jobs = new Set<string>();
   private readonly cancelledJobs = new Set<string>();
 
-  public isAvailable(): boolean {
-    return isPythonRuntimeAvailable();
-  }
-
-  public async warmUp(): Promise<boolean> {
-    if (!this.isAvailable()) return false;
+  public async warmUp(action: RScientificAction): Promise<boolean> {
+    if (!this.isAvailable(action)) return false;
     try {
       await this.getWorker().start();
       return true;
@@ -96,37 +55,65 @@ export class PythonStatisticsManager {
     }
   }
 
+  public isAvailable(action: RScientificAction): boolean {
+    return (
+      this.runtime.isRAvailable() &&
+      this.runtime.isPackageInstalled("jsonlite") &&
+      this.runtime.isPackageInstalled(REQUIRED_PACKAGE[action])
+    );
+  }
+
   public async run(
     request: HeavyStatisticsRequest,
     onProgress?: (progress?: number, detail?: string) => void
   ): Promise<HeavyStatisticsResponse> {
-    validateRequest(request);
-    if (!this.isAvailable()) {
-      throw new Error("The packaged Python statistical runtime is unavailable.");
+    if (request.action !== "limma" && request.action !== "wgcna-analysis") {
+      throw new Error("Unsupported R statistical action.");
     }
-
-    const inputValues = toFloat64Array(request.matrix.flat);
-    const expectedValues = request.matrix.columnNames.length * request.matrix.rowCount;
-    if (inputValues.length !== expectedValues) {
+    if (!request.jobId || typeof request.jobId !== "string") {
+      throw new Error("A statistical job id is required.");
+    }
+    if (
+      !Array.isArray(request.matrix.columnNames) ||
+      request.matrix.columnNames.length < 1 ||
+      !Number.isInteger(request.matrix.rowCount) ||
+      request.matrix.rowCount < 1 ||
+      !Array.isArray(request.matrix.lengths) ||
+      request.matrix.lengths.length !== request.matrix.columnNames.length ||
+      request.matrix.lengths.some(
+        (length) =>
+          !Number.isInteger(length) ||
+          length < 0 ||
+          length > request.matrix.rowCount
+      )
+    ) {
+      throw new Error("The R statistical matrix shape is invalid.");
+    }
+    if (!this.isAvailable(request.action)) {
+      throw new Error(
+        `The R package '${REQUIRED_PACKAGE[request.action]}' is unavailable.`
+      );
+    }
+    const values = toFloat64Array(request.matrix.flat);
+    const expectedInputValues =
+      request.matrix.columnNames.length * request.matrix.rowCount;
+    if (values.length !== expectedInputValues) {
       throw new Error("The statistical matrix buffer does not match its shape.");
     }
 
-    const tempDirectory = await mkdtemp(
-      path.join(app.getPath("temp"), "icarus-statistics-")
+    const temporaryDirectory = await mkdtemp(
+      path.join(app.getPath("temp"), "icarus-r-statistics-")
     );
-    const inputPath = path.join(tempDirectory, "input.f64");
-    const outputPath = path.join(tempDirectory, "output.f64");
+    const inputPath = path.join(temporaryDirectory, "input.f64");
+    const outputPath = path.join(temporaryDirectory, "output.f64");
     this.jobs.add(request.jobId);
-
     try {
-      const inputBytes = Buffer.from(
-        inputValues.buffer,
-        inputValues.byteOffset,
-        inputValues.byteLength
+      await writeFile(
+        inputPath,
+        Buffer.from(values.buffer, values.byteOffset, values.byteLength)
       );
-      await writeFile(inputPath, inputBytes);
-
       const payload = {
+        action: request.action,
         inputPath,
         outputPath,
         columnNames: request.matrix.columnNames,
@@ -138,7 +125,7 @@ export class PythonStatisticsManager {
       for (let attempt = 0; attempt < 2; attempt += 1) {
         try {
           manifest = await this.getWorker().request<ScientificManifest>(
-            { command: "statistics:run", payload: { action: request.action, ...payload } },
+            { payload },
             { onProgress }
           );
           break;
@@ -150,10 +137,7 @@ export class PythonStatisticsManager {
           this.resetWorker(error);
         }
       }
-      if (!manifest) {
-        throw new Error("The Python statistical worker could not be restarted.");
-      }
-
+      if (!manifest) throw new Error("The R statistical worker could not restart.");
       if (
         !Number.isInteger(manifest.outputColumnCount) ||
         manifest.outputColumnCount < 1 ||
@@ -163,16 +147,18 @@ export class PythonStatisticsManager {
         manifest.outputColumnNames.length !== manifest.outputColumnCount ||
         typeof manifest.metadata?.executionBackend !== "string"
       ) {
-        throw new Error("The Python statistical worker returned invalid output metadata.");
+        throw new Error("The R statistical worker returned invalid output metadata.");
       }
-      const outputValues = manifest.outputColumnCount * manifest.outputRowCount;
+      const expectedOutputBytes =
+        manifest.outputColumnCount *
+        manifest.outputRowCount *
+        Float64Array.BYTES_PER_ELEMENT;
       const outputBytes = await readFile(outputPath);
-      if (outputBytes.byteLength !== outputValues * Float64Array.BYTES_PER_ELEMENT) {
-        throw new Error("The Python statistical worker returned an invalid matrix size.");
+      if (outputBytes.byteLength !== expectedOutputBytes) {
+        throw new Error("The R statistical worker returned an invalid matrix size.");
       }
-      const outputCopy = new Uint8Array(outputBytes.byteLength);
-      outputCopy.set(outputBytes);
-
+      const copy = new Uint8Array(outputBytes.byteLength);
+      copy.set(outputBytes);
       return {
         jobId: request.jobId,
         action: request.action,
@@ -180,20 +166,19 @@ export class PythonStatisticsManager {
         inputRowCount: request.matrix.rowCount,
         outputColumnNames: manifest.outputColumnNames,
         outputRowCount: manifest.outputRowCount,
-        flat: new Float64Array(outputCopy.buffer),
+        flat: new Float64Array(copy.buffer),
         granularity: manifest.granularity,
         metadata: manifest.metadata,
       };
     } finally {
       this.jobs.delete(request.jobId);
       this.cancelledJobs.delete(request.jobId);
-      await rm(tempDirectory, { recursive: true, force: true }).catch((error) =>
-        console.warn("Unable to remove the statistical job directory.", error)
+      await rm(temporaryDirectory, { recursive: true, force: true }).catch(
+        (error) => console.warn("Unable to remove the R statistics directory.", error)
       );
     }
   }
 
-  /** Cancelling an active native job intentionally restarts the process. */
   public cancel(jobId: string): boolean {
     if (!this.jobs.has(jobId)) return false;
     this.cancelledJobs.add(jobId);
@@ -206,32 +191,22 @@ export class PythonStatisticsManager {
     this.worker = null;
     this.jobs.clear();
     this.cancelledJobs.clear();
+    this.runtime.dispose();
   }
 
   private getWorker(): PersistentJsonWorker {
     if (this.worker) return this.worker;
-    const nativeThreadCount = String(
-      Math.max(1, Math.min(4, os.availableParallelism() - 1))
-    );
-    const { command, args, env } = resolvePythonWorkerLaunch(
-      "--statistics-worker"
-    );
+    const launch = this.runtime.getWorkerLaunch();
+    if (!launch) {
+      throw new PersistentWorkerUnavailableError("Rscript is unavailable.");
+    }
     this.worker = new PersistentJsonWorker(
-      command,
-      args,
-      {
-        env: {
-          ...env,
-          OMP_NUM_THREADS: nativeThreadCount,
-          OPENBLAS_NUM_THREADS: nativeThreadCount,
-          MKL_NUM_THREADS: nativeThreadCount,
-          VECLIB_MAXIMUM_THREADS: nativeThreadCount,
-          NUMEXPR_NUM_THREADS: nativeThreadCount,
-        },
-      },
-      "Python statistical analysis",
+      launch.command,
+      [resourcePath("scripts", "r", "statistics_worker.r")],
+      { env: launch.env },
+      "R statistical analysis",
       120_000,
-      90_000,
+      0,
       "fifo"
     );
     return this.worker;
@@ -239,7 +214,7 @@ export class PythonStatisticsManager {
 
   private resetWorker(error: unknown): void {
     console.warn(
-      "Python statistical worker stopped; it will be restarted on demand.",
+      "R statistical worker stopped; it will be restarted on demand.",
       error
     );
     this.worker?.dispose();

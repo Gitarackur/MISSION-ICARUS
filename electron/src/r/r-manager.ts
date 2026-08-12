@@ -1,4 +1,4 @@
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync, execSync } from 'child_process';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -178,6 +178,17 @@ export default class EmbeddedRManager {
     return this.rScriptExe !== null && fs.existsSync(this.rScriptExe);
   }
 
+  public getWorkerLaunch(): {
+    command: string;
+    env: NodeJS.ProcessEnv;
+  } | null {
+    if (!this.rScriptExe || !fs.existsSync(this.rScriptExe)) return null;
+    return {
+      command: this.rScriptExe,
+      env: this.getRuntimeEnv(),
+    };
+  }
+
   isUsingBundledR(): boolean {
     return this.usingBundledRuntime;
   }
@@ -186,8 +197,11 @@ export default class EmbeddedRManager {
   public isPackageInstalled(pkgName: string): boolean {
     if (!this.rScriptExe) return false;
     try {
-      const cmd = `${this.rScriptExe} -e "if (!requireNamespace('${pkgName}', quietly = TRUE)) quit(status = 1)"`;
-      execSync(cmd, { stdio: 'ignore', env: this.getRuntimeEnv() });
+      execFileSync(
+        this.rScriptExe,
+        ['-e', `if (!requireNamespace('${pkgName}', quietly = TRUE)) quit(status = 1)`],
+        { stdio: 'ignore', env: this.getRuntimeEnv() }
+      );
       return true;
     } catch {
       return false;
@@ -203,8 +217,11 @@ export default class EmbeddedRManager {
       );
     }
     try {
-      const cmd = `${this.rScriptExe} -e "install.packages('${pkgName}', repos='https://cloud.r-project.org')"`;
-      execSync(cmd, { stdio: 'inherit', env: this.getRuntimeEnv() });
+      execFileSync(
+        this.rScriptExe,
+        ['-e', `install.packages('${pkgName}', repos='https://cloud.r-project.org')`],
+        { stdio: 'inherit', env: this.getRuntimeEnv() }
+      );
     } catch (err) {
       throw new Error(`Failed to install R package '${pkgName}': ${(err as Error).message}`);
     }

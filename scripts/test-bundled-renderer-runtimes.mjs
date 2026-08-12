@@ -3,6 +3,7 @@ import { spawnSync } from "node:child_process";
 import {
   existsSync,
   mkdtempSync,
+  readFileSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -90,23 +91,70 @@ const runProcess = ({ command, args, input, env, label, timeout = 180_000 }) => 
   return result.stdout.trim();
 };
 
-const parseWorkerResponse = (output, label) => {
+const parseWorkerMessages = (output, label) => {
   const messages = output
     .split(/\r?\n/)
     .filter(Boolean)
     .map((line) => JSON.parse(line));
   const ready = messages.find((message) => message.type === "ready");
-  const response = messages.find((message) => message.id === 1);
-
   assert.ok(ready, `${label} did not emit a ready message`);
-  assert.equal(response?.ok, true, `${label} failed: ${response?.error ?? "no response"}`);
+  return messages;
+};
 
+const parseWorkerResponse = (messages, label, requestId = 1) => {
+  const response = messages.find(
+    (message) => message.id === requestId && "ok" in message
+  );
+  assert.equal(
+    response?.ok,
+    true,
+    `${label} failed: ${response?.error ?? "no response"}`
+  );
+  return response;
+};
+
+const assertPngResponse = (response, label) => {
   const image = Buffer.from(response.result, "base64");
   assert.deepEqual(
     [...image.subarray(0, 8)],
     [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
     `${label} did not return a PNG image`
   );
+};
+
+const writeFloat64Matrix = (filePath, columns) => {
+  const rowCount = columns[0]?.length ?? 0;
+  assert.ok(rowCount > 0, "Scientific smoke-test matrix must contain rows");
+  assert.ok(
+    columns.every((column) => column.length === rowCount),
+    "Scientific smoke-test matrix columns must have equal lengths"
+  );
+  const bytes = Buffer.alloc(
+    columns.length * rowCount * Float64Array.BYTES_PER_ELEMENT
+  );
+  let offset = 0;
+  columns.forEach((column) => {
+    column.forEach((value) => {
+      bytes.writeDoubleLE(value, offset);
+      offset += Float64Array.BYTES_PER_ELEMENT;
+    });
+  });
+  writeFileSync(filePath, bytes);
+};
+
+const assertFiniteFloat64Output = (filePath, valueCount, label) => {
+  const bytes = readFileSync(filePath);
+  assert.equal(
+    bytes.byteLength,
+    valueCount * Float64Array.BYTES_PER_ELEMENT,
+    `${label} returned the wrong binary output size`
+  );
+  for (let offset = 0; offset < bytes.byteLength; offset += 8) {
+    assert.ok(
+      Number.isFinite(bytes.readDoubleLE(offset)),
+      `${label} returned NaN`
+    );
+  }
 };
 
 if (shouldTestRenderer("python")) {
@@ -125,6 +173,19 @@ if (shouldTestRenderer("python")) {
   );
 
   try {
+    const statisticsInputPath = path.join(
+      pythonTempRoot,
+      "statistics-input.f64"
+    );
+    const statisticsOutputPath = path.join(
+      pythonTempRoot,
+      "statistics-output.f64"
+    );
+    const statisticsColumns = [
+      [1, 3, 2, 4],
+      [8, 6, 7, 5],
+    ];
+    writeFloat64Matrix(statisticsInputPath, statisticsColumns);
     const pythonOutput = runProcess({
       command: pythonExecutable,
       args: ["--worker"],
@@ -154,7 +215,52 @@ if (shouldTestRenderer("python")) {
       },
       label: "Python renderer worker",
     });
-    parseWorkerResponse(pythonOutput, "Python renderer worker");
+    const pythonMessages = parseWorkerMessages(
+      pythonOutput,
+      "Python renderer worker"
+    );
+    assertPngResponse(
+      parseWorkerResponse(pythonMessages, "Python renderer worker"),
+      "Python renderer worker"
+    );
+
+    const scientificOutput = runProcess({
+      command: pythonExecutable,
+      args: ["--statistics-worker"],
+      input: `${JSON.stringify({
+        id: 1,
+        command: "statistics:run",
+        payload: {
+          action: "quantile-normalization",
+          inputPath: statisticsInputPath,
+          outputPath: statisticsOutputPath,
+          columnNames: ["sample_a", "sample_b"],
+          rowCount: statisticsColumns[0].length,
+        },
+      })}\n`,
+      env: {
+        ...process.env,
+        TMPDIR: pythonTempRoot,
+        TEMP: pythonTempRoot,
+        TMP: pythonTempRoot,
+      },
+      label: "Python scientific worker",
+    });
+    const scientificMessages = parseWorkerMessages(
+      scientificOutput,
+      "Python scientific worker"
+    );
+    const scientificResponse = parseWorkerResponse(
+      scientificMessages,
+      "Python scientific worker"
+    );
+    assert.equal(scientificResponse.result.outputColumnCount, 2);
+    assert.equal(scientificResponse.result.outputRowCount, 4);
+    assertFiniteFloat64Output(
+      statisticsOutputPath,
+      8,
+      "Python scientific worker"
+    );
   } finally {
     rmSync(pythonTempRoot, { recursive: true, force: true });
   }
@@ -200,6 +306,19 @@ if (shouldTestRenderer("fsharp")) {
 
 if (shouldTestRenderer("r")) {
   const rLibrary = path.join(rRuntimeRoot, "library");
+  const rEnvironment = {
+    ...process.env,
+    PATH: [path.join(rRuntimeRoot, "bin"), process.env.PATH]
+      .filter(Boolean)
+      .join(path.delimiter),
+    R_HOME: rRuntimeRoot,
+    R_DOC_DIR: path.join(rRuntimeRoot, "doc"),
+    R_INCLUDE_DIR: path.join(rRuntimeRoot, "include"),
+    R_SHARE_DIR: path.join(rRuntimeRoot, "share"),
+    R_LIBS: rLibrary,
+    R_LIBS_USER: rLibrary,
+    R_LIBS_SITE: rLibrary,
+  };
   const rOutput = runProcess({
     command: rExecutable,
     args: [
@@ -218,22 +337,78 @@ if (shouldTestRenderer("r")) {
         },
       }),
     })}\n`,
-    env: {
-      ...process.env,
-      PATH: [path.join(rRuntimeRoot, "bin"), process.env.PATH]
-        .filter(Boolean)
-        .join(path.delimiter),
-      R_HOME: rRuntimeRoot,
-      R_DOC_DIR: path.join(rRuntimeRoot, "doc"),
-      R_INCLUDE_DIR: path.join(rRuntimeRoot, "include"),
-      R_SHARE_DIR: path.join(rRuntimeRoot, "share"),
-      R_LIBS: rLibrary,
-      R_LIBS_USER: rLibrary,
-      R_LIBS_SITE: rLibrary,
-    },
+    env: rEnvironment,
     label: "R renderer worker",
   });
-  parseWorkerResponse(rOutput, "R renderer worker");
+  const rMessages = parseWorkerMessages(rOutput, "R renderer worker");
+  assertPngResponse(
+    parseWorkerResponse(rMessages, "R renderer worker"),
+    "R renderer worker"
+  );
+
+  const rStatisticsTempRoot = mkdtempSync(
+    path.join(os.tmpdir(), "icarus-r-statistics-smoke-")
+  );
+  try {
+    const inputPath = path.join(rStatisticsTempRoot, "input.f64");
+    const outputPath = path.join(rStatisticsTempRoot, "output.f64");
+    const columns = [
+      [10, 12, 14, 16, 18, 20],
+      [11, 13, 15, 17, 19, 21],
+      [4, 5, 6, 7, 8, 9],
+      [5, 6, 7, 8, 9, 10],
+    ];
+    writeFloat64Matrix(inputPath, columns);
+    const statisticsOutput = runProcess({
+      command: rExecutable,
+      args: [
+        path.join(
+          repositoryRoot,
+          "assets",
+          "scripts",
+          "r",
+          "statistics_worker.r"
+        ),
+      ],
+      input: `${JSON.stringify({
+        id: 1,
+        payload: {
+          action: "limma",
+          inputPath,
+          outputPath,
+          columnNames: [
+            "treatment_1",
+            "treatment_2",
+            "control_1",
+            "control_2",
+          ],
+          rowCount: columns[0].length,
+          treatmentColumns: ["treatment_1", "treatment_2"],
+          controlColumns: ["control_1", "control_2"],
+          adjustmentMethod: "BH",
+        },
+      })}\n`,
+      env: rEnvironment,
+      label: "R LIMMA statistics worker",
+    });
+    const statisticsMessages = parseWorkerMessages(
+      statisticsOutput,
+      "R LIMMA statistics worker"
+    );
+    const statisticsResponse = parseWorkerResponse(
+      statisticsMessages,
+      "R LIMMA statistics worker"
+    );
+    assert.equal(statisticsResponse.result.outputColumnCount, 3);
+    assert.equal(statisticsResponse.result.outputRowCount, columns[0].length);
+    assertFiniteFloat64Output(
+      outputPath,
+      columns[0].length * 3,
+      "R LIMMA statistics worker"
+    );
+  } finally {
+    rmSync(rStatisticsTempRoot, { recursive: true, force: true });
+  }
 }
 
 const testedRendererLabel =

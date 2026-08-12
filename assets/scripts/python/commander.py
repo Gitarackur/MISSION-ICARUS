@@ -39,8 +39,15 @@ def print_commands(commands):
 def main():
     if len(sys.argv) >= 2 and sys.argv[1] == "--statistics-worker":
         from analysis.mice import run_mice
+        from analysis.scientific import run_scientific
 
-        run_worker({}, {"statistics:mice": run_mice})
+        run_worker(
+            {},
+            {
+                "statistics:mice": run_mice,
+                "statistics:run": run_scientific,
+            },
+        )
         return
 
     renderer_commands, commands = build_commands()

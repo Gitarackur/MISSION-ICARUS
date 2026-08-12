@@ -7,8 +7,9 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
+const python = process.env.PYTHON || "python3";
 const dependencyCheck = spawnSync(
-  "python3",
+  python,
   ["-c", "import numpy"],
   { stdio: "ignore" }
 );
@@ -49,7 +50,7 @@ await writeFile(
   Buffer.from(input.buffer, input.byteOffset, input.byteLength)
 );
 
-const processHandle = spawn("python3", [commanderPath, "--statistics-worker"], {
+const processHandle = spawn(python, [commanderPath, "--statistics-worker"], {
   cwd: repositoryRoot,
   env: {
     ...process.env,

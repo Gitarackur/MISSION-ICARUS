@@ -12,6 +12,9 @@ on:
       - "package-lock.json"
       - "scripts/prepare-renderer-runtimes.mjs"
       - "scripts/test-bundled-renderer-runtimes.mjs"
+      - "scripts/test-python-scientific-worker.mjs"
+      - "scripts/test-python-statistics-worker.mjs"
+      - "scripts/test-r-statistics-worker.mjs"
       - "scripts/test-renderer-runtime-preparation.mjs"
   workflow_dispatch:
     inputs:
@@ -60,6 +63,16 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y fuse libarchive-tools
+
+      - name: Test scientific worker sources
+        shell: bash
+        env:
+          PIPENV_PIPFILE: ${{ github.workspace }}/assets/scripts/python/Pipfile
+        run: |
+          python -m pipenv sync
+          PYTHON="$(python -m pipenv --py)" npm run test:python-statistics-worker
+          PYTHON="$(python -m pipenv --py)" npm run test:python-scientific-worker
+          npm run test:r-statistics-worker
 
       - name: Prepare renderer runtimes
         uses: ./.github/actions/prepare-renderer-runtimes

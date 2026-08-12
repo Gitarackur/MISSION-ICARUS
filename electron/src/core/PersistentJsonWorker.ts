@@ -276,7 +276,9 @@ export class PersistentJsonWorker {
 
     if (response.type === "heartbeat" || response.type === "progress") {
       this.armRequestSilenceTimer(this.activeRequest, this.process!);
-      this.activeRequest.onProgress?.(response.progress, response.detail);
+      if (response.type === "progress") {
+        this.activeRequest.onProgress?.(response.progress, response.detail);
+      }
       return;
     }
 
