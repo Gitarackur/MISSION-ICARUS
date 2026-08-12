@@ -47,4 +47,20 @@ for (const workflowPath of [
   );
 }
 
+const packageJson = JSON.parse(
+  await readFile(new URL("../package.json", import.meta.url), "utf8")
+);
+for (const scriptName of [
+  "build",
+  "build:mac:dmg",
+  "build:linux",
+  "build:windows",
+]) {
+  assert.match(
+    packageJson.scripts[scriptName],
+    /npm run package:[^ ]+ --$/,
+    `${scriptName} forwards electron-builder arguments through npm`
+  );
+}
+
 console.log("Command retry tests passed");
