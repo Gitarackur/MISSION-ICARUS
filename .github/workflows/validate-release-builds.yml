@@ -16,6 +16,8 @@ on:
       - "scripts/test-python-statistics-worker.mjs"
       - "scripts/test-r-statistics-worker.mjs"
       - "scripts/test-renderer-runtime-preparation.mjs"
+      - "scripts/run-command-with-retry.mjs"
+      - "scripts/test-command-with-retry.mjs"
   workflow_dispatch:
     inputs:
       force_rebuild:
@@ -69,6 +71,7 @@ jobs:
         env:
           PIPENV_PIPFILE: ${{ github.workspace }}/assets/scripts/python/Pipfile
         run: |
+          npm run test:command-with-retry
           python -m pipenv sync
           PYTHON="$(python -m pipenv --py)" npm run test:python-statistics-worker
           PYTHON="$(python -m pipenv --py)" npm run test:python-scientific-worker
@@ -92,4 +95,7 @@ jobs:
 
       - name: Build Windows installer
         if: runner.os == 'Windows'
-        run: npm run build:windows -- --publish never
+        run: |
+          npm run prepare:renderer:runtimes
+          npm run build:application
+          node scripts/run-command-with-retry.mjs --attempts 3 --delay-ms 15000 -- npm run package:windows -- --publish never

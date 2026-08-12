@@ -185,6 +185,11 @@ const runAction = async (action, options = {}) => {
 try {
   await waitUntilReady();
 
+  await assert.rejects(
+    runAction("unsupported-action"),
+    /Unsupported Python scientific action/
+  );
+
   const heatmap = await runAction("heatmap");
   assert.equal(heatmap.manifest.outputColumnCount, names.length);
   assert.equal(heatmap.manifest.outputRowCount, names.length);

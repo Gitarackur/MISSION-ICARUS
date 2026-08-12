@@ -116,6 +116,10 @@ const runAction = async (action, options) => {
 
 try {
   await waitUntilReady();
+  await assert.rejects(
+    runAction("unsupported-action", {}),
+    /Unsupported R scientific action/
+  );
   if (packageAvailable("limma")) {
     const result = await runAction("limma", {
       treatmentColumns: names.slice(0, 2),

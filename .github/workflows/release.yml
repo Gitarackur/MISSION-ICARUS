@@ -199,7 +199,10 @@ jobs:
       - name: Build Windows app
         if: matrix.os == 'windows-latest'
         shell: bash
-        run: npm run build:windows -- --publish never
+        run: |
+          npm run prepare:renderer:runtimes
+          npm run build:application
+          node scripts/run-command-with-retry.mjs --attempts 3 --delay-ms 15000 -- npm run package:windows -- --publish never
 
       - name: Build Linux app
         if: matrix.os == 'ubuntu-latest'

@@ -1,5 +1,7 @@
 import type { ProteinRow } from "@/domain/proteins/index.types";
 import type {
+  PythonScientificAction,
+  RScientificAction,
   StatisticalAction,
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
@@ -20,10 +22,12 @@ import {
   rehydrateStatisticalResultData,
 } from "./statistics-transfer";
 import {
+  HeavyStatisticalAnalysisClient,
   heavyStatisticalAnalysisClient,
   shouldRunInPython,
   shouldRunInR,
 } from "./heavy-statistical-analysis-client";
+import type { StatisticalInput } from "./scientific-analysis.types";
 
 type StatisticalProgressCallback = (
   progress?: number,
@@ -36,7 +40,7 @@ type StatisticalProgressCallback = (
  * instead of on every analysis. Large numeric matrices are transferred as
  * ArrayBuffers (zero-copy) rather than structured-cloned on the main thread.
  */
-class StatisticalAnalysisClient {
+export class StatisticalAnalysisClient {
   private worker: Worker | null = null;
   private nextRequestId = 1;
   private readonly pending = new Map<number, PendingWorkerRequest>();
@@ -197,62 +201,99 @@ class StatisticalAnalysisClient {
 
 export const statisticalAnalysisClient = new StatisticalAnalysisClient();
 
+export class StatisticalAnalysisRouter {
+  public constructor(
+    private readonly browserClient: StatisticalAnalysisClient,
+    private readonly scientificClient: HeavyStatisticalAnalysisClient
+  ) {}
+
+  public async run(
+    action: StatisticalAction,
+    data: StatisticalInput,
+    onProgress?: StatisticalProgressCallback
+  ): Promise<StatisticalAnalysisResult> {
+    if (shouldRunInR(action)) {
+      return this.runInR(action, data, onProgress);
+    }
+    if (shouldRunInPython(action, data)) {
+      return this.runInPython(action, data, onProgress);
+    }
+    return this.browserClient.run(action, data, onProgress);
+  }
+
+  public async cancel(): Promise<boolean> {
+    const cancelledScientificAnalysis = await this.scientificClient.cancel();
+    return cancelledScientificAnalysis || this.browserClient.cancel();
+  }
+
+  private async runInR(
+    action: RScientificAction,
+    data: StatisticalInput,
+    onProgress?: StatisticalProgressCallback
+  ): Promise<StatisticalAnalysisResult> {
+    const available = await this.scientificClient.isAvailable("r", action);
+    if (!available) {
+      if (action === "wgcna-analysis") {
+        throw new Error(
+          "WGCNA requires the bundled R runtime and WGCNA package."
+        );
+      }
+      return this.browserClient.run(action, data, onProgress);
+    }
+
+    try {
+      return await this.scientificClient.runR(action, data, onProgress);
+    } catch (error) {
+      if (this.isCancellation(error) || action === "wgcna-analysis") {
+        throw error;
+      }
+      console.warn(
+        "R LIMMA backend failed; using the TypeScript compatibility implementation.",
+        error
+      );
+      return this.browserClient.run(action, data, onProgress);
+    }
+  }
+
+  private async runInPython(
+    action: PythonScientificAction,
+    data: StatisticalInput,
+    onProgress?: StatisticalProgressCallback
+  ): Promise<StatisticalAnalysisResult> {
+    const available = await this.scientificClient.isAvailable("python");
+    if (!available) {
+      return this.browserClient.run(action, data, onProgress);
+    }
+
+    try {
+      return await this.scientificClient.runPython(action, data, onProgress);
+    } catch (error) {
+      if (this.isCancellation(error)) throw error;
+      console.warn(
+        `Scientific Python backend failed for ${action}; using the TypeScript fallback.`,
+        error
+      );
+      return this.browserClient.run(action, data, onProgress);
+    }
+  }
+
+  private isCancellation(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /cancelled/i.test(message);
+  }
+}
+
+export const statisticalAnalysisRouter = new StatisticalAnalysisRouter(
+  statisticalAnalysisClient,
+  heavyStatisticalAnalysisClient
+);
+
 export const runStatisticalAnalysisInWorker = (
   action: StatisticalAction,
   data: ProteinRow[] | Map<string, TableMatrix>,
   onProgress?: StatisticalProgressCallback
-): Promise<StatisticalAnalysisResult> => {
-  if (shouldRunInR(action)) {
-    const runFallback = () =>
-      statisticalAnalysisClient.run(action, data, onProgress);
-    return heavyStatisticalAnalysisClient
-      .isAvailable("r", action)
-      .then((available) => {
-        if (!available) {
-          if (action === "wgcna-analysis") {
-            throw new Error(
-              "WGCNA requires the bundled R runtime and WGCNA package."
-            );
-          }
-          return runFallback();
-        }
-        return heavyStatisticalAnalysisClient
-          .runR(action, data, onProgress)
-          .catch((error: unknown) => {
-            const message = error instanceof Error ? error.message : String(error);
-            if (/cancelled/i.test(message) || action === "wgcna-analysis") {
-              throw error;
-            }
-            console.warn(
-              "R LIMMA backend failed; using the TypeScript compatibility implementation.",
-              error
-            );
-            return runFallback();
-          });
-      });
-  }
-  if (shouldRunInPython(action, data)) {
-    const runFallback = () =>
-      statisticalAnalysisClient.run(action, data, onProgress);
-    return heavyStatisticalAnalysisClient.isAvailable("python").then((available) => {
-      if (!available) return runFallback();
-      return heavyStatisticalAnalysisClient
-        .runPython(action, data, onProgress)
-        .catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : String(error);
-          if (/cancelled/i.test(message)) throw error;
-          console.warn(
-            `Scientific Python backend failed for ${action}; using the TypeScript fallback.`,
-            error
-          );
-          return runFallback();
-        });
-    });
-  }
-  return statisticalAnalysisClient.run(action, data, onProgress);
-};
+): Promise<StatisticalAnalysisResult> =>
+  statisticalAnalysisRouter.run(action, data, onProgress);
 
-export const cancelStatisticalAnalysis = async (): Promise<boolean> => {
-  const cancelledHeavyAnalysis = await heavyStatisticalAnalysisClient.cancel();
-  return cancelledHeavyAnalysis || statisticalAnalysisClient.cancel();
-};
+export const cancelStatisticalAnalysis = (): Promise<boolean> =>
+  statisticalAnalysisRouter.cancel();
