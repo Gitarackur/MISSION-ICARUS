@@ -45,6 +45,26 @@ class FakeWorker {
   postMessage() {
     if (this.mode === "reply") {
       setTimeout(() => this.onmessage({ data: { ok: true, result: this.result } }), 0);
+    } else if (this.mode === "heartbeat-reply") {
+      // A longer-than-timeout stream of heartbeats must keep the request
+      // alive; only the final real response settles it.
+      const started = Date.now();
+      const interval = setInterval(() => {
+        if (Date.now() - started >= 120) {
+          clearInterval(interval);
+          this.onmessage({ data: { ok: true, result: this.result } });
+          return;
+        }
+        this.onmessage({ data: { heartbeat: true, progress: 0.5 } });
+      }, 5);
+    } else if (this.mode === "heartbeat-hang") {
+      // Heartbeats briefly, then goes silent: the watchdog must fire after the
+      // grace period with no replacement wall-clock timeout killing it earlier.
+      const sendUntil = Date.now() + 40;
+      const interval = setInterval(() => {
+        if (Date.now() >= sendUntil) return clearInterval(interval);
+        this.onmessage({ data: { heartbeat: true, progress: 0.2 } });
+      }, 5);
     } else if (this.mode === "messageerror") {
       setTimeout(() => this.onmessageerror(), 0);
     }
@@ -96,11 +116,44 @@ await assert.rejects(
     operationName: "Timeout test",
     timeoutMs: 10,
   }),
-  /processing limit/
+  /stopped responding/
 );
 assert.equal(hangingWorker.terminated, true);
 assert.equal(workerNotices.at(-1).code, "WORKER_TIMEOUT");
 assert.match(workerNotices.at(-1).message, /interface responsive/);
+
+// A worker that keeps heartbeating must never be killed by the timeout, no
+// matter how long it runs; the final real response settles the request.
+const heartbeatWorker = new FakeWorker("heartbeat-reply", "heartbeated");
+const noticeCountBeforeHeartbeat = workerNotices.length;
+const heartbeatResult = await runWorkerRequest({
+  createWorker: () => heartbeatWorker,
+  request: {},
+  failureMessage: "request failed",
+  operationName: "Heartbeat test",
+  timeoutMs: 40,
+});
+assert.equal(heartbeatResult, "heartbeated");
+assert.equal(
+  workerNotices.length,
+  noticeCountBeforeHeartbeat,
+  "no spurious timeout notice for a heartbeatting worker"
+);
+
+// A worker that goes silent after heartbeating must still be caught by the
+// silence watchdog once the grace period elapses.
+const silentWorker = new FakeWorker("heartbeat-hang");
+await assert.rejects(
+  runWorkerRequest({
+    createWorker: () => silentWorker,
+    request: {},
+    failureMessage: "request failed",
+    operationName: "Silent-after-heartbeat test",
+    timeoutMs: 40,
+  }),
+  /stopped responding/
+);
+assert.equal(silentWorker.terminated, true);
 
 delete globalThis.Worker;
 await assert.rejects(

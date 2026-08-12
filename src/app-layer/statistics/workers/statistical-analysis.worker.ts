@@ -6,6 +6,7 @@ import type {
 } from "@/domain/workers/index.types";
 import type { StatisticalAnalysisResult } from "@/domain/statistics/index.types";
 import type { TableMatrices } from "@/domain/workflow/main.types";
+import { WORKER_HEARTBEAT_INTERVAL_MS } from "@/domain/workers/constants";
 import { runStatisticalAnalysis } from "../utils/statistical-action-runner";
 import {
   encodeStatisticalResultData,
@@ -15,15 +16,28 @@ import {
 
 const worker = self as DedicatedWorkerGlobalScope;
 
-worker.onmessage = (event: MessageEvent<StatisticalAnalysisWorkerRequest>) => {
+worker.onmessage = async (
+  event: MessageEvent<StatisticalAnalysisWorkerRequest>
+) => {
   const request = event.data;
+
+  // Heavy statistical operations can run for a long time. The engine yields
+  // cooperatively while it works, letting us post a throttled heartbeat so the
+  // client knows the worker is alive and never times the request out.
+  let lastHeartbeatAt = 0;
+  const onYield = async (progress: number, detail: string) => {
+    const now = Date.now();
+    if (now - lastHeartbeatAt < WORKER_HEARTBEAT_INTERVAL_MS) return;
+    lastHeartbeatAt = now;
+    worker.postMessage({ id: request.id, heartbeat: true, progress, detail });
+  };
 
   let response: StatisticalAnalysisWorkerResponse;
   try {
     const data = isColumnarInput(request.data)
       ? rehydrateStatisticalInput(request.data)
       : request.data;
-    const result = runStatisticalAnalysis(request.action, data);
+    const result = await runStatisticalAnalysis(request.action, data, onYield);
 
     const dataEnvelope = result.data
       ? encodeStatisticalResultData(result.data)

@@ -9,6 +9,7 @@ import type {
   PersistedMatrixMetadata,
   PersistedMatrixRecord,
 } from "@/domain/storage/index.types";
+import type { WorkerYieldHook } from "@/domain/workers/index.types";
 import {
   DEFAULT_MATRIX_CHUNK_CELLS,
   LEGACY_MATRIX_STORAGE_FORMAT,
@@ -53,10 +54,11 @@ const encodeColumn = (
   };
 };
 
-export const encodeMatrix = (
+export const encodeMatrix = async (
   matrix: IcarusMatrix,
-  targetChunkCells = DEFAULT_MATRIX_CHUNK_CELLS
-): EncodedMatrix => {
+  targetChunkCells = DEFAULT_MATRIX_CHUNK_CELLS,
+  onYield?: WorkerYieldHook
+): Promise<EncodedMatrix> => {
   const rowCount = matrix.data.length;
   const columnCount = matrix.columns.length;
   const safeColumnCount = Math.max(1, columnCount);
@@ -70,6 +72,7 @@ export const encodeMatrix = (
     0
   );
 
+  const chunkCount = Math.ceil(rowCount / rowsPerChunk);
   for (let rowStart = 0; rowStart < rowCount; rowStart += rowsPerChunk) {
     const rows = matrix.data.slice(rowStart, rowStart + rowsPerChunk);
     const encodedColumns: MatrixChunkColumn[] = [];
@@ -87,6 +90,13 @@ export const encodeMatrix = (
       rowCount: rows.length,
       columns: encodedColumns,
     });
+
+    if (onYield) {
+      await onYield(
+        chunks.length / chunkCount,
+        `encoding matrix chunk ${chunks.length}/${chunkCount}`
+      );
+    }
   }
 
   return {
@@ -126,10 +136,11 @@ const decodeChunk = (
   );
 };
 
-export const decodeMatrix = (
+export const decodeMatrix = async (
   metadata: PersistedMatrixMetadata,
-  chunks: PersistedMatrixChunk[]
-): IcarusMatrix => {
+  chunks: PersistedMatrixChunk[],
+  onYield?: WorkerYieldHook
+): Promise<IcarusMatrix> => {
   const orderedChunks = [...chunks].sort(
     (left, right) => left.chunkIndex - right.chunkIndex
   );
@@ -140,9 +151,16 @@ export const decodeMatrix = (
     );
   }
 
-  const data = orderedChunks.flatMap((chunk) =>
-    decodeChunk(chunk, metadata.columnCount)
-  );
+  const data: TableMatrices = [];
+  for (let chunkIndex = 0; chunkIndex < orderedChunks.length; chunkIndex += 1) {
+    data.push(...decodeChunk(orderedChunks[chunkIndex], metadata.columnCount));
+    if (onYield) {
+      await onYield(
+        (chunkIndex + 1) / orderedChunks.length,
+        `decoding matrix chunk ${chunkIndex + 1}/${orderedChunks.length}`
+      );
+    }
+  }
 
   if (data.length !== metadata.rowCount) {
     throw new Error(

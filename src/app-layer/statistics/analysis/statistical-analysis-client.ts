@@ -9,7 +9,10 @@ import type {
   StatisticalAnalysisWorkerRequest,
   StatisticalAnalysisWorkerResponse,
 } from "@/domain/workers/index.types";
-import { WORKER_REQUEST_TIMEOUT_MS } from "@/domain/workers/constants";
+import {
+  WORKER_HEARTBEAT_INTERVAL_MS,
+  WORKER_SILENCE_TIMEOUT_MS,
+} from "@/domain/workers/constants";
 import {
   createWorkerFailureError,
   createWorkerTimeoutError,
@@ -48,39 +51,47 @@ class StatisticalAnalysisClient {
     return new Promise<StatisticalAnalysisResult>((resolve, reject) => {
       const worker = this.getWorker(operationName);
 
-      const timeout = globalThis.setTimeout(() => {
-        // Reject only the request whose timer expired. The serial worker may
-        // still be processing queued requests, so they are preserved: no
-        // global worker teardown is triggered here.
+      // Liveness watchdog. The worker posts heartbeats (throttled to
+      // WORKER_HEARTBEAT_INTERVAL_MS) while a long synchronous computation is
+      // running, and the request keeps its `lastActivityAt` fresh on every
+      // message it receives. The watchdog only fires when the worker has been
+      // entirely silent for WORKER_SILENCE_TIMEOUT_MS, i.e. it crashed or
+      // wedged — a worker that is still making progress is never killed by a
+      // wall-clock limit. A wedged worker is torn down so the next request
+      // starts with a fresh one.
+      const watchdog = globalThis.setInterval(() => {
         const entry = this.pending.get(request.id);
-        this.pending.delete(request.id);
         if (!entry) return;
-        const error = createWorkerTimeoutError(
-          operationName,
-          WORKER_REQUEST_TIMEOUT_MS
+        if (Date.now() - entry.lastActivityAt < WORKER_SILENCE_TIMEOUT_MS) {
+          return;
+        }
+        this.failWorker(
+          createWorkerTimeoutError(
+            operationName,
+            WORKER_SILENCE_TIMEOUT_MS,
+          ),
         );
-        announceWorkerFailure(error);
-        entry.reject(error);
-      }, WORKER_REQUEST_TIMEOUT_MS);
-      const clearRequestTimeout = () => globalThis.clearTimeout(timeout);
+      }, Math.min(1000, WORKER_HEARTBEAT_INTERVAL_MS));
+      const clearRequestWatchdog = () => globalThis.clearInterval(watchdog);
 
       this.pending.set(request.id, {
         resolve: (value) => {
-          clearRequestTimeout();
+          clearRequestWatchdog();
           resolve(value as StatisticalAnalysisResult);
         },
         reject: (error) => {
-          clearRequestTimeout();
+          clearRequestWatchdog();
           reject(error);
         },
         operationName,
+        lastActivityAt: Date.now(),
       });
 
       try {
         worker.postMessage(request, transfer);
       } catch (cause) {
         this.pending.delete(request.id);
-        clearRequestTimeout();
+        clearRequestWatchdog();
         const error = createWorkerFailureError(
           operationName,
           "The statistical request could not be sent to the worker.",
@@ -117,6 +128,17 @@ class StatisticalAnalysisClient {
       event: MessageEvent<StatisticalAnalysisWorkerResponse>
     ) => {
       const response = event.data;
+
+      // Liveness heartbeat from a long-running computation: refresh the
+      // watchdog and keep waiting for the final result.
+      if ("heartbeat" in response) {
+        if (response.id !== undefined) {
+          const pending = this.pending.get(response.id);
+          if (pending) pending.lastActivityAt = Date.now();
+        }
+        return;
+      }
+
       const pending = this.pending.get(response.id);
       if (!pending) return;
       this.pending.delete(response.id);

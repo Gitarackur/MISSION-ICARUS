@@ -9,7 +9,10 @@ import type {
   MatrixCodecWorkerResponse,
   PendingWorkerRequest,
 } from "@/domain/workers/index.types";
-import { WORKER_REQUEST_TIMEOUT_MS } from "@/domain/workers/constants";
+import {
+  WORKER_HEARTBEAT_INTERVAL_MS,
+  WORKER_SILENCE_TIMEOUT_MS,
+} from "@/domain/workers/constants";
 import {
   createWorkerFailureError,
   createWorkerTimeoutError,
@@ -63,6 +66,17 @@ class MatrixCodec {
     }
     worker.onmessage = (event: MessageEvent<MatrixCodecWorkerResponse>) => {
       const response = event.data;
+
+      // Liveness heartbeat from a long-running computation: refresh the
+      // watchdog and keep waiting for the final result.
+      if ("heartbeat" in response) {
+        if (response.id !== undefined) {
+          const pending = this.pending.get(response.id);
+          if (pending) pending.lastActivityAt = Date.now();
+        }
+        return;
+      }
+
       const pending = this.pending.get(response.id);
       if (!pending) return;
       this.pending.delete(response.id);
@@ -110,29 +124,41 @@ class MatrixCodec {
     const id = this.nextRequestId++;
 
     return new Promise<unknown>((resolve, reject) => {
-      const timeout = globalThis.setTimeout(() => {
+      // Liveness watchdog. The worker posts heartbeats while a long encoding
+      // or decoding run is in progress, so a job that is still making progress
+      // is never killed by a wall-clock limit. The watchdog only fires once
+      // the worker has been entirely silent for the grace period, i.e. it
+      // crashed or wedged.
+      const watchdog = globalThis.setInterval(() => {
+        const entry = this.pending.get(id);
+        if (!entry) return;
+        if (Date.now() - entry.lastActivityAt < WORKER_SILENCE_TIMEOUT_MS) {
+          return;
+        }
         this.failWorker(
-          createWorkerTimeoutError(operationName, WORKER_REQUEST_TIMEOUT_MS)
+          createWorkerTimeoutError(operationName, WORKER_SILENCE_TIMEOUT_MS)
         );
-      }, WORKER_REQUEST_TIMEOUT_MS);
-      const clearRequestTimeout = () => globalThis.clearTimeout(timeout);
+      }, Math.min(1000, WORKER_HEARTBEAT_INTERVAL_MS));
+      const clearRequestWatchdog = () => globalThis.clearInterval(watchdog);
+
       this.pending.set(id, {
         resolve: (value) => {
-          clearRequestTimeout();
+          clearRequestWatchdog();
           resolve(value);
         },
         reject: (error) => {
-          clearRequestTimeout();
+          clearRequestWatchdog();
           reject(error);
         },
         operationName,
+        lastActivityAt: Date.now(),
       });
 
       try {
         worker.postMessage({ id, ...payload });
       } catch (cause) {
         this.pending.delete(id);
-        clearRequestTimeout();
+        clearRequestWatchdog();
         const error = createWorkerFailureError(
           operationName,
           "The matrix request could not be sent to the worker.",

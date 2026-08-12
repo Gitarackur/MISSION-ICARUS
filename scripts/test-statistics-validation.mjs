@@ -274,7 +274,7 @@ const selectedMatrix = new Map([
   ["b", [3, 5, 7]],
 ]);
 
-const zResult = engine.runStatisticalAnalysis("z", selectedMatrix);
+const zResult = await engine.runStatisticalAnalysis("z", selectedMatrix);
 assert.equal(zResult.outputParameters.granularity, "row-aligned");
 const extendedZ = engine.composeStatisticalOutputMatrix(zResult, sourceMatrix);
 assert.deepEqual(extendedZ.columns, ["id", "a", "b", "a_z", "b_z"]);
@@ -289,7 +289,7 @@ assert.ok(
   "z output appends one value per derived column"
 );
 
-const twoDResult = engine.runStatisticalAnalysis("2d", selectedMatrix);
+const twoDResult = await engine.runStatisticalAnalysis("2d", selectedMatrix);
 const extendedTwoD = engine.composeStatisticalOutputMatrix(
   twoDResult,
   sourceMatrix
@@ -307,7 +307,7 @@ assert.ok(
   "2d output appends two row-aligned principal components"
 );
 
-const pmResult = engine.runStatisticalAnalysis("pm", selectedMatrix);
+const pmResult = await engine.runStatisticalAnalysis("pm", selectedMatrix);
 assert.deepEqual(pmResult.newly_created_columns, ["mu", "p_value"]);
 assert.deepEqual(
   pmResult.data.map((row) => row[0]),
@@ -322,7 +322,7 @@ assert.ok(
   "pμ output is row-aligned with the source matrix"
 );
 
-const normalizationResult = engine.runStatisticalAnalysis(
+const normalizationResult = await engine.runStatisticalAnalysis(
   "normalization",
   selectedMatrix
 );
@@ -340,7 +340,7 @@ assert.deepEqual(extendedNormalization.columns, [
   "b_normalized",
 ]);
 
-const oneDimensionalResult = engine.runStatisticalAnalysis(
+const oneDimensionalResult = await engine.runStatisticalAnalysis(
   "1d-normalize",
   selectedMatrix
 );
@@ -367,7 +367,7 @@ const oneRowSelection = new Map([
   ["a", [1]],
   ["b", [3]],
 ]);
-const aggregateMean = engine.runStatisticalAnalysis("mean", oneRowSelection);
+const aggregateMean = await engine.runStatisticalAnalysis("mean", oneRowSelection);
 const standaloneMean = engine.composeStatisticalOutputMatrix(
   aggregateMean,
   oneRowSource
@@ -379,7 +379,7 @@ assert.equal(
   "aggregate output does not extend even when its single row matches the source"
 );
 
-const sortedResult = engine.runStatisticalAnalysis("sort-asc", selectedMatrix);
+const sortedResult = await engine.runStatisticalAnalysis("sort-asc", selectedMatrix);
 const standaloneSort = engine.composeStatisticalOutputMatrix(
   sortedResult,
   sourceMatrix
@@ -407,15 +407,14 @@ assert.equal(
 const originalConsoleError = console.error;
 try {
   console.error = () => {};
-  assert.throws(
-    () =>
-      engine.runStatisticalAnalysis(
-        "2d",
-        new Map([
-          ["a", [1]],
-          ["b", [2]],
-        ])
-      ),
+  await assert.rejects(
+    engine.runStatisticalAnalysis(
+      "2d",
+      new Map([
+        ["a", [1]],
+        ["b", [2]],
+      ])
+    ),
     /at least two rows/,
     "2d rejects a single-row matrix"
   );
@@ -490,7 +489,7 @@ const completeData = [
   [1, 2, 3, 4, 5],
   [2, 4, 6, 8, 10],
 ];
-const completeMi = engine.multipleImputationMice(completeData, "pmm", 5, 10, 7);
+const completeMi = await engine.multipleImputationMice(completeData, "pmm", 5, 10, 7);
 assert.equal(completeMi.missingCount, 0, "fully observed data has no missing cells");
 assert.equal(completeMi.imputedCount, 0, "fully observed data imputes nothing");
 assert.equal(completeMi.iterationsPerformed, 0, "no iteration cycles for complete data");
@@ -504,8 +503,8 @@ const missingData = [
   [2, 4, 6, NaN, 10],
   [3, 6, 9, 12, 15],
 ];
-const miA = engine.multipleImputationMice(missingData, "pmm", 5, 10, 42);
-const miB = engine.multipleImputationMice(missingData, "pmm", 5, 10, 42);
+const miA = await engine.multipleImputationMice(missingData, "pmm", 5, 10, 42);
+const miB = await engine.multipleImputationMice(missingData, "pmm", 5, 10, 42);
 assert.deepEqual(miA.pooledData, miB.pooledData, "seeded runs are reproducible");
 assert.deepEqual(miA.imputedDatasets, miB.imputedDatasets, "seeded datasets reproducible");
 checks += 2;
@@ -545,7 +544,7 @@ checks += 1;
 // by the pooled estimate when using the regression method (PMM cannot emit a
 // value that was never observed, so donor-based recovery is bounded by the
 // observed range).
-const miLin = engine.multipleImputationMice(missingData, "regression", 20, 20, 7);
+const miLin = await engine.multipleImputationMice(missingData, "regression", 20, 20, 7);
 assert.ok(
   Math.abs(miLin.pooledData[0][2] - 3) / 3 < 0.05,
   "col1 = col3/3 recovered by regression imputation"
@@ -566,17 +565,17 @@ assert.ok(miA.columnSummaries[0].fractionMissingInfo <= 1, "FMI bounded by 1");
 checks += 6;
 
 // Validation and method clamping.
-assert.throws(
-  () => engine.multipleImputationMice([[1, NaN]], "pmm", 3),
+await assert.rejects(
+  engine.multipleImputationMice([[1, NaN]], "pmm", 3),
   /at least 2 columns/,
   "rejects single-column input"
 );
-const regressionMi = engine.multipleImputationMice(missingData, "regression", 2, 4, 11);
+const regressionMi = await engine.multipleImputationMice(missingData, "regression", 2, 4, 11);
 assert.equal(regressionMi.method, "regression", "regression method honored");
 assert.equal(regressionMi.m, 2, "m honored when it equals the minimum");
 assert.equal(regressionMi.imputedDatasets.length, 2, "two datasets produced");
 assert.ok(Number.isFinite(regressionMi.pooledData[0][2]), "regression pooled cell finite");
-const clampedMi = engine.multipleImputationMice(missingData, "pmm", 1, 0, 11);
+const clampedMi = await engine.multipleImputationMice(missingData, "pmm", 1, 0, 11);
 assert.equal(clampedMi.m, 2, "m below the minimum is clamped to 2");
 assert.equal(clampedMi.maxIterations, 1, "maxIterations below the minimum is clamped to 1");
 checks += 7;
@@ -589,7 +588,7 @@ clampedRunnerInput.set("col_b", [2, NaN, 6, 8, 10]);
 clampedRunnerInput.set("__imputations__", [5000]);
 clampedRunnerInput.set("__max_iterations__", [500]);
 clampedRunnerInput.set("__method__", ["pmm"]);
-const clampedRunnerResult = engine.runStatisticalAnalysis(
+const clampedRunnerResult = await engine.runStatisticalAnalysis(
   "impute-multiple",
   clampedRunnerInput
 );

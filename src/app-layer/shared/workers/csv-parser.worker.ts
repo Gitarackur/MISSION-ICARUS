@@ -2,13 +2,18 @@
 
 import { parseCSVFromText } from "../csv_tsc_parser";
 import type { CSVParserWorkerRequest } from "@/domain/workers/index.types";
+import { createWorkerHeartbeat } from "@/app-layer/shared/workers/worker-heartbeat";
 
 const worker = self as DedicatedWorkerGlobalScope;
 
 worker.onmessage = async (event: MessageEvent<CSVParserWorkerRequest>) => {
+  const heartbeat = createWorkerHeartbeat(worker);
   try {
     const text = await event.data.file.text();
-    worker.postMessage({ ok: true, result: parseCSVFromText(text) });
+    worker.postMessage({
+      ok: true,
+      result: await parseCSVFromText(text, heartbeat),
+    });
   } catch (error) {
     worker.postMessage({
       ok: false,

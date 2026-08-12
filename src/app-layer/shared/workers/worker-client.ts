@@ -1,5 +1,6 @@
-import { WORKER_REQUEST_TIMEOUT_MS } from "@/domain/workers/constants";
+import { WORKER_SILENCE_TIMEOUT_MS } from "@/domain/workers/constants";
 import type {
+  WorkerProgressHeartbeat,
   WorkerRequestOptions,
   WorkerResponse,
 } from "@/domain/workers/index.types";
@@ -15,7 +16,7 @@ export const runWorkerRequest = <TRequest, TResult>({
   request,
   failureMessage,
   operationName,
-  timeoutMs = WORKER_REQUEST_TIMEOUT_MS,
+  timeoutMs = WORKER_SILENCE_TIMEOUT_MS,
 }: WorkerRequestOptions<TRequest>): Promise<TResult> => {
   if (typeof Worker === "undefined") {
     const error = createWorkerUnavailableError(operationName);
@@ -38,9 +39,19 @@ export const runWorkerRequest = <TRequest, TResult>({
     }
 
     let settled = false;
-    const timeout = globalThis.setTimeout(() => {
-      fail(createWorkerTimeoutError(operationName, timeoutMs));
-    }, timeoutMs);
+
+    // Liveness watchdog. The worker posts heartbeats while a long synchronous
+    // computation is running, so `lastActivityAt` stays fresh and a job that
+    // is still making progress is never killed by a wall-clock limit. The
+    // watchdog only fires once the worker has been entirely silent for the
+    // grace period, i.e. it crashed or wedged.
+    let lastActivityAt = Date.now();
+    const watchdog = globalThis.setInterval(() => {
+      if (Date.now() - lastActivityAt >= timeoutMs) {
+        fail(createWorkerTimeoutError(operationName, timeoutMs));
+      }
+    }, Math.min(1000, timeoutMs));
+    const clearWatchdog = () => globalThis.clearInterval(watchdog);
 
     const settle = <TValue>(
       complete: (value: TValue) => void,
@@ -48,7 +59,7 @@ export const runWorkerRequest = <TRequest, TResult>({
     ) => {
       if (settled) return;
       settled = true;
-      globalThis.clearTimeout(timeout);
+      clearWatchdog();
       worker.terminate();
       complete(value);
     };
@@ -58,7 +69,17 @@ export const runWorkerRequest = <TRequest, TResult>({
       settle(reject, error);
     };
 
-    worker.onmessage = (event: MessageEvent<WorkerResponse<TResult>>) => {
+    worker.onmessage = (
+      event: MessageEvent<
+        WorkerResponse<TResult> | WorkerProgressHeartbeat
+      >
+    ) => {
+      // Liveness heartbeat: refresh the watchdog and keep waiting.
+      if ("heartbeat" in event.data) {
+        lastActivityAt = Date.now();
+        return;
+      }
+
       if (event.data.ok && event.data.result !== undefined) {
         settle(resolve, event.data.result);
         return;

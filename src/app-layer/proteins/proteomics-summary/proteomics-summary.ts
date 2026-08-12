@@ -4,6 +4,7 @@ import type {
   Stats,
 } from "@/domain/proteins/index.types";
 import type { VolcanoPoint } from "@/domain/visualization/index.types";
+import type { WorkerYieldHook } from "@/domain/workers/index.types";
 
 const mean = (values: number[]) =>
   values.length
@@ -41,10 +42,11 @@ const safeLog2Ratio = (numerator: number, denominator: number) => {
   return Math.log2(numerator / denominator);
 };
 
-export const computeProteomicsSummary = (
+export const computeProteomicsSummary = async (
   rows: ProteinRow[],
-  columns: string[]
-): ProteomicsSummary => {
+  columns: string[],
+  onYield?: WorkerYieldHook
+): Promise<ProteomicsSummary> => {
   if (!rows.length) {
     return { stats: null, intensityDist: [], volcanoData: [] };
   }
@@ -63,14 +65,22 @@ export const computeProteomicsSummary = (
 
   const intensities: number[] = [];
   let missingValues = 0;
-  rows.forEach((row) => {
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
     intensityColumns.forEach((column) => {
       const rawValue = row[column];
       const value = Number(rawValue || 0);
       if (value > 0 && Number.isFinite(value)) intensities.push(value);
       else missingValues += 1;
     });
-  });
+
+    if (rowIndex % 500 === 499 || rowIndex === rows.length - 1) {
+      await onYield?.(
+        (rowIndex + 1) / rows.length,
+        `collecting intensities ${rowIndex + 1}/${rows.length}`
+      );
+    }
+  }
 
   const averageIntensity = mean(intensities);
   const stats: Exclude<Stats, null> = {
@@ -98,7 +108,9 @@ export const computeProteomicsSummary = (
     };
   });
 
-  const volcanoData = rows.flatMap<VolcanoPoint>((row) => {
+  const volcanoData: VolcanoPoint[] = [];
+  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
+    const row = rows[rowIndex];
     const numerator =
       Number(row.intensity_Sample1 || 0) +
       Number(row.intensity_Sample2 || 0) +
@@ -110,29 +122,32 @@ export const computeProteomicsSummary = (
     const x = safeLog2Ratio(numerator, denominator);
     const pValueSource = row.pValue;
     if (
-      pValueSource === null ||
-      pValueSource === undefined ||
-      String(pValueSource).trim() === ""
+      pValueSource !== null &&
+      pValueSource !== undefined &&
+      String(pValueSource).trim() !== ""
     ) {
-      return [];
+      const rawPValue = Number(pValueSource);
+      if (Number.isFinite(rawPValue) && rawPValue >= 0 && rawPValue <= 1) {
+        const pValue = Math.max(rawPValue, 1e-300);
+        const y = -Math.log10(Math.max(pValue, 1e-300));
+        if (Number.isFinite(x) && Number.isFinite(y)) {
+          volcanoData.push({
+            x,
+            y,
+            protein: String(row.proteinId || row.id),
+            significant: pValue < 0.05 && Math.abs(x) > 1,
+          });
+        }
+      }
     }
-    const rawPValue = Number(pValueSource);
-    if (!Number.isFinite(rawPValue) || rawPValue < 0 || rawPValue > 1) {
-      return [];
-    }
-    const pValue = Math.max(rawPValue, 1e-300);
-    const y = -Math.log10(Math.max(pValue, 1e-300));
-    if (!Number.isFinite(x) || !Number.isFinite(y)) return [];
 
-    return [
-      {
-        x,
-        y,
-        protein: String(row.proteinId || row.id),
-        significant: pValue < 0.05 && Math.abs(x) > 1,
-      },
-    ];
-  });
+    if (rowIndex % 500 === 499 || rowIndex === rows.length - 1) {
+      await onYield?.(
+        (rowIndex + 1) / rows.length,
+        `building volcano data ${rowIndex + 1}/${rows.length}`
+      );
+    }
+  }
 
   return { stats, intensityDist, volcanoData };
 };

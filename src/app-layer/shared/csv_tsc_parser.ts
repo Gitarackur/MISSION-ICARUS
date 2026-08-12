@@ -5,6 +5,7 @@ import {
   CSVDelimiterCandidate,
 } from "@/domain/shared/index.types";
 import type { CSVParserWorkerRequest } from "@/domain/workers/index.types";
+import type { WorkerYieldHook } from "@/domain/workers/index.types";
 import { LARGE_CSV_SINGLE_PARSER_THRESHOLD_BYTES } from "@/domain/workers/constants";
 import { runWorkerRequest } from "./workers/worker-client";
 import {
@@ -97,10 +98,11 @@ const splitDelimitedLine = (
   return values;
 };
 
-const parseDelimitedRecords = (
+const parseDelimitedRecords = async (
   text: string,
-  delimiter: Exclude<CSVDelimiterCandidate, "whitespace">
-) => {
+  delimiter: Exclude<CSVDelimiterCandidate, "whitespace">,
+  onYield?: WorkerYieldHook
+): Promise<string[][]> => {
   const records: string[][] = [];
   let row: string[] = [];
   let current = "";
@@ -138,6 +140,12 @@ const parseDelimitedRecords = (
     }
 
     current += char;
+
+    // Character scanning a multi-megabyte text is the dominant cost of CSV
+    // import, so yield periodically to keep the liveness heartbeat flowing.
+    if (onYield && index % 2_000_000 === 0) {
+      await onYield(index / text.length, `scanning CSV ${index}/${text.length}`);
+    }
   }
 
   if (current.length > 0 || row.length > 0) {
@@ -269,10 +277,11 @@ const inferColumnTypesInternal = <T>(
   return columnTypes;
 };
 
-const rowsToStructuredResult = <T>(
+const rowsToStructuredResult = async <T>(
   rawHeaders: string[],
-  rawRows: string[][]
-): ParsedCSVResult<T> => {
+  rawRows: string[][],
+  onYield?: WorkerYieldHook
+): Promise<ParsedCSVResult<T>> => {
   const errors: string[] = [];
   const headers = createUniqueHeaders(
     rawHeaders.filter((header) => header.length > 0)
@@ -282,7 +291,9 @@ const rowsToStructuredResult = <T>(
     throw new Error("No valid headers found");
   }
 
-  const data = rawRows.reduce<T[]>((accumulator, rawRow, rowIndex) => {
+  const data: T[] = [];
+  for (let rowIndex = 0; rowIndex < rawRows.length; rowIndex += 1) {
+    const rawRow = rawRows[rowIndex];
     const normalizedRow =
       rawRow.length < headers.length
         ? [
@@ -298,7 +309,7 @@ const rowsToStructuredResult = <T>(
     }
 
     if (normalizedRow.every((value) => value.trim().length === 0)) {
-      return accumulator;
+      continue;
     }
 
     const parsedRow = headers.reduce<Record<string, string | number>>(
@@ -309,13 +320,18 @@ const rowsToStructuredResult = <T>(
       {}
     );
 
-    accumulator.push({
+    data.push({
       ...parsedRow,
-      id: accumulator.length + 1,
+      id: data.length + 1,
     } as T);
 
-    return accumulator;
-  }, []);
+    if (onYield && (rowIndex % 5000 === 4999 || rowIndex === rawRows.length - 1)) {
+      await onYield(
+        (rowIndex + 1) / rawRows.length,
+        `structuring rows ${rowIndex + 1}/${rawRows.length}`
+      );
+    }
+  }
 
   if (!data.length) {
     throw new Error("No valid data rows found in file");
@@ -329,30 +345,50 @@ const rowsToStructuredResult = <T>(
   };
 };
 
-const parseNativeText = <T>(csvText: string): ParsedCSVResult<T> => {
+const parseNativeText = async <T>(
+  csvText: string,
+  onYield?: WorkerYieldHook
+): Promise<ParsedCSVResult<T>> => {
   const normalized = normalizeText(csvText);
   if (!normalized.trim()) {
     throw new Error("File is empty");
   }
 
   const delimiter = detectDelimiter(normalized.split("\n"));
-  const records =
-    delimiter === "whitespace"
-      ? normalized
-          .split("\n")
-          .map((line) => line.trim())
-          .filter((line) => line.length > 0 && !isCommentLine(line))
-          .map(splitWhitespaceLine)
-      : parseDelimitedRecords(normalized, delimiter);
+  let records: string[][];
+  if (delimiter === "whitespace") {
+    const lines = normalized
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !isCommentLine(line));
+    records = [];
+    for (let lineIndex = 0; lineIndex < lines.length; lineIndex += 1) {
+      records.push(splitWhitespaceLine(lines[lineIndex]));
+      if (
+        onYield &&
+        (lineIndex % 5000 === 4999 || lineIndex === lines.length - 1)
+      ) {
+        await onYield(
+          (lineIndex + 1) / lines.length,
+          `parsing whitespace records ${lineIndex + 1}/${lines.length}`
+        );
+      }
+    }
+  } else {
+    records = await parseDelimitedRecords(normalized, delimiter, onYield);
+  }
 
   if (records.length < 2) {
     throw new Error("File must contain at least a header and one data row");
   }
 
-  return rowsToStructuredResult<T>(records[0], records.slice(1));
+  return rowsToStructuredResult<T>(records[0], records.slice(1), onYield);
 };
 
-const parsePapaText = <T>(csvText: string): ParsedCSVResult<T> => {
+const parsePapaText = async <T>(
+  csvText: string,
+  onYield?: WorkerYieldHook
+): Promise<ParsedCSVResult<T>> => {
   const normalized = normalizeText(csvText);
   if (!normalized.trim()) {
     throw new Error("File is empty");
@@ -372,15 +408,27 @@ const parsePapaText = <T>(csvText: string): ParsedCSVResult<T> => {
     );
   }
 
-  const rows = result.data
-    .map((row) => row.map((value) => cleanCell(String(value ?? ""))))
-    .filter((row) => row.some((value) => value.length > 0));
+  const rows: string[][] = [];
+  for (let rowIndex = 0; rowIndex < result.data.length; rowIndex += 1) {
+    const cleaned = result.data[rowIndex].map((value) =>
+      cleanCell(String(value ?? ""))
+    );
+    if (cleaned.some((value) => value.length > 0)) {
+      rows.push(cleaned);
+    }
+    if (onYield && (rowIndex % 5000 === 4999 || rowIndex === result.data.length - 1)) {
+      await onYield(
+        (rowIndex + 1) / result.data.length,
+        `parsing Papa rows ${rowIndex + 1}/${result.data.length}`
+      );
+    }
+  }
 
   if (rows.length < 2) {
     throw new Error("File must contain at least a header and one data row");
   }
 
-  return rowsToStructuredResult<T>(rows[0], rows.slice(1));
+  return rowsToStructuredResult<T>(rows[0], rows.slice(1), onYield);
 };
 
 const pickBestResult = <T>(results: ParsedCSVResult<T>[]) =>
@@ -404,8 +452,9 @@ class IcarusParser {
     return inferColumnTypesInternal(data, options);
   }
 
-  parseCSVPapaParse = <T>(csvText: string): ParsedCSVResult<T> =>
-    parsePapaText<T>(csvText);
+  parseCSVPapaParse = async <T>(
+    csvText: string
+  ): Promise<ParsedCSVResult<T>> => parsePapaText<T>(csvText);
 
   parseCSVFromFilePapaParse = async <T>(
     file: File
@@ -414,22 +463,26 @@ class IcarusParser {
     return this.parseCSVPapaParse<T>(text);
   };
 
-  parseCSVNative = <T>(csvText: string): ParsedCSVResult<T> =>
-    parseNativeText<T>(csvText);
+  parseCSVNative = async <T>(
+    csvText: string
+  ): Promise<ParsedCSVResult<T>> => parseNativeText<T>(csvText);
 
   parseCSVFromFileNative = async <T>(
     file: File
   ): Promise<ParsedCSVResult<T>> => parseCSVFileInWorker<T>(file);
 
-  parseCSVFromText = <T>(csvText: string): ParsedCSVResult<T> => {
+  parseCSVFromText = async <T>(
+    csvText: string,
+    onYield?: WorkerYieldHook
+  ): Promise<ParsedCSVResult<T>> => {
     // Keeping two complete parse candidates doubles peak memory. The native
     // parser handles Icarus' supported delimiters and quoting rules, so large
     // files use it directly and retain Papa as a failure fallback.
     if (csvText.length >= LARGE_CSV_SINGLE_PARSER_THRESHOLD_BYTES) {
       try {
-        return parseNativeText<T>(csvText);
+        return await parseNativeText<T>(csvText, onYield);
       } catch {
-        return parsePapaText<T>(csvText);
+        return await parsePapaText<T>(csvText, onYield);
       }
     }
 
@@ -438,7 +491,7 @@ class IcarusParser {
 
     for (const parser of [parseNativeText<T>, parsePapaText<T>]) {
       try {
-        attempts.push(parser(csvText));
+        attempts.push(await parser(csvText, onYield));
       } catch (error) {
         failures.push(error instanceof Error ? error.message : String(error));
       }

@@ -460,13 +460,17 @@ function olsPredict(
  * uniformly from the `k` closest observed donors (bounded k). Pooled point
  * estimates are combined with Rubin's rules.
  */
-export function multipleImputationMice(
+export async function multipleImputationMice(
   data: number[][],
   method: MiceMethod = "pmm",
   m = 5,
   maxIterations = 10,
   seed?: number,
-): MultipleImputationResult {
+  onYield?: (
+    progress: number,
+    detail: string,
+  ) => Promise<void> | void,
+): Promise<MultipleImputationResult> {
   if (!data || data.length < 2) {
     throw new Error(
       "Multiple imputation requires at least 2 columns (target + >=1 predictor).",
@@ -544,6 +548,9 @@ export function multipleImputationMice(
   const imputedDatasets: number[][][] = [];
   let iterationsPerformed = 0;
 
+  const totalColumnWork = clampedM * clampedIterations * columnCount;
+  let completedColumnWork = 0;
+
   for (let datasetIndex = 0; datasetIndex < clampedM; datasetIndex++) {
     const work = data.map((column, j) => {
       const filled = [...column];
@@ -559,6 +566,15 @@ export function multipleImputationMice(
       );
 
       for (const j of columnOrder) {
+        completedColumnWork += 1;
+        // Cooperative yield: hand control back to the worker's event loop so a
+        // liveness heartbeat can be posted. A no-op when no hook is supplied.
+        if (onYield && completedColumnWork % 4 === 0) {
+          await onYield(
+            completedColumnWork / totalColumnWork,
+            `dataset ${datasetIndex + 1}/${clampedM}, iteration ${iteration + 1}/${clampedIterations}, column ${j + 1}/${columnCount}`,
+          );
+        }
         const missing = missingIndices[j];
         if (missing.length === 0) continue;
 
@@ -2090,12 +2106,16 @@ export function performPLSDA(
 /**
  * t-SNE - t-Distributed Stochastic Neighbor Embedding (WORKING VERSION)
  */
-export function performTSNE(
+export async function performTSNE(
   data: number[][],
   numDimensions: number = 2,
   perplexity: number = 30,
-  iterations: number = 1000
-): TSNEResult {
+  iterations: number = 1000,
+  onIteration?: (
+    iteration: number,
+    total: number,
+  ) => Promise<void> | void,
+): Promise<TSNEResult> {
   if (!data || data.length === 0) {
     throw new Error("No data provided for t-SNE");
   }
@@ -2173,6 +2193,7 @@ export function performTSNE(
   );
 
   for (let iter = 0; iter < Math.min(iterations, 1000); iter++) {
+    if (onIteration) await onIteration(iter, Math.min(iterations, 1000));
     const gradients: number[][] = embedded_data.map((dim) => dim.map(() => 0));
 
     // Compute gradients (simplified attractive and repulsive forces)

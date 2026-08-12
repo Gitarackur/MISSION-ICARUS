@@ -25,7 +25,30 @@ export interface PendingWorkerRequest {
   resolve: (value: unknown) => void;
   reject: (error: Error) => void;
   operationName: string;
+  /** Wall-clock time of the last activity (request sent, heartbeat, or response). */
+  lastActivityAt: number;
 }
+
+/** Periodic liveness signal sent by a worker while a long synchronous
+ *  computation is running. The client only treats a request as timed out once
+ *  the worker has been silent for the configured grace period. `id` is set by
+ *  multi-request (persistent) workers and omitted by one-shot workers. */
+export interface WorkerProgressHeartbeat {
+  id?: number;
+  heartbeat: true;
+  /** 0..1 fraction of the work completed (best-effort). */
+  progress?: number;
+  /** Human-readable progress detail. */
+  detail?: string;
+}
+
+/** Cooperative-yield hook threaded through long-running worker computations so
+ *  the worker can periodically hand control back to its event loop and post a
+ *  liveness heartbeat. */
+export type WorkerYieldHook = (
+  progress: number,
+  detail: string
+) => Promise<void> | void;
 
 export interface WorkerRequestOptions<TRequest> {
   createWorker: () => Worker;
@@ -64,29 +87,35 @@ export type MatrixCodecWorkerPayload =
       chunks: PersistedMatrixChunk[];
     };
 
-export type MatrixCodecWorkerResponse = IdentifiedWorkerResponse<
-  EncodedMatrix | IcarusMatrix
->;
+export type MatrixCodecWorkerResponse =
+  | WorkerProgressHeartbeat
+  | IdentifiedWorkerResponse<EncodedMatrix | IcarusMatrix>;
 
 export interface CSVParserWorkerRequest {
   file: File;
 }
 
-export type CSVParserWorkerResponse<T> = WorkerResponse<ParsedCSVResult<T>>;
+export type CSVParserWorkerResponse<T> =
+  | WorkerProgressHeartbeat
+  | WorkerResponse<ParsedCSVResult<T>>;
 
 export interface MatrixViewWorkerRequest {
   columns: string[];
   data: TableMatrices;
 }
 
-export type MatrixViewWorkerResponse = WorkerResponse<DataRowsAndColumns>;
+export type MatrixViewWorkerResponse =
+  | WorkerProgressHeartbeat
+  | WorkerResponse<DataRowsAndColumns>;
 
 export interface ProteomicsSummaryWorkerRequest {
   rows: ProteinRow[];
   columns: string[];
 }
 
-export type ProteomicsSummaryWorkerResponse = WorkerResponse<ProteomicsSummary>;
+export type ProteomicsSummaryWorkerResponse =
+  | WorkerProgressHeartbeat
+  | WorkerResponse<ProteomicsSummary>;
 
 export interface StatisticalAnalysisWorkerRequest {
   id: number;
@@ -115,13 +144,13 @@ export type StatisticalAnalysisPayload =
   | ProteinRow[]
   | StatisticalColumnarPayload;
 
-export interface StatisticalAnalysisWorkerResponse
-  extends WorkerResponse<StatisticalAnalysisResult> {
-  id: number;
-  /** Present when the result `data` matrix was transferred as a buffer. */
-  dataMatrix?: {
-    lengths: number[];
-    rowCount: number;
-    flat: Float64Array;
-  };
-}
+export type StatisticalAnalysisWorkerResponse =
+  | WorkerProgressHeartbeat
+  | IdentifiedWorkerResponse<StatisticalAnalysisResult> & {
+      /** Present when the result `data` matrix was transferred as a buffer. */
+      dataMatrix?: {
+        lengths: number[];
+        rowCount: number;
+        flat: Float64Array;
+      };
+    };

@@ -5,15 +5,17 @@ import {
   encodeMatrix,
 } from "../matrix/matrix-storage";
 import type { MatrixCodecWorkerRequest } from "@/domain/workers/index.types";
+import { createWorkerHeartbeat } from "@/app-layer/shared/workers/worker-heartbeat";
 
 const worker = self as DedicatedWorkerGlobalScope;
 
-worker.onmessage = (event: MessageEvent<MatrixCodecWorkerRequest>) => {
+worker.onmessage = async (event: MessageEvent<MatrixCodecWorkerRequest>) => {
   const request = event.data;
+  const heartbeat = createWorkerHeartbeat(worker, request.id);
 
   try {
     if (request.operation === "encode") {
-      const result = encodeMatrix(request.matrix);
+      const result = await encodeMatrix(request.matrix, undefined, heartbeat);
       const transfers = result.chunks.flatMap((chunk) =>
         chunk.columns.flatMap((column) =>
           column.kind === "float64" ? [column.values] : []
@@ -26,7 +28,11 @@ worker.onmessage = (event: MessageEvent<MatrixCodecWorkerRequest>) => {
     worker.postMessage({
       id: request.id,
       ok: true,
-      result: decodeMatrix(request.metadata, request.chunks),
+      result: await decodeMatrix(
+        request.metadata,
+        request.chunks,
+        heartbeat
+      ),
     });
   } catch (error) {
     worker.postMessage({

@@ -21,9 +21,9 @@ export const createWorkerTimeoutError = (
   timeoutMs: number
 ) =>
   new WorkerExecutionError(
-    `${operationName} exceeded the ${Math.ceil(
+    `${operationName} stopped responding after ${Math.ceil(
       timeoutMs / 60_000
-    )}-minute processing limit. The background task was stopped to keep the interface responsive. Try the operation again.`,
+    )} minute(s) of no activity. The background task was stopped to keep the interface responsive. Try the operation again.`,
     "WORKER_TIMEOUT",
     operationName
   );

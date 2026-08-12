@@ -40,7 +40,7 @@ const matrix = {
   createdByFirstActivity: true,
 };
 
-const encoded = encodeMatrix(matrix, 6);
+const encoded = await encodeMatrix(matrix, 6);
 assert.equal(encoded.metadata.storageFormat, MATRIX_STORAGE_FORMAT);
 assert.equal(encoded.metadata.rowCount, 4);
 assert.equal(encoded.metadata.columnCount, 3);
@@ -50,7 +50,9 @@ assert.equal(encoded.chunks[0].columns[0].kind, "float64");
 assert.equal(encoded.chunks[0].columns[1].kind, "values");
 assert.equal(encoded.chunks[0].columns[2].kind, "values");
 
-const decoded = decodeMatrix(encoded.metadata, [...encoded.chunks].reverse());
+const decoded = await decodeMatrix(encoded.metadata, [
+  ...encoded.chunks,
+].reverse());
 assert.equal(decoded.id, matrix.id);
 assert.equal(decoded.payloadState, "loaded");
 assert.deepEqual(decoded.columns, matrix.columns);
@@ -75,7 +77,7 @@ assert.equal(legacy.rowCount, 4);
 assert.equal(isMatrixPayloadLoaded(legacy), true);
 assert.deepEqual(matrix.data[0], [1, "alpha", 10]);
 
-const sparse = encodeMatrix({
+const sparse = await encodeMatrix({
   id: "sparse",
   createdAt: 1,
   columns: ["possibly-missing"],
@@ -83,16 +85,15 @@ const sparse = encodeMatrix({
 });
 assert.equal(sparse.chunks[0].columns[0].kind, "values");
 assert.equal(
-  decodeMatrix(sparse.metadata, sparse.chunks).data[0][0],
+  (await decodeMatrix(sparse.metadata, sparse.chunks)).data[0][0],
   undefined
 );
 
-assert.throws(
-  () =>
-    decodeMatrix(
-      { ...encoded.metadata, chunkCount: encoded.metadata.chunkCount + 1 },
-      encoded.chunks
-    ),
+await assert.rejects(
+  decodeMatrix(
+    { ...encoded.metadata, chunkCount: encoded.metadata.chunkCount + 1 },
+    encoded.chunks
+  ),
   /incomplete/
 );
 

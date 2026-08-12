@@ -98,10 +98,14 @@ import {
   sanitizeStatisticalResults,
 } from "@/app-layer/statistics/utils/analysis-helpers";
 
-export const runStatisticalAnalysis = (
+export const runStatisticalAnalysis = async (
   action: StatisticalAction,
   data: ProteinRow[] | Map<string, TableMatrix>,
-): StatisticalAnalysisResult => {
+  onYield?: (
+    progress: number,
+    detail: string,
+  ) => Promise<void> | void,
+): Promise<StatisticalAnalysisResult> => {
   const { numericColumns, numericData } = extractNumericData(data);
   const rawData = getRawColumnData(data);
 
@@ -261,17 +265,24 @@ export const runStatisticalAnalysis = (
       const weighted = true;
 
       // For each selected column index, treat it as the target and use all other columns as features
-      const imputedAll = numericData.map((_, targetIdx) => {
-        // build target and features arrays
+      const imputedAll: number[][] = [];
+      for (let targetIdx = 0; targetIdx < numericData.length; targetIdx += 1) {
         const targetCol = numericData[targetIdx];
         // features are all columns except the current target
         const featureCols = numericData.filter((_, j) => j !== targetIdx);
         // if no features (shouldn't happen because numericData.length >= 2), fallback to target as-is
-        if (featureCols.length === 0) return targetCol.slice();
-
-        // call helper
-        return knnImputeTarget(targetCol, featureCols, k, weighted);
-      });
+        imputedAll.push(
+          featureCols.length === 0
+            ? targetCol.slice()
+            : knnImputeTarget(targetCol, featureCols, k, weighted),
+        );
+        if (onYield) {
+          await onYield(
+            (targetIdx + 1) / numericData.length,
+            `KNN imputing column ${targetIdx + 1}/${numericData.length}`,
+          );
+        }
+      }
 
       // results is column-major: one array per imputed column
       results = imputedAll;
@@ -303,12 +314,13 @@ export const runStatisticalAnalysis = (
       const method: MiceMethod =
         rawMethod === "regression" ? "regression" : "pmm";
 
-      const multipleImputation = multipleImputationMice(
+      const multipleImputation = await multipleImputationMice(
         numericData,
         method,
         m,
         maxIterations,
         useSeed ? seed : undefined,
+        onYield,
       );
 
       // Pooled complete dataset becomes the appended columns; per-imputation
@@ -822,11 +834,13 @@ export const runStatisticalAnalysis = (
       const numDimensions = parseNumberMetadata(data, "__num_dimensions__", 2);
       const perplexity = parseNumberMetadata(data, "__perplexity__", 30);
       const iterations = parseNumberMetadata(data, "__iterations__", 1000);
-      const tsneResult = performTSNE(
+      const tsneResult = await performTSNE(
         numericData,
         numDimensions,
         perplexity,
         iterations,
+        (iteration, total) =>
+          onYield?.(iteration / total, `t-SNE iteration ${iteration}/${total}`),
       );
       results = tsneResult.embedded_data;
       newColumnNames = Array.from(

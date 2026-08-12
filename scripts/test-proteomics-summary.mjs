@@ -48,7 +48,7 @@ const columns = [
   "pValue",
 ];
 
-const result = computeProteomicsSummary(rows, columns);
+const result = await computeProteomicsSummary(rows, columns);
 assert.equal(result.stats.totalProteins, 2);
 assert.equal(result.stats.missingValues, 1);
 assert.equal(result.stats.medianIntensity, 200);
@@ -58,14 +58,14 @@ assert.equal(result.volcanoData.length, 2);
 assert.equal(result.volcanoData[0].protein, "p1");
 assert.equal(result.volcanoData[0].significant, true);
 
-const fallbackResult = computeProteomicsSummary(
+const fallbackResult = await computeProteomicsSummary(
   [{ Intensity_A: 10 }],
   ["Intensity_A"]
 );
 assert.equal(fallbackResult.stats.averageIntensity, 10);
 assert.deepEqual(fallbackResult.intensityDist, []);
 
-const invalidResult = computeProteomicsSummary(
+const invalidResult = await computeProteomicsSummary(
   [
     {
       proteinId: "invalid",
@@ -79,7 +79,7 @@ const invalidResult = computeProteomicsSummary(
 assert.equal(invalidResult.stats.missingValues, 1);
 assert.deepEqual(invalidResult.volcanoData, []);
 
-const missingPValueResult = computeProteomicsSummary(
+const missingPValueResult = await computeProteomicsSummary(
   [
     {
       proteinId: "missing-p",
@@ -92,7 +92,7 @@ const missingPValueResult = computeProteomicsSummary(
 );
 assert.deepEqual(missingPValueResult.volcanoData, []);
 
-const zeroPValueResult = computeProteomicsSummary(
+const zeroPValueResult = await computeProteomicsSummary(
   [
     {
       proteinId: "zero-p",
@@ -106,7 +106,7 @@ const zeroPValueResult = computeProteomicsSummary(
 assert.equal(zeroPValueResult.volcanoData[0].y, 300);
 assert.equal(zeroPValueResult.volcanoData[0].significant, true);
 
-assert.deepEqual(computeProteomicsSummary([], columns), {
+assert.deepEqual(await computeProteomicsSummary([], columns), {
   stats: null,
   intensityDist: [],
   volcanoData: [],
