@@ -6,6 +6,7 @@ export function setupFSharpHandlers() {
 
   ipcMain.handle("renderer:fsharp-available", async () => {
     const available = fsharpManager.isFSharpAvailable();
+    if (available) void fsharpManager.warmUp();
     return available;
   });
 

@@ -10,12 +10,7 @@ import type {
   StatisticalAnalysisWorkerResponse,
 } from "@/domain/workers/index.types";
 import {
-  WORKER_HEARTBEAT_INTERVAL_MS,
-  WORKER_SILENCE_TIMEOUT_MS,
-} from "@/domain/workers/constants";
-import {
   createWorkerFailureError,
-  createWorkerTimeoutError,
   createWorkerUnavailableError,
   type WorkerExecutionError,
 } from "@/domain/workers/errors";
@@ -24,6 +19,12 @@ import {
   encodeStatisticalInput,
   rehydrateStatisticalResultData,
 } from "./statistics-transfer";
+import { heavyStatisticalAnalysisClient } from "./heavy-statistical-analysis-client";
+
+type StatisticalProgressCallback = (
+  progress?: number,
+  detail?: string
+) => void;
 
 /**
  * Persistent statistics worker client. The worker is kept warm between
@@ -38,7 +39,8 @@ class StatisticalAnalysisClient {
 
   run(
     action: StatisticalAction,
-    data: ProteinRow[] | Map<string, TableMatrix>
+    data: ProteinRow[] | Map<string, TableMatrix>,
+    onProgress?: StatisticalProgressCallback
   ): Promise<StatisticalAnalysisResult> {
     const { payload, transfer } = encodeStatisticalInput(data);
     const request: StatisticalAnalysisWorkerRequest = {
@@ -51,47 +53,18 @@ class StatisticalAnalysisClient {
     return new Promise<StatisticalAnalysisResult>((resolve, reject) => {
       const worker = this.getWorker(operationName);
 
-      // Liveness watchdog. The worker posts heartbeats (throttled to
-      // WORKER_HEARTBEAT_INTERVAL_MS) while a long synchronous computation is
-      // running, and the request keeps its `lastActivityAt` fresh on every
-      // message it receives. The watchdog only fires when the worker has been
-      // entirely silent for WORKER_SILENCE_TIMEOUT_MS, i.e. it crashed or
-      // wedged — a worker that is still making progress is never killed by a
-      // wall-clock limit. A wedged worker is torn down so the next request
-      // starts with a fresh one.
-      const watchdog = globalThis.setInterval(() => {
-        const entry = this.pending.get(request.id);
-        if (!entry) return;
-        if (Date.now() - entry.lastActivityAt < WORKER_SILENCE_TIMEOUT_MS) {
-          return;
-        }
-        this.failWorker(
-          createWorkerTimeoutError(
-            operationName,
-            WORKER_SILENCE_TIMEOUT_MS,
-          ),
-        );
-      }, Math.min(1000, WORKER_HEARTBEAT_INTERVAL_MS));
-      const clearRequestWatchdog = () => globalThis.clearInterval(watchdog);
-
       this.pending.set(request.id, {
-        resolve: (value) => {
-          clearRequestWatchdog();
-          resolve(value as StatisticalAnalysisResult);
-        },
-        reject: (error) => {
-          clearRequestWatchdog();
-          reject(error);
-        },
+        resolve: (value) => resolve(value as StatisticalAnalysisResult),
+        reject,
         operationName,
         lastActivityAt: Date.now(),
+        onProgress,
       });
 
       try {
         worker.postMessage(request, transfer);
       } catch (cause) {
         this.pending.delete(request.id);
-        clearRequestWatchdog();
         const error = createWorkerFailureError(
           operationName,
           "The statistical request could not be sent to the worker.",
@@ -134,7 +107,10 @@ class StatisticalAnalysisClient {
       if ("heartbeat" in response) {
         if (response.id !== undefined) {
           const pending = this.pending.get(response.id);
-          if (pending) pending.lastActivityAt = Date.now();
+          if (pending) {
+            pending.lastActivityAt = Date.now();
+            pending.onProgress?.(response.progress, response.detail);
+          }
         }
         return;
       }
@@ -203,12 +179,36 @@ class StatisticalAnalysisClient {
     this.pending.forEach(({ reject }) => reject(error));
     this.pending.clear();
   }
+
+  cancel(): boolean {
+    if (!this.worker || this.pending.size === 0) return false;
+    const error = new Error("Statistical analysis was cancelled.");
+    this.worker.terminate();
+    this.worker = null;
+    this.pending.forEach(({ reject }) => reject(error));
+    this.pending.clear();
+    return true;
+  }
 }
 
 export const statisticalAnalysisClient = new StatisticalAnalysisClient();
 
 export const runStatisticalAnalysisInWorker = (
   action: StatisticalAction,
-  data: ProteinRow[] | Map<string, TableMatrix>
-): Promise<StatisticalAnalysisResult> =>
-  statisticalAnalysisClient.run(action, data);
+  data: ProteinRow[] | Map<string, TableMatrix>,
+  onProgress?: StatisticalProgressCallback
+): Promise<StatisticalAnalysisResult> => {
+  if (action === "impute-multiple" && data instanceof Map) {
+    return heavyStatisticalAnalysisClient.isAvailable().then((available) =>
+      available
+        ? heavyStatisticalAnalysisClient.runMice(data, onProgress)
+        : statisticalAnalysisClient.run(action, data, onProgress)
+    );
+  }
+  return statisticalAnalysisClient.run(action, data, onProgress);
+};
+
+export const cancelStatisticalAnalysis = async (): Promise<boolean> => {
+  const cancelledHeavyAnalysis = await heavyStatisticalAnalysisClient.cancel();
+  return cancelledHeavyAnalysis || statisticalAnalysisClient.cancel();
+};

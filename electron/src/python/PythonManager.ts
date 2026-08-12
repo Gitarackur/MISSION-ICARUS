@@ -1,76 +1,31 @@
 import { Manager } from "../core/Manager";
 
-import path from "path";
 import fs from "fs";
 import CoreExec from "../core/Exec";
 import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,
 } from "../core/PersistentJsonWorker";
-import { resourcePath } from "../core/utils";
 import { app } from "electron";
+import {
+  getPythonBinary,
+  getPythonCommanderScript,
+  getPythonRuntimeEnv,
+  isPythonRuntimeAvailable,
+  resolvePythonWorkerLaunch,
+} from "./python-runtime";
 
 
 
 export class PythonManager extends Manager {
   private worker: PersistentJsonWorker | null = null;
-  private workerDisabled = false;
-
-  private getRuntimeEnv(): NodeJS.ProcessEnv {
-    const baseTempDir = path.join(app.getPath("temp"), "mission-icarus-python");
-    const mplConfigDir = path.join(baseTempDir, "matplotlib");
-    const xdgCacheDir = path.join(baseTempDir, "cache");
-    const fontConfigDir = path.join(baseTempDir, "fontconfig");
-
-    fs.mkdirSync(mplConfigDir, { recursive: true });
-    fs.mkdirSync(xdgCacheDir, { recursive: true });
-    fs.mkdirSync(fontConfigDir, { recursive: true });
-
-    return {
-      ...process.env,
-      TMPDIR: baseTempDir,
-      MPLCONFIGDIR: mplConfigDir,
-      XDG_CACHE_HOME: xdgCacheDir,
-      FONTCONFIG_PATH: fontConfigDir,
-      MPLBACKEND: "Agg",
-    };
-  }
 
   public isPythonRendererAvailable(): boolean {
-    const scriptPath = resourcePath("scripts", "python", "commander.py");
-    if (!app.isPackaged) {
-      return fs.existsSync(scriptPath);
-    }
-
-    try {
-      return fs.existsSync(this.getBin(scriptPath));
-    } catch {
-      return false;
-    }
-  }
-
-  private checkIfPathIsPythonScript(scriptPath: string): void {
-    const ext = path.extname(scriptPath).toLowerCase();
-    if (ext !== ".py") {
-      throw new Error(`Not a Python script: ${scriptPath}`);
-    }
+    return isPythonRuntimeAvailable();
   }
 
   public getBin(scriptPath: string): string {
-    this.checkIfPathIsPythonScript(scriptPath);
-
-    const dirname = path.dirname(scriptPath);
-    const extname = path.extname(scriptPath);
-    const basename = path.basename(scriptPath, extname);
-    const binPath = path.join(dirname, 'bin', basename + this.getBinExtension());
-
-    if (!fs.existsSync(binPath)) {
-      throw new Error(
-        `Compiled Python binary not found. Expected at: ${binPath}`
-      );
-    }
-
-    return binPath;
+    return getPythonBinary(scriptPath);
   }
 
   public runScript(
@@ -79,7 +34,7 @@ export class PythonManager extends Manager {
     data?: unknown
   ): Promise<string> {
     console.log(`Running Python script: ${scriptPath} with args: ${args} and data: ${data ? 'provided' : 'none'}`);
-    const env = this.getRuntimeEnv();
+    const env = getPythonRuntimeEnv();
 
     if (!app.isPackaged && fs.existsSync(scriptPath)) {
       return CoreExec.run("python3", [scriptPath, ...(args ?? [])], data, { env });
@@ -91,13 +46,11 @@ export class PythonManager extends Manager {
   }
 
   public async warmUp(): Promise<boolean> {
-    if (this.workerDisabled) return false;
-
     try {
       await this.getWorker().start();
       return true;
     } catch (error) {
-      this.disableWorker(error);
+      this.resetWorker(error);
       return false;
     }
   }
@@ -115,14 +68,14 @@ export class PythonManager extends Manager {
     command: string,
     data: T
   ): Promise<string> {
-    const scriptPath = resourcePath('scripts', 'python', 'commander.py');
+    const scriptPath = getPythonCommanderScript();
 
-    if (!this.workerDisabled) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
         return await this.getWorker().request({ command, payload: data });
       } catch (error) {
         if (!(error instanceof PersistentWorkerUnavailableError)) throw error;
-        this.disableWorker(error);
+        this.resetWorker(error);
       }
     }
 
@@ -133,27 +86,23 @@ export class PythonManager extends Manager {
   private getWorker(): PersistentJsonWorker {
     if (this.worker) return this.worker;
 
-    const scriptPath = resourcePath("scripts", "python", "commander.py");
-    const useSource = !app.isPackaged && fs.existsSync(scriptPath);
-    const command = useSource ? "python3" : this.getBin(scriptPath);
-    const args = useSource ? [scriptPath, "--worker"] : ["--worker"];
+    const { command, args, env } = resolvePythonWorkerLaunch();
     this.worker = new PersistentJsonWorker(
       command,
       args,
-      { env: this.getRuntimeEnv() },
+      { env },
       "Python renderer"
     );
     return this.worker;
   }
 
-  private disableWorker(error: unknown): void {
+  private resetWorker(error: unknown): void {
     console.warn(
-      "Persistent Python renderer unavailable; using one-shot rendering.",
+      "Persistent Python renderer stopped; it will be restarted on demand.",
       error
     );
     this.worker?.dispose();
     this.worker = null;
-    this.workerDisabled = true;
   }
 
   public async getHeatmap<T = Record<string, unknown>>(data: T): Promise<string> {

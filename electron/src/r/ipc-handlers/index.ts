@@ -19,7 +19,7 @@ export function setupRHandlers() {
 
   ipcMain.handle("renderer:r-available", async () => {
     const available = rManager.isRAvailable();
-    if (available && rManager.isUsingBundledR()) {
+    if (available) {
       rManager.ensurePackagesInstalled(["ggplot2", "jsonlite", "ragg"]);
       void rManager.warmUp(resolveRScriptPath("plot_r.r"));
     }

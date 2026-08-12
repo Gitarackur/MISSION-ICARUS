@@ -371,6 +371,7 @@ function chiSquareSample(rng: () => number, degreesOfFreedom: number): number {
 function olsFit(
   targetObs: number[],
   predictorObs: number[][],
+  includeCovariance = true,
 ): OLSFit & { means: number[]; stds: number[] } {
   const predictorCount = predictorObs.length;
   const standardize = (column: number[]) => {
@@ -430,7 +431,9 @@ function olsFit(
     means: summary.map((s) => s.location),
     stds: summary.map((s) => s.scale),
     betaFull: beta,
-    covariance: invertMatrix(A),
+    // PMM only needs point predictions. Avoid the cubic matrix inversion
+    // unless Bayesian-regression posterior draws actually use it.
+    covariance: includeCovariance ? invertMatrix(A) : null,
     residualDegreesOfFreedom: degreesOfFreedom,
     residualSumSquares: residualSquares,
   };
@@ -604,7 +607,7 @@ export async function multipleImputationMice(
           observedRows.map((i) => work[k][i] as number),
         );
         const targetObs = observedRows.map((i) => work[j][i] as number);
-        const fit = olsFit(targetObs, predictorObs);
+        const fit = olsFit(targetObs, predictorObs, method === "regression");
 
         // Pre-compute observed predicted values for PMM donor pool.
         let observedPredictions: { predicted: number; value: number }[] = [];
@@ -617,7 +620,8 @@ export async function multipleImputationMice(
               ),
               value: work[j][i] as number,
             }))
-            .filter((entry) => Number.isFinite(entry.predicted));
+            .filter((entry) => Number.isFinite(entry.predicted))
+            .sort((a, b) => a.predicted - b.predicted);
         }
 
         const donorPool = Math.min(5, observedPredictions.length);
@@ -680,22 +684,29 @@ export async function multipleImputationMice(
             const predicted = olsPredict(fit, rawPredictors);
             if (!Number.isFinite(predicted) || donorPool === 0) continue;
 
-            // Keep only the k closest donors (bounded memory, no full sort).
-            const ranked: { predicted: number; value: number }[] = [];
-            for (const entry of observedPredictions) {
-              const distance = Math.abs(entry.predicted - predicted);
-              let position = ranked.length;
-              while (
-                position > 0 &&
-                Math.abs(ranked[position - 1].predicted - predicted) > distance
-              ) {
-                position--;
-              }
-              if (position < donorPool) {
-                ranked.splice(position, 0, entry);
-                if (ranked.length > donorPool) ranked.pop();
-              }
+            // Donor predictions are sorted once per fit. Binary search narrows
+            // each missing cell to at most 2k+1 candidates instead of scanning
+            // the full observed donor set.
+            let low = 0;
+            let high = observedPredictions.length;
+            while (low < high) {
+              const mid = (low + high) >>> 1;
+              if (observedPredictions[mid].predicted < predicted) low = mid + 1;
+              else high = mid;
             }
+            const start = Math.max(0, low - donorPool);
+            const end = Math.min(
+              observedPredictions.length,
+              low + donorPool + 1,
+            );
+            const ranked = observedPredictions
+              .slice(start, end)
+              .sort(
+                (a, b) =>
+                  Math.abs(a.predicted - predicted) -
+                  Math.abs(b.predicted - predicted),
+              )
+              .slice(0, donorPool);
             if (ranked.length === 0) continue;
 
             // Uniform draw from the closest donors.

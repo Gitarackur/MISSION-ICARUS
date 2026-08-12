@@ -443,7 +443,11 @@ export const extractNumericData = (
     data.forEach((values, key) => {
       if (isMetadataColumn(key)) return;
 
-      const numericValues = values.map((val) => toFinite(val));
+      // Worker-transfer rehydration already produces number-only arrays. Keep
+      // those arrays by reference instead of copying the full matrix again.
+      const numericValues = values.every((value) => typeof value === "number")
+        ? (values as number[])
+        : values.map((val) => toFinite(val));
 
       if (numericValues.some((value) => Number.isFinite(value))) {
         numericColumns.push(key);

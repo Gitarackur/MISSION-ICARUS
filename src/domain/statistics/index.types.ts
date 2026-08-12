@@ -430,6 +430,51 @@ export type ComposedStatisticalMatrix = {
 // Imputation engine used by multiple imputation.
 export type MiceMethod = "pmm" | "regression";
 
+/** Binary column-major request used by the out-of-process Python engine. */
+export interface HeavyMiceStatisticsRequest {
+  jobId: string;
+  action: "impute-multiple";
+  matrix: {
+    columnNames: string[];
+    lengths: number[];
+    rowCount: number;
+    flat: Float64Array;
+  };
+  options: {
+    method: MiceMethod;
+    imputations: number;
+    maxIterations: number;
+    seed: number;
+    maxPredictors: number;
+    workers?: number;
+  };
+}
+
+export interface HeavyMiceStatisticsResponse {
+  jobId: string;
+  columnNames: string[];
+  rowCount: number;
+  flat: Float64Array;
+  metadata: {
+    method: MiceMethod;
+    imputations: number;
+    maxIterations: number;
+    iterationsPerformed: number;
+    missingCount: number;
+    imputedCount: number;
+    columnSummaries: MiceColumnSummary[];
+    workers: number;
+    maximumPredictors?: number;
+    numpyVersion: string;
+  };
+}
+
+export interface HeavyStatisticsProgress {
+  jobId: string;
+  progress?: number;
+  detail?: string;
+}
+
 // Per-column pooled estimates (Rubin's rules) across the m imputed datasets.
 export interface MiceColumnSummary {
   columnName: string;
@@ -495,4 +540,3 @@ export type OLSFit = {
   residualDegreesOfFreedom: number;
   residualSumSquares: number;
 };
-

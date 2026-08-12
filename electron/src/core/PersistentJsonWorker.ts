@@ -6,18 +6,27 @@ import {
 import { createInterface, type Interface } from "node:readline";
 
 type WorkerResponse = {
-  type?: "ready";
+  type?: "ready" | "heartbeat" | "progress";
   id?: number;
   ok?: boolean;
-  result?: string;
+  result?: unknown;
   error?: string;
+  progress?: number;
+  detail?: string;
 };
 
 type PendingRequest = {
   id: number;
   payload: Record<string, unknown>;
-  resolve: (value: string) => void;
+  resolve: (value: unknown) => void;
   reject: (error: Error) => void;
+  onProgress?: (progress?: number, detail?: string) => void;
+};
+
+export type PersistentWorkerQueuePolicy = "latest" | "fifo";
+
+export type PersistentWorkerRequestOptions = {
+  onProgress?: (progress?: number, detail?: string) => void;
 };
 
 export class PersistentWorkerUnavailableError extends Error {
@@ -52,7 +61,7 @@ export class PersistentJsonWorker {
   private disposed = false;
   private nextRequestId = 1;
   private activeRequest: PendingRequest | null = null;
-  private queuedRequest: PendingRequest | null = null;
+  private queuedRequests: PendingRequest[] = [];
   private requestTimer: NodeJS.Timeout | null = null;
   private recentStderr = "";
 
@@ -62,7 +71,14 @@ export class PersistentJsonWorker {
     private readonly options: SpawnOptionsWithoutStdio,
     private readonly label: string,
     private readonly startupTimeoutMs = 120_000,
-    private readonly requestTimeoutMs = 120_000
+    /**
+     * Maximum time a request may remain completely silent. This is not a
+     * wall-clock execution limit: heartbeat/progress messages reset it. A
+     * value of 0 disables the silence watchdog and relies on process
+     * exit/error plus explicit cancellation.
+     */
+    private readonly requestSilenceTimeoutMs = 0,
+    private readonly queuePolicy: PersistentWorkerQueuePolicy = "latest"
   ) {}
 
   public start(): Promise<void> {
@@ -139,20 +155,30 @@ export class PersistentJsonWorker {
     return startPromise;
   }
 
-  public async request(payload: Record<string, unknown>): Promise<string> {
+  public async request<T = string>(
+    payload: Record<string, unknown>,
+    options: PersistentWorkerRequestOptions = {}
+  ): Promise<T> {
     await this.start();
 
-    return new Promise<string>((resolve, reject) => {
+    return new Promise<T>((resolve, reject) => {
       const request: PendingRequest = {
         id: this.nextRequestId++,
         payload,
-        resolve,
+        resolve: (value) => resolve(value as T),
         reject,
+        onProgress: options.onProgress,
       };
 
       if (this.activeRequest) {
-        this.queuedRequest?.reject(new SupersededWorkerRequestError());
-        this.queuedRequest = request;
+        if (this.queuePolicy === "latest") {
+          this.queuedRequests.forEach((queued) =>
+            queued.reject(new SupersededWorkerRequestError())
+          );
+          this.queuedRequests = [request];
+        } else {
+          this.queuedRequests.push(request);
+        }
         return;
       }
 
@@ -189,17 +215,7 @@ export class PersistentJsonWorker {
 
     this.activeRequest = request;
     const workerProcess = this.process;
-    this.requestTimer = setTimeout(() => {
-      if (this.activeRequest !== request || this.process !== workerProcess) {
-        return;
-      }
-      this.failWorker(
-        new PersistentWorkerUnavailableError(
-          `${this.label} worker did not respond within ${this.requestTimeoutMs}ms.`
-        )
-      );
-    }, this.requestTimeoutMs);
-    this.requestTimer.unref();
+    this.armRequestSilenceTimer(request, workerProcess);
 
     const message = JSON.stringify({ ...request.payload, id: request.id }) + "\n";
     workerProcess.stdin.write(message, (error) => {
@@ -216,6 +232,26 @@ export class PersistentJsonWorker {
         )
       );
     });
+  }
+
+  private armRequestSilenceTimer(
+    request: PendingRequest,
+    workerProcess: ChildProcessWithoutNullStreams
+  ): void {
+    this.clearRequestTimer();
+    if (this.requestSilenceTimeoutMs <= 0) return;
+
+    this.requestTimer = setTimeout(() => {
+      if (this.activeRequest !== request || this.process !== workerProcess) {
+        return;
+      }
+      this.failWorker(
+        new PersistentWorkerUnavailableError(
+          `${this.label} worker was silent for ${this.requestSilenceTimeoutMs}ms.`
+        )
+      );
+    }, this.requestSilenceTimeoutMs);
+    this.requestTimer.unref();
   }
 
   private handleLine(line: string): void {
@@ -238,10 +274,19 @@ export class PersistentJsonWorker {
 
     if (!this.activeRequest || response.id !== this.activeRequest.id) return;
 
+    if (response.type === "heartbeat" || response.type === "progress") {
+      this.armRequestSilenceTimer(this.activeRequest, this.process!);
+      this.activeRequest.onProgress?.(response.progress, response.detail);
+      return;
+    }
+
     const completedRequest = this.activeRequest;
     this.clearRequestTimer();
     this.activeRequest = null;
-    if (response.ok && typeof response.result === "string") {
+    if (
+      response.ok &&
+      Object.prototype.hasOwnProperty.call(response, "result")
+    ) {
       completedRequest.resolve(response.result);
     } else {
       completedRequest.reject(
@@ -251,8 +296,7 @@ export class PersistentJsonWorker {
       );
     }
 
-    const nextRequest = this.queuedRequest;
-    this.queuedRequest = null;
+    const nextRequest = this.queuedRequests.shift();
     if (nextRequest) this.dispatch(nextRequest);
   }
 
@@ -276,9 +320,9 @@ export class PersistentJsonWorker {
   private rejectPending(error: Error): void {
     this.clearRequestTimer();
     this.activeRequest?.reject(error);
-    this.queuedRequest?.reject(error);
+    this.queuedRequests.forEach((request) => request.reject(error));
     this.activeRequest = null;
-    this.queuedRequest = null;
+    this.queuedRequests = [];
   }
 
   private clearStartTimer(): void {

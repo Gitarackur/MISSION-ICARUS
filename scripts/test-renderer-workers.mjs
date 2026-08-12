@@ -63,10 +63,29 @@ const workerSource = `
   input.on("line", (line) => {
     const request = JSON.parse(line);
     if (request.action === "hang") return;
+    if (request.action === "slow") {
+      const heartbeat = setInterval(() => {
+        process.stdout.write(JSON.stringify({
+          id: request.id,
+          type: "heartbeat",
+        }) + "\\n");
+      }, 50);
+      setTimeout(() => {
+        clearInterval(heartbeat);
+        process.stdout.write(JSON.stringify({
+          id: request.id,
+          ok: true,
+          result: "slow-result",
+        }) + "\\n");
+      }, 500);
+      return;
+    }
     process.stdout.write(JSON.stringify({
       id: request.id,
       ok: true,
-      result: String(request.id),
+      result: request.action === "object"
+        ? { value: request.id }
+        : String(request.id),
     }) + "\\n");
   });
 `;
@@ -94,8 +113,18 @@ const workerSource = `
     300
   );
   assert.equal(await worker.request({ action: "reply", id: 999 }), "1");
-  await assert.rejects(worker.request({ action: "hang" }), /did not respond/);
-  assert.equal(await worker.request({ action: "reply" }), "3");
+  assert.equal(
+    await worker.request({ action: "slow" }),
+    "slow-result",
+    "heartbeats prevent a long-running request from being cut off"
+  );
+  assert.deepEqual(
+    await worker.request({ action: "object" }),
+    { value: 3 },
+    "persistent protocol carries structured analysis results"
+  );
+  await assert.rejects(worker.request({ action: "hang" }), /was silent/);
+  assert.equal(await worker.request({ action: "reply" }), "5");
   worker.dispose();
 }
 
@@ -170,7 +199,6 @@ class FakeWorker {
   assert.equal(await firstWarmUp, false);
   assert.equal(await secondWarmUp, true);
   assert.equal(workers.get("second.r").disposed, false);
-  assert.equal(manager.workerDisabled, false);
   manager.dispose();
 }
 
@@ -198,7 +226,6 @@ class FakeWorker {
   assert.equal(await secondRequest, "worker result");
   assert.deepEqual(fallbackScripts, ["first.r"]);
   assert.equal(workers.get("second.r").disposed, false);
-  assert.equal(manager.workerDisabled, false);
   manager.dispose();
 }
 

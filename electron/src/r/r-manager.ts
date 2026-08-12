@@ -19,7 +19,6 @@ export default class EmbeddedRManager {
   private verifiedPackages = new Set<string>();
   private worker: PersistentJsonWorker | null = null;
   private workerScriptPath: string | null = null;
-  private workerDisabled = false;
   private disposed = false;
 
   constructor(
@@ -231,7 +230,7 @@ export default class EmbeddedRManager {
   }
 
   public async warmUp(scriptPath: string): Promise<boolean> {
-    if (this.disposed || this.workerDisabled) return false;
+    if (this.disposed) return false;
 
     let worker: PersistentJsonWorker | null = null;
     try {
@@ -239,7 +238,7 @@ export default class EmbeddedRManager {
       await worker.start();
       return !this.disposed && this.worker === worker;
     } catch (error) {
-      this.disableWorker(worker, error);
+      this.resetWorker(worker, error);
       return false;
     }
   }
@@ -254,7 +253,7 @@ export default class EmbeddedRManager {
       );
     }
 
-    if (!this.workerDisabled && args[0]) {
+    if (args[0]) {
       let worker: PersistentJsonWorker | null = null;
       try {
         worker = this.getWorker(scriptPath);
@@ -262,7 +261,7 @@ export default class EmbeddedRManager {
       } catch (error) {
         if (!(error instanceof PersistentWorkerUnavailableError)) throw error;
         if (this.disposed) throw error;
-        this.disableWorker(worker, error);
+        this.resetWorker(worker, error);
       }
     }
 
@@ -416,19 +415,18 @@ export default class EmbeddedRManager {
     return this.worker;
   }
 
-  private disableWorker(
+  private resetWorker(
     failedWorker: PersistentJsonWorker | null,
     error: unknown
   ): void {
     if (this.disposed || this.worker !== failedWorker) return;
     console.warn(
-      'Persistent R renderer unavailable; using one-shot rendering.',
+      'Persistent R renderer stopped; it will be restarted on demand.',
       error
     );
     const worker = this.worker;
     this.worker = null;
     this.workerScriptPath = null;
-    this.workerDisabled = true;
     worker?.dispose();
   }
 

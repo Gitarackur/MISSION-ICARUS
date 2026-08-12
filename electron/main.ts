@@ -6,6 +6,7 @@ import path from "node:path";
 import { setupPythonHandlers } from "./src/python/ipc-handlers";
 import { setupRHandlers } from "./src/r/ipc-handlers";
 import { setupFSharpHandlers } from "./src/fsharp/ipc-handlers";
+import { setupStatisticsHandlers } from "./src/statistics/ipc-handlers";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 process.env.APP_ROOT = path.join(__dirname, "..");
@@ -151,6 +152,14 @@ try {
   console.log("F# handlers set up successfully");
 } catch (error) {
   console.error("Error setting up F# handlers:", error);
+}
+
+try {
+  console.log("Setting up statistical analysis handlers...");
+  setupStatisticsHandlers();
+  console.log("Statistical analysis handlers set up successfully");
+} catch (error) {
+  console.error("Error setting up statistical analysis handlers:", error);
 }
 
 app.on("window-all-closed", () => {

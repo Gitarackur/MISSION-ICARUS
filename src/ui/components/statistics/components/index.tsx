@@ -43,7 +43,7 @@ import {
   Database,
   Download,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
@@ -2815,7 +2815,7 @@ export const ImputeMultiple = ({
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
-  const { performAnalysis } = useStatisticalAnalysis();
+  const { performAnalysis, cancelAnalysis, progress } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
     () => getNumericColumnsOptimized(dataColumns, dataRows),
     [dataColumns, dataRows]
@@ -2830,6 +2830,7 @@ export const ImputeMultiple = ({
   const [seed, setSeed] = useState<number>(42);
   const [error, setError] = useState<string | null>(null);
   const [isImputing, setIsImputing] = useState(false);
+  const cancelRequested = useRef(false);
 
   const handleColumnSelection = (values: string[]) => {
     setSelectedDataSets(values);
@@ -2837,6 +2838,7 @@ export const ImputeMultiple = ({
 
   const runImputation = async () => {
     if (isImputing) return;
+    cancelRequested.current = false;
     setError(null);
     setIsImputing(true);
 
@@ -2878,9 +2880,9 @@ export const ImputeMultiple = ({
       const result = await performAnalysis(actionId, filteredData);
       onSuccess?.(result);
     } catch (err) {
-      setError(
-        "An error occurred during multiple imputation. Please check your data."
-      );
+      setError(cancelRequested.current
+        ? "Multiple imputation was cancelled."
+        : "An error occurred during multiple imputation. Please check your data.");
       console.error("Multiple imputation failed:", err);
       onError?.();
     } finally {
@@ -2889,6 +2891,11 @@ export const ImputeMultiple = ({
   };
 
   const isRunButtonDisabled = selectedDataSets.length < 2;
+
+  const cancelImputation = async () => {
+    cancelRequested.current = true;
+    await cancelAnalysis();
+  };
 
   return (
     <div className={containerClass}>
@@ -3009,7 +3016,33 @@ export const ImputeMultiple = ({
 
       {error && <div className="text-red-500 text-sm mb-4">{error}</div>}
 
-      <div className="flex justify-end">
+      {isImputing && progress && (
+        <div className="mb-4" aria-live="polite">
+          <div className="flex justify-between text-sm text-gray-600 mb-1">
+            <span>{progress.detail ?? "Running multiple imputation…"}</span>
+            {progress.value !== undefined && (
+              <span>{Math.round(progress.value * 100)}%</span>
+            )}
+          </div>
+          <div className="h-2 overflow-hidden rounded bg-gray-200">
+            <div
+              className="h-full bg-blue-600 transition-[width]"
+              style={{ width: `${Math.round((progress.value ?? 0) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2">
+        {isImputing && (
+          <button
+            type="button"
+            className={dangerButtonClass}
+            onClick={cancelImputation}
+          >
+            Cancel
+          </button>
+        )}
         <AnalysisSubmitButton
           disabled={isRunButtonDisabled || isImputing}
           onClick={runImputation}

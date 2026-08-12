@@ -86,6 +86,7 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 - Column-focused descriptive statistics such as mean, median, variance, standard deviation, counts, min, and max
 - Filtering, imputation, normalization, outlier detection, and matrix reshaping operations
 - Differential-expression oriented actions such as fold-change, t-test, ANOVA, LIMMA-related flows, and clustering/PCA analysis surfaces
+- Hybrid statistical execution: lightweight operations stay in a Web Worker, while MICE uses a warm NumPy-backed process with binary matrix transport, bounded parallel chains, progress, cancellation, and a TypeScript fallback
 - Statistical result handling mapped back to the appropriate UI views
 
 ### Visualization workspace

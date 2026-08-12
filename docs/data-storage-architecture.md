@@ -48,3 +48,27 @@ storage and inactive-session navigation substantially safer, but a single
 matrix larger than available process memory still requires a future streaming
 or out-of-process analysis engine. Full-session JSON export has the same
 in-memory boundary.
+
+### Hybrid statistical execution
+
+Lightweight statistics and transforms continue to run in the persistent
+renderer Web Worker. Multiple imputation is routed to a separate persistent
+Python analysis process when the bundled scientific runtime is available, with
+the TypeScript implementation retained as a compatibility fallback.
+
+The Python MICE path writes a column-major `Float64` input to a job-scoped
+temporary file and memory-maps it in NumPy. This avoids JSON serialization of
+large matrices. Its result uses the same binary layout and is converted to the
+application's row-oriented result only once. Independent imputation chains are
+parallelized in bounded batches, selected predictors are capped, PMM searches a
+sorted donor vector, and pooled results are accumulated without retaining all
+completed datasets in memory. Fixed seeds are pooled in stable chain order for
+reproducible output.
+
+Python, R, and F# renderer/analysis processes use a shared persistent
+newline-delimited JSON control protocol. Startup has a bounded readiness check,
+but calculations do not have a wall-clock deadline. The Python analysis worker
+emits progress and heartbeats, so its silence watchdog measures loss of worker
+activity rather than total calculation duration. Process exit and stream errors
+reject the active job, and the manager creates a fresh worker on the next
+request. MICE jobs can also be cancelled explicitly from the analysis panel.

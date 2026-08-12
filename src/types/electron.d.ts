@@ -6,10 +6,16 @@ declare global {
   interface Window {
     electron: {
       ipcRenderer: {
-        invoke(channel: string, data?: unknown): Promise<string>;
+        invoke<T = string>(channel: string, data?: unknown): Promise<T>;
         send(channel: string, data?: unknown): void;
-        on(channel: string, listener: (...args: unknown[]) => void): void;
-        off(channel: string, listener: (...args: unknown[]) => void): void;
+        on(
+          channel: string,
+          listener: (event: unknown, ...args: unknown[]) => void
+        ): void;
+        off(
+          channel: string,
+          listener: (event: unknown, ...args: unknown[]) => void
+        ): void;
       };
     };
   }

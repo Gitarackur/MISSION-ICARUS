@@ -50,6 +50,7 @@ NOFOLLOW_IMPORTS = [
 
 def renderer_source_hash() -> str:
     source_files = [COMMANDER]
+    source_files.extend((ROOT / "analysis").glob("*.py"))
     source_files.extend((ROOT / "commands").glob("*.py"))
     source_files.extend((ROOT / "core").glob("*.py"))
     digest = hashlib.sha256()

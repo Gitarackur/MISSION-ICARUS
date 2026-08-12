@@ -364,6 +364,9 @@ class PythonRendererBuilder extends RendererBuilder {
       path.join(PYTHON_ROOT, "Pipfile.lock"),
       path.join(PYTHON_ROOT, "build_nuitka.py"),
       path.join(PYTHON_ROOT, "commander.py"),
+      ...walkFiles(path.join(PYTHON_ROOT, "analysis"), (filePath) =>
+        filePath.endsWith(".py")
+      ),
       ...walkFiles(path.join(PYTHON_ROOT, "commands"), (filePath) =>
         filePath.endsWith(".py")
       ),
