@@ -33,7 +33,21 @@ assert.throws(
 );
 assert.equal(new PlatformCommandResolver("win32").resolve("npm"), "npm.cmd");
 assert.equal(new PlatformCommandResolver("win32").resolve("node"), "node");
+assert.equal(new PlatformCommandResolver("win32").requiresShell("npm"), true);
+assert.equal(new PlatformCommandResolver("win32").requiresShell("node"), false);
 assert.equal(new PlatformCommandResolver("linux").resolve("npm"), "npm");
+assert.equal(new PlatformCommandResolver("linux").requiresShell("npm"), false);
+
+if (process.platform === "win32") {
+  const windowsNpmSmokeTest = new CommandRetryRunner(
+    new CommandRetryPolicy({ attempts: 1, delayMs: 0 })
+  );
+  assert.equal(
+    await windowsNpmSmokeTest.run("npm", ["--version"]),
+    0,
+    "Windows can launch the npm.cmd shim through the retry runner"
+  );
+}
 
 for (const workflowPath of [
   "../.github/workflows/validate-release-builds.yml",

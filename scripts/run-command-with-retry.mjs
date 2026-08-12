@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+const WINDOWS_COMMAND_SHIMS = new Set(["npm", "npx", "pnpm", "yarn"]);
+
 export class CommandRetryPolicy {
   constructor({ attempts = 3, delayMs = 15_000 } = {}) {
     if (!Number.isInteger(attempts) || attempts < 1) {
@@ -27,11 +29,17 @@ export class PlatformCommandResolver {
   resolve(command) {
     if (
       this.platform === "win32" &&
-      ["npm", "npx", "pnpm", "yarn"].includes(command)
+      WINDOWS_COMMAND_SHIMS.has(command)
     ) {
       return `${command}.cmd`;
     }
     return command;
+  }
+
+  requiresShell(command) {
+    // Windows package-manager commands are .cmd shims. Node cannot execute
+    // them directly; cmd.exe must launch them.
+    return this.platform === "win32" && WINDOWS_COMMAND_SHIMS.has(command);
   }
 }
 
@@ -64,13 +72,16 @@ export class CommandRetryRunner {
   }
 
   runOnce(command, args) {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const child = spawn(this.commandResolver.resolve(command), args, {
         env: process.env,
         stdio: "inherit",
-        shell: false,
+        shell: this.commandResolver.requiresShell(command),
       });
-      child.once("error", reject);
+      child.once("error", (error) => {
+        console.error(`Command could not be started: ${error.message}`);
+        resolve(1);
+      });
       child.once("close", (code, signal) => {
         if (signal) {
           console.error(`Command terminated by signal ${signal}.`);
