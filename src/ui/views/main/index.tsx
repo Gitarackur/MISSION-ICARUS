@@ -1,8 +1,9 @@
-import React, { useState } from "react";
+import React, { startTransition, useState } from "react";
 import ProteomicsAnalysisHomeView from "@/ui/views/proteomics";
 import Sidebar from "@/ui/components/sidebar";
 import MatrixTab from "@/ui/components/header/matrix-tab";
 import CreateSession from "@/ui/components/session/create-session";
+import { MatrixDataLoader } from "@/ui/components/loading/matrix-data-loader";
 import { useIcarusAppSession } from "@/app-layer/session/hooks/useIcarusAppSession";
 import { tabTypes } from "@/ui/views/proteomics/types/index.types";
 import { ActivitySheet } from "./components/activity-sheet";
@@ -79,9 +80,13 @@ const IcarusApp: React.FC = () => {
   const openActivitySheet = () => setIsSheetOpen(true);
 
   const selectMatrix = (matrixId: string) => {
-    setActiveMatrixId(matrixId);
-    setActiveVisualizationId("");
-    setActiveProteomicsTab("import");
+    // Mark the selection update as a transition so the workspace re-render is
+    // interruptible and the UI stays responsive while a large new matrix loads.
+    startTransition(() => {
+      setActiveMatrixId(matrixId);
+      setActiveVisualizationId("");
+      setActiveProteomicsTab("import");
+    });
   };
 
   const selectActivityMatrix = (matrixId: string) => {
@@ -272,42 +277,50 @@ const IcarusApp: React.FC = () => {
           onOpenExport={() => setIsExportOpen(true)}
         />
 
-        {activeSession && activeMatrix && !isPreparingMatrixView ? (
-          <>
-            <ProteomicsAnalysisHomeView
-              originalDataRows={originalDataRows}
-              originalDataColumns={originalDataColumns}
-              selectedDataColumns={selectedDataColumns}
-              setSelectedDataColumns={setSelectedDataColumns}
-              saveActivityInWorkflow={saveActivityInWorkflow}
-              saveVisualizationInWorkflow={saveVisualizationInWorkflow}
-              sessionSourceMatrix={activeMatrix || sessionSourceMatrix}
-              activeMatrix={activeMatrix}
-              activeSession={activeSession}
-              openActivitySheet={openActivitySheet}
-              activeTab={activeProteomicsTab}
-              setActiveTab={setActiveProteomicsTab}
-              activeVisualizationId={activeVisualizationId}
-              setActiveVisualizationId={setActiveVisualizationId}
-            />
-            <ActivitySheet
-              activeMatrixId={activeMatrixId}
-              activeVisualizationId={activeVisualizationId || null}
-              activeSession={activeSession}
-              isOpen={isSheetOpen}
-              onClose={closeActivitySheet}
-              onMatrixSelect={selectActivityMatrix}
-              onVisualizationSelect={selectVisualization}
-              onMatrixDelete={requestMatrixDeletion}
-              onActivityDelete={requestActivityDeletion}
-              onVisualizationDelete={requestVisualizationDeletion}
-            />
-          </>
+        {activeSession && activeMatrix ? (
+          <div key={activeMatrix.id} className={styles.matrixViewShell()}>
+            {isProcessing || isPreparingMatrixView ? (
+              <MatrixDataLoader
+                label={
+                  isPreparingMatrixView
+                    ? "Preparing matrix view…"
+                    : "Loading matrix data…"
+                }
+                detail={
+                  isPreparingMatrixView
+                    ? "Rebuilding the preview in the background"
+                    : "Hydrating the matrix payload"
+                }
+              />
+            ) : (
+              <ProteomicsAnalysisHomeView
+                originalDataRows={originalDataRows}
+                originalDataColumns={originalDataColumns}
+                selectedDataColumns={selectedDataColumns}
+                setSelectedDataColumns={setSelectedDataColumns}
+                saveActivityInWorkflow={saveActivityInWorkflow}
+                saveVisualizationInWorkflow={saveVisualizationInWorkflow}
+                sessionSourceMatrix={activeMatrix || sessionSourceMatrix}
+                activeMatrix={activeMatrix}
+                activeSession={activeSession}
+                openActivitySheet={openActivitySheet}
+                activeTab={activeProteomicsTab}
+                setActiveTab={setActiveProteomicsTab}
+                activeVisualizationId={activeVisualizationId}
+                setActiveVisualizationId={setActiveVisualizationId}
+              />
+            )}
+          </div>
         ) : activeSession ? (
           <div className={styles.matrixLoadState()}>
-            {isProcessing || isPreparingMatrixView
-              ? "Loading matrix data…"
-              : "This session does not contain a loadable matrix."}
+            {isProcessing ? (
+              <MatrixDataLoader
+                label="Loading matrix data…"
+                detail="Hydrating the matrix payload"
+              />
+            ) : (
+              "This session does not contain a loadable matrix."
+            )}
           </div>
         ) : (
           <div className="w-full">
@@ -317,6 +330,21 @@ const IcarusApp: React.FC = () => {
               handleSessionCreate={handleCreateSessionAndOpenImport}
             />
           </div>
+        )}
+
+        {activeSession && activeMatrix && (
+          <ActivitySheet
+            activeMatrixId={activeMatrixId}
+            activeVisualizationId={activeVisualizationId || null}
+            activeSession={activeSession}
+            isOpen={isSheetOpen}
+            onClose={closeActivitySheet}
+            onMatrixSelect={selectActivityMatrix}
+            onVisualizationSelect={selectVisualization}
+            onMatrixDelete={requestMatrixDeletion}
+            onActivityDelete={requestActivityDeletion}
+            onVisualizationDelete={requestVisualizationDeletion}
+          />
         )}
       </main>
 

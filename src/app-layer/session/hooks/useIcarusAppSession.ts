@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  startTransition,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db } from "@/app-layer/database";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
@@ -173,17 +180,21 @@ export const useIcarusAppSession = () => {
     reconstructMatrixView(activeMatrix)
       .then((result) => {
         if (cancelled) return;
-        setOriginalDataRows(result.rows as ProteinRow[]);
-        setOriginalDataColumns(result.columns);
-        setSelectedDataColumns(result.columns);
+        // Painting thousands of rows is the heaviest render in the app. The
+        // preview data and its "ready" flag must commit together inside the
+        // same transition so the analysis view never mounts with missing rows
+        // (which would momentarily flash the empty-data state).
+        startTransition(() => {
+          setOriginalDataRows(result.rows as ProteinRow[]);
+          setOriginalDataColumns(result.columns);
+          setSelectedDataColumns(result.columns);
+          setIsPreparingMatrixView(false);
+        });
       })
       .catch((error) => {
-        if (!cancelled) {
-          reportOperationError("Unable to prepare matrix preview", error);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsPreparingMatrixView(false);
+        if (cancelled) return;
+        reportOperationError("Unable to prepare matrix preview", error);
+        setIsPreparingMatrixView(false);
       });
 
     return () => {

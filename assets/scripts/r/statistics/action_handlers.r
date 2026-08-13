@@ -138,6 +138,14 @@ WgcnaActionHandler <- setRefClass(
       if (!requireNamespace("WGCNA", quietly = TRUE)) {
         stop("R package 'WGCNA' is unavailable", call. = FALSE)
       }
+      # blockwiseModules resolves the correlation function ('cor') via string
+      # lookup, so the WGCNA implementation must be on the search path or
+      # stats::cor is called and rejects WGCNA-only arguments.
+      if (!"package:WGCNA" %in% search()) {
+        suppressPackageStartupMessages(
+          library(package = "WGCNA", quietly = TRUE, warn.conflicts = FALSE)
+        )
+      }
       input <- store$load(payload)
       if (ncol(input) < 4 || nrow(input) < 3) {
         stop(

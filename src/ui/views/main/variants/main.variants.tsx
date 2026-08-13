@@ -39,6 +39,8 @@ export const mainViewStyles = tv({
     storageAlertDismiss:
       "rounded px-2 py-1 font-medium hover:bg-amber-100 dark:hover:bg-amber-900",
     matrixLoadState:
-      "flex h-full min-h-80 items-center justify-center text-sm text-gray-500 dark:text-gray-400",
+      "flex h-full min-h-80 items-center justify-center text-sm text-gray-500 animate-[workspace-enter_0.3s_ease-out_both] dark:text-gray-400",
+    matrixViewShell:
+      "relative h-full animate-[content-fade_0.3s_ease-out]",
   },
 });
