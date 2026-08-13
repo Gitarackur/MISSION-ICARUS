@@ -46,7 +46,11 @@ repeat {
   request_id <- request$id
   tryCatch(
     {
-      result <- registry$run(request$payload, request_id)
+      result <- if (identical(request$payload$action, "capabilities")) {
+        registry$capabilities()
+      } else {
+        registry$run(request$payload, request_id)
+      }
       protocol$emit(list(id = request_id, ok = TRUE, result = result))
     },
     error = function(error) {

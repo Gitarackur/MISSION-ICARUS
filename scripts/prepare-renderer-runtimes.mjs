@@ -11,6 +11,7 @@ import {
 } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { R_RUNTIME_REQUIRED_PACKAGES } from "../assets/scripts/r/vendor-r-runtime.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("..", import.meta.url));
 const scriptPath = fileURLToPath(import.meta.url);
@@ -286,6 +287,10 @@ class RendererBuilder {
   build() {
     throw new Error("RendererBuilder subclasses must define build");
   }
+
+  isArtifactReady() {
+    return this.hasher.isNonEmptyFile(this.artifactPath);
+  }
 }
 
 class FSharpRendererBuilder extends RendererBuilder {
@@ -466,7 +471,7 @@ class PythonRendererBuilder extends RendererBuilder {
   }
 }
 
-class RRendererBuilder extends RendererBuilder {
+export class RRendererBuilder extends RendererBuilder {
   get key() {
     return "r";
   }
@@ -502,6 +507,18 @@ class RRendererBuilder extends RendererBuilder {
       "bin",
       `Rscript${this.target.nativeExecutableSuffix}`
     );
+  }
+
+  isArtifactReady() {
+    if (!super.isArtifactReady()) return false;
+
+    const packageList = R_RUNTIME_REQUIRED_PACKAGES.map((pkg) =>
+      JSON.stringify(pkg)
+    ).join(",");
+    return this.commandRunner.isAvailable(this.artifactPath, [
+      "-e",
+      `packages <- c(${packageList}); quit(status = if (all(vapply(packages, requireNamespace, logical(1), quietly = TRUE))) 0 else 1)`,
+    ]);
   }
 
   build() {
@@ -570,7 +587,9 @@ export class RendererRuntimePreparer {
 
     const buildStates = builders.map((builder) => {
       const rendererManifest = previousManifest?.renderers?.[builder.key];
-      const artifactHash = this.hasher.artifact(builder.artifactPath);
+      const artifactHash = builder.isArtifactReady()
+        ? this.hasher.artifact(builder.artifactPath)
+        : null;
       const current =
         !this.force &&
         previousManifest?.version === manifestVersion &&
@@ -610,9 +629,9 @@ export class RendererRuntimePreparer {
       console.log(`\nRebuilding ${builder.label}...`);
       builder.build();
 
-      if (!this.hasher.isNonEmptyFile(builder.artifactPath)) {
+      if (!builder.isArtifactReady()) {
         throw new Error(
-          `${builder.label} did not produce the expected artifact: ${builder.artifactPath}`
+          `${builder.label} did not produce a complete artifact: ${builder.artifactPath}`
         );
       }
     }

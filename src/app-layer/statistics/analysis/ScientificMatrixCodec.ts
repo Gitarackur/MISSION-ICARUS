@@ -2,9 +2,9 @@ import type {
   HeavyStatisticsRequest,
   HeavyStatisticsResponse,
   StatisticalAnalysisResult,
+  StatisticalInput,
 } from "@/domain/statistics/index.types";
 import { extractNumericData } from "@/app-layer/shared/utils";
-import type { StatisticalInput } from "./scientific-analysis.types";
 
 export class ScientificMatrixCodec {
   public encode(data: StatisticalInput): HeavyStatisticsRequest["matrix"] {

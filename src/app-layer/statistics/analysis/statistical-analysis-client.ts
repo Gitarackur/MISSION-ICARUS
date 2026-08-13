@@ -4,6 +4,8 @@ import type {
   RScientificAction,
   StatisticalAction,
   StatisticalAnalysisResult,
+  StatisticalInput,
+  StatisticalProgressListener,
 } from "@/domain/statistics/index.types";
 import type { TableMatrix } from "@/domain/workflow/main.types";
 import type {
@@ -27,12 +29,6 @@ import {
   shouldRunInPython,
   shouldRunInR,
 } from "./heavy-statistical-analysis-client";
-import type { StatisticalInput } from "./scientific-analysis.types";
-
-type StatisticalProgressCallback = (
-  progress?: number,
-  detail?: string
-) => void;
 
 /**
  * Persistent statistics worker client. The worker is kept warm between
@@ -48,7 +44,7 @@ export class StatisticalAnalysisClient {
   run(
     action: StatisticalAction,
     data: ProteinRow[] | Map<string, TableMatrix>,
-    onProgress?: StatisticalProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const { payload, transfer } = encodeStatisticalInput(data);
     const request: StatisticalAnalysisWorkerRequest = {
@@ -210,7 +206,7 @@ export class StatisticalAnalysisRouter {
   public async run(
     action: StatisticalAction,
     data: StatisticalInput,
-    onProgress?: StatisticalProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     if (shouldRunInR(action)) {
       return this.runInR(action, data, onProgress);
@@ -229,7 +225,7 @@ export class StatisticalAnalysisRouter {
   private async runInR(
     action: RScientificAction,
     data: StatisticalInput,
-    onProgress?: StatisticalProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const available = await this.scientificClient.isAvailable("r", action);
     if (!available) {
@@ -258,7 +254,7 @@ export class StatisticalAnalysisRouter {
   private async runInPython(
     action: PythonScientificAction,
     data: StatisticalInput,
-    onProgress?: StatisticalProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const available = await this.scientificClient.isAvailable("python");
     if (!available) {
@@ -291,7 +287,7 @@ export const statisticalAnalysisRouter = new StatisticalAnalysisRouter(
 export const runStatisticalAnalysisInWorker = (
   action: StatisticalAction,
   data: ProteinRow[] | Map<string, TableMatrix>,
-  onProgress?: StatisticalProgressCallback
+  onProgress?: StatisticalProgressListener
 ): Promise<StatisticalAnalysisResult> =>
   statisticalAnalysisRouter.run(action, data, onProgress);
 

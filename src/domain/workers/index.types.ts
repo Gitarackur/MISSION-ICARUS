@@ -27,8 +27,41 @@ export interface PendingWorkerRequest {
   operationName: string;
   /** Wall-clock time of the last activity (request sent, heartbeat, or response). */
   lastActivityAt: number;
-  onProgress?: (progress?: number, detail?: string) => void;
+  onProgress?: WorkerProgressListener;
 }
+
+export type WorkerProgressListener = (
+  progress?: number,
+  detail?: string
+) => void;
+
+export interface PersistentWorkerProtocolResponse {
+  type?: "ready" | "heartbeat" | "progress";
+  id?: number;
+  ok?: boolean;
+  result?: unknown;
+  error?: string;
+  progress?: number;
+  detail?: string;
+}
+
+export interface PendingPersistentWorkerRequest {
+  id: number;
+  payload: Record<string, unknown>;
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+  onProgress?: WorkerProgressListener;
+}
+
+export type PersistentWorkerQueuePolicy = "latest" | "fifo";
+
+export interface PersistentWorkerRequestOptions {
+  onProgress?: WorkerProgressListener;
+}
+
+export type PersistentWorkerFactory<TWorker, TArguments extends unknown[]> = (
+  ...args: TArguments
+) => TWorker;
 
 /** Periodic liveness signal sent by a worker while a long synchronous
  *  computation is running. The client only treats a request as timed out once

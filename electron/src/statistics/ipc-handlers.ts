@@ -3,13 +3,12 @@ import type {
   HeavyStatisticsRequest,
   HeavyStatisticsProgress,
   RScientificAction,
+  StatisticalProgressListener,
 } from "../../../src/domain/statistics/index.types";
 import { PythonStatisticsManager } from "./python-statistics-manager";
 import { RStatisticsManager } from "./r-statistics-manager";
 
 export const STATISTICS_PROGRESS_CHANNEL = "statistics:progress";
-
-type ProgressListener = (progress?: number, detail?: string) => void;
 
 export class StatisticsIpcController {
   public constructor(
@@ -67,7 +66,7 @@ export class StatisticsIpcController {
   private createProgressListener(
     event: IpcMainInvokeEvent,
     request: HeavyStatisticsRequest
-  ): ProgressListener {
+  ): StatisticalProgressListener {
     return (progress, detail) => {
       if (event.sender.isDestroyed()) return;
       const update: HeavyStatisticsProgress = {

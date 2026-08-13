@@ -16,6 +16,13 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 export const R_RUNTIME_DEPENDENCY_FIELDS = Object.freeze(["Depends", "Imports"]);
+export const R_RUNTIME_REQUIRED_PACKAGES = Object.freeze([
+  "jsonlite",
+  "ggplot2",
+  "ragg",
+  "limma",
+  "WGCNA",
+]);
 
 export class RRuntimeVendor {
   constructor(options = {}) {
@@ -29,13 +36,8 @@ export class RRuntimeVendor {
      */
     this.rootDir = options.rootDir ?? path.resolve(this.__dirname, "../../..");
 
-    this.requiredPackages = options.requiredPackages ?? [
-      "jsonlite",
-      "ggplot2",
-      "ragg",
-      "limma",
-      "WGCNA",
-    ];
+    this.requiredPackages =
+      options.requiredPackages ?? [...R_RUNTIME_REQUIRED_PACKAGES];
 
     this.runProcess = options.runProcess ?? execFileSync;
 

@@ -7,10 +7,7 @@ import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,
 } from '../core/PersistentJsonWorker';
-
-type PersistentJsonWorkerFactory = (
-  ...args: ConstructorParameters<typeof PersistentJsonWorker>
-) => PersistentJsonWorker;
+import type { PersistentWorkerFactory } from '../../../src/domain/workers/index.types';
 
 export default class EmbeddedRManager {
   private rScriptExe: string | null;
@@ -22,8 +19,10 @@ export default class EmbeddedRManager {
   private disposed = false;
 
   constructor(
-    private readonly workerFactory: PersistentJsonWorkerFactory = (...args) =>
-      new PersistentJsonWorker(...args)
+    private readonly workerFactory: PersistentWorkerFactory<
+      PersistentJsonWorker,
+      ConstructorParameters<typeof PersistentJsonWorker>
+    > = (...args) => new PersistentJsonWorker(...args)
   ) {
     this.bundledRuntimeRoot = this.findBundledRuntimeRoot();
     this.rScriptExe = this.findRScriptPath();

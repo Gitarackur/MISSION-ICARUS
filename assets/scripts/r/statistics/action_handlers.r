@@ -10,18 +10,28 @@ ScientificActionHandler <- setRefClass(
   "ScientificActionHandler",
   fields = list(
     action = "character",
+    required_package = "character",
     store = "ANY",
     protocol = "ANY"
   ),
   methods = list(
-    initialize = function(action_name, matrix_store, worker_protocol) {
+    initialize = function(
+      action_name,
+      package_name,
+      matrix_store,
+      worker_protocol
+    ) {
       action <<- action_name
+      required_package <<- package_name
       store <<- matrix_store
       protocol <<- worker_protocol
       callSuper()
     },
     run = function(payload, request_id) {
       stop(sprintf("Handler for '%s' is not implemented", action), call. = FALSE)
+    },
+    is_available = function() {
+      requireNamespace(required_package, quietly = TRUE)
     }
   )
 )
@@ -33,6 +43,7 @@ LimmaActionHandler <- setRefClass(
     initialize = function(matrix_store, worker_protocol) {
       callSuper(
         action_name = "limma",
+        package_name = "limma",
         matrix_store = matrix_store,
         worker_protocol = worker_protocol
       )
@@ -118,6 +129,7 @@ WgcnaActionHandler <- setRefClass(
     initialize = function(matrix_store, worker_protocol) {
       callSuper(
         action_name = "wgcna-analysis",
+        package_name = "WGCNA",
         matrix_store = matrix_store,
         worker_protocol = worker_protocol
       )

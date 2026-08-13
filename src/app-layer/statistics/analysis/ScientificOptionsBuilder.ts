@@ -1,6 +1,7 @@
 import type {
   PythonScientificAction,
   RScientificAction,
+  StatisticalInput,
 } from "@/domain/statistics/index.types";
 import {
   parseNumberMetadata,
@@ -13,7 +14,6 @@ import {
   LIMMA_DEFAULT_ADJUSTMENT_METHOD,
   LIMMA_TREATMENT_COLUMNS_KEY,
 } from "../constants";
-import type { StatisticalInput } from "./scientific-analysis.types";
 
 const DEFAULT_MAX_PREDICTORS = 30;
 
