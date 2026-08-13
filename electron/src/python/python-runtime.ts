@@ -21,6 +21,8 @@ export const getPythonRuntimeEnv = (): NodeJS.ProcessEnv => {
     XDG_CACHE_HOME: xdgCacheDir,
     FONTCONFIG_PATH: fontConfigDir,
     MPLBACKEND: "Agg",
+    PYTHONUTF8: "1",
+    PYTHONIOENCODING: "utf-8",
   };
 };
 

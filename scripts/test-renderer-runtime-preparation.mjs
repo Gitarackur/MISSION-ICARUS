@@ -105,6 +105,21 @@ assert.doesNotMatch(
   "the renderer build must keep Nuitka's compiler cache enabled"
 );
 
+const pythonRuntimeSource = readFileSync(
+  path.join("electron", "src", "python", "python-runtime.ts"),
+  "utf8"
+);
+assert.match(
+  pythonRuntimeSource,
+  /PYTHONUTF8:\s*["']1["']/,
+  "Python workers must decode JSON requests as UTF-8 even under an ASCII host locale"
+);
+assert.match(
+  pythonRuntimeSource,
+  /PYTHONIOENCODING:\s*["']utf-8["']/,
+  "Python worker standard streams must use UTF-8"
+);
+
 const rendererEnvironmentAction = readFileSync(
   path.join(
     ".github",
