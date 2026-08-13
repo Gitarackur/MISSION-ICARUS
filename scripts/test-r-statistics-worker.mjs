@@ -86,11 +86,11 @@ const waitUntilReady = async () => {
   }
   assert.equal(ready, true, `R statistics worker did not start: ${stderr}`);
 };
-const runAction = async (action, options) => {
+const requestWorker = async (payload) => {
   const id = nextId++;
   const resultPromise = new Promise((resolve, reject) => {
     const timeout = setTimeout(
-      () => reject(new Error(`${action} timed out: ${stderr}`)),
+      () => reject(new Error(`${payload.action} timed out: ${stderr}`)),
       120_000
     );
     timeout.unref();
@@ -99,23 +99,32 @@ const runAction = async (action, options) => {
   worker.stdin.write(
     `${JSON.stringify({
       id,
-      payload: {
-        action,
-        inputPath,
-        outputPath,
-        columnNames: names,
-        rowCount: rows,
-        ...options,
-      },
+      payload,
     })}\n`
   );
-  const manifest = await resultPromise;
+  return resultPromise;
+};
+const runAction = async (action, options) => {
+  const manifest = await requestWorker({
+    action,
+    inputPath,
+    outputPath,
+    columnNames: names,
+    rowCount: rows,
+    ...options,
+  });
   const output = await readFile(outputPath);
   return { manifest, output };
 };
 
 try {
   await waitUntilReady();
+  const capabilities = await requestWorker({ action: "capabilities" });
+  const expectedActions = [
+    ...(packageAvailable("limma") ? ["limma"] : []),
+    ...(packageAvailable("WGCNA") ? ["wgcna-analysis"] : []),
+  ];
+  assert.deepEqual([...capabilities.actions].sort(), expectedActions.sort());
   await assert.rejects(
     runAction("unsupported-action", {}),
     /Unsupported R scientific action/

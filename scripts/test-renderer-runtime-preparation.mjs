@@ -12,9 +12,11 @@ import {
   getPythonTransientBuildStatePaths,
   getRendererBuildOrder,
   getRuntimeTarget,
+  RRendererBuilder,
 } from "./prepare-renderer-runtimes.mjs";
 import {
   R_RUNTIME_DEPENDENCY_FIELDS,
+  R_RUNTIME_REQUIRED_PACKAGES,
   RRuntimeVendor,
 } from "../assets/scripts/r/vendor-r-runtime.mjs";
 
@@ -58,6 +60,24 @@ assert.equal(
 
 assert.deepEqual(getRendererBuildOrder("win32"), ["fsharp", "r", "python"]);
 assert.deepEqual(getRendererBuildOrder("linux"), ["fsharp", "python", "r"]);
+
+let rRuntimeProbe;
+const rRendererBuilder = new RRendererBuilder({
+  target: windowsTarget,
+  hasher: { isNonEmptyFile: () => true },
+  commandRunner: {
+    isAvailable: (command, args) => {
+      rRuntimeProbe = { command, args };
+      return true;
+    },
+  },
+});
+assert.equal(rRendererBuilder.isArtifactReady(), true);
+assert.match(rRuntimeProbe.command, /runtime[\\/]r[\\/]windows-x64[\\/]bin[\\/]Rscript\.exe$/);
+assert.equal(rRuntimeProbe.args[0], "-e");
+for (const packageName of R_RUNTIME_REQUIRED_PACKAGES) {
+  assert.match(rRuntimeProbe.args[1], new RegExp(`"${packageName}"`));
+}
 
 const pythonRoot = path.join("assets", "scripts", "python");
 const pythonBinDirectory = path.join(pythonRoot, "bin");
@@ -116,6 +136,13 @@ assert.throws(
 );
 
 assert.deepEqual(R_RUNTIME_DEPENDENCY_FIELDS, ["Depends", "Imports"]);
+assert.deepEqual(R_RUNTIME_REQUIRED_PACKAGES, [
+  "jsonlite",
+  "ggplot2",
+  "ragg",
+  "limma",
+  "WGCNA",
+]);
 
 class CapturingRRuntimeVendor extends RRuntimeVendor {
   runR(_rscript, expression) {
@@ -138,13 +165,7 @@ assert.equal(transportVendor.runR("Rscript", "cat('transport-ok')"), "transport-
 assert.equal(capturedRScript, "cat('transport-ok')\n");
 
 const rVendor = new CapturingRRuntimeVendor();
-assert.deepEqual(rVendor.requiredPackages, [
-  "jsonlite",
-  "ggplot2",
-  "ragg",
-  "limma",
-  "WGCNA",
-]);
+assert.deepEqual(rVendor.requiredPackages, R_RUNTIME_REQUIRED_PACKAGES);
 rVendor.getRequiredPackagesWithDependencies("Rscript");
 
 assert.match(

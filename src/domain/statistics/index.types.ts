@@ -1,4 +1,9 @@
-import { TableColumns, TableMatrices } from "../workflow/main.types";
+import type { ProteinRow } from "@/domain/proteins/index.types";
+import type {
+  TableColumns,
+  TableMatrices,
+  TableMatrix,
+} from "@/domain/workflow/main.types";
 
 export interface ColumnStats {
   mean: number;
@@ -448,6 +453,12 @@ export type PythonScientificAction =
 
 export type RScientificAction = "limma" | "wgcna-analysis";
 export type ScientificAction = PythonScientificAction | RScientificAction;
+export type ScientificBackend = "python" | "r";
+export type StatisticalInput = ProteinRow[] | Map<string, TableMatrix>;
+export type StatisticalProgressListener = (
+  progress?: number,
+  detail?: string
+) => void;
 
 /** Binary column-major request used by an out-of-process scientific engine. */
 export interface HeavyStatisticsRequest {
@@ -474,6 +485,19 @@ export interface HeavyStatisticsResponse {
   metadata: Record<string, unknown> & {
     executionBackend: string;
   };
+}
+
+export type ScientificWorkerManifest = Pick<
+  HeavyStatisticsResponse,
+  "outputColumnNames" | "outputRowCount" | "granularity" | "metadata"
+> & {
+  outputColumnCount: number;
+};
+
+export interface ScientificWorkerCapabilities<
+  TAction extends ScientificAction = ScientificAction,
+> {
+  actions: TAction[];
 }
 
 export type HeavyMiceStatisticsRequest = HeavyStatisticsRequest & {

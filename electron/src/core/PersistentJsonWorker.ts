@@ -4,30 +4,12 @@ import {
   type SpawnOptionsWithoutStdio,
 } from "node:child_process";
 import { createInterface, type Interface } from "node:readline";
-
-type WorkerResponse = {
-  type?: "ready" | "heartbeat" | "progress";
-  id?: number;
-  ok?: boolean;
-  result?: unknown;
-  error?: string;
-  progress?: number;
-  detail?: string;
-};
-
-type PendingRequest = {
-  id: number;
-  payload: Record<string, unknown>;
-  resolve: (value: unknown) => void;
-  reject: (error: Error) => void;
-  onProgress?: (progress?: number, detail?: string) => void;
-};
-
-export type PersistentWorkerQueuePolicy = "latest" | "fifo";
-
-export type PersistentWorkerRequestOptions = {
-  onProgress?: (progress?: number, detail?: string) => void;
-};
+import type {
+  PendingPersistentWorkerRequest,
+  PersistentWorkerProtocolResponse,
+  PersistentWorkerQueuePolicy,
+  PersistentWorkerRequestOptions,
+} from "@/domain/workers/index.types";
 
 export class PersistentWorkerUnavailableError extends Error {
   constructor(message: string) {
@@ -60,8 +42,8 @@ export class PersistentJsonWorker {
   private ready = false;
   private disposed = false;
   private nextRequestId = 1;
-  private activeRequest: PendingRequest | null = null;
-  private queuedRequests: PendingRequest[] = [];
+  private activeRequest: PendingPersistentWorkerRequest | null = null;
+  private queuedRequests: PendingPersistentWorkerRequest[] = [];
   private requestTimer: NodeJS.Timeout | null = null;
   private recentStderr = "";
 
@@ -162,7 +144,7 @@ export class PersistentJsonWorker {
     await this.start();
 
     return new Promise<T>((resolve, reject) => {
-      const request: PendingRequest = {
+      const request: PendingPersistentWorkerRequest = {
         id: this.nextRequestId++,
         payload,
         resolve: (value) => resolve(value as T),
@@ -205,7 +187,7 @@ export class PersistentJsonWorker {
     this.startReject = null;
   }
 
-  private dispatch(request: PendingRequest): void {
+  private dispatch(request: PendingPersistentWorkerRequest): void {
     if (!this.process || !this.ready) {
       request.reject(
         new PersistentWorkerUnavailableError(`${this.label} worker is not ready.`)
@@ -235,7 +217,7 @@ export class PersistentJsonWorker {
   }
 
   private armRequestSilenceTimer(
-    request: PendingRequest,
+    request: PendingPersistentWorkerRequest,
     workerProcess: ChildProcessWithoutNullStreams
   ): void {
     this.clearRequestTimer();
@@ -255,9 +237,9 @@ export class PersistentJsonWorker {
   }
 
   private handleLine(line: string): void {
-    let response: WorkerResponse;
+    let response: PersistentWorkerProtocolResponse;
     try {
-      response = JSON.parse(line) as WorkerResponse;
+      response = JSON.parse(line) as PersistentWorkerProtocolResponse;
     } catch {
       return;
     }

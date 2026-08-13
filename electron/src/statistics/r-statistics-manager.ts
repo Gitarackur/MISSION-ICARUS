@@ -1,7 +1,8 @@
 import type {
   RScientificAction,
   ScientificAction,
-} from "../../../src/domain/statistics/index.types";
+  ScientificWorkerCapabilities,
+} from "@/domain/statistics/index.types";
 import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,
@@ -16,18 +17,16 @@ const REQUIRED_PACKAGE: Record<RScientificAction, string> = {
 };
 
 export class RStatisticsManager extends BinaryScientificWorkerManager<RScientificAction> {
-  private readonly runtime = new EmbeddedRManager();
+  private availableActions: ReadonlySet<RScientificAction> | null = null;
 
-  public constructor() {
+  public constructor(
+    private readonly runtime: EmbeddedRManager = new EmbeddedRManager()
+  ) {
     super("icarus-r-statistics-", "R statistical analysis");
   }
 
   public warmUp(action: RScientificAction): Promise<boolean> {
     return this.warmUpAction(action);
-  }
-
-  public isAvailable(action: RScientificAction): boolean {
-    return this.isRuntimeAvailable(action);
   }
 
   protected supportsAction(
@@ -37,11 +36,21 @@ export class RStatisticsManager extends BinaryScientificWorkerManager<RScientifi
   }
 
   protected isRuntimeAvailable(action: RScientificAction): boolean {
-    return (
-      this.runtime.isRAvailable() &&
-      this.runtime.isPackageInstalled("jsonlite") &&
-      this.runtime.isPackageInstalled(REQUIRED_PACKAGE[action])
-    );
+    void action;
+    return this.runtime.isRAvailable();
+  }
+
+  protected async isWorkerActionAvailable(
+    action: RScientificAction
+  ): Promise<boolean> {
+    if (!this.availableActions) {
+      const capabilities =
+        await this.requestWorker<ScientificWorkerCapabilities<RScientificAction>>({
+          payload: { action: "capabilities" },
+        });
+      this.availableActions = new Set(capabilities.actions);
+    }
+    return this.availableActions.has(action);
   }
 
   protected createWorker(): PersistentJsonWorker {
@@ -73,5 +82,9 @@ export class RStatisticsManager extends BinaryScientificWorkerManager<RScientifi
 
   protected onDispose(): void {
     this.runtime.dispose();
+  }
+
+  protected onWorkerReset(): void {
+    this.availableActions = null;
   }
 }

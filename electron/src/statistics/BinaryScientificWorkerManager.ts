@@ -5,18 +5,13 @@ import type {
   HeavyStatisticsRequest,
   HeavyStatisticsResponse,
   ScientificAction,
-} from "../../../src/domain/statistics/index.types";
+  ScientificWorkerManifest,
+  StatisticalProgressListener,
+} from "@/domain/statistics/index.types";
 import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,
 } from "../core/PersistentJsonWorker";
-
-type ScientificManifest = Pick<
-  HeavyStatisticsResponse,
-  "outputColumnNames" | "outputRowCount" | "granularity" | "metadata"
-> & { outputColumnCount: number };
-
-type ProgressListener = (progress?: number, detail?: string) => void;
 
 /**
  * Template-method implementation shared by binary scientific runtimes.
@@ -43,23 +38,21 @@ export abstract class BinaryScientificWorkerManager<
   ): Record<string, unknown>;
   protected abstract unavailableMessage(action: TAction): string;
 
+  protected async isWorkerActionAvailable(action: TAction): Promise<boolean> {
+    void action;
+    return true;
+  }
+
   protected async warmUpAction(action: TAction): Promise<boolean> {
-    if (!this.isRuntimeAvailable(action)) return false;
-    try {
-      await this.getWorker().start();
-      return true;
-    } catch (error) {
-      this.resetWorker(error);
-      return false;
-    }
+    return this.ensureActionAvailable(action);
   }
 
   public async run(
     request: HeavyStatisticsRequest,
-    onProgress?: ProgressListener
+    onProgress?: StatisticalProgressListener
   ): Promise<HeavyStatisticsResponse> {
     const action = this.validateRequest(request);
-    if (!this.isRuntimeAvailable(action)) {
+    if (!(await this.ensureActionAvailable(action))) {
       throw new Error(this.unavailableMessage(action));
     }
 
@@ -202,11 +195,11 @@ export abstract class BinaryScientificWorkerManager<
     jobId: string,
     action: TAction,
     payload: Record<string, unknown>,
-    onProgress?: ProgressListener
-  ): Promise<ScientificManifest> {
+    onProgress?: StatisticalProgressListener
+  ): Promise<ScientificWorkerManifest> {
     for (let attempt = 0; attempt < 2; attempt += 1) {
       try {
-        return await this.getWorker().request<ScientificManifest>(
+        return await this.getWorker().request<ScientificWorkerManifest>(
           this.createWorkerMessage(action, payload),
           { onProgress }
         );
@@ -223,7 +216,7 @@ export abstract class BinaryScientificWorkerManager<
     );
   }
 
-  private validateManifest(manifest: ScientificManifest): void {
+  private validateManifest(manifest: ScientificWorkerManifest): void {
     if (
       !Number.isInteger(manifest.outputColumnCount) ||
       manifest.outputColumnCount < 1 ||
@@ -244,6 +237,23 @@ export abstract class BinaryScientificWorkerManager<
     return this.worker;
   }
 
+  protected requestWorker<T>(payload: Record<string, unknown>): Promise<T> {
+    return this.getWorker().request<T>(payload);
+  }
+
+  protected onWorkerReset(): void {}
+
+  private async ensureActionAvailable(action: TAction): Promise<boolean> {
+    if (!this.isRuntimeAvailable(action)) return false;
+    try {
+      await this.getWorker().start();
+      return await this.isWorkerActionAvailable(action);
+    } catch (error) {
+      this.resetWorker(error);
+      return false;
+    }
+  }
+
   private resetWorker(error: unknown): void {
     console.warn(
       `${this.backendLabel} worker stopped; it will be restarted on demand.`,
@@ -251,5 +261,6 @@ export abstract class BinaryScientificWorkerManager<
     );
     this.worker?.dispose();
     this.worker = null;
+    this.onWorkerReset();
   }
 }

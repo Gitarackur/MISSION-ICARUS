@@ -3,8 +3,8 @@ import type {
   RScientificAction,
   ScientificAction,
   StatisticalAction,
+  StatisticalInput,
 } from "@/domain/statistics/index.types";
-import type { StatisticalInput } from "./scientific-analysis.types";
 
 const PYTHON_ACTIONS = new Set<PythonScientificAction>([
   "impute-multiple",

@@ -26,6 +26,16 @@ ScientificActionRegistry <- setRefClass(
         )
       }
       handler$run(payload, request_id)
+    },
+    capabilities = function() {
+      available <- names(handlers)[vapply(
+        handlers,
+        function(handler) handler$is_available(),
+        logical(1)
+      )]
+      # AsIs preserves the array shape when exactly one action is available;
+      # the worker protocol otherwise auto-unboxes length-one vectors.
+      list(actions = I(unname(available)))
     }
   )
 )

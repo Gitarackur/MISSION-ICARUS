@@ -4,18 +4,16 @@ import type {
   HeavyStatisticsResponse,
   PythonScientificAction,
   RScientificAction,
+  ScientificBackend,
   ScientificAction,
   StatisticalAction,
   StatisticalAnalysisResult,
+  StatisticalInput,
+  StatisticalProgressListener,
 } from "@/domain/statistics/index.types";
 import { ScientificExecutionPolicy, scientificExecutionPolicy } from "./ScientificExecutionPolicy";
 import { ScientificMatrixCodec } from "./ScientificMatrixCodec";
 import { ScientificOptionsBuilder } from "./ScientificOptionsBuilder";
-import type {
-  ProgressCallback,
-  ScientificBackend,
-  StatisticalInput,
-} from "./scientific-analysis.types";
 
 const PROGRESS_CHANNEL = "statistics:progress";
 
@@ -55,7 +53,7 @@ export class HeavyStatisticalAnalysisClient {
   public async runPython(
     action: PythonScientificAction,
     data: StatisticalInput,
-    onProgress?: ProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const matrix = this.matrixCodec.encode(data);
     return this.runRequest(
@@ -78,7 +76,7 @@ export class HeavyStatisticalAnalysisClient {
   public async runR(
     action: RScientificAction,
     data: StatisticalInput,
-    onProgress?: ProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const matrix = this.matrixCodec.encode(data);
     return this.runRequest(
@@ -104,7 +102,7 @@ export class HeavyStatisticalAnalysisClient {
   private async runRequest(
     backend: ScientificBackend,
     request: HeavyStatisticsRequest,
-    onProgress?: ProgressCallback
+    onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const progressListener = (_event: unknown, ...args: unknown[]) => {
       const update = args[0] as HeavyStatisticsProgress | undefined;
