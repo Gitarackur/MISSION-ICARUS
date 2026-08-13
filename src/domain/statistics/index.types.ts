@@ -1,9 +1,9 @@
-import type { ProteinRow } from "../proteins/index.types";
+import type { ProteinRow } from "@/domain/proteins/index.types";
 import type {
   TableColumns,
   TableMatrices,
   TableMatrix,
-} from "../workflow/main.types";
+} from "@/domain/workflow/main.types";
 
 export interface ColumnStats {
   mean: number;

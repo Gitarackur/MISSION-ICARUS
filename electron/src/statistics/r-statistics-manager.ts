@@ -2,7 +2,7 @@ import type {
   RScientificAction,
   ScientificAction,
   ScientificWorkerCapabilities,
-} from "../../../src/domain/statistics/index.types";
+} from "@/domain/statistics/index.types";
 import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,

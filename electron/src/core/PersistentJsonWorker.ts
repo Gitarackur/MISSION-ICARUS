@@ -9,7 +9,7 @@ import type {
   PersistentWorkerProtocolResponse,
   PersistentWorkerQueuePolicy,
   PersistentWorkerRequestOptions,
-} from "../../../src/domain/workers/index.types";
+} from "@/domain/workers/index.types";
 
 export class PersistentWorkerUnavailableError extends Error {
   constructor(message: string) {

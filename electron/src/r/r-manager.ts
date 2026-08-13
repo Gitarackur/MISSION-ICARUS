@@ -7,7 +7,7 @@ import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,
 } from '../core/PersistentJsonWorker';
-import type { PersistentWorkerFactory } from '../../../src/domain/workers/index.types';
+import type { PersistentWorkerFactory } from '@/domain/workers/index.types';
 
 export default class EmbeddedRManager {
   private rScriptExe: string | null;

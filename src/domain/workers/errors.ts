@@ -1,4 +1,4 @@
-import type { WorkerFailureCode } from "./index.types";
+import type { WorkerFailureCode } from "@/domain/workers/index.types";
 
 export class WorkerExecutionError extends Error {
   readonly retryable = true;

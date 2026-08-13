@@ -4,7 +4,7 @@ import type {
   HeavyStatisticsProgress,
   RScientificAction,
   StatisticalProgressListener,
-} from "../../../src/domain/statistics/index.types";
+} from "@/domain/statistics/index.types";
 import { PythonStatisticsManager } from "./python-statistics-manager";
 import { RStatisticsManager } from "./r-statistics-manager";
 

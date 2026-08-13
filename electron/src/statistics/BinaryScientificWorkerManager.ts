@@ -7,7 +7,7 @@ import type {
   ScientificAction,
   ScientificWorkerManifest,
   StatisticalProgressListener,
-} from "../../../src/domain/statistics/index.types";
+} from "@/domain/statistics/index.types";
 import {
   PersistentJsonWorker,
   PersistentWorkerUnavailableError,

@@ -2,7 +2,7 @@ import os from "node:os";
 import type {
   PythonScientificAction,
   ScientificAction,
-} from "../../../src/domain/statistics/index.types";
+} from "@/domain/statistics/index.types";
 import { PersistentJsonWorker } from "../core/PersistentJsonWorker";
 import {
   isPythonRuntimeAvailable,
