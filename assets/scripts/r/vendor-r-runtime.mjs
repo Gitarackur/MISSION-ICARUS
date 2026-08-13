@@ -54,6 +54,15 @@ export class RRuntimeVendor {
         `${this.platformName()}-${this.archName()}`
       );
 
+    this.packageLibraryDir =
+      options.packageLibraryDir ??
+      path.join(
+        this.rootDir,
+        ".cache",
+        "r-packages",
+        `${this.platformName()}-${this.archName()}`
+      );
+
     this.runtimePrunePaths = [
       "doc",
       "tests",
@@ -140,7 +149,16 @@ export class RRuntimeVendor {
     ];
   }
 
-  runR(rscript, expression) {
+  rExecutionEnvironment() {
+    return {
+      ...process.env,
+      R_LIBS_USER: [this.packageLibraryDir, process.env.R_LIBS_USER]
+        .filter(Boolean)
+        .join(path.delimiter),
+    };
+  }
+
+  runR(rscript, expression, { inheritStdio = false } = {}) {
     const temporaryDirectory = mkdtempSync(
       path.join(os.tmpdir(), "icarus-r-vendor-")
     );
@@ -148,37 +166,94 @@ export class RRuntimeVendor {
 
     try {
       writeFileSync(scriptPath, `${expression}\n`);
-      return this.runProcess(rscript, [scriptPath], {
-        encoding: "utf8",
-        env: process.env,
-      }).trim();
+      const output = this.runProcess(rscript, [scriptPath], {
+        ...(inheritStdio ? { stdio: "inherit" } : { encoding: "utf8" }),
+        env: this.rExecutionEnvironment(),
+      });
+      return typeof output === "string" ? output.trim() : "";
     } finally {
       rmSync(temporaryDirectory, { recursive: true, force: true });
     }
   }
 
   assertPackages(rscript) {
+    const missing = this.getMissingPackages(rscript);
+    if (missing.length > 0) {
+      throw new Error(`Missing required R packages: ${missing.join(", ")}`);
+    }
+  }
+
+  getMissingPackages(rscript) {
     const expression = `
       pkgs <- c(${this.requiredPackages.map((pkg) => `"${pkg}"`).join(",")});
       missing <- pkgs[!vapply(pkgs, requireNamespace, logical(1), quietly = TRUE)];
-
-      if (length(missing) > 0) {
-        stop(
-          sprintf("Missing required R packages: %s", paste(missing, collapse = ", ")),
-          call. = FALSE
-        );
-      }
+      cat(paste(missing, collapse = "\\n"));
     `;
 
-    this.runR(rscript, expression);
+    return this.runR(rscript, expression)
+      .split("\n")
+      .map((value) => value.trim())
+      .filter(Boolean);
   }
 
   hasRequiredPackages(rscript) {
     try {
-      this.assertPackages(rscript);
-      return true;
+      return this.getMissingPackages(rscript).length === 0;
     } catch {
       return false;
+    }
+  }
+
+  installRequiredPackages(rscript, missingPackages) {
+    mkdirSync(this.packageLibraryDir, { recursive: true });
+    const packageLibrary = JSON.stringify(
+      this.pathToPosix(this.packageLibraryDir)
+    );
+    const packages = missingPackages
+      .map((pkg) => JSON.stringify(pkg))
+      .join(",");
+    const expression = `
+      local_library <- ${packageLibrary};
+      dir.create(local_library, recursive = TRUE, showWarnings = FALSE);
+      .libPaths(unique(c(local_library, .libPaths())));
+      cran_repository <- "https://cloud.r-project.org";
+
+      if (!requireNamespace("BiocManager", quietly = TRUE)) {
+        install.packages(
+          "BiocManager",
+          lib = local_library,
+          repos = cran_repository,
+          dependencies = c("Depends", "Imports", "LinkingTo")
+        );
+      }
+
+      BiocManager::install(
+        c(${packages}),
+        lib = local_library,
+        ask = FALSE,
+        update = FALSE,
+        dependencies = c("Depends", "Imports", "LinkingTo")
+      );
+    `;
+
+    console.log(
+      `Installing missing R runtime packages into ${this.packageLibraryDir}: ${missingPackages.join(", ")}`
+    );
+    this.runR(rscript, expression, { inheritStdio: true });
+  }
+
+  ensureRequiredPackages(rscript) {
+    const missingPackages = this.getMissingPackages(rscript);
+    if (missingPackages.length === 0) return;
+
+    try {
+      this.installRequiredPackages(rscript, missingPackages);
+      this.assertPackages(rscript);
+    } catch (error) {
+      throw new Error(
+        `Unable to provision required R packages (${missingPackages.join(", ")}) in ${this.packageLibraryDir}. Check the R package installation output and network connection.`,
+        { cause: error }
+      );
     }
   }
 
@@ -616,7 +691,7 @@ exec "$R_HOME_DIR/bin/exec/R" --slave --no-restore --file="$script" --args "$@"
       "cat(normalizePath(R.home(), mustWork = TRUE))"
     );
 
-    this.assertPackages(rscript);
+    this.ensureRequiredPackages(rscript);
 
     if (!existsSync(rHome)) {
       throw new Error(`R_HOME does not exist: ${rHome}`);

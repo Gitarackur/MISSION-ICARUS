@@ -59,7 +59,7 @@ assert.equal(
 );
 
 assert.deepEqual(getRendererBuildOrder("win32"), ["fsharp", "r", "python"]);
-assert.deepEqual(getRendererBuildOrder("linux"), ["fsharp", "python", "r"]);
+assert.deepEqual(getRendererBuildOrder("linux"), ["fsharp", "r", "python"]);
 
 let rRuntimeProbe;
 const rRendererBuilder = new RRendererBuilder({
@@ -163,6 +163,37 @@ const transportVendor = new RRuntimeVendor({
 
 assert.equal(transportVendor.runR("Rscript", "cat('transport-ok')"), "transport-ok");
 assert.equal(capturedRScript, "cat('transport-ok')\n");
+assert.match(
+  transportVendor.rExecutionEnvironment().R_LIBS_USER,
+  /\.cache[\\/]r-packages[\\/]/
+);
+
+const bootstrapRoot = mkdtempSync(
+  path.join(os.tmpdir(), "icarus-r-bootstrap-test-")
+);
+let bootstrapExpression;
+let bootstrapOptions;
+try {
+  const bootstrapVendor = new RRuntimeVendor({
+    rootDir: bootstrapRoot,
+    runProcess: (_command, args, options) => {
+      bootstrapExpression = readFileSync(args[0], "utf8");
+      bootstrapOptions = options;
+    },
+  });
+  bootstrapVendor.installRequiredPackages("Rscript", ["limma", "WGCNA"]);
+  assert.match(bootstrapExpression, /install\.packages\(/);
+  assert.match(bootstrapExpression, /BiocManager::install\(/);
+  assert.match(bootstrapExpression, /"limma","WGCNA"/);
+  assert.match(
+    bootstrapExpression,
+    /dependencies = c\("Depends", "Imports", "LinkingTo"\)/
+  );
+  assert.equal(bootstrapOptions.stdio, "inherit");
+  assert.match(bootstrapOptions.env.R_LIBS_USER, /\.cache[\\/]r-packages[\\/]/);
+} finally {
+  rmSync(bootstrapRoot, { recursive: true, force: true });
+}
 
 const rVendor = new CapturingRRuntimeVendor();
 assert.deepEqual(rVendor.requiredPackages, R_RUNTIME_REQUIRED_PACKAGES);
