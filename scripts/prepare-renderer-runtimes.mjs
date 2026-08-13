@@ -30,8 +30,7 @@ const RUNTIME_PREFIXES = Object.freeze({
 });
 
 const RENDERER_BUILD_ORDER = Object.freeze({
-  win32: ["fsharp", "r", "python"],
-  default: ["fsharp", "python", "r"],
+  default: ["fsharp", "r", "python"],
 });
 
 const PYTHON_ROOT = path.join(repositoryRoot, "assets", "scripts", "python");
