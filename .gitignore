@@ -145,3 +145,6 @@ electron-builder.env
 
 # TypeScript
 *.tsbuildinfo
+
+# Internal docs (kept out of GitHub until pre-release work is complete)
+docs/internal/
