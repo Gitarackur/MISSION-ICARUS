@@ -8,6 +8,12 @@ const MISSING_VALUE_TOKENS = new Set([
   "-",
 ]);
 
+const PLAIN_NUMBER_RE = /^[+-]?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
+
+const LOCALIZED_NUMBER_CANDIDATE_RE = /^[+-]?[0-9.,eE\s\u00a0']*$/;
+
+const NUMBER_LITERAL_PREFIX_RE = /^[+-]?0[xXoObB]/;
+
 const normalizeNumericToken = (value: string) =>
   value
     .trim()
@@ -36,8 +42,20 @@ export const isMissingValue = (value: unknown): boolean => {
   if (value === null || value === undefined) return true;
   if (typeof value === "number") return !Number.isFinite(value);
 
-  const normalized = normalizeNumericToken(String(value)).toLowerCase();
-  return MISSING_VALUE_TOKENS.has(normalized);
+  const stringValue = String(value);
+  const trimmed = stringValue.trim();
+
+  if (MISSING_VALUE_TOKENS.has(trimmed.toLowerCase())) {
+    return true;
+  }
+
+  if (trimmed !== stringValue || /[\s']/.test(trimmed)) {
+    return MISSING_VALUE_TOKENS.has(
+      normalizeNumericToken(stringValue).toLowerCase()
+    );
+  }
+
+  return false;
 };
 
 export const looksNumericLike = (value: unknown): boolean => {
@@ -56,6 +74,18 @@ export const parseLocalizedNumber = (value: unknown): number | null => {
   }
 
   if (typeof value !== "string") {
+    return null;
+  }
+
+  if (PLAIN_NUMBER_RE.test(value)) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  if (
+    !LOCALIZED_NUMBER_CANDIDATE_RE.test(value) &&
+    !NUMBER_LITERAL_PREFIX_RE.test(value)
+  ) {
     return null;
   }
 
@@ -103,6 +133,11 @@ export const toNumberIfPossible = (
   value: string | undefined
 ): number | string => {
   if (value == null) return "N/A";
+
+  if (PLAIN_NUMBER_RE.test(value)) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : value;
+  }
 
   const trimmed = value.trim();
   if (isMissingValue(trimmed)) return "N/A";

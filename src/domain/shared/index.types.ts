@@ -17,6 +17,16 @@ export interface ParsedCSVResult<T> {
   errors: string[];
 }
 
+export type ColumnarColumn = Float64Array | string[];
+
+export interface ColumnarTable {
+  headers: string[];
+  columns: ColumnarColumn[];
+  rowCount: number;
+  columnTypes: Record<string, ColumnType>;
+  errors: string[];
+}
+
 export interface StrictValidationResult {
   rowsAs2dMatrix: TableMatrices;
   columns: TableColumns;

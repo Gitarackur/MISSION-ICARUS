@@ -1,5 +1,3 @@
-export const LARGE_CSV_SINGLE_PARSER_THRESHOLD_BYTES = 5 * 1024 * 1024;
-
 // Liveness protocol for long-running workers. A worker posts a heartbeat while
 // a heavy synchronous computation is running, and the client only treats the
 // request as timed out once the worker has been SILENT for the grace period
