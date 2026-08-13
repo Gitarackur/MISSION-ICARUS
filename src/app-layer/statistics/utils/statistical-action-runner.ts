@@ -1511,6 +1511,7 @@ export const runStatisticalAnalysis = async (
           ? "Row[]"
           : "Map<string, TableMatrix>",
         columnsProcessed: numericColumns.length,
+        executionBackend: "typescript-worker",
         ...inputParametersMetadata,
       },
     },
@@ -1524,6 +1525,7 @@ export const runStatisticalAnalysis = async (
       metadata: {
         calculationTimestamp: new Date().toISOString(),
         resultCount: transposedResults.length,
+        executionBackend: "typescript-worker",
         ...outputParametersMetadata,
       },
     },

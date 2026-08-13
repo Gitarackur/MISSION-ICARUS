@@ -52,18 +52,23 @@ runs:
         r-version: ${{ inputs.r-version }}
         use-public-rspm: true
 
-    - name: Install R renderer packages
+    - name: Install R renderer and statistics packages
       uses: r-lib/actions/setup-r-dependencies@v2
       with:
+        # Runtime packaging only needs Depends, Imports, and LinkingTo.
+        # Installing all Suggests introduces a limma <-> vsn solver cycle.
+        dependencies: '"hard"'
         packages: |
           any::jsonlite
           any::ggplot2
           any::ragg
+          bioc::limma
+          any::WGCNA
 
-    - name: Verify R renderer packages
+    - name: Verify R renderer and statistics packages
       shell: bash
       run: >-
-        Rscript -e 'packages <- c("jsonlite", "ggplot2", "ragg");
+        Rscript -e 'packages <- c("jsonlite", "ggplot2", "ragg", "limma", "WGCNA");
         stopifnot(all(vapply(packages, requireNamespace, logical(1), quietly = TRUE)));
         cat("R renderer packages loaded successfully\n")'
 

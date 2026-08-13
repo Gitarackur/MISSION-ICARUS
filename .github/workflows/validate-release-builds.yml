@@ -12,7 +12,12 @@ on:
       - "package-lock.json"
       - "scripts/prepare-renderer-runtimes.mjs"
       - "scripts/test-bundled-renderer-runtimes.mjs"
+      - "scripts/test-python-scientific-worker.mjs"
+      - "scripts/test-python-statistics-worker.mjs"
+      - "scripts/test-r-statistics-worker.mjs"
       - "scripts/test-renderer-runtime-preparation.mjs"
+      - "scripts/run-command-with-retry.mjs"
+      - "scripts/test-command-with-retry.mjs"
   workflow_dispatch:
     inputs:
       force_rebuild:
@@ -61,6 +66,17 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y fuse libarchive-tools
 
+      - name: Test scientific worker sources
+        shell: bash
+        env:
+          PIPENV_PIPFILE: ${{ github.workspace }}/assets/scripts/python/Pipfile
+        run: |
+          npm run test:command-with-retry
+          python -m pipenv sync
+          PYTHON="$(python -m pipenv --py)" npm run test:python-statistics-worker
+          PYTHON="$(python -m pipenv --py)" npm run test:python-scientific-worker
+          npm run test:r-statistics-worker
+
       - name: Prepare renderer runtimes
         uses: ./.github/actions/prepare-renderer-runtimes
         with:
@@ -79,4 +95,7 @@ jobs:
 
       - name: Build Windows installer
         if: runner.os == 'Windows'
-        run: npm run build:windows -- --publish never
+        run: |
+          npm run prepare:renderer:runtimes
+          npm run build:application
+          node scripts/run-command-with-retry.mjs --attempts 3 --delay-ms 15000 -- npm run package:windows -- --publish never

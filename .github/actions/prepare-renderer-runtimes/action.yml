@@ -31,7 +31,7 @@ runs:
       uses: actions/cache@v4
       with:
         path: assets/scripts/python/.nuitka-cache
-        key: nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-${{ hashFiles('assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py') }}
+        key: nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-${{ hashFiles('assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/analysis/**/*.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py') }}
         restore-keys: |
           nuitka-v1-${{ runner.os }}-${{ runner.arch }}-py313-${{ hashFiles('assets/scripts/python/Pipfile.lock') }}-
 
@@ -43,7 +43,7 @@ runs:
           .cache/renderer-runtimes
           assets/runtime
           assets/scripts/python/bin
-        key: renderer-runtimes-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('assets/scripts/python/Pipfile', 'assets/scripts/python/Pipfile.lock', 'assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py', 'assets/scripts/fsharp/IcarusPlotRenderer/**/*.fs', 'assets/scripts/fsharp/IcarusPlotRenderer/**/*.fsproj', 'assets/scripts/r/vendor-r-runtime.mjs', 'scripts/prepare-renderer-runtimes.mjs') }}
+        key: renderer-runtimes-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('assets/scripts/python/Pipfile', 'assets/scripts/python/Pipfile.lock', 'assets/scripts/python/build_nuitka.py', 'assets/scripts/python/commander.py', 'assets/scripts/python/analysis/**/*.py', 'assets/scripts/python/commands/**/*.py', 'assets/scripts/python/core/**/*.py', 'assets/scripts/fsharp/IcarusPlotRenderer/**/*.fs', 'assets/scripts/fsharp/IcarusPlotRenderer/**/*.fsproj', 'assets/scripts/r/**/*.r', 'assets/scripts/r/vendor-r-runtime.mjs', 'scripts/prepare-renderer-runtimes.mjs') }}
         restore-keys: |
           renderer-runtimes-v1-${{ runner.os }}-${{ runner.arch }}-
 

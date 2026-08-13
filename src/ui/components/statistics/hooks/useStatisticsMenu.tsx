@@ -1213,7 +1213,17 @@ case 'delete-row':
       
       case "wgcna-analysis":
         content = (
-          <WgcnaAnalysis dataColumns={dataColumns} actionId={actionId} />
+          <WgcnaAnalysis
+            dataColumns={dataColumns}
+            actionId={actionId}
+            dataRows={dataRows}
+            allColumnarData={allColumnarData}
+            onSuccess={(result) => {
+              closeModal();
+              onSuccess?.(result);
+            }}
+            onError={() => onError?.()}
+          />
         );
         break;
       case "save-data":

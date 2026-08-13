@@ -86,6 +86,7 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 - Column-focused descriptive statistics such as mean, median, variance, standard deviation, counts, min, and max
 - Filtering, imputation, normalization, outlier detection, and matrix reshaping operations
 - Differential-expression oriented actions such as fold-change, t-test, ANOVA, LIMMA-related flows, and clustering/PCA analysis surfaces
+- Hybrid statistical execution: lightweight operations stay in a Web Worker; MICE, KNN, PCA, PLS-DA, t-SNE, clustering, and large matrix operations use a warm NumPy/SciPy/scikit-learn process, while LIMMA and WGCNA use canonical packages in a persistent R worker
 - Statistical result handling mapped back to the appropriate UI views
 
 ### Visualization workspace
@@ -194,7 +195,7 @@ Alongside the Recharts bar plot shown above, these captures show the same groupe
 | Frontend | React, TypeScript |
 | Styling | Tailwind CSS, tailwind-variants |
 | Charts and visuals | Python (Matplotlib, Seaborn), R (ggplot2), Recharts, D3 |
-| Statistics | jStat, simple-statistics |
+| Statistics | NumPy, SciPy, scikit-learn, Bioconductor LIMMA, WGCNA, jStat, simple-statistics |
 | Data handling | Papa Parse plus custom resilient parser pipeline |
 | Local storage / persistence | SQLite workflow storage |
 

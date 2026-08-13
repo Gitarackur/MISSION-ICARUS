@@ -430,6 +430,86 @@ export type ComposedStatisticalMatrix = {
 // Imputation engine used by multiple imputation.
 export type MiceMethod = "pmm" | "regression";
 
+export type PythonScientificAction =
+  | "impute-multiple"
+  | "impute-knn"
+  | "pca-learning"
+  | "pca-plot"
+  | "pca-analysis"
+  | "2d"
+  | "plsda-learning"
+  | "tsne-learning"
+  | "k-means-clustering"
+  | "k-means-clustering-run"
+  | "hierarchical-clustering"
+  | "hierarchical-clustering-run"
+  | "heatmap"
+  | "quantile-normalization";
+
+export type RScientificAction = "limma" | "wgcna-analysis";
+export type ScientificAction = PythonScientificAction | RScientificAction;
+
+/** Binary column-major request used by an out-of-process scientific engine. */
+export interface HeavyStatisticsRequest {
+  jobId: string;
+  action: ScientificAction;
+  matrix: {
+    columnNames: string[];
+    lengths: number[];
+    rowCount: number;
+    flat: Float64Array;
+  };
+  options: Record<string, unknown>;
+}
+
+export interface HeavyStatisticsResponse {
+  jobId: string;
+  action: ScientificAction;
+  inputColumnNames: string[];
+  inputRowCount: number;
+  outputColumnNames: string[];
+  outputRowCount: number;
+  flat: Float64Array;
+  granularity: StatisticalResultGranularity;
+  metadata: Record<string, unknown> & {
+    executionBackend: string;
+  };
+}
+
+export type HeavyMiceStatisticsRequest = HeavyStatisticsRequest & {
+  action: "impute-multiple";
+  options: {
+    method: MiceMethod;
+    imputations: number;
+    maxIterations: number;
+    seed: number;
+    maxPredictors: number;
+    workers?: number;
+  };
+};
+
+export type HeavyMiceStatisticsResponse = HeavyStatisticsResponse & {
+  action: "impute-multiple";
+  metadata: HeavyStatisticsResponse["metadata"] & {
+    method: MiceMethod;
+    imputations: number;
+    maxIterations: number;
+    iterationsPerformed: number;
+    missingCount: number;
+    imputedCount: number;
+    columnSummaries: MiceColumnSummary[];
+    workers: number;
+    maximumPredictors?: number;
+    numpyVersion: string;
+  };
+};
+
+export interface HeavyStatisticsProgress {
+  jobId: string;
+  progress?: number;
+  detail?: string;
+}
+
 // Per-column pooled estimates (Rubin's rules) across the m imputed datasets.
 export interface MiceColumnSummary {
   columnName: string;
@@ -495,4 +575,3 @@ export type OLSFit = {
   residualDegreesOfFreedom: number;
   residualSumSquares: number;
 };
-

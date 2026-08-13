@@ -602,40 +602,89 @@ let renderPca (payload: JsonElement) (settings: Settings) (title: string) : stri
         assemble traces lo
 
 // ---------------------------------------------------------------------------
-// Entry point
+// Shared renderer and persistent worker entry point
 // ---------------------------------------------------------------------------
+let renderRoot (root: JsonElement) : string =
+    let plotType = getStringDef root "plotType" "bar"
+    let payload = match tryProp root "payload" with Some x -> x | None -> root
+    let title = getStringDef payload "title" (plotType + " Plot")
+    let settings = tryProp payload "displaySettings" |> parseSettings
+
+    let json =
+        match plotType with
+        | "bar" -> renderBar payload settings title
+        | "box" -> renderBox payload settings title
+        | "scatter" -> renderScatter payload settings title
+        | "pca" -> renderPca payload settings title
+        | "heatmap" -> renderHeatmap payload settings title
+        | "volcano" -> renderVolcano payload settings title
+        | _ -> renderBar payload settings title
+
+    if String.IsNullOrEmpty json then
+        invalidOp (sprintf "Unable to render plot type: %s" plotType)
+    json
+
+let renderText (text: string) : string =
+    use doc = JsonDocument.Parse text
+    renderRoot doc.RootElement
+
+let emitWorkerMessage (message: JsonObject) =
+    Console.Out.WriteLine(message.ToJsonString())
+    Console.Out.Flush()
+
+let runWorker () : int =
+    let ready = jO()
+    setStr ready "type" "ready"
+    emitWorkerMessage ready
+
+    let mutable line = Console.In.ReadLine()
+    while not (isNull line) do
+        if not (String.IsNullOrWhiteSpace line) then
+            try
+                use requestDoc = JsonDocument.Parse line
+                let request = requestDoc.RootElement
+                let requestId =
+                    match tryProp request "id" with
+                    | Some id when id.ValueKind = JsonValueKind.Number -> id.GetInt32()
+                    | _ -> invalidArg "id" "Worker request must contain a numeric id"
+                // The request itself is the normal plot document plus its
+                // transport id. Rendering it directly keeps worker and
+                // one-shot payload contracts identical.
+                let result = renderRoot request
+                let response = jO()
+                setInt response "id" requestId
+                setBool response "ok" true
+                setStr response "result" result
+                emitWorkerMessage response
+            with
+            | ex ->
+                let response = jO()
+                try
+                    use failedDoc = JsonDocument.Parse line
+                    match tryProp failedDoc.RootElement "id" with
+                    | Some id when id.ValueKind = JsonValueKind.Number ->
+                        setInt response "id" (id.GetInt32())
+                    | _ -> setInt response "id" -1
+                with
+                | _ -> setInt response "id" -1
+                setBool response "ok" false
+                setStr response "error" (sprintf "%s: %s" (ex.GetType().Name) ex.Message)
+                emitWorkerMessage response
+        line <- Console.In.ReadLine()
+    0
+
 [<EntryPoint>]
 let main argv =
+    Console.OutputEncoding <- Encoding.UTF8
     try
-        if argv.Length < 1 then
+        if argv.Length > 0 && argv.[0] = "--worker" then
+            runWorker()
+        elif argv.Length < 1 then
             eprintfn "No payload file provided"
             1
         else
-            let path = argv.[0]
-            use doc = JsonDocument.Parse(File.ReadAllText path)
-            let root = doc.RootElement
-            let plotType = getStringDef root "plotType" "bar"
-            let payload = match tryProp root "payload" with Some x -> x | None -> root
-            let title = getStringDef payload "title" (plotType + " Plot")
-            let settings = tryProp payload "displaySettings" |> parseSettings
-
-            let json =
-                match plotType with
-                | "bar" -> renderBar payload settings title
-                | "box" -> renderBox payload settings title
-                | "scatter" -> renderScatter payload settings title
-                | "pca" -> renderPca payload settings title
-                | "heatmap" -> renderHeatmap payload settings title
-                | "volcano" -> renderVolcano payload settings title
-                | _ -> renderBar payload settings title
-
-            if String.IsNullOrEmpty json then
-                eprintfn "Unable to render plot type: %s" plotType
-                1
-            else
-                Console.OutputEncoding <- Encoding.UTF8
-                printfn "%s" json
-                0
+            printfn "%s" (File.ReadAllText argv.[0] |> renderText)
+            0
     with
     | ex ->
         eprintfn "F# renderer error: %s" ex.Message

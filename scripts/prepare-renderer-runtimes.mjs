@@ -364,6 +364,9 @@ class PythonRendererBuilder extends RendererBuilder {
       path.join(PYTHON_ROOT, "Pipfile.lock"),
       path.join(PYTHON_ROOT, "build_nuitka.py"),
       path.join(PYTHON_ROOT, "commander.py"),
+      ...walkFiles(path.join(PYTHON_ROOT, "analysis"), (filePath) =>
+        filePath.endsWith(".py")
+      ),
       ...walkFiles(path.join(PYTHON_ROOT, "commands"), (filePath) =>
         filePath.endsWith(".py")
       ),
@@ -483,7 +486,14 @@ class RRendererBuilder extends RendererBuilder {
   }
 
   get sourceFiles() {
-    return [R_VENDOR_SCRIPT, scriptPath];
+    return [
+      R_VENDOR_SCRIPT,
+      ...walkFiles(
+        path.join(repositoryRoot, "assets", "scripts", "r"),
+        (filePath) => filePath.endsWith(".r")
+      ),
+      scriptPath,
+    ];
   }
 
   get artifactPath() {

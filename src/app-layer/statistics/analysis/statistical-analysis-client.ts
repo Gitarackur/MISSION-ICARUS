@@ -1,5 +1,7 @@
 import type { ProteinRow } from "@/domain/proteins/index.types";
 import type {
+  PythonScientificAction,
+  RScientificAction,
   StatisticalAction,
   StatisticalAnalysisResult,
 } from "@/domain/statistics/index.types";
@@ -10,12 +12,7 @@ import type {
   StatisticalAnalysisWorkerResponse,
 } from "@/domain/workers/index.types";
 import {
-  WORKER_HEARTBEAT_INTERVAL_MS,
-  WORKER_SILENCE_TIMEOUT_MS,
-} from "@/domain/workers/constants";
-import {
   createWorkerFailureError,
-  createWorkerTimeoutError,
   createWorkerUnavailableError,
   type WorkerExecutionError,
 } from "@/domain/workers/errors";
@@ -24,6 +21,18 @@ import {
   encodeStatisticalInput,
   rehydrateStatisticalResultData,
 } from "./statistics-transfer";
+import {
+  HeavyStatisticalAnalysisClient,
+  heavyStatisticalAnalysisClient,
+  shouldRunInPython,
+  shouldRunInR,
+} from "./heavy-statistical-analysis-client";
+import type { StatisticalInput } from "./scientific-analysis.types";
+
+type StatisticalProgressCallback = (
+  progress?: number,
+  detail?: string
+) => void;
 
 /**
  * Persistent statistics worker client. The worker is kept warm between
@@ -31,14 +40,15 @@ import {
  * instead of on every analysis. Large numeric matrices are transferred as
  * ArrayBuffers (zero-copy) rather than structured-cloned on the main thread.
  */
-class StatisticalAnalysisClient {
+export class StatisticalAnalysisClient {
   private worker: Worker | null = null;
   private nextRequestId = 1;
   private readonly pending = new Map<number, PendingWorkerRequest>();
 
   run(
     action: StatisticalAction,
-    data: ProteinRow[] | Map<string, TableMatrix>
+    data: ProteinRow[] | Map<string, TableMatrix>,
+    onProgress?: StatisticalProgressCallback
   ): Promise<StatisticalAnalysisResult> {
     const { payload, transfer } = encodeStatisticalInput(data);
     const request: StatisticalAnalysisWorkerRequest = {
@@ -51,47 +61,18 @@ class StatisticalAnalysisClient {
     return new Promise<StatisticalAnalysisResult>((resolve, reject) => {
       const worker = this.getWorker(operationName);
 
-      // Liveness watchdog. The worker posts heartbeats (throttled to
-      // WORKER_HEARTBEAT_INTERVAL_MS) while a long synchronous computation is
-      // running, and the request keeps its `lastActivityAt` fresh on every
-      // message it receives. The watchdog only fires when the worker has been
-      // entirely silent for WORKER_SILENCE_TIMEOUT_MS, i.e. it crashed or
-      // wedged — a worker that is still making progress is never killed by a
-      // wall-clock limit. A wedged worker is torn down so the next request
-      // starts with a fresh one.
-      const watchdog = globalThis.setInterval(() => {
-        const entry = this.pending.get(request.id);
-        if (!entry) return;
-        if (Date.now() - entry.lastActivityAt < WORKER_SILENCE_TIMEOUT_MS) {
-          return;
-        }
-        this.failWorker(
-          createWorkerTimeoutError(
-            operationName,
-            WORKER_SILENCE_TIMEOUT_MS,
-          ),
-        );
-      }, Math.min(1000, WORKER_HEARTBEAT_INTERVAL_MS));
-      const clearRequestWatchdog = () => globalThis.clearInterval(watchdog);
-
       this.pending.set(request.id, {
-        resolve: (value) => {
-          clearRequestWatchdog();
-          resolve(value as StatisticalAnalysisResult);
-        },
-        reject: (error) => {
-          clearRequestWatchdog();
-          reject(error);
-        },
+        resolve: (value) => resolve(value as StatisticalAnalysisResult),
+        reject,
         operationName,
         lastActivityAt: Date.now(),
+        onProgress,
       });
 
       try {
         worker.postMessage(request, transfer);
       } catch (cause) {
         this.pending.delete(request.id);
-        clearRequestWatchdog();
         const error = createWorkerFailureError(
           operationName,
           "The statistical request could not be sent to the worker.",
@@ -134,7 +115,10 @@ class StatisticalAnalysisClient {
       if ("heartbeat" in response) {
         if (response.id !== undefined) {
           const pending = this.pending.get(response.id);
-          if (pending) pending.lastActivityAt = Date.now();
+          if (pending) {
+            pending.lastActivityAt = Date.now();
+            pending.onProgress?.(response.progress, response.detail);
+          }
         }
         return;
       }
@@ -203,12 +187,113 @@ class StatisticalAnalysisClient {
     this.pending.forEach(({ reject }) => reject(error));
     this.pending.clear();
   }
+
+  cancel(): boolean {
+    if (!this.worker || this.pending.size === 0) return false;
+    const error = new Error("Statistical analysis was cancelled.");
+    this.worker.terminate();
+    this.worker = null;
+    this.pending.forEach(({ reject }) => reject(error));
+    this.pending.clear();
+    return true;
+  }
 }
 
 export const statisticalAnalysisClient = new StatisticalAnalysisClient();
 
+export class StatisticalAnalysisRouter {
+  public constructor(
+    private readonly browserClient: StatisticalAnalysisClient,
+    private readonly scientificClient: HeavyStatisticalAnalysisClient
+  ) {}
+
+  public async run(
+    action: StatisticalAction,
+    data: StatisticalInput,
+    onProgress?: StatisticalProgressCallback
+  ): Promise<StatisticalAnalysisResult> {
+    if (shouldRunInR(action)) {
+      return this.runInR(action, data, onProgress);
+    }
+    if (shouldRunInPython(action, data)) {
+      return this.runInPython(action, data, onProgress);
+    }
+    return this.browserClient.run(action, data, onProgress);
+  }
+
+  public async cancel(): Promise<boolean> {
+    const cancelledScientificAnalysis = await this.scientificClient.cancel();
+    return cancelledScientificAnalysis || this.browserClient.cancel();
+  }
+
+  private async runInR(
+    action: RScientificAction,
+    data: StatisticalInput,
+    onProgress?: StatisticalProgressCallback
+  ): Promise<StatisticalAnalysisResult> {
+    const available = await this.scientificClient.isAvailable("r", action);
+    if (!available) {
+      if (action === "wgcna-analysis") {
+        throw new Error(
+          "WGCNA requires the bundled R runtime and WGCNA package."
+        );
+      }
+      return this.browserClient.run(action, data, onProgress);
+    }
+
+    try {
+      return await this.scientificClient.runR(action, data, onProgress);
+    } catch (error) {
+      if (this.isCancellation(error) || action === "wgcna-analysis") {
+        throw error;
+      }
+      console.warn(
+        "R LIMMA backend failed; using the TypeScript compatibility implementation.",
+        error
+      );
+      return this.browserClient.run(action, data, onProgress);
+    }
+  }
+
+  private async runInPython(
+    action: PythonScientificAction,
+    data: StatisticalInput,
+    onProgress?: StatisticalProgressCallback
+  ): Promise<StatisticalAnalysisResult> {
+    const available = await this.scientificClient.isAvailable("python");
+    if (!available) {
+      return this.browserClient.run(action, data, onProgress);
+    }
+
+    try {
+      return await this.scientificClient.runPython(action, data, onProgress);
+    } catch (error) {
+      if (this.isCancellation(error)) throw error;
+      console.warn(
+        `Scientific Python backend failed for ${action}; using the TypeScript fallback.`,
+        error
+      );
+      return this.browserClient.run(action, data, onProgress);
+    }
+  }
+
+  private isCancellation(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return /cancelled/i.test(message);
+  }
+}
+
+export const statisticalAnalysisRouter = new StatisticalAnalysisRouter(
+  statisticalAnalysisClient,
+  heavyStatisticalAnalysisClient
+);
+
 export const runStatisticalAnalysisInWorker = (
   action: StatisticalAction,
-  data: ProteinRow[] | Map<string, TableMatrix>
+  data: ProteinRow[] | Map<string, TableMatrix>,
+  onProgress?: StatisticalProgressCallback
 ): Promise<StatisticalAnalysisResult> =>
-  statisticalAnalysisClient.run(action, data);
+  statisticalAnalysisRouter.run(action, data, onProgress);
+
+export const cancelStatisticalAnalysis = (): Promise<boolean> =>
+  statisticalAnalysisRouter.cancel();

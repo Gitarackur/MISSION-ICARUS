@@ -27,6 +27,7 @@ export interface PendingWorkerRequest {
   operationName: string;
   /** Wall-clock time of the last activity (request sent, heartbeat, or response). */
   lastActivityAt: number;
+  onProgress?: (progress?: number, detail?: string) => void;
 }
 
 /** Periodic liveness signal sent by a worker while a long synchronous
