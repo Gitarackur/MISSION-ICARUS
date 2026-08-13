@@ -6,12 +6,12 @@ import threading
 from contextlib import nullcontext
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Callable
 
 import numpy as np
 
-
-ProgressCallback = Callable[[Optional[float], Optional[str]], None]
+from analysis.payloads import MicePayload
+from core.worker_protocol import ProgressCallback
 
 
 def _bounded_int(value, fallback: int, minimum: int, maximum: int) -> int:
@@ -224,7 +224,7 @@ def _impute_chain(
     return work, estimates, within_variances
 
 
-def run_mice(payload: dict, emit_progress: ProgressCallback) -> dict:
+def run_mice(payload: MicePayload, emit_progress: ProgressCallback) -> dict:
     input_path = _validate_path(payload.get("inputPath"), "input")
     output_path = _validate_path(payload.get("outputPath"), "output")
     if not input_path.is_file():

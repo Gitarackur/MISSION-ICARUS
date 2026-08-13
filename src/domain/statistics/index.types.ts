@@ -460,8 +460,14 @@ export type StatisticalProgressListener = (
   detail?: string
 ) => void;
 
-/** Binary column-major request used by an out-of-process scientific engine. */
-export interface HeavyStatisticsRequest {
+/**
+ * Binary column-major request used by an out-of-process scientific engine.
+ * `TOptions` is narrowed per backend (e.g. `PythonWorkerRequestOptions`) so
+ * the precise option shape is enforced at every non-IPC call site.
+ */
+export interface HeavyStatisticsRequest<
+  TOptions extends object = Record<string, unknown>,
+> {
   jobId: string;
   action: ScientificAction;
   matrix: {
@@ -470,7 +476,7 @@ export interface HeavyStatisticsRequest {
     rowCount: number;
     flat: Float64Array;
   };
-  options: Record<string, unknown>;
+  options: TOptions;
 }
 
 export interface HeavyStatisticsResponse {
@@ -500,16 +506,155 @@ export interface ScientificWorkerCapabilities<
   actions: TAction[];
 }
 
+// ===================================================================
+// PYTHON STATISTICS WIRE PAYLOAD
+// Mirrors assets/scripts/python/analysis/payloads.py so the shape sent by
+// PythonStatisticsManager.createWorkerMessage matches the Python TypedDicts.
+// ===================================================================
+
+/**
+ * Matrix file envelope merged by BinaryScientificWorkerManager onto the
+ * backend options of every out-of-process request.
+ */
+export interface HeavyStatisticsEnvelope {
+  inputPath: string;
+  outputPath: string;
+  columnNames: string[];
+  rowCount: number;
+}
+
+/** Matrix envelope merged by BinaryScientificWorkerManager onto every request. */
+export type PythonWorkerMatrixPayload = HeavyStatisticsEnvelope;
+
+export interface PythonMiceRequestOptions {
+  method: MiceMethod;
+  imputations: number;
+  maxIterations: number;
+  seed: number;
+  reportedSeed: number | null;
+  maxPredictors: number;
+  workers?: number;
+}
+
+export interface PythonKnnRequestOptions {
+  neighbors: number;
+  weighted: boolean;
+}
+
+export interface PythonPcaRequestOptions {
+  numComponents: number;
+  seed: number;
+}
+
+export interface PythonPcaAnalysisRequestOptions extends PythonPcaRequestOptions {
+  performClustering: boolean;
+  clusters: number;
+}
+
+export interface PythonPlsDaRequestOptions {
+  numComponents: number;
+  labels: Array<string | number>;
+}
+
+export interface PythonTsneRequestOptions {
+  numDimensions: number;
+  perplexity: number;
+  iterations: number;
+  seed: number;
+}
+
+export interface PythonKMeansRequestOptions {
+  clusters: number;
+  maxIterations: number;
+  seed: number;
+}
+
+export interface PythonHierarchicalRequestOptions {
+  clusters: number;
+  linkage: "single" | "complete" | "average";
+}
+
+export type PythonNoOptionsRequestOptions = object;
+
+export type PythonWorkerRequestOptions =
+  | PythonMiceRequestOptions
+  | PythonKnnRequestOptions
+  | PythonPcaRequestOptions
+  | PythonPcaAnalysisRequestOptions
+  | PythonPlsDaRequestOptions
+  | PythonTsneRequestOptions
+  | PythonKMeansRequestOptions
+  | PythonHierarchicalRequestOptions
+  | PythonNoOptionsRequestOptions;
+
+export type PythonWorkerOptionByAction = {
+  "impute-multiple": PythonMiceRequestOptions;
+  "impute-knn": PythonKnnRequestOptions;
+  "pca-learning": PythonPcaRequestOptions;
+  "pca-plot": PythonPcaRequestOptions;
+  "2d": PythonPcaRequestOptions;
+  "pca-analysis": PythonPcaAnalysisRequestOptions;
+  "plsda-learning": PythonPlsDaRequestOptions;
+  "tsne-learning": PythonTsneRequestOptions;
+  "k-means-clustering": PythonKMeansRequestOptions;
+  "k-means-clustering-run": PythonKMeansRequestOptions;
+  "hierarchical-clustering": PythonHierarchicalRequestOptions;
+  "hierarchical-clustering-run": PythonHierarchicalRequestOptions;
+  heatmap: PythonNoOptionsRequestOptions;
+  "quantile-normalization": PythonNoOptionsRequestOptions;
+};
+
+/** Structured payload sent over the worker protocol to commander.py. */
+export type PythonWorkerPayload = {
+  [K in keyof PythonWorkerOptionByAction]: PythonWorkerMatrixPayload & {
+    action: K;
+  } & PythonWorkerOptionByAction[K];
+}[keyof PythonWorkerOptionByAction];
+
+export type PythonWorkerRequest = {
+  command: "statistics:run";
+  payload: PythonWorkerPayload;
+};
+
+// ===================================================================
+// R STATISTICS WIRE PAYLOAD
+// Mirrors the fields consumed by assets/scripts/r/statistics/action_handlers.r
+// so the shape sent by RStatisticsManager.createWorkerMessage matches the
+// R worker protocol.
+// ===================================================================
+
+export interface LimmaRequestOptions {
+  treatmentColumns: string[];
+  controlColumns: string[];
+  adjustmentMethod: PValueAdjustmentMethod;
+}
+
+export interface WgcnaRequestOptions {
+  softThreshold: number;
+  workers: number;
+}
+
+export type RWorkerRequestOptions = LimmaRequestOptions | WgcnaRequestOptions;
+
+export type RWorkerOptionByAction = {
+  limma: LimmaRequestOptions;
+  "wgcna-analysis": WgcnaRequestOptions;
+};
+
+/** Structured payload sent over the worker protocol to statistics_worker.r. */
+export type RWorkerPayload = {
+  [K in keyof RWorkerOptionByAction]: HeavyStatisticsEnvelope & {
+    action: K;
+  } & RWorkerOptionByAction[K];
+}[keyof RWorkerOptionByAction];
+
+export type RWorkerRequest = {
+  payload: RWorkerPayload;
+};
+
 export type HeavyMiceStatisticsRequest = HeavyStatisticsRequest & {
   action: "impute-multiple";
-  options: {
-    method: MiceMethod;
-    imputations: number;
-    maxIterations: number;
-    seed: number;
-    maxPredictors: number;
-    workers?: number;
-  };
+  options: PythonMiceRequestOptions;
 };
 
 export type HeavyMiceStatisticsResponse = HeavyStatisticsResponse & {

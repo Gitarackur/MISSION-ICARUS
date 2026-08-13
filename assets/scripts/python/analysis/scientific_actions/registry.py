@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 
+from analysis.payloads import ScientificPayload
 from analysis.scientific_actions.base import ScientificActionHandler
 from analysis.scientific_actions.clustering import (
     HierarchicalClusteringHandler,
@@ -37,7 +38,7 @@ class ScientificActionRegistry:
                     raise ValueError(f"Duplicate scientific action handler: {action}")
                 self._handlers[action] = handler
 
-    def run(self, payload: dict, emit_progress: ProgressCallback) -> dict:
+    def run(self, payload: ScientificPayload, emit_progress: ProgressCallback) -> dict:
         action = str(payload.get("action", ""))
         handler = self._handlers.get(action)
         if handler is None:

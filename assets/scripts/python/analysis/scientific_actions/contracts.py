@@ -3,12 +3,12 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Optional
+from typing import Optional
 
 import numpy as np
 
-
-ProgressCallback = Callable[[Optional[float], Optional[str]], None]
+from analysis.payloads import MatrixPayload, ScientificPayload
+from core.worker_protocol import ProgressCallback
 
 
 def bounded_int(value, fallback: int, minimum: int, maximum: int) -> int:
@@ -38,13 +38,13 @@ class ScientificMatrix:
 
 class BinaryMatrixStore:
     @staticmethod
-    def _required_path(payload: dict, key: str) -> Path:
+    def _required_path(payload: MatrixPayload, key: str) -> Path:
         value = payload.get(key)
         if not isinstance(value, str) or not value:
             raise ValueError(f"{key} is required")
         return Path(value).expanduser().resolve()
 
-    def load(self, payload: dict) -> ScientificMatrix:
+    def load(self, payload: MatrixPayload) -> ScientificMatrix:
         input_path = self._required_path(payload, "inputPath")
         if not input_path.is_file():
             raise ValueError("Scientific input file does not exist")
@@ -67,7 +67,7 @@ class BinaryMatrixStore:
         )
         return ScientificMatrix(np.asarray(mapped), column_names, row_count)
 
-    def write(self, payload: dict, columns: np.ndarray) -> tuple[int, int]:
+    def write(self, payload: MatrixPayload, columns: np.ndarray) -> tuple[int, int]:
         output_path = self._required_path(payload, "outputPath")
         output = np.asarray(columns, dtype="<f8", order="C")
         if output.ndim != 2:
@@ -101,7 +101,7 @@ class BinaryMatrixStore:
 
 @dataclass
 class ScientificExecutionContext:
-    payload: dict
+    payload: ScientificPayload
     emit_progress: ProgressCallback
     store: BinaryMatrixStore
     _matrix: Optional[ScientificMatrix] = field(default=None, init=False)

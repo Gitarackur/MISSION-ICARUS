@@ -2,7 +2,9 @@ import { app, ipcMain, type IpcMainInvokeEvent } from "electron";
 import type {
   HeavyStatisticsRequest,
   HeavyStatisticsProgress,
+  PythonWorkerRequestOptions,
   RScientificAction,
+  RWorkerRequestOptions,
   StatisticalProgressListener,
 } from "@/domain/statistics/index.types";
 import { PythonStatisticsManager } from "./python-statistics-manager";
@@ -32,7 +34,7 @@ export class StatisticsIpcController {
       "statistics:run-python",
       async (event, request: HeavyStatisticsRequest) =>
         this.pythonManager.run(
-          request,
+          request as HeavyStatisticsRequest<PythonWorkerRequestOptions>,
           this.createProgressListener(event, request)
         )
     );
@@ -40,7 +42,12 @@ export class StatisticsIpcController {
     ipcMain.handle(
       "statistics:run-r",
       async (event, request: HeavyStatisticsRequest) =>
-        this.rManager.run(request, this.createProgressListener(event, request))
+        // Options cross the IPC boundary as opaque JSON; the renderer's
+        // options builder already produces the RWorkerRequestOptions shape.
+        this.rManager.run(
+          request as unknown as HeavyStatisticsRequest<RWorkerRequestOptions>,
+          this.createProgressListener(event, request)
+        )
     );
 
     ipcMain.handle(

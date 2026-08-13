@@ -1,6 +1,8 @@
 import type {
   PythonScientificAction,
+  PythonWorkerRequestOptions,
   RScientificAction,
+  RWorkerRequestOptions,
   StatisticalInput,
 } from "@/domain/statistics/index.types";
 import {
@@ -23,7 +25,7 @@ export class ScientificOptionsBuilder {
     data: StatisticalInput,
     columnCount: number,
     rowCount: number
-  ): Record<string, unknown> {
+  ): PythonWorkerRequestOptions {
     const seed = Math.round(parseNumberMetadata(data, "__seed__", 42));
     switch (action) {
       case "impute-multiple": {
@@ -167,7 +169,7 @@ export class ScientificOptionsBuilder {
   public forR(
     action: RScientificAction,
     data: StatisticalInput
-  ): Record<string, unknown> {
+  ): RWorkerRequestOptions {
     if (action === "limma") {
       return {
         treatmentColumns: parseStringArrayMetadata(
@@ -180,11 +182,14 @@ export class ScientificOptionsBuilder {
           LIMMA_CONTROL_COLUMNS_KEY,
           []
         ),
-        adjustmentMethod: parseStringMetadata(
-          data,
-          LIMMA_ADJUSTMENT_METHOD_KEY,
-          LIMMA_DEFAULT_ADJUSTMENT_METHOD
-        ),
+        adjustmentMethod:
+          parseStringMetadata(
+            data,
+            LIMMA_ADJUSTMENT_METHOD_KEY,
+            LIMMA_DEFAULT_ADJUSTMENT_METHOD
+          ) === "bonferroni"
+            ? "bonferroni"
+            : "BH",
       };
     }
     return {

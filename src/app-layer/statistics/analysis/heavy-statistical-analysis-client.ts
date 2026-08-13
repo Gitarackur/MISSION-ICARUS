@@ -3,7 +3,9 @@ import type {
   HeavyStatisticsRequest,
   HeavyStatisticsResponse,
   PythonScientificAction,
+  PythonWorkerRequestOptions,
   RScientificAction,
+  RWorkerRequestOptions,
   ScientificBackend,
   ScientificAction,
   StatisticalAction,
@@ -56,21 +58,18 @@ export class HeavyStatisticalAnalysisClient {
     onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const matrix = this.matrixCodec.encode(data);
-    return this.runRequest(
-      "python",
-      {
-        jobId: globalThis.crypto.randomUUID(),
+    const request: HeavyStatisticsRequest<PythonWorkerRequestOptions> = {
+      jobId: globalThis.crypto.randomUUID(),
+      action,
+      matrix,
+      options: this.optionsBuilder.forPython(
         action,
-        matrix,
-        options: this.optionsBuilder.forPython(
-          action,
-          data,
-          matrix.columnNames.length,
-          matrix.rowCount
-        ),
-      },
-      onProgress
-    );
+        data,
+        matrix.columnNames.length,
+        matrix.rowCount
+      ),
+    };
+    return this.runRequest("python", request, onProgress);
   }
 
   public async runR(
@@ -79,16 +78,13 @@ export class HeavyStatisticalAnalysisClient {
     onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const matrix = this.matrixCodec.encode(data);
-    return this.runRequest(
-      "r",
-      {
-        jobId: globalThis.crypto.randomUUID(),
-        action,
-        matrix,
-        options: this.optionsBuilder.forR(action, data),
-      },
-      onProgress
-    );
+    const request: HeavyStatisticsRequest<RWorkerRequestOptions> = {
+      jobId: globalThis.crypto.randomUUID(),
+      action,
+      matrix,
+      options: this.optionsBuilder.forR(action, data),
+    };
+    return this.runRequest("r", request, onProgress);
   }
 
   public async cancel(): Promise<boolean> {
@@ -99,9 +95,9 @@ export class HeavyStatisticalAnalysisClient {
     );
   }
 
-  private async runRequest(
+  private async runRequest<TOptions extends object>(
     backend: ScientificBackend,
-    request: HeavyStatisticsRequest,
+    request: HeavyStatisticsRequest<TOptions>,
     onProgress?: StatisticalProgressListener
   ): Promise<StatisticalAnalysisResult> {
     const progressListener = (_event: unknown, ...args: unknown[]) => {

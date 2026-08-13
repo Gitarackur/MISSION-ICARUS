@@ -71,6 +71,7 @@ processHandle.stderr.on("data", (chunk) => {
 
 const startedAt = performance.now();
 const workerPayload = {
+  action: "impute-multiple",
   inputPath,
   outputPath,
   columnNames: ["x", "y", "oscillation", "trend"],
@@ -101,7 +102,7 @@ try {
         processHandle.stdin.write(
           JSON.stringify({
             id: 1,
-            command: "statistics:mice",
+            command: "statistics:run",
             payload: workerPayload,
           }) + "\n"
         );
@@ -152,17 +153,32 @@ try {
     processHandle.stdin.write(
       JSON.stringify({
         id: 2,
-        command: "statistics:mice",
+        command: "statistics:run",
         payload: workerPayload,
       }) + "\n"
     );
   });
   const repeatedBytes = await readFile(outputPath);
   assert.equal(imputed.length, input.length, "output preserves the matrix shape");
-  assert.equal(result.missingCount, expectedMissing, "worker reports missing cells");
-  assert.equal(result.imputedCount, result.missingCount, "all missing cells imputed");
-  assert.equal(result.columnSummaries.length, columns, "one Rubin summary per column");
-  assert.equal(secondResult.missingCount, result.missingCount);
+  assert.equal(
+    result.metadata.missingCount,
+    expectedMissing,
+    "worker reports missing cells"
+  );
+  assert.equal(
+    result.metadata.imputedCount,
+    result.metadata.missingCount,
+    "all missing cells imputed"
+  );
+  assert.equal(
+    result.metadata.columnSummaries.length,
+    columns,
+    "one Rubin summary per column"
+  );
+  assert.equal(
+    secondResult.metadata.missingCount,
+    result.metadata.missingCount
+  );
   assert.deepEqual(
     repeatedBytes,
     bytes,
@@ -180,7 +196,7 @@ try {
 
   console.log(
     `Python statistics worker test passed in ${Math.round(performance.now() - startedAt)}ms ` +
-      `(${rows} rows, ${columns} columns, ${result.workers} chain workers)`
+      `(${rows} rows, ${columns} columns, ${result.metadata.workers} chain workers)`
   );
 } finally {
   output.close();

@@ -1,10 +1,25 @@
 
 import sys
+from typing import Dict
 
+from core.Command import Command
 from core.renderer_worker import run_worker
+from core.worker_protocol import (
+    CommandName,
+    RendererCommand,
+    RequestHandler,
+    STATISTICS_RUN,
+    STATISTICS_WORKER_FLAG,
+    StatisticsCommand,
+    WorkerMode,
+    WORKER_FLAG,
+)
 
 
-def build_commands():
+def build_commands() -> tuple[
+    Dict[RendererCommand, Command],
+    Dict[CommandName, Command],
+]:
     # Plotting imports are intentionally lazy. The dedicated statistics worker
     # should not initialize Matplotlib, its font cache, pandas or sklearn before
     # a numerical job can start.
@@ -30,24 +45,29 @@ def build_commands():
     }
 
 
-def print_commands(commands):
+def print_commands(commands: Dict[CommandName, Command]):
     print("Available commands:")
     for cmd in commands.values():
         print(f"  {cmd.name}: {cmd.description}")
 
 
-def main():
-    if len(sys.argv) >= 2 and sys.argv[1] == "--statistics-worker":
-        from analysis.mice import run_mice
+def run_statistics_worker() -> bool:
+    if len(sys.argv) >= 2 and sys.argv[1] == STATISTICS_WORKER_FLAG:
         from analysis.scientific import run_scientific
 
-        run_worker(
-            {},
-            {
-                "statistics:mice": run_mice,
-                "statistics:run": run_scientific,
-            },
-        )
+        statistics_handlers: Dict[StatisticsCommand, RequestHandler] = {
+            STATISTICS_RUN: run_scientific,
+        }
+        run_worker({}, statistics_handlers)
+        return True
+    return False
+
+
+def main():
+    # The dedicated statistics worker must never fall through to the renderer
+    # command path after its stdin reaches EOF, otherwise Matplotlib, pandas
+    # and sklearn get initialized and stray text is printed to the protocol fifo.
+    if run_statistics_worker():
         return
 
     renderer_commands, commands = build_commands()
@@ -56,7 +76,7 @@ def main():
         return
 
     command_name = sys.argv[1]
-    if command_name == "--worker":
+    if command_name == WORKER_FLAG:
         run_worker(renderer_commands)
         return
     command = commands.get(command_name)
@@ -70,3 +90,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+

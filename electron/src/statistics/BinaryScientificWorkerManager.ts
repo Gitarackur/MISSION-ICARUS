@@ -2,6 +2,7 @@ import { app } from "electron";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type {
+  HeavyStatisticsEnvelope,
   HeavyStatisticsRequest,
   HeavyStatisticsResponse,
   ScientificAction,
@@ -19,6 +20,7 @@ import {
  */
 export abstract class BinaryScientificWorkerManager<
   TAction extends ScientificAction,
+  TOptions extends object = Record<string, unknown>,
 > {
   private worker: PersistentJsonWorker | null = null;
   private readonly activeJobs = new Set<string>();
@@ -34,7 +36,7 @@ export abstract class BinaryScientificWorkerManager<
   protected abstract createWorker(): PersistentJsonWorker;
   protected abstract createWorkerMessage(
     action: TAction,
-    payload: Record<string, unknown>
+    payload: TOptions & HeavyStatisticsEnvelope
   ): Record<string, unknown>;
   protected abstract unavailableMessage(action: TAction): string;
 
@@ -48,7 +50,7 @@ export abstract class BinaryScientificWorkerManager<
   }
 
   public async run(
-    request: HeavyStatisticsRequest,
+    request: HeavyStatisticsRequest<TOptions>,
     onProgress?: StatisticalProgressListener
   ): Promise<HeavyStatisticsResponse> {
     const action = this.validateRequest(request);
@@ -79,7 +81,7 @@ export abstract class BinaryScientificWorkerManager<
           inputValues.byteLength
         )
       );
-      const payload = {
+      const payload: TOptions & HeavyStatisticsEnvelope = {
         ...request.options,
         inputPath,
         outputPath,
@@ -149,7 +151,9 @@ export abstract class BinaryScientificWorkerManager<
 
   protected onDispose(): void {}
 
-  private validateRequest(request: HeavyStatisticsRequest): TAction {
+  private validateRequest(
+    request: HeavyStatisticsRequest<TOptions>
+  ): TAction {
     if (!this.supportsAction(request?.action)) {
       throw new Error(`Unsupported ${this.backendLabel} statistical action.`);
     }
@@ -194,7 +198,7 @@ export abstract class BinaryScientificWorkerManager<
   private async requestWithRestart(
     jobId: string,
     action: TAction,
-    payload: Record<string, unknown>,
+    payload: TOptions & HeavyStatisticsEnvelope,
     onProgress?: StatisticalProgressListener
   ): Promise<ScientificWorkerManifest> {
     for (let attempt = 0; attempt < 2; attempt += 1) {

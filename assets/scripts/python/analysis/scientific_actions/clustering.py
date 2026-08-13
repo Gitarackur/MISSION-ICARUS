@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
 
+from analysis.payloads import HierarchicalClusteringPayload, KMeansPayload
 from analysis.scientific_actions.base import ScientificActionHandler
 from analysis.scientific_actions.contracts import (
     ScientificExecutionContext,
@@ -17,14 +20,15 @@ class KMeansHandler(ScientificActionHandler):
         from sklearn import __version__ as sklearn_version
         from sklearn.cluster import KMeans, MiniBatchKMeans
 
+        payload = cast(KMeansPayload, context.payload)
         samples = sample_matrix(context.matrix.columns)
         clusters = bounded_int(
-            context.payload.get("clusters"), 3, 1, samples.shape[0]
+            payload.get("clusters"), 3, 1, samples.shape[0]
         )
         iterations = bounded_int(
-            context.payload.get("maxIterations"), 100, 1, 10_000
+            payload.get("maxIterations"), 100, 1, 10_000
         )
-        seed = bounded_int(context.payload.get("seed"), 42, 0, 2**32 - 1)
+        seed = bounded_int(payload.get("seed"), 42, 0, 2**32 - 1)
         use_minibatch = samples.shape[0] >= 50_000
         estimator = (
             MiniBatchKMeans(
@@ -69,11 +73,12 @@ class HierarchicalClusteringHandler(ScientificActionHandler):
         from sklearn.cluster import AgglomerativeClustering
         from sklearn.neighbors import kneighbors_graph
 
+        payload = cast(HierarchicalClusteringPayload, context.payload)
         samples = sample_matrix(context.matrix.columns)
         clusters = bounded_int(
-            context.payload.get("clusters"), 3, 1, samples.shape[0]
+            payload.get("clusters"), 3, 1, samples.shape[0]
         )
-        linkage = str(context.payload.get("linkage", "average"))
+        linkage = str(payload.get("linkage", "average"))
         if linkage not in {"single", "complete", "average"}:
             linkage = "average"
         context.emit_progress(0.05, "Building hierarchical clusters")

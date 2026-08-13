@@ -1,7 +1,13 @@
 import type {
+  HeavyStatisticsEnvelope,
+  LimmaRequestOptions,
   RScientificAction,
+  RWorkerPayload,
+  RWorkerRequest,
+  RWorkerRequestOptions,
   ScientificAction,
   ScientificWorkerCapabilities,
+  WgcnaRequestOptions,
 } from "@/domain/statistics/index.types";
 import {
   PersistentJsonWorker,
@@ -16,7 +22,10 @@ const REQUIRED_PACKAGE: Record<RScientificAction, string> = {
   "wgcna-analysis": "WGCNA",
 };
 
-export class RStatisticsManager extends BinaryScientificWorkerManager<RScientificAction> {
+export class RStatisticsManager extends BinaryScientificWorkerManager<
+  RScientificAction,
+  RWorkerRequestOptions
+> {
   private availableActions: ReadonlySet<RScientificAction> | null = null;
 
   public constructor(
@@ -71,9 +80,37 @@ export class RStatisticsManager extends BinaryScientificWorkerManager<RScientifi
 
   protected createWorkerMessage(
     action: RScientificAction,
-    payload: Record<string, unknown>
-  ): Record<string, unknown> {
-    return { payload: { ...payload, action } };
+    payload: RWorkerRequestOptions & HeavyStatisticsEnvelope
+  ): RWorkerRequest {
+    return {
+      payload: this.rWorkerPayload(action, payload),
+    };
+  }
+
+  private rWorkerPayload(
+    action: RScientificAction,
+    payload: RWorkerRequestOptions & HeavyStatisticsEnvelope
+  ): RWorkerPayload {
+    const envelope: HeavyStatisticsEnvelope = {
+      inputPath: payload.inputPath,
+      outputPath: payload.outputPath,
+      columnNames: payload.columnNames,
+      rowCount: payload.rowCount,
+    };
+    switch (action) {
+      case "limma":
+        return {
+          ...envelope,
+          action,
+          ...(payload as LimmaRequestOptions),
+        };
+      case "wgcna-analysis":
+        return {
+          ...envelope,
+          action,
+          ...(payload as WgcnaRequestOptions),
+        };
+    }
   }
 
   protected unavailableMessage(action: RScientificAction): string {
