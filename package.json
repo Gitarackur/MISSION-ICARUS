@@ -2,7 +2,7 @@
   "name": "mission-icarus",
   "author": "Gitarackur--Peter",
   "private": true,
-  "version": "0.0.144",
+  "version": "0.0.145",
   "type": "module",
   "scripts": {
     "prepare:renderer:runtimes": "node scripts/prepare-renderer-runtimes.mjs",
