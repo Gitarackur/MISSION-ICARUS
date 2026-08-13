@@ -1,4 +1,5 @@
 import Papa from "papaparse";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import type {
   IcarusActivity,
   IcarusMatrix,
@@ -69,9 +70,38 @@ const readCell = (
   return undefined;
 };
 
-/** Converts raw rows into column-filtered objects. */
+export type SerializableMatrix = unknown[] | ColumnarTable;
+
+const isTable = (matrix: SerializableMatrix): matrix is ColumnarTable =>
+  !!matrix && typeof matrix === "object" && !Array.isArray(matrix);
+
+/** Normalizes either a row array or a columnar table into a uniform
+ *  (getCell, rowCount) accessor used by the table-format renderers below. */
+const cellAccessor = (
+  matrix: SerializableMatrix
+): { getCell: (rowIndex: number, column: string) => unknown; rowCount: number } => {
+  if (isTable(matrix)) {
+    const indexByColumn = new Map<string, number>();
+    matrix.headers.forEach((header, index) => indexByColumn.set(header, index));
+    return {
+      rowCount: matrix.rowCount,
+      getCell: (rowIndex, column) => {
+        const pair = matrix.columns[indexByColumn.get(column) ?? -1];
+        const value = pair?.[rowIndex];
+        if (pair instanceof Float64Array && Number.isNaN(value)) return "N/A";
+        return value;
+      },
+    };
+  }
+  return {
+    rowCount: (matrix as unknown[]).length,
+    getCell: (rowIndex, column) => readCell((matrix as unknown[])[rowIndex], column),
+  };
+};
+
+/** Converts raw rows or a columnar table into column-filtered objects. */
 export const rowsToJson = (
-  rows: unknown[],
+  rows: SerializableMatrix,
   columns: TableColumns,
   options: ExportOptions = {}
 ): Record<string, unknown>[] => {
@@ -79,32 +109,36 @@ export const rowsToJson = (
     columns,
     Boolean(options.includeMetadataColumns)
   );
+  const { rowCount, getCell } = cellAccessor(rows);
 
-  return rows.map((row) => {
+  const records: Record<string, unknown>[] = [];
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
     const record: Record<string, unknown> = {};
     safeColumns.forEach((column) => {
-      record[column] = readCell(row, column);
+      record[column] = getCell(rowIndex, column);
     });
-    return record;
-  });
+    records.push(record);
+  }
+  return records;
 };
 
 const renderSeries = (
-  rows: unknown[],
+  rows: SerializableMatrix,
   columns: TableColumns,
   options: ExportOptions
 ): string => {
   const { delimiter = ",", includeHeaders = true } = options;
   const includeMetadataColumns = Boolean(options.includeMetadataColumns);
   const safeColumns = filterColumns(columns, includeMetadataColumns);
-
-  const matrix: (string | number)[][] = rows.map((row) =>
-    safeColumns.map((column) => readCell(row, column) as string | number)
-  );
+  const { rowCount, getCell } = cellAccessor(rows);
 
   const builder: (string | number)[][] = [];
   if (includeHeaders) builder.push([...safeColumns] as string[]);
-  matrix.forEach((row) => builder.push(row));
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    builder.push(
+      safeColumns.map((column) => getCell(rowIndex, column) as string | number)
+    );
+  }
 
   return Papa.unparse(builder, { delimiter });
 };
@@ -118,7 +152,7 @@ const escapeText = (value: string): string =>
     .replace(/'/g, "&apos;");
 
 const toMarkdown = (
-  rows: unknown[],
+  rows: SerializableMatrix,
   columns: TableColumns,
   options: ExportOptions
 ): string => {
@@ -127,30 +161,54 @@ const toMarkdown = (
     Boolean(options.includeMetadataColumns)
   );
   if (safeColumns.length === 0) return "";
+  const { rowCount, getCell } = cellAccessor(rows);
 
   const header = `| ${safeColumns.join(" | ")} |`;
   const separator = `| ${safeColumns.map(() => "---").join(" | ")} |`;
-  const body = rows
-    .map((row) => {
-      const cells = safeColumns.map((column) =>
-        String(readCell(row, column) ?? "")
-          .replace(/\|/g, "\\|")
-          .replace(/\n/g, " ")
-      );
-      return `| ${cells.join(" | ")} |`;
-    })
-    .join("\n");
 
-  return [header, separator, body].join("\n");
+  const body: string[] = [];
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    const cells = safeColumns.map((column) =>
+      String(getCell(rowIndex, column) ?? "")
+        .replace(/\|/g, "\\|")
+        .replace(/\n/g, " ")
+    );
+    body.push(`| ${cells.join(" | ")} |`);
+  }
+
+  return [header, separator, body.join("\n")].join("\n");
 };
 
 const columnValues = (
-  rows: unknown[],
-  column: string
-): unknown[] => rows.map((row) => readCell(row, column));
+  rows: SerializableMatrix,
+  column: string,
+  indexByColumn: Map<string, number>,
+  rowCount: number
+): unknown[] => {
+  const values: unknown[] = [];
+  const pair = isTable(rows)
+    ? rows.columns[indexByColumn.get(column) ?? -1]
+    : null;
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    if (pair) {
+      const value = pair[rowIndex];
+      values.push(
+        pair instanceof Float64Array && Number.isNaN(value) ? "N/A" : value
+      );
+    } else {
+      values.push(readCell((rows as unknown[])[rowIndex], column));
+    }
+  }
+  return values;
+};
 
-const isNumericColumn = (rows: unknown[], column: string): boolean =>
-  columnValues(rows, column).every(
+const isNumericColumn = (
+  rows: SerializableMatrix,
+  column: string,
+  indexByColumn: Map<string, number>,
+  rowCount: number
+): boolean =>
+  columnValues(rows, column, indexByColumn, rowCount).every(
     (value) => value == null || typeof value === "number"
   );
 
@@ -164,7 +222,7 @@ const toSqlLiteral = (value: unknown): string => {
 };
 
 const toSql = (
-  rows: unknown[],
+  rows: SerializableMatrix,
   columns: TableColumns,
   options: ExportOptions
 ): string => {
@@ -173,10 +231,17 @@ const toSql = (
   if (safeColumns.length === 0) return "-- No columns available for export";
 
   const tableName = (safeColumns[0] ?? "matrix").toLowerCase().split(/[_\s]/)[0];
+  const { rowCount, getCell } = cellAccessor(rows);
+  const indexByColumn = new Map<string, number>();
+  if (isTable(rows)) {
+    rows.headers.forEach((header, index) => indexByColumn.set(header, index));
+  }
 
   const columnDefs = safeColumns
     .map((column) => {
-      const type = isNumericColumn(rows, column) ? "REAL" : "TEXT";
+      const type = isNumericColumn(rows, column, indexByColumn, rowCount)
+        ? "REAL"
+        : "TEXT";
       return `  ${sanitizeSqlIdentifier(column)} ${type}`;
     })
     .join(",\n");
@@ -193,14 +258,14 @@ const toSql = (
   lines.push(");");
   lines.push("");
 
-  rows.forEach((row) => {
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
     const values = safeColumns
-      .map((column) => toSqlLiteral(readCell(row, column)))
+      .map((column) => toSqlLiteral(getCell(rowIndex, column)))
       .join(", ");
     lines.push(
       `INSERT INTO "${tableName || "matrix"}" (${columnList}) VALUES (${values});`
     );
-  });
+  }
 
   return lines.join("\n");
 };
@@ -212,7 +277,7 @@ const sanitizeTag = (name: string): string =>
     .replace(/^(\d)/, "_col_1");
 
 const toXml = (
-  rows: unknown[],
+  rows: SerializableMatrix,
   columns: TableColumns,
   options: ExportOptions
 ): string => {
@@ -220,29 +285,29 @@ const toXml = (
     columns,
     Boolean(options.includeMetadataColumns)
   );
+  const { rowCount, getCell } = cellAccessor(rows);
 
-  const inner = rows
-    .map((row) => {
-      const cells = safeColumns
-        .map((column) => {
-          const tag = sanitizeTag(column);
-          return `    <${tag}>${escapeText(String(readCell(row, column) ?? ""))}</${tag}>`;
-        })
-        .join("\n");
-      return `  <row>${cells ? `\n${cells}\n  ` : ""}</row>`;
-    })
-    .join("\n");
+  const innerRows: string[] = [];
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    const cells = safeColumns
+      .map((column) => {
+        const tag = sanitizeTag(column);
+        return `    <${tag}>${escapeText(String(getCell(rowIndex, column) ?? ""))}</${tag}>`;
+      })
+      .join("\n");
+    innerRows.push(`  <row>${cells ? `\n${cells}\n  ` : ""}</row>`);
+  }
 
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     "<matrix>",
-    inner,
+    innerRows.join("\n"),
     "</matrix>",
   ].join("\n");
 };
 
 export const serializeActiveMatrix = (
-  rows: unknown[],
+  rows: SerializableMatrix,
   columns: TableColumns,
   format: ExportFormat,
   options: ExportOptions = {}

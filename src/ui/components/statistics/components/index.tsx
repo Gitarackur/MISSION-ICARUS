@@ -25,7 +25,7 @@ import {
   DELIMITER_LABELS,
   type CsvDelimiter,
 } from "@/ui/settings/settings.types";
-import { ProteinRow } from "@/domain/proteins/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import {
   StatisticalAction,
   StatisticalAnalysisResult,
@@ -44,6 +44,25 @@ import {
   Download,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+
+// Reads the display identifier of a row from a columnar table, mirroring the
+// previous row-object lookup of `row.id || row.name || "Row N"`.
+const getRowIdentifier = (
+  dataTable: ColumnarTable,
+  rowIndex: number
+): string => {
+  const idIndex = dataTable.headers.indexOf("id");
+  const nameIndex = dataTable.headers.indexOf("name");
+  for (const index of [idIndex, nameIndex]) {
+    if (index === -1) continue;
+    const pair = dataTable.columns[index];
+    const value = pair?.[rowIndex];
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+  return `Row ${rowIndex + 1}`;
+};
 
 // Common styles for consistency
 const containerClass = "bg-white rounded-xl";
@@ -100,7 +119,7 @@ const AnalysisSubmitButton = ({
 type StatisticalComponentProps = {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -123,7 +142,7 @@ const ColumnAnalysisRunner = ({
   allColumnarData,
   buttonLabel = "Calculate",
   dataColumns,
-  dataRows,
+  dataTable,
   description,
   minSelections = 1,
   multi = true,
@@ -139,8 +158,8 @@ const ColumnAnalysisRunner = ({
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -232,14 +251,14 @@ COUNT COLUMN VALUES
 export const Count = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -247,8 +266,8 @@ export const Count = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -341,14 +360,14 @@ COUNT MISSING COLUMN VALUES
 export const CountMissing = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -356,8 +375,8 @@ export const CountMissing = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -453,14 +472,14 @@ COUNT VALID COLUMN VALUES
 export const CountValid = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -468,8 +487,8 @@ export const CountValid = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -565,14 +584,14 @@ MEAN COLUMN VALUES
 export const MeanValues = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -580,8 +599,8 @@ export const MeanValues = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -675,14 +694,14 @@ MEDIAN COLUMN VALUES
 export const MedianValues = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -690,8 +709,8 @@ export const MedianValues = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -786,14 +805,14 @@ VARIANCE COLUMN VALUES
 export const Variance = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -801,8 +820,8 @@ export const Variance = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -899,14 +918,14 @@ STDDEV COLUMN VALUES
 export const StdDevValues = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -914,8 +933,8 @@ export const StdDevValues = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -1012,14 +1031,14 @@ SUM COLUMN VALUES
 export const Sum = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -1027,8 +1046,8 @@ export const Sum = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -1122,14 +1141,14 @@ PRODUCT COLUMN VALUES
 export const Product = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -1137,8 +1156,8 @@ export const Product = ({
   // hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -1234,7 +1253,7 @@ MIN COLUMN VALUES
 export const Min = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -1242,7 +1261,7 @@ export const Min = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -1259,7 +1278,7 @@ MAX COLUMN VALUES
 export const Max = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -1267,7 +1286,7 @@ export const Max = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -1284,21 +1303,21 @@ FILTER COLUMN VALUES
 export const FilterByValue = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -1458,7 +1477,7 @@ export const FilterByValue = ({
         inputParameters: {
           columns: selectedDataSets,
           action: actionId,
-          rowCount: dataRows.length,
+          rowCount: dataTable.rowCount,
           metadata: {
             originalDataType: "Map<string, TableMatrix>",
             columnsProcessed: selectedDataSets.length,
@@ -1570,22 +1589,22 @@ COUNT COLUMN VALUES BY MISSING
 export const FilterByMissing = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -1679,22 +1698,22 @@ FILTER COLUMN VALUES BY RANGE
 export const FilterByRange = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -1817,22 +1836,22 @@ FILTER COLUMN VALUES BY OUTLIER
 export const FilterByOutlier = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -1926,22 +1945,22 @@ ADD COLUMN VALUES
 export const AddColumn = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [newColumnName, setNewColumnName] = useState<string>("");
@@ -2023,22 +2042,22 @@ export const AddColumn = ({
 export const RenameColumn = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [oldName, setOldName] = useState<string>("");
@@ -2138,22 +2157,22 @@ DELETE COLUMN VALUES
 export const DeleteColumn = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -2242,22 +2261,22 @@ FILL COLUMN VALUES
 export const FillColumn = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -2363,14 +2382,14 @@ INPUT MEAN COLUMN VALUES
 export const ImputeMean = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -2379,8 +2398,8 @@ export const ImputeMean = ({
 // (B) Keep UX consistent with your Count components
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -2463,14 +2482,14 @@ IMPUTE MEDIAN COLUMN VALUES
 export const ImputeMedian = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -2478,8 +2497,8 @@ export const ImputeMedian = ({
   // Keep UX consistent with ImputeMean / Count components
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -2570,14 +2589,14 @@ IMPUTE KNN COLUMN VALUES (same structure as mean)
 export const ImputeKnn = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -2585,8 +2604,8 @@ export const ImputeKnn = ({
   // Keep UX consistent with your Count / ImputeMean components
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -2698,14 +2717,14 @@ IMPUTE ZERO COLUMN VALUES
 export const ImputeZero = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -2713,8 +2732,8 @@ export const ImputeZero = ({
   // Keep UX consistent with your Count / ImputeMean components
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -2803,22 +2822,22 @@ export const ImputeZero = ({
 export const ImputeMultiple = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis, cancelAnalysis, progress } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
 
@@ -3062,15 +3081,15 @@ export const ImputeMultiple = ({
 export const MovingAverage: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ dataColumns, actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   // Hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataTable), [dataColumns, dataTable]);
   const numericColumns = [...numericColumnsSet];
   
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
@@ -3182,15 +3201,15 @@ export const MovingAverage: React.FC<{
 export const RollingStdDev: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ dataColumns, actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   // Hook that attaches to statistical engine
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataTable), [dataColumns, dataTable]);
   const numericColumns = [...numericColumnsSet];
   
   const [selectedDataSets, setSelectedDataSets] = useState<string[]>([]);
@@ -3303,14 +3322,14 @@ export const RollingStdDev: React.FC<{
 export const TTest: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ dataColumns, actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataTable), [dataColumns, dataTable]);
   const numericColumns = [...numericColumnsSet];
   
   const [group1Columns, setGroup1Columns] = useState<string[]>([]);
@@ -3431,14 +3450,14 @@ export const TTest: React.FC<{
 export const Anova: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ dataColumns, actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataTable), [dataColumns, dataTable]);
   const numericColumns = [...numericColumnsSet];
   
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
@@ -3541,14 +3560,14 @@ export const Anova: React.FC<{
 export const Limma: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ dataColumns, actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataTable), [dataColumns, dataTable]);
   const numericColumns = [...numericColumnsSet];
   
   const [treatmentColumns, setTreatmentColumns] = useState<string[]>([]);
@@ -3677,14 +3696,14 @@ export const Limma: React.FC<{
 export const FoldChange: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ dataColumns, actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ dataColumns, actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataRows), [dataColumns, dataRows]);
+  const numericColumnsSet = useMemo(() => getNumericColumnsOptimized(dataColumns, dataTable), [dataColumns, dataTable]);
   const numericColumns = [...numericColumnsSet];
   
   const [treatmentColumns, setTreatmentColumns] = useState<string[]>([]);
@@ -3825,7 +3844,7 @@ export const FoldChange: React.FC<{
 export const NormalizeReporterIons: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -3959,7 +3978,7 @@ export const NormalizeReporterIons: React.FC<{
 export const CorrectForPurity: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -4112,7 +4131,7 @@ BOX PLOT COLUMN VALUES
 export const BoxPlot = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -4120,7 +4139,7 @@ export const BoxPlot = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -4137,7 +4156,7 @@ SCATTER PLOT COLUMN VALUES
 export const ScatterPlot = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -4145,7 +4164,7 @@ export const ScatterPlot = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -4163,7 +4182,7 @@ HEATMAP COLUMN VALUES
 export const Heatmap = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -4171,7 +4190,7 @@ export const Heatmap = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -4189,7 +4208,7 @@ VOLCANO PLOT COLUMN VALUES
 export const VolcanoPlot = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -4197,7 +4216,7 @@ export const VolcanoPlot = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -4215,7 +4234,7 @@ PCA PLOT COLUMN VALUES
 export const PcaPlot = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -4223,7 +4242,7 @@ export const PcaPlot = ({
   <ColumnAnalysisRunner
     dataColumns={dataColumns}
     actionId={actionId}
-    dataRows={dataRows}
+    dataTable={dataTable}
     allColumnarData={allColumnarData}
     onSuccess={onSuccess}
     onError={onError}
@@ -4242,7 +4261,7 @@ export const PcaPlot = ({
 export const SortAscending: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -4361,7 +4380,7 @@ export const SortAscending: React.FC<{
 export const SortDescending: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -4479,7 +4498,7 @@ export const SortDescending: React.FC<{
 export const ReorderColumns: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -4582,7 +4601,7 @@ export const ReorderColumns: React.FC<{
 export const Transpose: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -4702,7 +4721,7 @@ export const Transpose: React.FC<{
 export const FilterColumnsByName: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -4881,7 +4900,7 @@ export const FilterColumnsByName: React.FC<{
 export const FilterColumnsByType: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -5030,7 +5049,7 @@ export const FilterColumnsByType: React.FC<{
 export const AddRow: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -5164,14 +5183,14 @@ export const AddRow: React.FC<{
 export const RenameRow: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ actionId, dataRows, onSuccess, onError }) => {
+}> = ({ actionId, dataTable, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const totalRows = dataRows.length;
+  const totalRows = dataTable.rowCount;
   
   const [rowIndex, setRowIndex] = useState<number>(0);
   const [newName, setNewName] = useState<string>('');
@@ -5179,13 +5198,12 @@ export const RenameRow: React.FC<{
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (rowIndex >= 0 && rowIndex < dataRows.length) {
+    if (rowIndex >= 0 && rowIndex < dataTable.rowCount) {
       // Get the current row identifier (assuming there's an 'id' or 'name' property)
-      const row = dataRows[rowIndex];
-      const identifier = ((row).id || (row).name || `Row ${rowIndex + 1}`)as string;
+      const identifier = getRowIdentifier(dataTable, rowIndex);
       setCurrentName(identifier);
     }
-  }, [rowIndex, dataRows]);
+  }, [rowIndex, dataTable]);
 
   const runRenameRow = async () => {
     setError(null);
@@ -5289,14 +5307,14 @@ export const RenameRow: React.FC<{
 export const DeleteRow: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const totalRows = dataRows.length;
+  const totalRows = dataTable.rowCount;
   const availableColumns = useMemo(() => {
     const columnNames = Array.from(allColumnarData.keys());
     return columnNames.filter(col => !col.startsWith('__'));
@@ -5471,14 +5489,14 @@ export const DeleteRow: React.FC<{
 export const PcaLearning: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }> = ({ 
   // dataColumns, 
   actionId, 
-  // dataRows, 
+  // dataTable, 
   allColumnarData, 
   onSuccess, 
   onError 
@@ -5601,14 +5619,14 @@ export const PcaLearning: React.FC<{
 export const PlsdaLearning: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }> = ({ 
   // dataColumns, 
   actionId, 
-  // dataRows, 
+  // dataTable, 
   allColumnarData, 
   onSuccess, 
   onError 
@@ -5747,14 +5765,14 @@ export const PlsdaLearning: React.FC<{
 export const TsneLearning: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }> = ({ 
   // dataColumns, 
   actionId, 
-  // dataRows, 
+  // dataTable, 
   allColumnarData, 
   onSuccess, 
   onError 
@@ -5926,14 +5944,14 @@ export const TsneLearning: React.FC<{
 export const AddPtm: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const totalRows = dataRows.length;
+  const totalRows = dataTable.rowCount;
   
   const [ptmType, setPtmType] = useState<string>('Phosphorylation');
   const [residueType, setResidueType] = useState<string>('S');
@@ -6128,14 +6146,14 @@ export const AddPtm: React.FC<{
 export const RemovePtm: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
-}> = ({ actionId, dataRows, allColumnarData, onSuccess, onError }) => {
+}> = ({ actionId, dataTable, allColumnarData, onSuccess, onError }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   
-  const totalRows = dataRows.length;
+  const totalRows = dataTable.rowCount;
   
   const [removalMode, setRemovalMode] = useState<string>('by-type');
   const [selectedPTMTypes, setSelectedPTMTypes] = useState<string[]>([]);
@@ -6450,7 +6468,7 @@ export const PathwayAnalysis = () => (
 interface ClusteringComponentProps {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -6462,7 +6480,7 @@ interface ClusteringComponentProps {
 
 export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError
@@ -6490,8 +6508,8 @@ export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
       return;
     }
     
-    if (k < 2 || k > dataRows.length) {
-      setError(`K must be between 2 and ${dataRows.length}.`);
+    if (k < 2 || k > dataTable.rowCount) {
+      setError(`K must be between 2 and ${dataTable.rowCount}.`);
       onError?.();
       return;
     }
@@ -6550,7 +6568,7 @@ export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
             type="number"
             id="k-value"
             min="2"
-            max={Math.min(50, dataRows.length)}
+            max={Math.min(50, dataTable.rowCount)}
             value={k}
             onChange={(e) => setK(parseInt(e.target.value) || 3)}
             className={inputClass}
@@ -6609,7 +6627,7 @@ export const KMeansClustering: React.FC<ClusteringComponentProps> = ({
 
 export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError
@@ -6637,8 +6655,8 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
       return;
     }
     
-    if (numClusters < 2 || numClusters > dataRows.length) {
-      setError(`Number of clusters must be between 2 and ${dataRows.length}.`);
+    if (numClusters < 2 || numClusters > dataTable.rowCount) {
+      setError(`Number of clusters must be between 2 and ${dataTable.rowCount}.`);
       onError?.();
       return;
     }
@@ -6697,7 +6715,7 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
             type="number"
             id="num-clusters-hier"
             min="2"
-            max={Math.min(50, dataRows.length)}
+            max={Math.min(50, dataTable.rowCount)}
             value={numClusters}
             onChange={(e) => setNumClusters(parseInt(e.target.value) || 3)}
             className={inputClass}
@@ -6731,10 +6749,10 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
           </ul>
         </div>
         
-        {dataRows.length > 1000 && (
+        {dataTable.rowCount > 1000 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
             <p className="text-xs text-yellow-800">
-              <strong>⚠️ Warning:</strong> Your dataset has {dataRows.length} samples. 
+              <strong>⚠️ Warning:</strong> Your dataset has {dataTable.rowCount} samples. 
               Hierarchical clustering may take significant time for large datasets.
             </p>
           </div>
@@ -6760,7 +6778,7 @@ export const HierarchicalClustering: React.FC<ClusteringComponentProps> = ({
 
 export const PCAClustering: React.FC<ClusteringComponentProps> = ({
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError
@@ -6876,7 +6894,7 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
               type="number"
               id="k-value-pca"
               min="2"
-              max={Math.min(20, dataRows.length)}
+              max={Math.min(20, dataTable.rowCount)}
               value={k}
               onChange={(e) => setK(parseInt(e.target.value) || 3)}
               className={inputClass}
@@ -6915,7 +6933,7 @@ export const PCAClustering: React.FC<ClusteringComponentProps> = ({
 export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
   actionId,
   dataColumns,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -6923,8 +6941,8 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
   const { performAnalysis } = useStatisticalAnalysis();
 
   const availableColumns = useMemo(
-    () => [...getNumericColumnsOptimized(dataColumns, dataRows)],
-    [dataColumns, dataRows]
+    () => [...getNumericColumnsOptimized(dataColumns, dataTable)],
+    [dataColumns, dataTable]
   );
 
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -6939,7 +6957,7 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
       setError("2D requires at least two feature columns.");
       return;
     }
-    if (dataRows.length < 2) {
+    if (dataTable.rowCount < 2) {
       setError("2D requires at least two rows of data.");
       return;
     }
@@ -7019,15 +7037,15 @@ export const TwoDEmbedding: React.FC<StatisticalComponentProps> = ({
 export const PmuTest: React.FC<StatisticalComponentProps> = ({
   actionId,
   dataColumns,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -7126,7 +7144,7 @@ export const PmuTest: React.FC<StatisticalComponentProps> = ({
 interface NormalizationComponentProps {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -7628,7 +7646,7 @@ export const MissingValuesPlot = () => (
 export const FTest: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -7730,7 +7748,7 @@ export const FTest: React.FC<{
 export const ChiSquareTest: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -7835,7 +7853,7 @@ export const ChiSquareTest: React.FC<{
 export const ZScoreOutlier: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -7957,7 +7975,7 @@ export const ZScoreOutlier: React.FC<{
 export const IQROutlier: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -8079,7 +8097,7 @@ export const IQROutlier: React.FC<{
 export const GrubbsOutlier: React.FC<{
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -8184,22 +8202,22 @@ WGCNA ANALYSIS
 export const WgcnaAnalysis = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
 }) => {
   const { performAnalysis, cancelAnalysis, progress } = useStatisticalAnalysis();
   const numericColumns = useMemo(
-    () => [...getNumericColumnsOptimized(dataColumns, dataRows)],
-    [dataColumns, dataRows]
+    () => [...getNumericColumnsOptimized(dataColumns, dataTable)],
+    [dataColumns, dataTable]
   );
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
   const [softThreshold, setSoftThreshold] = useState(6);
@@ -8322,10 +8340,10 @@ const DELIMITER_FORMATS: ExportFormat[] = ["csv", "tsv", "txt"];
 
 const MatrixExportView: React.FC<{
   dataColumns: TableColumns;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   defaultFormat: ExportFormat;
   successMessage: string;
-}> = ({ dataColumns, dataRows, defaultFormat, successMessage }) => {
+}> = ({ dataColumns, dataTable, defaultFormat, successMessage }) => {
   const styles = exportSheetStyles();
   const {
     settings,
@@ -8347,7 +8365,7 @@ const MatrixExportView: React.FC<{
 
   const handleExport = () => {
     try {
-      const file = serializeActiveMatrix(dataRows, dataColumns, format, {
+      const file = serializeActiveMatrix(dataTable, dataColumns, format, {
         delimiter: settings.delimiter,
         includeHeaders: settings.includeHeaders,
         includeMetadataColumns: settings.includeMetadataColumns,
@@ -8455,10 +8473,10 @@ const MatrixExportView: React.FC<{
           variant="primary"
           className={styles.exportButton()}
           onClick={handleExport}
-          disabled={dataRows.length === 0}
+          disabled={dataTable.rowCount === 0}
         >
           <Download className={styles.buttonIcon()} />
-          Export {dataRows.length} rows
+          Export {dataTable.rowCount} rows
         </Button>
       </div>
     </div>
@@ -8467,10 +8485,10 @@ const MatrixExportView: React.FC<{
 
 export const SaveData = ({
   dataColumns,
-  dataRows,
+  dataTable,
 }: {
   dataColumns: TableColumns;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Save Data</h1>
@@ -8479,7 +8497,7 @@ export const SaveData = ({
     </p>
     <MatrixExportView
       dataColumns={dataColumns}
-      dataRows={dataRows}
+      dataTable={dataTable}
       defaultFormat="json"
       successMessage="Data saved successfully"
     />
@@ -8488,10 +8506,10 @@ export const SaveData = ({
 
 export const ExportCsv = ({
   dataColumns,
-  dataRows,
+  dataTable,
 }: {
   dataColumns: TableColumns;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
 }) => (
   <div className={containerClass}>
     <h1 className={headingClass}>Export CSV</h1>
@@ -8500,7 +8518,7 @@ export const ExportCsv = ({
     </p>
     <MatrixExportView
       dataColumns={dataColumns}
-      dataRows={dataRows}
+      dataTable={dataTable}
       defaultFormat="csv"
       successMessage="CSV exported successfully"
     />
@@ -8515,15 +8533,15 @@ FX: EXPRESSION f(x)
 export const FxExpression = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: StatisticalComponentProps) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -8614,15 +8632,15 @@ FX: LINEAR (ax+b)
 export const FxLinear = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: StatisticalComponentProps) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumn, setSelectedColumn] = useState<string>("");
@@ -8728,15 +8746,15 @@ export const FxLinear = ({
 export const OneDNormalize = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: StatisticalComponentProps) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -8811,15 +8829,15 @@ export const OneDNormalize = ({
 export const OneDIndex = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: StatisticalComponentProps) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumns = [...useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   )];
 
   const runAnalysis = async () => {
@@ -8868,7 +8886,7 @@ PI: MULTIPLY / DIVIDE
 const PiColumnRunner = ({
   actionId,
   dataColumns,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
@@ -8876,8 +8894,8 @@ const PiColumnRunner = ({
 }: StatisticalComponentProps & { multiply: boolean }) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
@@ -8965,7 +8983,7 @@ export const MeanCenteringNormalizationLog = ({
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -8986,7 +9004,7 @@ export const TransformNormalization = ({
 }: {
   dataColumns: TableColumns;
   actionId: StatisticalAction;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
   onSuccess?: (result: StatisticalAnalysisResult) => void;
   onError?: () => void;
@@ -9017,15 +9035,15 @@ Pj
 export const Pj = ({
   dataColumns,
   actionId,
-  dataRows,
+  dataTable,
   allColumnarData,
   onSuccess,
   onError,
 }: StatisticalComponentProps) => {
   const { performAnalysis } = useStatisticalAnalysis();
   const numericColumnsSet = useMemo(
-    () => getNumericColumnsOptimized(dataColumns, dataRows),
-    [dataColumns, dataRows]
+    () => getNumericColumnsOptimized(dataColumns, dataTable),
+    [dataColumns, dataTable]
   );
   const numericColumns = [...numericColumnsSet];
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);

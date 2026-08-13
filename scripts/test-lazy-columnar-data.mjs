@@ -21,21 +21,27 @@ const { LazyColumnarData } = await import(
   `data:text/javascript;base64,${encodedModule}`
 );
 
-const data = new LazyColumnarData(
-  [
-    { protein: "p1", intensity: 10 },
-    { protein: "p2", intensity: 20 },
+const table = {
+  headers: ["protein", "intensity"],
+  columns: [
+    ["p1", "p2", "p3"],
+    new Float64Array([10, NaN, 30]),
   ],
-  ["protein", "intensity"]
-);
+  rowCount: 3,
+  columnTypes: { protein: "string", intensity: "number" },
+  errors: [],
+};
 
-assert.deepEqual(data.get("intensity"), [10, 20]);
+const data = new LazyColumnarData(table, ["protein", "intensity"]);
+
+assert.deepEqual(data.get("intensity"), [10, "N/A", 30]);
+assert.deepEqual(data.get("protein"), ["p1", "p2", "p3"]);
 assert.deepEqual([...data], [
-  ["protein", ["p1", "p2"]],
-  ["intensity", [10, 20]],
+  ["protein", ["p1", "p2", "p3"]],
+  ["intensity", [10, "N/A", 30]],
 ]);
-assert.deepEqual([...data.values()], [["p1", "p2"], [10, 20]]);
-assert.deepEqual(new Map(data).get("protein"), ["p1", "p2"]);
+assert.deepEqual([...data.values()], [["p1", "p2", "p3"], [10, "N/A", 30]]);
+assert.deepEqual(new Map(data).get("protein"), ["p1", "p2", "p3"]);
 
 const visited = [];
 data.forEach((values, column, source) => {
@@ -43,5 +49,8 @@ data.forEach((values, column, source) => {
   visited.push([column, values]);
 });
 assert.deepEqual(visited, [...data.entries()]);
+
+const tested = new LazyColumnarData(table, ["intensity"]);
+assert.equal(tested.get("missing-column"), undefined);
 
 console.log("Lazy columnar data tests passed");

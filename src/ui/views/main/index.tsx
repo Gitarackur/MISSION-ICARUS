@@ -44,7 +44,7 @@ const IcarusApp: React.FC = () => {
     matrices,
     operationError,
     originalDataColumns,
-    originalDataRows,
+    originalDataTable,
     retryActiveMatrixProcessing,
     saveActivityInWorkflow,
     saveVisualizationInWorkflow,
@@ -265,7 +265,7 @@ const IcarusApp: React.FC = () => {
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}
-          dataRows={originalDataRows}
+          rowCount={originalDataTable?.rowCount ?? 0}
           onMatrixSelect={selectMatrix}
           toggleSidebar={toggleSidebar}
           visualizations={activeSession?.visualizations ?? []}
@@ -294,7 +294,7 @@ const IcarusApp: React.FC = () => {
               />
             ) : (
               <ProteomicsAnalysisHomeView
-                originalDataRows={originalDataRows}
+                originalDataTable={originalDataTable}
                 originalDataColumns={originalDataColumns}
                 selectedDataColumns={selectedDataColumns}
                 setSelectedDataColumns={setSelectedDataColumns}
@@ -366,7 +366,7 @@ const IcarusApp: React.FC = () => {
       <ExportSheet
         isOpen={isExportOpen}
         onClose={() => setIsExportOpen(false)}
-        rows={originalDataRows}
+        table={originalDataTable}
         columns={originalDataColumns}
         session={activeSession}
         loadSession={loadSessionForExport}

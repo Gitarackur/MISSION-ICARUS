@@ -1,37 +1,51 @@
 import { useMemo, useCallback, useEffect } from "react";
-import { ProteinRow } from "@/domain/proteins/index.types";
 import { dataOutputStyles } from "../variants/data-output.variant";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
-import { inferColumnTypes } from "@/app-layer/shared/csv_tsc_parser";
+import type { ColumnarTable, ColumnType } from "@/domain/shared/index.types";
 import { LazyColumnarData } from "@/app-layer/shared/lazy-columnar-data";
 import {
   formatNumericDisplayValue,
   getNumericCellState,
 } from "@/domain/shared/number-parsing";
 
+const readCellValue = (
+  table: ColumnarTable | null,
+  rowIndex: number,
+  column: string
+): unknown => {
+  if (!table) return undefined;
+  const columnIndex = table.headers.indexOf(column);
+  if (columnIndex === -1) return undefined;
+  const pair = table.columns[columnIndex];
+  const value = pair[rowIndex];
+  if (pair instanceof Float64Array && Number.isNaN(value)) return "N/A";
+  return value;
+};
+
 export const useTableStylingAndInteraction = (
-  originalDataRows: ProteinRow[],
+  originalDataTable: ColumnarTable | null,
   columns: TableColumns,
   selectedDataColumns: TableColumns,
   setSelectedDataColumns: (cols: TableColumns) => void
 ) => {
   const styles = dataOutputStyles();
 
-  // Identifies the column type of the data
-  const mapColumnType = useMemo(() => inferColumnTypes(originalDataRows), [originalDataRows])
+  // Identifies the column type of the data (parser-inferred, no re-scan)
+  const mapColumnType = useMemo<Record<string, ColumnType>>(() => {
+    if (!originalDataTable) return {};
+    return originalDataTable.columnTypes;
+  }, [originalDataTable]);
 
   const allColumnarData = useMemo(() => {
-    if (!originalDataRows.length || !columns.length) {
+    if (!originalDataTable || !originalDataTable.rowCount || !columns.length) {
       return new Map<string, TableMatrix>();
     }
 
-    return new LazyColumnarData(originalDataRows, columns);
-  }, [originalDataRows, columns]);
-
-
+    return new LazyColumnarData(originalDataTable, columns);
+  }, [originalDataTable, columns]);
 
   // Determines the CSS class for each cell based on its selection state
-  const getCellStyle = useCallback((_rowIndex: number, _row: ProteinRow | null, columnName: string, isHeader = false) => {
+  const getCellStyle = useCallback((_rowIndex: number, _row: unknown, columnName: string, isHeader = false) => {
     const isNumeric = mapColumnType[columnName] === "number";
     const isString = mapColumnType[columnName] === "string";
     const isBoolean = mapColumnType[columnName] === "boolean";
@@ -52,7 +66,7 @@ export const useTableStylingAndInteraction = (
       }
 
     } else if (isNumeric) {
-      const numericState = getNumericCellState(_row?.[columnName]);
+      const numericState = getNumericCellState(_row);
 
       if (numericState === "missing") {
         className +=
@@ -73,13 +87,17 @@ export const useTableStylingAndInteraction = (
   }, [mapColumnType, styles]);
 
   const getCellDisplayValue = useCallback(
-    (row: ProteinRow, columnName: string) => {
-      const rawValue = row[columnName];
+    (
+      rowIndex: number,
+      columnName: string,
+      table: ColumnarTable | null
+    ): string | number => {
+      const rawValue = readCellValue(table, rowIndex, columnName);
       if (mapColumnType[columnName] === "number") {
         return formatNumericDisplayValue(rawValue);
       }
 
-      return rawValue ?? "N/A";
+      return (rawValue ?? "N/A") as string | number;
     },
     [mapColumnType]
   );
@@ -87,11 +105,12 @@ export const useTableStylingAndInteraction = (
 
   // get cell style (based on which cells are numeric values and/or which are highlighted)
   const getCombinedCellStyle = useCallback(
-    (rowIndex: number, row: ProteinRow | null, columnId: string, isHeader: boolean = false) => {
-      const baseStyle = getCellStyle(rowIndex, row, columnId, isHeader);
+    (rowIndex: number, _row: unknown, columnId: string, isHeader: boolean = false) => {
+      const value = isHeader ? undefined : readCellValue(originalDataTable, rowIndex, columnId);
+      const baseStyle = getCellStyle(rowIndex, value, columnId, isHeader);
       return baseStyle;
     },
-    [getCellStyle]
+    [getCellStyle, originalDataTable]
   );
 
   // toggle the fields to show on the preview ui table

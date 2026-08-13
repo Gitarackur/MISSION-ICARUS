@@ -1,7 +1,7 @@
 import type { ExportFormat, CsvDelimiter } from "@/app-layer/shared/exporter";
 import type { IcarusSessionWithWorkflow } from "@/domain/session/session.types";
 import type { TableColumns } from "@/domain/workflow/main.types";
-import type { ProteinRow } from "@/domain/proteins/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { IcarusStorageEstimate } from "@/domain/storage/index.types";
 
 export interface SettingsViewProps {
@@ -13,7 +13,7 @@ export interface SettingsViewProps {
 export interface ExportViewProps {
   isOpen: boolean;
   onClose: () => void;
-  rows: ProteinRow[];
+  table: ColumnarTable | null;
   columns: TableColumns;
   session: IcarusSessionWithWorkflow | null;
   loadSession?: () => Promise<IcarusSessionWithWorkflow | null>;

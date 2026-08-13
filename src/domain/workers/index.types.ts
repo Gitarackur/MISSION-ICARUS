@@ -1,5 +1,5 @@
 import type { IcarusMatrix, TableMatrices } from "@/domain/workflow/main.types";
-import type { ParsedCSVResult, DataRowsAndColumns } from "@/domain/shared/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { ProteinRow, ProteomicsSummary } from "@/domain/proteins/index.types";
 import type {
   StatisticalAction,
@@ -129,9 +129,12 @@ export interface CSVParserWorkerRequest {
   file: File;
 }
 
-export type CSVParserWorkerResponse<T> =
+/** CSV import now resolves to a columnar table; row objects are not built in
+ *  the worker. Float64Array columns structured-clone far cheaper than 1.8M
+ *  row objects. */
+export type CSVParserWorkerResponse =
   | WorkerProgressHeartbeat
-  | WorkerResponse<ParsedCSVResult<T>>;
+  | WorkerResponse<ColumnarTable>;
 
 export interface MatrixViewWorkerRequest {
   columns: string[];
@@ -140,11 +143,10 @@ export interface MatrixViewWorkerRequest {
 
 export type MatrixViewWorkerResponse =
   | WorkerProgressHeartbeat
-  | WorkerResponse<DataRowsAndColumns>;
+  | WorkerResponse<ColumnarTable>;
 
 export interface ProteomicsSummaryWorkerRequest {
-  rows: ProteinRow[];
-  columns: string[];
+  table: ColumnarTable;
 }
 
 export type ProteomicsSummaryWorkerResponse =

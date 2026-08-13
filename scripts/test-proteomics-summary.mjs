@@ -21,34 +21,64 @@ const { computeProteomicsSummary } = await import(
   `data:text/javascript;base64,${encodedModule}`
 );
 
+// Builds a ColumnarTable from row-major cells, mirroring how the parser and
+// matrix-view worker produce tables (Float64Array for numeric columns).
+const toTable = (rows, columns) => {
+  const headers = [...columns];
+  const columnValues = headers.map((_, columnIndex) =>
+    rows.map((row) => row[columnIndex])
+  );
+  const numericFlags = headers.map((_, columnIndex) =>
+    columnValues[columnIndex].every(
+      (value) =>
+        value === null ||
+        value === undefined ||
+        value === "" ||
+        (typeof value === "number" && !Number.isNaN(value))
+    )
+  );
+  const columnsOut = headers.map((_, columnIndex) => {
+    if (numericFlags[columnIndex]) {
+      const array = new Float64Array(rows.length);
+      columnValues[columnIndex].forEach((value, index) => {
+        array[index] =
+          value === null || value === undefined || value === ""
+            ? NaN
+            : Number(value);
+      });
+      return array;
+    }
+    return columnValues[columnIndex].map((value) =>
+      value === null || value === undefined ? "N/A" : String(value)
+    );
+  });
+  const columnTypes = {};
+  headers.forEach((header, index) => {
+    columnTypes[header] = numericFlags[index] ? "number" : "string";
+  });
+  return {
+    headers,
+    columns: columnsOut,
+    rowCount: rows.length,
+    columnTypes,
+    errors: [],
+  };
+};
+
 const rows = [
-  {
-    proteinId: "p1",
-    intensity_Sample1: 100,
-    intensity_Sample2: 200,
-    intensity_Control1: 50,
-    intensity_Control2: 50,
-    pValue: 0.01,
-  },
-  {
-    proteinId: "p2",
-    intensity_Sample1: 0,
-    intensity_Sample2: 400,
-    intensity_Control1: 200,
-    intensity_Control2: 200,
-    pValue: 0.5,
-  },
+  [100, 200, 50, 50, 0.01, "p1"],
+  [0, 400, 200, 200, 0.5, "p2"],
 ];
 const columns = [
-  "proteinId",
   "intensity_Sample1",
   "intensity_Sample2",
   "intensity_Control1",
   "intensity_Control2",
   "pValue",
+  "proteinId",
 ];
 
-const result = await computeProteomicsSummary(rows, columns);
+const result = await computeProteomicsSummary(toTable(rows, columns));
 assert.equal(result.stats.totalProteins, 2);
 assert.equal(result.stats.missingValues, 1);
 assert.equal(result.stats.medianIntensity, 200);
@@ -59,54 +89,42 @@ assert.equal(result.volcanoData[0].protein, "p1");
 assert.equal(result.volcanoData[0].significant, true);
 
 const fallbackResult = await computeProteomicsSummary(
-  [{ Intensity_A: 10 }],
-  ["Intensity_A"]
+  toTable([[10]], ["Intensity_A"])
 );
 assert.equal(fallbackResult.stats.averageIntensity, 10);
 assert.deepEqual(fallbackResult.intensityDist, []);
 
 const invalidResult = await computeProteomicsSummary(
-  [
-    {
-      proteinId: "invalid",
-      intensity_Sample1: "not-a-number",
-      intensity_Control1: 10,
-      pValue: undefined,
-    },
-  ],
-  ["intensity_Sample1", "intensity_Control1", "pValue"]
+  toTable(
+    [["not-a-number", 10, undefined, "invalid"]],
+    ["intensity_Sample1", "intensity_Control1", "pValue", "proteinId"]
+  )
 );
 assert.equal(invalidResult.stats.missingValues, 1);
 assert.deepEqual(invalidResult.volcanoData, []);
 
 const missingPValueResult = await computeProteomicsSummary(
-  [
-    {
-      proteinId: "missing-p",
-      intensity_Sample1: 100,
-      intensity_Control1: 10,
-      pValue: "",
-    },
-  ],
-  ["intensity_Sample1", "intensity_Control1", "pValue"]
+  toTable([[100, 10, "", "missing-p"]], [
+    "intensity_Sample1",
+    "intensity_Control1",
+    "pValue",
+    "proteinId",
+  ])
 );
 assert.deepEqual(missingPValueResult.volcanoData, []);
 
 const zeroPValueResult = await computeProteomicsSummary(
-  [
-    {
-      proteinId: "zero-p",
-      intensity_Sample1: 100,
-      intensity_Control1: 10,
-      pValue: 0,
-    },
-  ],
-  ["intensity_Sample1", "intensity_Control1", "pValue"]
+  toTable([[100, 10, 0, "zero-p"]], [
+    "intensity_Sample1",
+    "intensity_Control1",
+    "pValue",
+    "proteinId",
+  ])
 );
 assert.equal(zeroPValueResult.volcanoData[0].y, 300);
 assert.equal(zeroPValueResult.volcanoData[0].significant, true);
 
-assert.deepEqual(await computeProteomicsSummary([], columns), {
+assert.deepEqual(await computeProteomicsSummary(toTable([], [])), {
   stats: null,
   intensityDist: [],
   volcanoData: [],

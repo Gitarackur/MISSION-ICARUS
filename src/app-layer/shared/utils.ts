@@ -1,6 +1,6 @@
 import {
   parse2DArray,
-  parseCSVFromFile,
+  parseColumnarFromFile,
 } from "@/app-layer/shared/csv_tsc_parser";
 import {
   formatNumericDisplayValue,
@@ -8,7 +8,7 @@ import {
   parseLocalizedNumber,
 } from "@/domain/shared/number-parsing";
 import { ProteinRow } from "@/domain/proteins/index.types";
-import { ColumnTypeInferenceOptions, DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
+import { ColumnTypeInferenceOptions, ColumnarTable, DataRowsAndColumns, MatrixData } from "@/domain/shared/index.types";
 import { TableColumns, TableMatrices, TableMatrix } from "@/domain/workflow/main.types";
 
 /* calculation specific utils */
@@ -54,7 +54,7 @@ export async function handleCSVFileUpload(
     onError,
     onProcessingChange,
   }: {
-    onData: (rows: ProteinRow[], headers: string[]) => void;
+    onData: (table: ColumnarTable) => void;
     onProcessingChange: (processing: boolean) => void;
     onError?: (error: unknown) => void;
   }
@@ -62,14 +62,14 @@ export async function handleCSVFileUpload(
   onProcessingChange(true);
 
   try {
-    const result = await parseCSVFromFile<ProteinRow>(file);
+    const table = await parseColumnarFromFile(file);
 
-    if (result.errors.length > 0) {
-      onError?.(result.errors);
-      throw new Error(`CSV parsing warnings: ${result.errors}`);
+    if (table.errors.length > 0) {
+      onError?.(table.errors);
+      throw new Error(`CSV parsing warnings: ${table.errors}`);
     }
 
-    onData(result.data, result.headers);
+    onData(table);
   } catch (err) {
     onError?.(err);
     throw new Error(`Error parsing file: ${err}`);
@@ -268,9 +268,13 @@ export const getNumericColumns = (
 // get numeric columns from data optimized
 export const getNumericColumnsOptimized = (
   columns: string[],
-  data: ProteinRow[],
+  data: ProteinRow[] | ColumnarTable,
   options: ColumnTypeInferenceOptions = {}
 ): Set<string> => {
+  if (data && !Array.isArray(data)) {
+    return getNumericColumnsFromTable(columns, data, options);
+  }
+
   const numericColumns = new Set<string>();
 
   if (!data || !data.length || !columns || !columns.length) {
@@ -330,6 +334,86 @@ export const getNumericColumnsOptimized = (
     // Add to numeric columns if:
     // 1. All non-missing values were numeric, AND
     // 2. We have enough valid data
+    if (isNumeric && validNumericCount >= minRequiredValid) {
+      numericColumns.add(column);
+    }
+  });
+
+  return numericColumns;
+};
+
+// Columnar variant of getNumericColumnsOptimized that scans per-column arrays
+// directly (no row objects) while preserving the exact missing-value and
+// parseLocalizedNumber semantics of the row-based version.
+const getNumericColumnsFromTable = (
+  columns: string[],
+  data: ColumnarTable,
+  options: ColumnTypeInferenceOptions = {}
+): Set<string> => {
+  const numericColumns = new Set<string>();
+
+  if (
+    !data ||
+    data.rowCount === 0 ||
+    !columns ||
+    !columns.length ||
+    data.headers.length === 0
+  ) {
+    return numericColumns;
+  }
+
+  const {
+    minValidPercentage = 0.1,
+    allowedMissingValues = ['N/A', 'n/a', 'NA', 'na', 'NULL', 'null', '#N/A', '-', '']
+  } = options;
+
+  const missingValuesSet = new Set(
+    allowedMissingValues.map(val => val.toLowerCase())
+  );
+
+  const isMissingOrNaN = (value: unknown): boolean => {
+    if (value === null || value === undefined) return true;
+    if (typeof value === 'number' && isNaN(value)) return true;
+
+    const stringValue = String(value).trim();
+    if (stringValue === '') return true;
+
+    const lowerValue = stringValue.toLowerCase();
+    return lowerValue === 'nan' || missingValuesSet.has(lowerValue);
+  };
+
+  const indexByColumn = new Map<string, number>();
+  data.headers.forEach((header, index) => indexByColumn.set(header, index));
+
+  const minRequiredValid = Math.ceil(data.rowCount * minValidPercentage);
+
+  columns.forEach((column) => {
+    const pair = data.columns[indexByColumn.get(column) ?? -1];
+    if (!pair) return;
+
+    let validNumericCount = 0;
+    let isNumeric = true;
+
+    // Rows beyond a ragged string column's length are treated as missing,
+    // matching how missing values are skipped in the row-based scan.
+    for (let rowIndex = 0; rowIndex < data.rowCount; rowIndex += 1) {
+      const value = pair[rowIndex];
+
+      if (isMissingOrNaN(value)) {
+        continue;
+      }
+
+      const numericValue =
+        typeof value === "number" ? value : parseLocalizedNumber(value);
+
+      if (numericValue === null) {
+        isNumeric = false;
+        break;
+      }
+
+      validNumericCount++;
+    }
+
     if (isNumeric && validNumericCount >= minRequiredValid) {
       numericColumns.add(column);
     }

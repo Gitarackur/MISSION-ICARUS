@@ -1,5 +1,4 @@
-import { TableColumns } from "@/domain/workflow/main.types";
-import { ProteinRow } from "@/domain/proteins/index.types";
+import { ColumnarTable } from "@/domain/shared/index.types";
 import {
   IcarusActivity,
   IcarusMatrix,
@@ -8,8 +7,7 @@ import {
 
 export type BareSession = {
   name?: string;
-  rows: ProteinRow[];
-  columns: TableColumns;
+  table: ColumnarTable;
 };
 
 // Icarus Session aggregation

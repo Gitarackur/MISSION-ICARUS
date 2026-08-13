@@ -1,9 +1,9 @@
 import type {
-  ProteinRow,
   ProteomicsSummary,
   Stats,
 } from "@/domain/proteins/index.types";
 import type { VolcanoPoint } from "@/domain/visualization/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { WorkerYieldHook } from "@/domain/workers/index.types";
 
 const mean = (values: number[]) =>
@@ -42,49 +42,66 @@ const safeLog2Ratio = (numerator: number, denominator: number) => {
   return Math.log2(numerator / denominator);
 };
 
+const readColumnNumber = (
+  table: ColumnarTable,
+  columnIndex: number,
+  rowIndex: number
+): number => {
+  const value = table.columns[columnIndex][rowIndex];
+  return typeof value === "number" ? value : Number(value || 0);
+};
+
 export const computeProteomicsSummary = async (
-  rows: ProteinRow[],
-  columns: string[],
+  table: ColumnarTable,
   onYield?: WorkerYieldHook
 ): Promise<ProteomicsSummary> => {
-  if (!rows.length) {
+  if (!table.rowCount) {
     return { stats: null, intensityDist: [], volcanoData: [] };
   }
 
-  const selectedIntensityColumns = columns.filter((column) =>
-    column.includes("intensity")
-  );
+  const columnIndices = new Map<string, number>();
+  table.headers.forEach((header, index) => columnIndices.set(header, index));
+
+  const findIntensityColumns = (caseInsensitive = false): number[] => {
+    const matches: number[] = [];
+    table.headers.forEach((header, index) => {
+      if (
+        caseInsensitive
+          ? header.toLowerCase().includes("intensity")
+          : header.includes("intensity")
+      ) {
+        matches.push(index);
+      }
+    });
+    return matches;
+  };
+
+  const selectedIntensityColumns = findIntensityColumns();
   const intensityColumns = [...selectedIntensityColumns];
   if (!intensityColumns.length) {
-    intensityColumns.push(
-      ...Object.keys(rows[0]).filter((column) =>
-        column.toLowerCase().includes("intensity")
-      )
-    );
+    intensityColumns.push(...findIntensityColumns(true));
   }
 
   const intensities: number[] = [];
   let missingValues = 0;
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-    const row = rows[rowIndex];
-    intensityColumns.forEach((column) => {
-      const rawValue = row[column];
-      const value = Number(rawValue || 0);
-      if (value > 0 && Number.isFinite(value)) intensities.push(value);
+  for (let rowIndex = 0; rowIndex < table.rowCount; rowIndex += 1) {
+    intensityColumns.forEach((columnIndex) => {
+      const rawValue = readColumnNumber(table, columnIndex, rowIndex);
+      if (rawValue > 0 && Number.isFinite(rawValue)) intensities.push(rawValue);
       else missingValues += 1;
     });
 
-    if (rowIndex % 500 === 499 || rowIndex === rows.length - 1) {
+    if (rowIndex % 500 === 499 || rowIndex === table.rowCount - 1) {
       await onYield?.(
-        (rowIndex + 1) / rows.length,
-        `collecting intensities ${rowIndex + 1}/${rows.length}`
+        (rowIndex + 1) / table.rowCount,
+        `collecting intensities ${rowIndex + 1}/${table.rowCount}`
       );
     }
   }
 
   const averageIntensity = mean(intensities);
   const stats: Exclude<Stats, null> = {
-    totalProteins: rows.length,
+    totalProteins: table.rowCount,
     averageIntensity,
     medianIntensity: median(intensities),
     coefficientOfVariation:
@@ -95,56 +112,66 @@ export const computeProteomicsSummary = async (
   };
 
   // Preserve the previous display behavior: the summary statistics fall back
-  // to case-insensitive row keys, while the distribution only uses explicitly
-  // selected lowercase `intensity` columns.
-  const intensityDist = selectedIntensityColumns.map((column) => {
-    const values = rows
-      .map((row) => Math.log10(Number(row[column]) || 1))
-      .filter(Number.isFinite);
+  // to case-insensitive intensity columns, while the distribution only uses
+  // explicitly selected lowercase `intensity` columns.
+  const intensityDist = selectedIntensityColumns.map((columnIndex) => {
+    const values: number[] = [];
+    for (let rowIndex = 0; rowIndex < table.rowCount; rowIndex += 1) {
+      const value = Math.log10(readColumnNumber(table, columnIndex, rowIndex) || 1);
+      if (Number.isFinite(value)) values.push(value);
+    }
     return {
-      sample: column.replace("intensity_", ""),
+      sample: table.headers[columnIndex].replace("intensity_", ""),
       meanIntensity: mean(values),
       count: values.length,
     };
   });
 
   const volcanoData: VolcanoPoint[] = [];
-  for (let rowIndex = 0; rowIndex < rows.length; rowIndex += 1) {
-    const row = rows[rowIndex];
-    const numerator =
-      Number(row.intensity_Sample1 || 0) +
-      Number(row.intensity_Sample2 || 0) +
-      Number(row.intensity_Sample3 || 0);
-    const denominator =
-      Number(row.intensity_Control1 || 0) +
-      Number(row.intensity_Control2 || 0) +
-      Number(row.intensity_Control3 || 0);
+  const sampleIndices = [0, 1, 2]
+    .map((part) => columnIndices.get(`intensity_Sample${part + 1}`))
+    .filter((index): index is number => index !== undefined);
+  const controlIndices = [0, 1, 2]
+    .map((part) => columnIndices.get(`intensity_Control${part + 1}`))
+    .filter((index): index is number => index !== undefined);
+  const pValueIndex = columnIndices.get("pValue");
+  const proteinIndex = columnIndices.get("proteinId") ?? columnIndices.get("id");
+
+  for (let rowIndex = 0; rowIndex < table.rowCount; rowIndex += 1) {
+    const numerator = sampleIndices.reduce(
+      (total, index) => total + readColumnNumber(table, index, rowIndex),
+      0
+    );
+    const denominator = controlIndices.reduce(
+      (total, index) => total + readColumnNumber(table, index, rowIndex),
+      0
+    );
     const x = safeLog2Ratio(numerator, denominator);
-    const pValueSource = row.pValue;
-    if (
-      pValueSource !== null &&
-      pValueSource !== undefined &&
-      String(pValueSource).trim() !== ""
-    ) {
-      const rawPValue = Number(pValueSource);
+
+    if (pValueIndex !== undefined) {
+      const rawPValue = readColumnNumber(table, pValueIndex, rowIndex);
       if (Number.isFinite(rawPValue) && rawPValue >= 0 && rawPValue <= 1) {
         const pValue = Math.max(rawPValue, 1e-300);
         const y = -Math.log10(Math.max(pValue, 1e-300));
         if (Number.isFinite(x) && Number.isFinite(y)) {
+          const proteinValue =
+            proteinIndex === undefined
+              ? undefined
+              : table.columns[proteinIndex][rowIndex];
           volcanoData.push({
             x,
             y,
-            protein: String(row.proteinId || row.id),
+            protein: String(proteinValue ?? rowIndex + 1),
             significant: pValue < 0.05 && Math.abs(x) > 1,
           });
         }
       }
     }
 
-    if (rowIndex % 500 === 499 || rowIndex === rows.length - 1) {
+    if (rowIndex % 500 === 499 || rowIndex === table.rowCount - 1) {
       await onYield?.(
-        (rowIndex + 1) / rows.length,
-        `building volcano data ${rowIndex + 1}/${rows.length}`
+        (rowIndex + 1) / table.rowCount,
+        `building volcano data ${rowIndex + 1}/${table.rowCount}`
       );
     }
   }

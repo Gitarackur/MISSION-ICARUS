@@ -16,7 +16,7 @@ export default function ProteomicsAnalysisHomeView(
     activeTab,
     activeVisualizationId,
     originalDataColumns,
-    originalDataRows,
+    originalDataTable,
     openActivitySheet,
     saveActivityInWorkflow,
     saveVisualizationInWorkflow,
@@ -34,7 +34,7 @@ export default function ProteomicsAnalysisHomeView(
     stats,
     summaryError,
     volcanoData,
-  } = useProteomicsAnalysisView({ originalDataColumns, originalDataRows });
+  } = useProteomicsAnalysisView({ originalDataColumns, originalDataTable });
   const selectTab = (tab: typeof activeTab) => {
     setActiveTab(tab);
     if (tab !== "visualization") {
@@ -77,8 +77,8 @@ export default function ProteomicsAnalysisHomeView(
         {activeTab === "import" && (
           <div className={styles.sectionSpacing()}>
             <DataPreview
-              originalDataRows={originalDataRows}
-              filteredDataRows={originalDataRows}
+              originalDataTable={originalDataTable}
+              filteredDataTable={originalDataTable}
               originalDataColumns={originalDataColumns}
               selectedDataColumns={selectedDataColumns}
               setSelectedDataColumns={setSelectedDataColumns}

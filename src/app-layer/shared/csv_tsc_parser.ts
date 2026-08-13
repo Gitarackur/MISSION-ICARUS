@@ -443,7 +443,7 @@ export const buildColumnarTable = async (
       return;
     }
 
-    const parsed = scanPlainNumber(text, a, b);
+    const parsed = parsePlainDouble(text, a, b);
     if (parsed !== null) {
       if (Number.isFinite(parsed)) {
         if (state.len === state.cap) {
@@ -506,54 +506,102 @@ export const buildColumnarTable = async (
     return a < b;
   };
 
-  const scanPlainNumber = (
-    text: string,
-    a: number,
-    b: number
-  ): number | null => {
+  // Quick-and-dirty exact-arithmetic IEEE-754 conversion over [a,b) with
+  // exact parity to Number(text.slice(a,b)): single pass over the lexeme
+  // validates structure AND converts, falling back to Number() only when the
+  // magnitude of the value leaves the exact integer-arithmetic domain (rare).
+  const IN_EXACT_POW10 = new Float64Array(17);
+  let inExactP10 = 1;
+  for (let k = 0; k <= 16; k += 1) {
+    IN_EXACT_POW10[k] = inExactP10;
+    inExactP10 *= 10;
+  }
+  const parsePlainDouble = (text: string, a: number, b: number): number | null => {
     let i = a;
+    let sign = 1;
     if (i < b) {
-      const sign = text.charCodeAt(i);
-      if (sign === 43 || sign === 45) i += 1;
-    }
-    const intStart = i;
-    while (i < b && text.charCodeAt(i) >= 48 && text.charCodeAt(i) <= 57) {
-      i += 1;
-    }
-    if (i === intStart) {
-      return null;
-    }
-    if (i < b && text.charCodeAt(i) === 46) {
-      i += 1;
-      const fracStart = i;
-      while (i < b && text.charCodeAt(i) >= 48 && text.charCodeAt(i) <= 57) {
+      const c0 = text.charCodeAt(i);
+      if (c0 === 43) i += 1;
+      else if (c0 === 45) {
+        sign = -1;
         i += 1;
       }
-      if (i === fracStart) {
-        return null;
-      }
     }
-    if (i < b) {
-      const exp = text.charCodeAt(i);
-      if (exp === 69 || exp === 101) {
-        i += 1;
-        if (i < b) {
-          const expSign = text.charCodeAt(i);
-          if (expSign === 43 || expSign === 45) i += 1;
+    if (i >= b) return null;
+    let mant = 0;
+    let frac = 0;
+    let sigDigits = 0;
+    let hasDot = false;
+    let dotPending = false;
+    let fallback = false;
+    for (; i < b; i += 1) {
+      const c = text.charCodeAt(i);
+      if (c >= 48 && c <= 57) {
+        if (sigDigits < 15) {
+          mant = mant * 10 + (c - 48);
+          sigDigits += 1;
+        } else {
+          fallback = true;
         }
-        const expStart = i;
-        while (i < b && text.charCodeAt(i) >= 48 && text.charCodeAt(i) <= 57) {
+        if (hasDot) {
+          frac += 1;
+          dotPending = false;
+        }
+      } else if (c === 46) {
+        if (hasDot) return null;
+        if (sigDigits === 0) return null;
+        hasDot = true;
+        dotPending = true;
+      } else {
+        break;
+      }
+    }
+    if (dotPending) return null;
+    let exponent = 0;
+    if (i < b) {
+      const c = text.charCodeAt(i);
+      if (c !== 69 && c !== 101) return null;
+      if (sigDigits === 0) return null;
+      i += 1;
+      let expSign = 1;
+      if (i < b) {
+        const c2 = text.charCodeAt(i);
+        if (c2 === 45) {
+          expSign = -1;
+          i += 1;
+        } else if (c2 === 43) {
           i += 1;
         }
-        if (i === expStart) {
-          return null;
-        }
       }
+      const expStart = i;
+      for (; i < b; i += 1) {
+        const c3 = text.charCodeAt(i);
+        if (c3 < 48 || c3 > 57) return null;
+        if (exponent < 1e9) exponent = exponent * 10 + (c3 - 48);
+        else fallback = true;
+      }
+      if (i === expStart) return null;
+      if (!fallback) {
+        const finalExp = exponent * expSign - frac;
+        if (finalExp < -16 || finalExp > 16) {
+          return Number(text.slice(a, b));
+        }
+        const v =
+          finalExp >= 0
+            ? mant * IN_EXACT_POW10[finalExp]
+            : mant / IN_EXACT_POW10[-finalExp];
+        return sign < 0 ? -v : v;
+      }
+      return Number(text.slice(a, b));
     }
-    if (i !== b) {
-      return null;
+    if (fallback) return Number(text.slice(a, b));
+    let v;
+    if (frac === 0) {
+      v = mant;
+    } else {
+      v = mant / IN_EXACT_POW10[frac];
     }
-    return Number(text.slice(a, b));
+    return sign < 0 ? -v : v;
   };
 
   const totalLength = text.length;
@@ -713,27 +761,6 @@ export const buildColumnarTable = async (
   }
 
   return { headers, columns: resultColumns, rowCount, columnTypes, errors };
-};
-
-export const parseColumnarText = async (
-  csvText: string,
-  onYield?: WorkerYieldHook
-): Promise<ColumnarTable> => {
-  const normalized = normalizeText(csvText);
-  if (!normalized.trim()) {
-    throw new Error("File is empty");
-  }
-
-  const delimiter = detectDelimiter(sampleLines(normalized));
-  if (delimiter === "whitespace" || normalized.includes('"')) {
-    const result = await parseNativeText<Record<string, string | number>>(
-      csvText,
-      onYield
-    );
-    return materializeColumnar(result.data, result.headers);
-  }
-
-  return buildColumnarTable(normalized, delimiter, onYield);
 };
 
 const materializeColumnar = <T>(
@@ -1432,7 +1459,79 @@ function parseCSVFileInWorker<T>(file: File): Promise<ParsedCSVResult<T>> {
   });
 }
 
+/** Columnar text parse: no row-object materialization. Falls back to the
+ *  native/papa row parsers and converts their output to columns when the
+ *  single-pass columnar scanner reports errors or cannot run. */
+const parseColumnarFromText = async (
+  csvText: string,
+  onYield?: WorkerYieldHook
+): Promise<ColumnarTable> => {
+  const normalized = normalizeText(csvText);
+  if (!normalized.trim()) {
+    throw new Error("File is empty");
+  }
+
+  if (!normalized.includes('"')) {
+    const delimiter = detectDelimiter(sampleLines(normalized));
+    if (delimiter !== "whitespace") {
+      const table = await buildColumnarTable(normalized, delimiter, onYield);
+      if (table.errors.length === 0) {
+        return table;
+      }
+    }
+  }
+
+  let nativeResult: ParsedCSVResult<unknown> | null = null;
+  let nativeFailure: string | null = null;
+  try {
+    nativeResult = await parseNativeText<unknown>(normalized, onYield);
+  } catch (error) {
+    nativeFailure = error instanceof Error ? error.message : String(error);
+  }
+
+  if (nativeResult && nativeResult.errors.length === 0) {
+    return materializeColumnar(nativeResult.data, nativeResult.headers);
+  }
+
+  let papaResult: ParsedCSVResult<unknown> | null = null;
+  try {
+    papaResult = await parsePapaText<unknown>(normalized, onYield);
+  } catch (error) {
+    if (nativeFailure === null) {
+      nativeFailure = error instanceof Error ? error.message : String(error);
+    }
+  }
+
+  if (papaResult) {
+    return materializeColumnar(papaResult.data, papaResult.headers);
+  }
+
+  if (nativeResult) {
+    return materializeColumnar(nativeResult.data, nativeResult.headers);
+  }
+
+  throw new Error(
+    `Unable to parse file with available parsers. ${nativeFailure ?? ""}`
+  );
+};
+
+function parseColumnarFileInWorker(file: File): Promise<ColumnarTable> {
+  const request: CSVParserWorkerRequest = { file };
+  return runWorkerRequest<CSVParserWorkerRequest, ColumnarTable>({
+    createWorker: () =>
+      new Worker(
+        new URL("./workers/csv-parser.worker.ts", import.meta.url),
+        { type: "module" }
+      ),
+    request,
+    failureMessage: "CSV parser worker failed",
+    operationName: "CSV import",
+  });
+}
+
 export const parseCSVFromFile = parser.parseCSVFromFileNative;
 export const parseCSVFromText = parser.parseCSVFromText;
+export const parseColumnarText = parseColumnarFromText;
+export const parseColumnarFromFile = parseColumnarFileInWorker;
 export const parse2DArray = parser.parse2DArrayNative2;
 export const inferColumnTypes = parser.inferColumnTypes.bind(parser);

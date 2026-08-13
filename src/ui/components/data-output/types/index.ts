@@ -1,5 +1,5 @@
 import React from "react";
-import { ProteinRow } from "@/domain/proteins/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import {
   IcarusMatrix,
   SaveStatisticalActivity,
@@ -9,8 +9,8 @@ import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
 import { VisualizationRecord } from "@/domain/visualization/index.types";
 
 export type DataPreviewProps = {
-  originalDataRows: ProteinRow[];
-  filteredDataRows: ProteinRow[];
+  originalDataTable: ColumnarTable | null;
+  filteredDataTable: ColumnarTable | null;
 
   originalDataColumns: TableColumns;
 

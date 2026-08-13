@@ -1,11 +1,11 @@
-import type { DataRowsAndColumns } from "@/domain/shared/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { IcarusMatrix } from "@/domain/workflow/main.types";
 import type { MatrixViewWorkerRequest } from "@/domain/workers/index.types";
 import { runWorkerRequest } from "../workers/worker-client";
 
 export const reconstructMatrixView = async (
   matrix: IcarusMatrix
-): Promise<DataRowsAndColumns> => {
+): Promise<ColumnarTable> => {
   const request: MatrixViewWorkerRequest = {
     columns: matrix.columns,
     data: matrix.data,

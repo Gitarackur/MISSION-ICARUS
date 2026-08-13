@@ -87,15 +87,15 @@ import {
   PmuTest,
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
-import { ProteinRow } from "@/domain/proteins/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 
 const useStatisticsMenu = ({
   allColumnarData,
   dataColumns,
-  dataRows,
+  dataTable,
 }: {
   dataColumns: TableColumns;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   allColumnarData: Map<string, TableMatrix>;
 }) => {
   const { openModal, closeModal } = useModal();
@@ -114,7 +114,7 @@ const useStatisticsMenu = ({
           <CountMissing
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -131,7 +131,7 @@ const useStatisticsMenu = ({
           <Count
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -148,7 +148,7 @@ const useStatisticsMenu = ({
           <CountValid
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -166,7 +166,7 @@ const useStatisticsMenu = ({
           <MeanValues
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -184,7 +184,7 @@ const useStatisticsMenu = ({
           <MedianValues
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -201,7 +201,7 @@ const useStatisticsMenu = ({
           <Variance
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -219,7 +219,7 @@ const useStatisticsMenu = ({
           <StdDevValues
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -236,7 +236,7 @@ const useStatisticsMenu = ({
           <Sum
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -253,7 +253,7 @@ const useStatisticsMenu = ({
           <Product
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -270,7 +270,7 @@ const useStatisticsMenu = ({
           <Min
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -287,7 +287,7 @@ const useStatisticsMenu = ({
           <Max
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -304,7 +304,7 @@ const useStatisticsMenu = ({
           <FilterByValue
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -321,7 +321,7 @@ const useStatisticsMenu = ({
           <FilterByMissing
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -338,7 +338,7 @@ const useStatisticsMenu = ({
           <FilterByRange
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -355,7 +355,7 @@ const useStatisticsMenu = ({
           <FilterByOutlier
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -372,7 +372,7 @@ const useStatisticsMenu = ({
           <AddColumn
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -389,7 +389,7 @@ const useStatisticsMenu = ({
           <RenameColumn
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -406,7 +406,7 @@ const useStatisticsMenu = ({
           <DeleteColumn
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -423,7 +423,7 @@ const useStatisticsMenu = ({
           <FillColumn
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -440,7 +440,7 @@ const useStatisticsMenu = ({
           <ImputeMean
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -455,7 +455,7 @@ const useStatisticsMenu = ({
       case "impute-median":
         content = (<ImputeMedian dataColumns={dataColumns} 
           actionId={actionId} 
-          dataRows={dataRows}
+          dataTable={dataTable}
           allColumnarData={allColumnarData}
           onSuccess={(result) => {
             closeModal();
@@ -469,7 +469,7 @@ const useStatisticsMenu = ({
       case "impute-knn":
         content = (<ImputeKnn dataColumns={dataColumns} 
           actionId={actionId} 
-          dataRows={dataRows}
+          dataTable={dataTable}
           allColumnarData={allColumnarData}
           onSuccess={(result) => {
             closeModal();
@@ -483,7 +483,7 @@ const useStatisticsMenu = ({
       case "impute-zero":
         content = (<ImputeZero dataColumns={dataColumns} 
           actionId={actionId} 
-          dataRows={dataRows}
+          dataTable={dataTable}
           allColumnarData={allColumnarData}
           onSuccess={(result) => {
             closeModal();
@@ -497,7 +497,7 @@ const useStatisticsMenu = ({
       case "impute-multiple":
         content = (<ImputeMultiple dataColumns={dataColumns} 
           actionId={actionId} 
-          dataRows={dataRows}
+          dataTable={dataTable}
           allColumnarData={allColumnarData}
           onSuccess={(result) => {
             closeModal();
@@ -511,7 +511,7 @@ const useStatisticsMenu = ({
       case "moving-average":
         content = (<MovingAverage dataColumns={dataColumns} 
           actionId={actionId} 
-          dataRows={dataRows}
+          dataTable={dataTable}
           allColumnarData={allColumnarData}
           onSuccess={(result) => {
             closeModal();
@@ -525,7 +525,7 @@ const useStatisticsMenu = ({
       case "rolling-stddev":
         content = (<RollingStdDev dataColumns={dataColumns} 
           actionId={actionId} 
-          dataRows={dataRows}
+          dataTable={dataTable}
           allColumnarData={allColumnarData}
           onSuccess={(result) => {
             closeModal();
@@ -541,7 +541,7 @@ const useStatisticsMenu = ({
             content = <TTest 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -557,7 +557,7 @@ const useStatisticsMenu = ({
             content = <Anova 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -573,7 +573,7 @@ const useStatisticsMenu = ({
             content = <Limma 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -589,7 +589,7 @@ const useStatisticsMenu = ({
             content = <FoldChange 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -606,7 +606,7 @@ const useStatisticsMenu = ({
                 <NormalizeReporterIons 
                   dataColumns={dataColumns} 
                   actionId={actionId}
-                  dataRows={dataRows}
+                  dataTable={dataTable}
                   allColumnarData={allColumnarData}
                   onSuccess={(result) => {
                     closeModal();
@@ -624,7 +624,7 @@ const useStatisticsMenu = ({
                 <CorrectForPurity 
                   dataColumns={dataColumns} 
                   actionId={actionId}
-                  dataRows={dataRows}
+                  dataTable={dataTable}
                   allColumnarData={allColumnarData}
                   onSuccess={(result) => {
                     closeModal();
@@ -643,7 +643,7 @@ const useStatisticsMenu = ({
           <BoxPlot
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -660,7 +660,7 @@ const useStatisticsMenu = ({
           <ScatterPlot
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -677,7 +677,7 @@ const useStatisticsMenu = ({
           <Heatmap
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -694,7 +694,7 @@ const useStatisticsMenu = ({
           <VolcanoPlot
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -711,7 +711,7 @@ const useStatisticsMenu = ({
           <PcaPlot
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -728,7 +728,7 @@ const useStatisticsMenu = ({
             <SortAscending 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result: StatisticalAnalysisResult) => {
                 closeModal();
@@ -746,7 +746,7 @@ const useStatisticsMenu = ({
             <SortDescending 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result: StatisticalAnalysisResult) => {
                 closeModal();
@@ -764,7 +764,7 @@ const useStatisticsMenu = ({
             <ReorderColumns 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -782,7 +782,7 @@ const useStatisticsMenu = ({
             <Transpose 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -803,7 +803,7 @@ const useStatisticsMenu = ({
               <FilterColumnsByName 
                 dataColumns={dataColumns} 
                 actionId={actionId}
-                dataRows={dataRows}
+                dataTable={dataTable}
                 allColumnarData={allColumnarData}
                 onSuccess={(result) => {
                   closeModal();
@@ -821,7 +821,7 @@ const useStatisticsMenu = ({
               <FilterColumnsByType 
                 dataColumns={dataColumns} 
                 actionId={actionId}
-                dataRows={dataRows}
+                dataTable={dataTable}
                 allColumnarData={allColumnarData}
                 onSuccess={(result) => {
                   closeModal();
@@ -839,7 +839,7 @@ const useStatisticsMenu = ({
     <AddRow 
       dataColumns={dataColumns} 
       actionId={actionId}
-      dataRows={dataRows}
+      dataTable={dataTable}
       allColumnarData={allColumnarData}
       onSuccess={(result) => {
         closeModal();
@@ -857,7 +857,7 @@ case 'rename-row':
     <RenameRow 
       dataColumns={dataColumns} 
       actionId={actionId}
-      dataRows={dataRows}
+      dataTable={dataTable}
       allColumnarData={allColumnarData}
       onSuccess={(result) => {
         closeModal();
@@ -875,7 +875,7 @@ case 'delete-row':
     <DeleteRow 
       dataColumns={dataColumns} 
       actionId={actionId}
-      dataRows={dataRows}
+      dataTable={dataTable}
       allColumnarData={allColumnarData}
       onSuccess={(result) => {
         closeModal();
@@ -893,7 +893,7 @@ case 'delete-row':
       <PcaLearning 
         dataColumns={dataColumns} 
         actionId={actionId}
-        dataRows={dataRows}
+        dataTable={dataTable}
         allColumnarData={allColumnarData}
         onSuccess={(result) => {
           closeModal();
@@ -911,7 +911,7 @@ case 'delete-row':
       <PlsdaLearning 
         dataColumns={dataColumns} 
         actionId={actionId}
-        dataRows={dataRows}
+        dataTable={dataTable}
         allColumnarData={allColumnarData}
         onSuccess={(result) => {
           closeModal();
@@ -929,7 +929,7 @@ case 'delete-row':
       <TsneLearning 
         dataColumns={dataColumns} 
         actionId={actionId}
-        dataRows={dataRows}
+        dataTable={dataTable}
         allColumnarData={allColumnarData}
         onSuccess={(result) => {
           closeModal();
@@ -948,7 +948,7 @@ case 'delete-row':
             <AddPtm 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -966,7 +966,7 @@ case 'delete-row':
             <RemovePtm 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -991,7 +991,7 @@ case 'delete-row':
             <KMeansClustering 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -1010,7 +1010,7 @@ case 'delete-row':
             <HierarchicalClustering 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -1028,7 +1028,7 @@ case 'delete-row':
             <PCAClustering 
               dataColumns={dataColumns} 
               actionId={actionId}
-              dataRows={dataRows}
+              dataTable={dataTable}
               allColumnarData={allColumnarData}
               onSuccess={(result) => {
                 closeModal();
@@ -1046,7 +1046,7 @@ case 'delete-row':
               <ZScoreNormalization 
                 dataColumns={dataColumns}
                 actionId={actionId}
-                dataRows={dataRows}
+                dataTable={dataTable}
                 allColumnarData={allColumnarData}
                 onSuccess={(result) => {
                   closeModal();
@@ -1064,7 +1064,7 @@ case 'delete-row':
               <TransformNormalization 
                 dataColumns={dataColumns}
                 actionId={actionId}
-                dataRows={dataRows}
+                dataTable={dataTable}
                 allColumnarData={allColumnarData}
                 onSuccess={(result: StatisticalAnalysisResult) => {
                   closeModal();
@@ -1082,7 +1082,7 @@ case 'delete-row':
               <QuantileNormalization 
                 dataColumns={dataColumns}
                 actionId={actionId}
-                dataRows={dataRows}
+                dataTable={dataTable}
                 allColumnarData={allColumnarData}
                 onSuccess={(result) => {
                   closeModal();
@@ -1100,7 +1100,7 @@ case 'delete-row':
               <MeanCenteringNormalizationLog 
                 dataColumns={dataColumns}
                 actionId={actionId}
-                dataRows={dataRows}
+                dataTable={dataTable}
                 allColumnarData={allColumnarData}
                 onSuccess={(result: StatisticalAnalysisResult) => {
                   closeModal();
@@ -1125,7 +1125,7 @@ case 'delete-row':
     content = <FTest 
       dataColumns={dataColumns}
       actionId={actionId}
-      dataRows={dataRows}
+      dataTable={dataTable}
       allColumnarData={allColumnarData}
       onSuccess={(result) => {
         closeModal();
@@ -1143,7 +1143,7 @@ case 'delete-row':
     content = <ChiSquareTest 
       dataColumns={dataColumns}
       actionId={actionId}
-      dataRows={dataRows}
+      dataTable={dataTable}
       allColumnarData={allColumnarData}
       onSuccess={(result) => {
         closeModal();
@@ -1160,7 +1160,7 @@ case 'delete-row':
           <ZScoreOutlier 
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1179,7 +1179,7 @@ case 'delete-row':
           <IQROutlier 
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1198,7 +1198,7 @@ case 'delete-row':
           <GrubbsOutlier 
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1216,7 +1216,7 @@ case 'delete-row':
           <WgcnaAnalysis
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1228,12 +1228,12 @@ case 'delete-row':
         break;
       case "save-data":
         content = (
-          <SaveData dataColumns={dataColumns} dataRows={dataRows} />
+          <SaveData dataColumns={dataColumns} dataTable={dataTable} />
         );
         break;
       case "export-csv":
         content = (
-          <ExportCsv dataColumns={dataColumns} dataRows={dataRows} />
+          <ExportCsv dataColumns={dataColumns} dataTable={dataTable} />
         );
         break;
       case "fx-expression":
@@ -1241,7 +1241,7 @@ case 'delete-row':
           <FxExpression
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1258,7 +1258,7 @@ case 'delete-row':
           <FxLinear
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1275,7 +1275,7 @@ case 'delete-row':
           <OneDNormalize
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1292,7 +1292,7 @@ case 'delete-row':
           <OneDIndex
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1309,7 +1309,7 @@ case 'delete-row':
           <PiMultiply
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1326,7 +1326,7 @@ case 'delete-row':
           <PiDivide
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1343,7 +1343,7 @@ case 'delete-row':
           <Pj
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1360,7 +1360,7 @@ case 'delete-row':
           <ZScoreNormalization
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1377,7 +1377,7 @@ case 'delete-row':
           <TwoDEmbedding
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();
@@ -1394,7 +1394,7 @@ case 'delete-row':
           <PmuTest
             dataColumns={dataColumns}
             actionId={actionId}
-            dataRows={dataRows}
+            dataTable={dataTable}
             allColumnarData={allColumnarData}
             onSuccess={(result) => {
               closeModal();

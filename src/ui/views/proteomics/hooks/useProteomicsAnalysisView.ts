@@ -13,10 +13,10 @@ const EMPTY_SUMMARY: ProteomicsSummary = {
 
 export const useProteomicsAnalysisView = ({
   originalDataColumns,
-  originalDataRows,
+  originalDataTable,
 }: Pick<
   ProteomicsAnalysisHomeViewProps,
-  "originalDataColumns" | "originalDataRows"
+  "originalDataColumns" | "originalDataTable"
 >) => {
   const [summary, setSummary] = useState<ProteomicsSummary>(EMPTY_SUMMARY);
   const [summaryError, setSummaryError] = useState<string | null>(null);
@@ -25,7 +25,7 @@ export const useProteomicsAnalysisView = ({
 
   useEffect(() => {
     let cancelled = false;
-    if (!originalDataRows.length) {
+    if (!originalDataTable || !originalDataTable.rowCount) {
       setSummary(EMPTY_SUMMARY);
       setSummaryError(null);
       setIsSummaryLoading(false);
@@ -34,7 +34,7 @@ export const useProteomicsAnalysisView = ({
 
     setSummaryError(null);
     setIsSummaryLoading(true);
-    computeProteomicsSummaryInWorker(originalDataRows, originalDataColumns)
+    computeProteomicsSummaryInWorker(originalDataTable)
       .then((result) => {
         if (!cancelled) setSummary(result);
       })
@@ -56,7 +56,7 @@ export const useProteomicsAnalysisView = ({
     return () => {
       cancelled = true;
     };
-  }, [originalDataColumns, originalDataRows, summaryAttempt]);
+  }, [originalDataColumns, originalDataTable, summaryAttempt]);
 
   return {
     ...summary,

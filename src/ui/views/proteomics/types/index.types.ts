@@ -3,16 +3,16 @@ import {
   SaveStatisticalActivity,
   TableColumns,
 } from "@/domain/workflow/main.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import { SaveVisualizationInWorkflow } from "@/app-layer/visualization/types";
 import type { IcarusSessionWithWorkflow } from "@/domain/session";
 
-import { ProteinRow } from "@/domain/proteins/index.types";
 import { tabsIdTypes } from "@/ui/components/tabs/types/index.types";
 
 export type ProteomicsAnalysisHomeViewProps = {
   openActivitySheet: () => void;
 
-  originalDataRows: ProteinRow[];
+  originalDataTable: ColumnarTable | null;
   originalDataColumns: TableColumns;
 
   selectedDataColumns: TableColumns;

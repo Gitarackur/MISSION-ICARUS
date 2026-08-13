@@ -72,7 +72,8 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 - Import `.txt`, `.tsv`, and `.csv` files
 - Handles common proteomics-style exports, including MaxQuant-like tabular formats
 - Uses a resilient parsing pipeline with delimiter detection, quoted-field support, ragged-row handling, header normalization, and parser fallback
-- Shows imported matrices in a table-first `Data Import` view
+- Parses well-formed delimited files with a single-pass columnar scanner: numeric cells are written directly into `Float64Array` columns via an exact IEEE-754 converter (`parsePlainDouble`), missing cells become `NaN`, and non-finite overflows widen a column to string. String columns are `string[]` with missing cells as `"N/A"`. The column-major `ColumnarTable` flows straight from the parser into the session matrix, preview, statistics, and exports — no intermediate row objects in the hot path (raw parse ~115 ms vs `pandas.read_csv` ~122 ms for 100k × 20 on an Apple M1)
+- Shows imported matrices in a table-first `Data Import` view over the columnar table, with the public row-object `ParsedCSVResult` contract preserved only at the API boundary for fallback paths
 
 ### Matrix and session workflow
 
@@ -196,7 +197,7 @@ Alongside the Recharts bar plot shown above, these captures show the same groupe
 | Styling | Tailwind CSS, tailwind-variants |
 | Charts and visuals | Python (Matplotlib, Seaborn), R (ggplot2), Recharts, D3 |
 | Statistics | NumPy, SciPy, scikit-learn, Bioconductor LIMMA, WGCNA, jStat, simple-statistics |
-| Data handling | Papa Parse plus custom resilient parser pipeline |
+| Data handling | Single-pass columnar parser (`ColumnarTable`: `Float64Array` numeric columns, `"N/A"` missing) with Papa Parse fallback |
 | Local storage / persistence | SQLite workflow storage |
 
 ---

@@ -1,15 +1,14 @@
 import type {
-  ProteinRow,
   ProteomicsSummary,
 } from "@/domain/proteins/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { ProteomicsSummaryWorkerRequest } from "@/domain/workers/index.types";
 import { runWorkerRequest } from "@/app-layer/shared/workers/worker-client";
 
 export const computeProteomicsSummaryInWorker = (
-  rows: ProteinRow[],
-  columns: string[]
+  table: ColumnarTable
 ): Promise<ProteomicsSummary> => {
-  const request: ProteomicsSummaryWorkerRequest = { rows, columns };
+  const request: ProteomicsSummaryWorkerRequest = { table };
   return runWorkerRequest({
     createWorker: () =>
       new Worker(

@@ -24,7 +24,7 @@ import {
   saveNewStatisticalActivityInWorkflow,
   saveNewVisualizationActivityInWorkflow,
 } from "@/app-layer/session/utils/main";
-import { ProteinRow } from "@/domain/proteins/index.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 import { BareSession } from "@/domain/session";
 import {
   SaveStatisticalActivity,
@@ -38,7 +38,8 @@ export const useIcarusAppSession = () => {
   const [showSession, setShowSession] = useState(true);
   const [activeSession, setActiveSession] =
     useState<IcarusSessionWithWorkflow | null>(null);
-  const [originalDataRows, setOriginalDataRows] = useState<ProteinRow[]>([]);
+  const [originalDataTable, setOriginalDataTable] =
+    useState<ColumnarTable | null>(null);
   const [originalDataColumns, setOriginalDataColumns] = useState<TableColumns>(
     []
   );
@@ -174,7 +175,7 @@ export const useIcarusAppSession = () => {
 
     let cancelled = false;
     setIsPreparingMatrixView(true);
-    setOriginalDataRows([]);
+    setOriginalDataTable(null);
     setOriginalDataColumns([]);
     setSelectedDataColumns([]);
     reconstructMatrixView(activeMatrix)
@@ -185,9 +186,9 @@ export const useIcarusAppSession = () => {
         // same transition so the analysis view never mounts with missing rows
         // (which would momentarily flash the empty-data state).
         startTransition(() => {
-          setOriginalDataRows(result.rows as ProteinRow[]);
-          setOriginalDataColumns(result.columns);
-          setSelectedDataColumns(result.columns);
+          setOriginalDataTable(result);
+          setOriginalDataColumns(result.headers);
+          setSelectedDataColumns(result.headers);
           setIsPreparingMatrixView(false);
         });
       })
@@ -208,12 +209,12 @@ export const useIcarusAppSession = () => {
     setMatrixProcessingAttempt((attempt) => attempt + 1);
   };
 
-  const handleSessionCreate = async ({ rows, columns, name }: BareSession) => {
+  const handleSessionCreate = async ({ table, name }: BareSession) => {
     isUploadingRef.current = true;
     setIsProcessing(true);
     try {
       const { matrixId, sessionWithWorkflows } =
-        await generateActiveSessionWitNestedWorkflow({ rows, columns, name });
+        await generateActiveSessionWitNestedWorkflow({ table, name });
 
       setActiveMatrixId(matrixId);
       setActiveSession(sessionWithWorkflows);
@@ -244,7 +245,7 @@ export const useIcarusAppSession = () => {
     await IcarusDBAdapter.deleteSessionWithAllData(id);
     if (activeSession?.id === id) {
       setActiveSession(null);
-      setOriginalDataRows([]);
+      setOriginalDataTable(null);
       setOriginalDataColumns([]);
       setSelectedDataColumns([]);
       setActiveMatrixId(null);
@@ -277,7 +278,7 @@ export const useIcarusAppSession = () => {
       setActiveMatrixId(nextMatrix?.id ?? null);
 
       if (!nextMatrix) {
-        setOriginalDataRows([]);
+        setOriginalDataTable(null);
         setOriginalDataColumns([]);
         setSelectedDataColumns([]);
       }
@@ -426,7 +427,7 @@ export const useIcarusAppSession = () => {
     matrices,
     operationError,
     originalDataColumns,
-    originalDataRows,
+    originalDataTable,
     retryActiveMatrixProcessing,
     saveActivityInWorkflow,
     saveVisualizationInWorkflow,

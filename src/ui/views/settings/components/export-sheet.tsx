@@ -45,7 +45,7 @@ const DELIMITER_FORMATS: ExportFormat[] = ["csv", "tsv", "txt"];
 const ExportSheet = ({
   isOpen,
   onClose,
-  rows,
+  table,
   columns,
   session,
   loadSession,
@@ -72,7 +72,7 @@ const ExportSheet = ({
   const showDelimiter = DELIMITER_FORMATS.includes(format);
   const showHeadersAndFlags = format !== "json" && format !== "xml";
 
-  const hasData = (scope === "session" && !!session) || rows.length > 0;
+  const hasData = (scope === "session" && !!session) || (table?.rowCount ?? 0) > 0;
 
   const handleExport = async () => {
     setExportError(null);
@@ -93,9 +93,9 @@ const ExportSheet = ({
         return;
       }
 
-      if (rows.length === 0) return;
+      if (!table || table.rowCount === 0) return;
 
-      const file = serializeActiveMatrix(rows, columns, format, {
+      const file = serializeActiveMatrix(table, columns, format, {
         delimiter: settings.delimiter,
         includeHeaders: settings.includeHeaders,
         includeMetadataColumns: settings.includeMetadataColumns,
@@ -214,7 +214,7 @@ const ExportSheet = ({
             {isExporting
               ? "Preparing export…"
               : `Export ${
-                  scope === "session" ? "session" : `${rows.length} rows`
+                  scope === "session" ? "session" : `${table?.rowCount ?? 0} rows`
                 }`}
           </Button>
         </div>

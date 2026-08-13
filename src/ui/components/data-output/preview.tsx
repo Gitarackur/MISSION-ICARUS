@@ -11,14 +11,11 @@ import PreviewEmptyState from './preview-empty-state';
 import PreviewPagination from './preview-pagination';
 import { usePreviewMenuAction } from './hooks/usePreviewMenuAction';
 
-
 const ROWS_PER_PAGE = 20;
 
-
-
 const DataPreview: React.FC<DataPreviewProps> = ({
-  originalDataRows,
-  filteredDataRows,
+  originalDataTable,
+  filteredDataTable,
   // original columns from raw data
   originalDataColumns,
   // toggled columns for UI view
@@ -33,7 +30,6 @@ const DataPreview: React.FC<DataPreviewProps> = ({
   // the source session matrix
   sessionSourceMatrix
 }) => {
-
   // styles for data preview table
   const s = dataOutputStyles();
 
@@ -44,16 +40,14 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     getCombinedCellStyle,
     toggleViewOfColumnOnPreviewTable,
   } = useTableStylingAndInteraction(
-    originalDataRows,
+    originalDataTable,
     originalDataColumns,
     selectedDataColumns,
     setSelectedDataColumns
   );
 
-  const { currentPage, totalPages, paginatedData, goToNext, goToPrev, reset } = usePagination(
-    filteredDataRows,
-    ROWS_PER_PAGE
-  );
+  const { currentPage, totalPages, paginatedRowIndices, goToNext, goToPrev, reset } =
+    usePagination(filteredDataTable?.rowCount ?? 0, ROWS_PER_PAGE);
 
   const toggleColumn = (column: string, checked: boolean) => {
     const ontoggle = () => {
@@ -71,9 +65,8 @@ const DataPreview: React.FC<DataPreviewProps> = ({
     visualizations,
   });
 
-
   // account for empty state from raw data
-  if (!originalDataRows.length) {
+  if (!originalDataTable || !originalDataTable.rowCount) {
     return (
       <PreviewEmptyState onSelectButtonForUpload={onSelectButtonForUpload} />
     );
@@ -86,7 +79,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
       <>
         <StatisticsMenu
           onMenuAction={handleMenuAction}
-          dataRows={originalDataRows}
+          dataTable={originalDataTable}
           allColumnarData={allColumnarData}
           dataColumns={originalDataColumns}
         />
@@ -128,22 +121,19 @@ const DataPreview: React.FC<DataPreviewProps> = ({
           </thead>
 
           <tbody className={s.tableBody()}>
-            {paginatedData.length > 0 ? (
-              paginatedData.map((row, idx) => {
-                const actualRowIndex = idx + (currentPage - 1) * ROWS_PER_PAGE;
-                return (
-                  <tr key={actualRowIndex} className={s.tableBodyRow()}>
-                    {selectedDataColumns.map((column) => (
-                      <td
-                        key={column}
-                        className={getCombinedCellStyle(actualRowIndex, row, column)}
-                      >
-                        {getCellDisplayValue(row, column)}
-                      </td>
-                    ))}
-                  </tr>
-                );
-              })
+            {paginatedRowIndices.length > 0 ? (
+              paginatedRowIndices.map((actualRowIndex) => (
+                <tr key={actualRowIndex} className={s.tableBodyRow()}>
+                  {selectedDataColumns.map((column) => (
+                    <td
+                      key={column}
+                      className={getCombinedCellStyle(actualRowIndex, null, column)}
+                    >
+                      {getCellDisplayValue(actualRowIndex, column, originalDataTable)}
+                    </td>
+                  ))}
+                </tr>
+              ))
             ) : (
               <tr>
                 <td colSpan={originalDataColumns.length + 1} className={s.tableBodyEmptyCell()}>
@@ -157,7 +147,7 @@ const DataPreview: React.FC<DataPreviewProps> = ({
 
       <div className='flex py-4 md:py-0 flex-col md:flex-row items-center justify-between'>
         <div>
-          Showing {paginatedData.length} of {filteredDataRows.length} proteins
+          Showing {paginatedRowIndices.length} of {filteredDataTable?.rowCount ?? 0} proteins
           <span className="block md:inline ml-4 text-blue-600 font-medium">
             Analyzing All Columns
           </span>

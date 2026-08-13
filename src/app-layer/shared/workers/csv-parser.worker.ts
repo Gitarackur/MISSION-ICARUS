@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { parseCSVFromText } from "../csv_tsc_parser";
+import { parseColumnarText } from "../csv_tsc_parser";
 import type { CSVParserWorkerRequest } from "@/domain/workers/index.types";
 import { createWorkerHeartbeat } from "@/app-layer/shared/workers/worker-heartbeat";
 
@@ -12,7 +12,7 @@ worker.onmessage = async (event: MessageEvent<CSVParserWorkerRequest>) => {
     const text = await event.data.file.text();
     worker.postMessage({
       ok: true,
-      result: await parseCSVFromText(text, heartbeat),
+      result: await parseColumnarText(text, heartbeat),
     });
   } catch (error) {
     worker.postMessage({

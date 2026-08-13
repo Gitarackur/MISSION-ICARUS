@@ -1,4 +1,3 @@
-import { ProteinRow } from "@/domain/proteins/index.types";
 import {
   IcarusMatrix,
   IcarusVisualization,
@@ -9,7 +8,7 @@ export type MatrixTabProps = {
   activeMatrixId: string;
   toggleSidebar: () => void;
   onMatrixSelect: (id: string) => void;
-  dataRows?: ProteinRow[];
+  rowCount?: number;
   visualizations?: IcarusVisualization[];
   activeVisualizationId?: string;
   onVisualizationSelect?: (visualizationId: string, matrixId?: string) => void;

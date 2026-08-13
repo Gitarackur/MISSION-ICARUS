@@ -9,10 +9,8 @@ import {
   SaveVisualizationActivity,
   SaveStatisticalActivity,
 } from "@/domain/workflow/main.types";
-import {
-  createMatrixDataSafe,
-} from "@/app-layer/shared/utils";
 import { IcarusDBAdapter } from "@/app-layer/database/store";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 
 //-----------------------------------------------------------------------------
 //
@@ -52,6 +50,30 @@ export function validateAndExtractWorkflowDataStrict(
 }
 
 //--------------------------------------------------------------------------------------------------------------
+// Transposes a columnar table into the row-major 2D matrix persisted on the
+// session (IcarusMatrix.data). No intermediate row objects are created.
+//--------------------------------------------------------------------------------------------------------------
+export const columnarTableTo2DMatrix = (
+  table: ColumnarTable
+): (string | number)[][] => {
+  const { headers, columns, rowCount } = table;
+  const matrix = new Array<(string | number)[]>(rowCount);
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    const row = new Array<string | number>(headers.length);
+    for (let columnIndex = 0; columnIndex < headers.length; columnIndex += 1) {
+      const column = columns[columnIndex];
+      const value = column[rowIndex];
+      row[columnIndex] =
+        column instanceof Float64Array && Number.isNaN(value)
+          ? "N/A"
+          : (value as string | number);
+    }
+    matrix[rowIndex] = row;
+  }
+  return matrix;
+};
+
+//--------------------------------------------------------------------------------------------------------------
 // creates an active session with Nested Workflow using loaded rows and column data from the imported  data file
 // It creates the session, workflow amd saves it ti the db
 // It then fetches the session with the nested workflow
@@ -59,18 +81,14 @@ export function validateAndExtractWorkflowDataStrict(
 //--------------------------------------------------------------------------------------------------------------
 export const generateActiveSessionWitNestedWorkflow = async ({
   name,
-  rows,
-  columns,
+  table,
 }: BareSession) => {
   try {
-    // generate table matrices(row as 2D matrices)
-    const result = createMatrixDataSafe(rows, columns);
+    const columns = table.headers;
 
-    if (!result) {
-      throw new Error("Failed to create matrix data from imported file");
-    }
-
-    const { rowsAs2dMatrix } = result;
+    // generate table matrices(row as 2D matrices) directly from columns,
+    // without building intermediate row objects
+    const rowsAs2dMatrix = columnarTableTo2DMatrix(table);
 
     // cerate icarus session instance
     const session = new IcarusSessionEntity();

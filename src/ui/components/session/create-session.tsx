@@ -1,5 +1,6 @@
 import { handleCSVFileUpload } from "@/app-layer/shared/utils";
 import { BareSession } from "@/domain/session";
+import { ColumnarTable } from "@/domain/shared/index.types";
 import DataImport from "@/ui/components/data-output/import";
 import { useCallback, useRef } from "react";
 import Header from "../header/main";
@@ -13,7 +14,7 @@ const CreateSession = ({
 }: {
   isProcessing: boolean;
   setIsProcessing: (isProcessing: boolean) => void;
-  handleSessionCreate: ({ rows, columns }: BareSession) => void;
+  handleSessionCreate: ({ table }: BareSession) => void;
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { openModal, closeModal } = useModal();
@@ -29,8 +30,8 @@ const CreateSession = ({
 
               // create the session
               await handleCSVFileUpload(file, {
-                onData: (rows, headers) => {
-                  handleSessionCreate({ rows, columns: headers, name });
+                onData: (table: ColumnarTable) => {
+                  handleSessionCreate({ table, name });
                 },
                 onProcessingChange: setIsProcessing,
                 onError: (err) => {

@@ -1,6 +1,7 @@
-import { ProteinRow, Stats } from "@/domain/proteins/index.types";
+import { Stats } from "@/domain/proteins/index.types";
 import { StatisticalAction, StatisticalAnalysisResult } from "@/domain/statistics/index.types";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
+import type { ColumnarTable } from "@/domain/shared/index.types";
 
 export type StatisticsMenuItem = {
   id: StatisticalAction;
@@ -16,7 +17,7 @@ export type StatisticsMenuDropdownItem = {
 
 export interface StatisticsMenuProps {
   onMenuAction: (result: StatisticalAnalysisResult) => void | Promise<void>;
-  dataRows: ProteinRow[];
+  dataTable: ColumnarTable;
   dataColumns: TableColumns;
   allColumnarData: Map<string, TableMatrix>;
 }
