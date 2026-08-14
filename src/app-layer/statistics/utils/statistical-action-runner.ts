@@ -70,6 +70,35 @@ fillColumn,
   index1D,
   multiplyByConstant,
   divideConstantBy,
+  rankWithinColumn,
+  unitVectorNormalize,
+  scaleToInterval,
+  widthAdjustedColumns,
+  transformColumns,
+  filterRowsByValidValues,
+  addColumnNoise,
+  densityEstimateColumn,
+  summaryStatisticsColumns,
+  columnCorrelationMatrix,
+  rowCorrelationMatrix,
+  columnQuantiles,
+  combineMainColumns,
+  combineRowsByIdentifiers,
+  imputeGaussianColumn,
+  imputeDownShiftColumn,
+  imputeMinimumColumn,
+  significanceOutliers,
+  oneSampleTTestRows,
+  periodogramSignal,
+  rankOrder,
+  convertValuesToNaN,
+  createValidityMatrix,
+  removeSelectedColumns,
+  removeEmptyColumns,
+  renameColumnsByRegex,
+  uniqueValuesOfColumn,
+  uniqueRows,
+  mulberry32,
 } from "@/app-layer/statistics/utils/statistical-engine";
 
 import { TableMatrix } from "@/domain/workflow/main.types";
@@ -1493,11 +1522,704 @@ export const runStatisticalAnalysis = async (
       break;
     }
 
+    // ===================================================================
+    // PERSEUS FILTER ROWS / FILTER COLUMNS
+    // ===================================================================
+
+    case "filter-rows-valid-values":
+    case "filter-quality": {
+      resultGranularity = "matrix-transform";
+      const mode =
+        parseStringMetadata(data, "__mode__", "absolute") === "percentage"
+          ? "percentage"
+          : "absolute";
+      const minValids = parseNumberMetadata(data, "__min_valids__", 2);
+      const minPercentage = parseNumberMetadata(data, "__min_percentage__", 70);
+      results = filterRowsByValidValues(
+        numericData,
+        minValids,
+        mode,
+        minPercentage
+      );
+      newColumnNames = numericColumns;
+      break;
+    }
+
+    case "filter-rows-random-sampling": {
+      resultGranularity = "matrix-transform";
+      const fraction = parseNumberMetadata(data, "__fraction__", 0.8);
+      const seed = Math.round(parseNumberMetadata(data, "__seed__", Date.now()));
+      const rng = mulberry32(seed);
+      const rowCount = numericData[0]?.length ?? 0;
+      const keepFraction = Math.min(1, Math.max(0, fraction));
+      const rowMask = Array.from({ length: rowCount }, () =>
+        rng() < keepFraction
+      );
+      if (rowMask.some((keep) => keep)) {
+        results = numericData.map((column) =>
+          column.filter((_, rowIndex) => rowMask[rowIndex])
+        );
+      }
+      newColumnNames = numericColumns;
+      outputParametersMetadata = {
+        fraction: keepFraction,
+        seed,
+        keptRows: rowMask.filter(Boolean).length,
+      };
+      break;
+    }
+
+    case "filter-rows-categorical-column":
+    case "filter-rows-text-column":
+    case "filter-rows-numerical-column": {
+      resultGranularity = "matrix-transform";
+      const targetColumn = parseStringMetadata(data, "__column__", "");
+      const pattern = parseStringMetadata(data, "__value__", "");
+      const operator = parseStringMetadata(data, "__operator__", "==");
+      const keepMode = parseStringMetadata(data, "__keep__", "keep");
+      const raw = getRawColumnData(data);
+      const columnIndex = raw.columns.indexOf(targetColumn);
+      if (columnIndex === -1) {
+        throw new Error(`Column '${targetColumn}' not found in the matrix`);
+      }
+      const columnValues = raw.values[columnIndex];
+      const rowCount = numericData[0]?.length ?? 0;
+
+      const matches = (value: unknown): boolean => {
+        if (action === "filter-rows-numerical-column") {
+          const numeric = Number(value);
+          const threshold = Number(pattern);
+          if (!Number.isFinite(numeric) || !Number.isFinite(threshold)) {
+            return false;
+          }
+          switch (operator) {
+            case ">":
+              return numeric > threshold;
+            case "<":
+              return numeric < threshold;
+            case ">=":
+              return numeric >= threshold;
+            case "<=":
+              return numeric <= threshold;
+            case "!=":
+              return numeric !== threshold;
+            default:
+              return numeric === threshold;
+          }
+        }
+        const textValue = value === null || value === undefined ? "" : String(value);
+        if (action === "filter-rows-text-column") {
+          return textValue.includes(pattern);
+        }
+        return textValue === pattern;
+      };
+
+      const rowMask = Array.from({ length: rowCount }, (_, rowIndex) => {
+        const isMatch = matches(columnValues[rowIndex]);
+        return keepMode === "remove" ? !isMatch : isMatch;
+      });
+      if (rowMask.some((keep) => keep)) {
+        results = numericData.map((column) =>
+          column.filter((_, rowIndex) => rowMask[rowIndex])
+        );
+      }
+      newColumnNames = numericColumns;
+      outputParametersMetadata = {
+        column: targetColumn,
+        keep: keepMode,
+        operator,
+        pattern,
+        keptRows: rowMask.filter(Boolean).length,
+      };
+      break;
+    }
+
+    case "filter-columns-valid-values": {
+      resultGranularity = "matrix-transform";
+      const minPercentage = parseNumberMetadata(data, "__min_percentage__", 70);
+      const kept: number[][] = [];
+      const keptNames: string[] = [];
+      numericData.forEach((column, index) => {
+        if (!column.length) return;
+        const validRatio =
+          column.filter((value) => Number.isFinite(value)).length / column.length;
+        if (validRatio * 100 >= minPercentage) {
+          kept.push(column);
+          keptNames.push(numericColumns[index] ?? `column_${index}`);
+        }
+      });
+      results = kept;
+      newColumnNames = keptNames;
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS BASIC (PROCESSING): TRANSFORM / SUMMARY / CORRELATION ...
+    // ===================================================================
+
+    case "transform": {
+      resultGranularity = "row-aligned";
+      const kind = parseStringMetadata(data, "__transform__", "log2");
+      const supported =
+        kind === "log10" ||
+        kind === "ln" ||
+        kind === "sqrt" ||
+        kind === "inverse" ||
+        kind === "square" ||
+        kind === "centralize"
+          ? kind
+          : "log2";
+      results = transformColumns(numericData, supported);
+      newColumnNames = numericColumns.map((col) => `${col}_${supported}`);
+      break;
+    }
+
+    case "summary-statistics-rows": {
+      resultGranularity = "row-aligned";
+      const statsRequested = parseStringMetadata(data, "__stats__", "mean,stddev,median,count,min,max")
+        .split(",")
+        .map((stat) => stat.trim())
+        .filter(Boolean);
+      const rowCount = numericData[0]?.length ?? 0;
+      const columns: Record<string, number[]> = {};
+      const statNames: string[] = [];
+      const include = (name: string, fn: (values: number[]) => number) => {
+        if (!statsRequested.includes(name)) return;
+        statNames.push(name);
+        columns[name] = Array.from({ length: rowCount }, (_, rowIndex) => {
+          const values = numericData
+            .map((column) => column[rowIndex])
+            .filter(Number.isFinite);
+          return values.length ? fn(values) : Number.NaN;
+        });
+      };
+      include("mean", mean);
+      include("median", median);
+      include("stddev", (values) => (values.length > 1 ? stddev(values) : 0));
+      include("count", (values) => values.length);
+      include("min", (values) => Math.min(...values));
+      include("max", (values) => Math.max(...values));
+      results = statNames.map((name) => columns[name]);
+      newColumnNames = statNames.map((name) => `row_${name}`);
+      break;
+    }
+
+    case "summary-statistics-columns": {
+      resultGranularity = "row-aligned";
+      const stats = summaryStatisticsColumns(numericData);
+      const rowCount = numericData[0]?.length ?? 0;
+      const order = ["mean", "median", "stddev", "count", "min", "max"];
+      results = order.map((name) => {
+        const values = stats[name] ?? [];
+        return Array.from({ length: rowCount }, (_, index) => values[index] ?? Number.NaN);
+      });
+      newColumnNames = order.map((name) => `column_${name}`);
+      break;
+    }
+
+    case "column-correlation": {
+      resultGranularity = "row-aligned";
+      const matrix = columnCorrelationMatrix(numericData);
+      results = matrix;
+      newColumnNames = numericColumns.map((col) => `${col}_corr`);
+      break;
+    }
+
+    case "row-correlation": {
+      resultGranularity = "row-aligned";
+      const matrix = rowCorrelationMatrix(numericData);
+      results = matrix;
+      newColumnNames = Array.from(
+        { length: matrix.length },
+        (_, index) => `row_corr_${index + 1}`
+      );
+      break;
+    }
+
+    case "quantiles": {
+      resultGranularity = "row-aligned";
+      const quantileList = columnQuantiles(numericData, [0, 0.25, 0.5, 0.75, 1]);
+      const rowCount = numericData[0]?.length ?? 0;
+      results = quantileList.map((column) => {
+        const padded = [...column];
+        while (padded.length < rowCount) padded.push(column[column.length - 1] ?? Number.NaN);
+        return padded;
+      });
+      newColumnNames = numericColumns.map((col) => `${col}_quantiles`);
+      break;
+    }
+
+    case "clone":
+    case "duplicate-columns": {
+      resultGranularity = "row-aligned";
+      results = numericData.map((column) => [...column]);
+      newColumnNames = numericColumns.map((col) => `${col}_clone`);
+      break;
+    }
+
+    case "add-noise": {
+      resultGranularity = "row-aligned";
+      const sigma = parseNumberMetadata(data, "__sigma__", 0);
+      const seed = Math.round(parseNumberMetadata(data, "__seed__", Date.now()));
+      results = addColumnNoise(numericData, sigma, seed);
+      newColumnNames = numericColumns.map((col) => `${col}_noise`);
+      outputParametersMetadata = {
+        sigma: sigma > 0 ? sigma : "relative to column stddev",
+        seed,
+      };
+      break;
+    }
+
+    case "combine-main-columns": {
+      resultGranularity = "row-aligned";
+      results = [combineMainColumns(numericData)];
+      newColumnNames = ["combined_main"];
+      break;
+    }
+
+    case "combine-rows-by-identifiers": {
+      resultGranularity = "row-aligned";
+      const idColumn = parseStringMetadata(data, "__id_column__", "");
+      const raw = getRawColumnData(data);
+      const columnIndex = raw.columns.indexOf(idColumn);
+      if (columnIndex === -1) {
+        throw new Error(`Identifier column '${idColumn}' not found`);
+      }
+      const identifiers = raw.values[columnIndex].map((value) =>
+        value === null || value === undefined ? String("") : String(value)
+      );
+      const { combinedData, identifiers: groups } = combineRowsByIdentifiers(
+        numericData,
+        identifiers
+      );
+      results = combinedData;
+      newColumnNames = numericColumns;
+      outputParametersMetadata = {
+        idColumn,
+        groups: groups.length,
+        identifiers: groups.map((group) => group.id),
+      };
+      break;
+    }
+
+    case "density-estimation": {
+      resultGranularity = "row-aligned";
+      const bins = Math.round(parseNumberMetadata(data, "__bins__", 20));
+      const safeBins = Math.max(2, Math.min(200, bins));
+      results = numericData.map((column) => {
+        const { counts } = densityEstimateColumn(column, safeBins);
+        while (counts.length < (numericData[0]?.length ?? 0)) {
+          counts.push(0);
+        }
+        return counts;
+      });
+      newColumnNames = numericColumns.map((col) => `${col}_density`);
+      outputParametersMetadata = { bins: safeBins };
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS NORMALIZATION
+    // ===================================================================
+
+    case "normalize-subtract": {
+      resultGranularity = "row-aligned";
+      const value = parseNumberMetadata(data, "__value__", 0);
+      results = numericData.map((column) =>
+        column.map((item) => (Number.isFinite(item) ? item - value : item))
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_sub_${value}`);
+      break;
+    }
+
+    case "normalize-divide": {
+      resultGranularity = "row-aligned";
+      const value = parseNumberMetadata(data, "__value__", 1);
+      if (Math.abs(value) < 1e-12) {
+        throw new Error("Divisor cannot be zero");
+      }
+      results = numericData.map((column) =>
+        column.map((item) => (Number.isFinite(item) ? item / value : item))
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_div_${value}`);
+      break;
+    }
+
+    case "normalize-rank": {
+      resultGranularity = "row-aligned";
+      results = numericData.map((column) => rankWithinColumn(column));
+      newColumnNames = numericColumns.map((col) => `${col}_rank`);
+      break;
+    }
+
+    case "normalize-unit-vectors": {
+      resultGranularity = "row-aligned";
+      results = numericData.map((column) => unitVectorNormalize(column));
+      newColumnNames = numericColumns.map((col) => `${col}_unit`);
+      break;
+    }
+
+    case "width-adjustment": {
+      resultGranularity = "row-aligned";
+      const targetWidth = parseNumberMetadata(data, "__target_width__", 1.349);
+      results = widthAdjustedColumns(numericData, targetWidth);
+      newColumnNames = numericColumns.map((col) => `${col}_width_adj`);
+      break;
+    }
+
+    case "normalize-scale-to-interval": {
+      resultGranularity = "row-aligned";
+      const minValue = parseNumberMetadata(data, "__min__", 0);
+      const maxValue = parseNumberMetadata(data, "__max__", 1);
+      results = numericData.map((column) =>
+        scaleToInterval(column, minValue, maxValue)
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_scaled`);
+      break;
+    }
+
+    case "normalize-modify-by-column": {
+      resultGranularity = "row-aligned";
+      const refColumn = parseStringMetadata(data, "__ref_column__", "");
+      const statMode = parseStringMetadata(data, "__stat__", "mean");
+      const refIndex = numericColumns.indexOf(refColumn);
+      if (refIndex === -1) {
+        throw new Error(`Reference column '${refColumn}' not found`);
+      }
+      const refValues = finiteValues(numericData[refIndex]);
+      const refStat =
+        statMode === "median"
+          ? median(refValues)
+          : refValues.length
+            ? mean(refValues)
+            : 1;
+      if (Math.abs(refStat) < 1e-12) {
+        throw new Error(`Reference statistic is zero; cannot divide`);
+      }
+      results = numericData.map((column) =>
+        column.map((item) => (Number.isFinite(item) ? item / refStat : item))
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_mod_${statMode}`);
+      break;
+    }
+
+    case "un-z-score": {
+      resultGranularity = "row-aligned";
+      results = numericData.map((column) => {
+        const values = finiteValues(column);
+        if (values.length < 2) return column.slice();
+        const average = mean(values);
+        const spread = stddev(values);
+        return column.map((value) =>
+          Number.isFinite(value) ? value * spread + average : value
+        );
+      });
+      newColumnNames = numericColumns.map((col) => `${col}_unz`);
+      break;
+    }
+
+    case "cluster-normalization":
+    case "subtract-row-cluster": {
+      resultGranularity = "row-aligned";
+      const clusterCount = Math.max(
+        1,
+        Math.round(parseNumberMetadata(data, "__clusters__", 3))
+      );
+      const normalizedClusters = performKMeans(numericData, clusterCount);
+      const assignments = normalizedClusters.clusterAssignments;
+      const rowCount = numericData[0]?.length ?? 0;
+      const clusterMeans = (mode: "mean" | "std"): number[][] => {
+        const means: number[][] = [];
+        for (let cluster = 0; cluster < clusterCount; cluster += 1) {
+          means.push([]);
+        }
+        assignments.forEach((cluster, rowIndex) => {
+          const values = numericData
+            .map((column) => column[rowIndex])
+            .filter((value) => Number.isFinite(value));
+          const stat = values.length
+            ? mode === "mean"
+              ? mean(values)
+              : values.length > 1
+                ? stddev(values)
+                : 0
+            : Number.NaN;
+          means[cluster].push(stat);
+        });
+        return means.map((column) => {
+          while (column.length < rowCount) column.push(Number.NaN);
+          return column;
+        });
+      };
+      if (action === "cluster-normalization") {
+        const clusterStd = clusterMeans("std");
+        const clusterMean = clusterMeans("mean");
+        results = numericData.map((column) =>
+          column.map((value, rowIndex) => {
+            if (!Number.isFinite(value)) return value;
+            const cluster = assignments[rowIndex];
+            const meanValue = clusterMean[cluster]?.[rowIndex];
+            const stdValue = clusterStd[cluster]?.[rowIndex];
+            if (!Number.isFinite(meanValue) || !(stdValue ?? 0)) return value;
+            return (value - meanValue) / (stdValue ?? 1);
+          })
+        );
+        newColumnNames = numericColumns.map((col) => `${col}_clust_norm`);
+      } else {
+        const clusterMean = clusterMeans("mean");
+        results = numericData.map((column) =>
+          column.map((value, rowIndex) => {
+            if (!Number.isFinite(value)) return value;
+            const cluster = assignments[rowIndex];
+            const meanValue = clusterMean[cluster]?.[rowIndex];
+            return Number.isFinite(meanValue) ? value - meanValue : value;
+          })
+        );
+        newColumnNames = numericColumns.map((col) => `${col}_cluster_subtracted`);
+      }
+      outputParametersMetadata = { clusters: clusterCount };
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS IMPUTATION
+    // ===================================================================
+
+    case "impute-constant": {
+      resultGranularity = "row-aligned";
+      const value = parseNumberMetadata(data, "__value__", 0);
+      results = numericData.map((column) =>
+        column.map((item) => (Number.isFinite(item) ? item : value))
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_imputed_constant`);
+      break;
+    }
+
+    case "impute-gaussian": {
+      resultGranularity = "row-aligned";
+      const width = parseNumberMetadata(data, "__width__", 0.3);
+      const seed = Math.round(parseNumberMetadata(data, "__seed__", Date.now()));
+      results = numericData.map((column) =>
+        imputeGaussianColumn(column, width, seed)
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_imputed_normal`);
+      break;
+    }
+
+    case "impute-downshift": {
+      resultGranularity = "row-aligned";
+      const shift = parseNumberMetadata(data, "__shift__", 1.8);
+      const width = parseNumberMetadata(data, "__width__", 0.3);
+      const seed = Math.round(parseNumberMetadata(data, "__seed__", Date.now()));
+      results = numericData.map((column) =>
+        imputeDownShiftColumn(column, shift, width, seed)
+      );
+      newColumnNames = numericColumns.map((col) => `${col}_imputed_downshift`);
+      break;
+    }
+
+    case "impute-minimum": {
+      resultGranularity = "row-aligned";
+      results = numericData.map((column) => imputeMinimumColumn(column));
+      newColumnNames = numericColumns.map((col) => `${col}_imputed_min`);
+      break;
+    }
+
+    case "replace-imputed-by-nan": {
+      resultGranularity = "row-aligned";
+      const value = parseNumberMetadata(data, "__value__", 0);
+      results = convertValuesToNaN(numericData, value);
+      newColumnNames = numericColumns.map((col) => `${col}_to_nan`);
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS OUTLIERS (Significance A / B)
+    // ===================================================================
+
+    case "significance-a":
+    case "significance-b": {
+      resultGranularity = "row-aligned";
+      const detection = action === "significance-b";
+      const { zScores, flags } = significanceOutliers(numericData, detection);
+      const rowCount = numericData[0]?.length ?? 0;
+      const zColumns: number[][] = [];
+      const flagColumns: number[][] = [];
+      numericData.forEach((_, columnIndex) => {
+        zColumns.push(
+          Array.from({ length: rowCount }, (_, rowIndex) => zScores[rowIndex][columnIndex] ?? Number.NaN)
+        );
+        flagColumns.push(
+          Array.from({ length: rowCount }, (_, rowIndex) => flags[rowIndex][columnIndex] ?? 0)
+        );
+      });
+      results = [...zColumns, ...flagColumns];
+      newColumnNames = [
+        ...numericColumns.map((col) => `${col}_zscore`),
+        ...numericColumns.map((col) => `${col}_outlier_flag`),
+      ];
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS QUALITY
+    // ===================================================================
+
+    case "convert-to-nan": {
+      resultGranularity = "row-aligned";
+      const value = parseNumberMetadata(data, "__value__", 0);
+      results = convertValuesToNaN(numericData, value);
+      newColumnNames = numericColumns.map((col) => `${col}_nan_filtered`);
+      break;
+    }
+
+    case "create-quality-matrix": {
+      resultGranularity = "row-aligned";
+      results = createValidityMatrix(numericData);
+      newColumnNames = numericColumns.map((col) => `${col}_is_valid`);
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS REARRANGE
+    // ===================================================================
+
+    case "remove-columns": {
+      resultGranularity = "matrix-transform";
+      const { removed, removedNames } = removeSelectedColumns(
+        numericData,
+        numericColumns,
+        numericColumns
+      );
+      results = removed;
+      newColumnNames = removedNames;
+      break;
+    }
+
+    case "remove-empty-columns": {
+      resultGranularity = "matrix-transform";
+      const { kept, keptNames } = removeEmptyColumns(numericData, numericColumns);
+      results = kept;
+      newColumnNames = keptNames;
+      break;
+    }
+
+    case "rename-columns-regex": {
+      resultGranularity = "matrix-transform";
+      const pattern = parseStringMetadata(data, "__pattern__", "");
+      const replacement = parseStringMetadata(data, "__replacement__", "");
+      results = numericData.map((column) => [...column]);
+      newColumnNames = renameColumnsByRegex(numericColumns, pattern, replacement);
+      break;
+    }
+
+    case "unique-rows": {
+      resultGranularity = "matrix-transform";
+      const { kept, keptLength } = uniqueRows(
+        numericData,
+        numericData[0]?.length ?? 0,
+        numericData.map((_, index) => index)
+      );
+      results = kept;
+      newColumnNames = numericColumns;
+      outputParametersMetadata = { uniqueRowCount: keptLength };
+      break;
+    }
+
+    case "unique-values": {
+      resultGranularity = "aggregate";
+      const targetColumn = parseStringMetadata(data, "__column__", "");
+      const raw = getRawColumnData(data);
+      const columnIndex = raw.columns.indexOf(targetColumn);
+      if (columnIndex === -1) {
+        throw new Error(`Column '${targetColumn}' not found`);
+      }
+      const unique = uniqueValuesOfColumn(
+        (raw.values[columnIndex] ?? []) as Array<string | number>
+      );
+      results = [unique.map((value) => Number(String(value)) || 0)];
+      newColumnNames = [`${targetColumn}_unique_values`];
+      outputParametersMetadata = { uniqueCount: unique.length };
+      break;
+    }
+
+    // ===================================================================
+    // PERSEUS TESTS / TIME SERIES
+    // ===================================================================
+
+    case "one-sample-tests": {
+      resultGranularity = "row-aligned";
+      const hypothesized = parseNumberMetadata(data, "__value__", 0);
+      const { t, p } = oneSampleTTestRows(numericData, hypothesized);
+      results = [t, p];
+      newColumnNames = ["one_sample_t", "one_sample_p"];
+      break;
+    }
+
+    case "generic-clustering": {
+      resultGranularity = "row-aligned";
+      const k = Math.max(
+        1,
+        Math.round(parseNumberMetadata(data, "__k__", 3))
+      );
+      const clusteringResult = performKMeans(numericData, k);
+      results = [clusteringResult.clusterAssignments];
+      newColumnNames = ["Cluster_Assignment"];
+      outputParametersMetadata = { clusters: k };
+      break;
+    }
+
+    case "periodogram": {
+      resultGranularity = "row-aligned";
+      const rowCount = numericData[0]?.length ?? 0;
+      results = numericData.map((column) => {
+        const signal = periodogramSignal(column);
+        const padded = [...signal];
+        while (padded.length < rowCount) padded.push(Number.NaN);
+        return padded;
+      });
+      newColumnNames = numericColumns.map((col) => `${col}_periodogram`);
+      break;
+    }
+
+    case "periodicity-analysis": {
+      resultGranularity = "row-aligned";
+      const rowCount = numericData[0]?.length ?? 0;
+      const dominantFrequencies: number[] = [];
+      const dominanceScores: number[] = [];
+      numericData.forEach((column) => {
+        const signal = periodogramSignal(column);
+        if (!signal.length) {
+          dominantFrequencies.push(Number.NaN);
+          dominanceScores.push(0);
+          return;
+        }
+        const peak = Math.max(...signal);
+        const dominantIndex = signal.indexOf(peak) + 1;
+        dominantFrequencies.push(dominantIndex);
+        dominanceScores.push(peak * 2);
+      });
+      const pad = (column: number[]) => {
+        const padded = [...column];
+        while (padded.length < rowCount) padded.push(Number.NaN);
+        return padded;
+      };
+      results = [pad(dominantFrequencies), pad(dominanceScores)];
+      newColumnNames = ["dominant_period", "periodicity_score"];
+      break;
+    }
+
+    case "time-series-ordering": {
+      resultGranularity = "row-aligned";
+      results = numericData.map((column) => rankOrder(column.map((value) => (Number.isFinite(value) ? value : Number.POSITIVE_INFINITY))));
+      newColumnNames = numericColumns.map((col) => `${col}_order`);
+      break;
+    }
+
     default: {
       throw new Error(`Action '${action}' not supported.`);
     }
   }
-
   const sanitizedResults = sanitizeStatisticalResults(results);
   const transposedResults = transposedStatisticalResults(sanitizedResults);
 

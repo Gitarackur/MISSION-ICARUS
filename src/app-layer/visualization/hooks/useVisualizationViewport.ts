@@ -10,9 +10,15 @@ import { PanState } from "@/app-layer/visualization/types";
 export const useVisualizationViewport = ({
   activeVisualizationId,
   displayMode,
+  interactive = false,
 }: {
   activeVisualizationId?: string;
   displayMode: "saved" | "native" | "python" | "r" | "fsharp";
+  /**
+   * When true the frame hosts an interactive chart (recharts tooltips/hover),
+   * so the window-level wheel scroll lock and pan-drag handlers are skipped.
+   */
+  interactive?: boolean;
 }) => {
   const [zoomLevel, setZoomLevel] = useState(1);
   const [pan, setPan] = useState<PanState>({ x: 0, y: 0 });
@@ -63,6 +69,8 @@ export const useVisualizationViewport = ({
   }, [activeVisualizationId, displayMode, resetViewport]);
 
   useEffect(() => {
+    if (interactive) return;
+
     const handleWheelScrollLock = (event: WheelEvent) => {
       const target = event.target as Node | null;
       const frame = frameRef.current;
@@ -78,7 +86,7 @@ export const useVisualizationViewport = ({
     window.addEventListener("wheel", handleWheelScrollLock, { passive: false });
     return () =>
       window.removeEventListener("wheel", handleWheelScrollLock);
-  }, []);
+  }, [interactive]);
 
   useEffect(() => {
     const handlePointerMove = (event: MouseEvent) => {

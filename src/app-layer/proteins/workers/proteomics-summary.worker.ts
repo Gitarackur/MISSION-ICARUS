@@ -10,8 +10,8 @@ const worker = self as DedicatedWorkerGlobalScope;
 registerWorkerRequestHandler<
   ProteomicsSummaryWorkerRequest,
   ProteomicsSummary
->(worker, ({ table }, heartbeat) =>
-  computeProteomicsSummary(table, heartbeat)
+>(worker, ({ table, columns }, heartbeat) =>
+  computeProteomicsSummary(table, columns, heartbeat)
 );
 
 export {};

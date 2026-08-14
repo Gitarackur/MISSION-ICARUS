@@ -88,6 +88,10 @@ import {
 } from "../components";
 import { TableColumns, TableMatrix } from "@/domain/workflow/main.types";
 import type { ColumnarTable } from "@/domain/shared/index.types";
+import {
+  buildProteomicsActivityDialog,
+  isProteomicsActivity,
+} from "../proteomics";
 
 const useStatisticsMenu = ({
   allColumnarData,
@@ -1407,8 +1411,24 @@ case 'delete-row':
         );
         break;
       default:
-        // Optional: Provide a fallback UI for unhandled actions
-        content = <NoUiFound actionId={actionId} />;
+        if (isProteomicsActivity(actionId)) {
+          content =
+            buildProteomicsActivityDialog(actionId, {
+              dataColumns,
+              dataTable,
+              allColumnarData,
+              onSuccess: (result) => {
+                closeModal();
+                onSuccess?.(result);
+              },
+              onError: () => {
+                onError?.();
+              },
+            }) ?? <NoUiFound actionId={actionId} />;
+        } else {
+          // Optional: Provide a fallback UI for unhandled actions
+          content = <NoUiFound actionId={actionId} />;
+        }
         break;
     }
 

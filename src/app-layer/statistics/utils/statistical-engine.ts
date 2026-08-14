@@ -42,6 +42,7 @@ import {
   OLSFit,
 } from "@/domain/statistics/index.types";
 import { EPSILON, EXPR_CONSTANTS, EXPR_FUNCTIONS, EXPR_PRECEDENCE } from "@/app-layer/statistics/constants";
+import { pearsonCorrelation } from "@/app-layer/statistics/utils/analysis-helpers";
 
 
 
@@ -236,7 +237,7 @@ export function imputeZeroColumn(col: number[]): number[] {
  * Deterministic seeded PRNG (mulberry32). Used so multiple imputation runs
  * are reproducible when a seed is supplied.
  */
-function mulberry32(seed: number): () => number {
+export function mulberry32(seed: number): () => number {
   let state = seed >>> 0;
   return () => {
     state |= 0;
@@ -248,7 +249,7 @@ function mulberry32(seed: number): () => number {
 }
 
 /** Standard normal sample via Box-Muller transform (uses the given PRNG). */
-function gaussianSample(rng: () => number, mean = 0, std = 1): number {
+export function gaussianSample(rng: () => number, mean = 0, std = 1): number {
   let u = 0;
   let v = 0;
   while (u === 0) u = rng();
@@ -3382,4 +3383,584 @@ export function detectGrubbsOutliers(
       index,
     };
   });
+}
+
+// ===================================================================
+// PERSEUS CORE MATRIX PROCESSING ACTIVITIES
+// ===================================================================
+
+/**
+ * Ranks the values of a column (average ranking for ties). Non-finite values
+ * receive rank 0.
+ */
+export function rankWithinColumn(column: number[]): number[] {
+  const ranks = new Array<number>(column.length).fill(0);
+  const indexed = column.map((value, index) => ({ value, index }));
+  indexed.sort((a, b) => Number(a.value) - Number(b.value));
+  let pointer = 0;
+  while (pointer < indexed.length) {
+    const current = indexed[pointer];
+    if (!Number.isFinite(Number(current.value))) break;
+    let end = pointer;
+    while (
+      end + 1 < indexed.length &&
+      Number(indexed[end + 1].value) === Number(current.value) &&
+      Number.isFinite(Number(indexed[end + 1].value))
+    ) {
+      end += 1;
+    }
+    const averageRank = (pointer + 1 + end + 1) / 2;
+    for (let cursor = pointer; cursor <= end; cursor += 1) {
+      ranks[indexed[cursor].index] = averageRank;
+    }
+    pointer = end + 1;
+  }
+  return ranks;
+}
+
+/** Divides a column by its Euclidean (L2) norm so the norm equals 1. */
+export function unitVectorNormalize(column: number[]): number[] {
+  const squaredSum = finiteNumbers(column).reduce(
+    (total, value) => total + value * value,
+    0
+  );
+  const norm = Math.sqrt(squaredSum);
+  return column.map((value) =>
+    Number.isFinite(value) && norm > 0 ? value / norm : Number.NaN
+  );
+}
+
+/** Linearly rescales a column into the target [min, max] interval. */
+export function scaleToInterval(
+  column: number[],
+  minValue: number,
+  maxValue: number
+): number[] {
+  const values = finiteNumbers(column);
+  if (values.length === 0) return column.map(() => Number.NaN);
+  const lowest = Math.min(...values);
+  const highest = Math.max(...values);
+  const range = highest - lowest;
+  return column.map((value) => {
+    if (!Number.isFinite(value)) return Number.NaN;
+    if (range <= 0) return (minValue + maxValue) / 2;
+    return minValue + ((value - lowest) / range) * (maxValue - minValue);
+  });
+}
+
+/**
+ * Scales each column so the interquartile ranges become the target width.
+ * Width adjustment makes all columns share a comparable spread.
+ */
+export function widthAdjustedColumns(
+  data: number[][],
+  targetWidth = 1.349
+): number[][] {
+  return data.map((column) => {
+    const values = finiteNumbers(column);
+    if (values.length < 2) return column.slice();
+    const sorted = [...values].sort((a, b) => a - b);
+    const q1 = ss.quantileSorted(sorted, 0.25);
+    const q3 = ss.quantileSorted(sorted, 0.75);
+    const iqr = q3 - q1;
+    const factor = iqr > EPSILON ? targetWidth / iqr : 1;
+    return column.map((value) =>
+      Number.isFinite(value) ? value * factor : value
+    );
+  });
+}
+
+/** Transforms each column with the requested mathematical transform. */
+export function transformColumns(
+  data: number[][],
+  kind: "log2" | "log10" | "ln" | "sqrt" | "inverse" | "square" | "centralize"
+): number[][] {
+  const apply = (value: number): number | undefined => {
+    if (!Number.isFinite(value)) return undefined;
+    switch (kind) {
+      case "log2":
+        return value > 0 ? Math.log2(value) : Number.NaN;
+      case "log10":
+        return value > 0 ? Math.log10(value) : Number.NaN;
+      case "ln":
+        return value > 0 ? Math.log(value) : Number.NaN;
+      case "sqrt":
+        return value >= 0 ? Math.sqrt(value) : Number.NaN;
+      case "inverse":
+        return value !== 0 ? 1 / value : Number.NaN;
+      case "square":
+        return value * value;
+      case "centralize":
+        return value;
+      default:
+        return value;
+    }
+  };
+  return data.map((column) =>
+    column.map((value) => {
+      const transformed = apply(value);
+      return transformed === undefined ? Number.NaN : transformed;
+    })
+  );
+}
+
+/** Keeps the rows that reach a minimum number / fraction of valid values. */
+export function filterRowsByValidValues(
+  data: number[][],
+  minValids: number,
+  mode: "absolute" | "percentage",
+  minPercentage: number
+): number[][] {
+  if (data.length === 0) return [];
+  const rowCount = data[0]?.length ?? 0;
+  const rowMask: boolean[] = [];
+  for (let rowIndex = 0; rowIndex < rowCount; rowIndex += 1) {
+    const validCount = data.reduce(
+      (total, column) => total + (Number.isFinite(column[rowIndex]) ? 1 : 0),
+      0
+    );
+    const threshold =
+      mode === "percentage"
+        ? Math.ceil((minPercentage / 100) * data.length)
+        : minValids;
+    rowMask.push(
+      mode === "percentage"
+        ? (validCount / data.length) * 100 >= minPercentage
+        : validCount >= threshold
+    );
+  }
+  return data.map((column) =>
+    column.filter((_, rowIndex) => rowMask[rowIndex])
+  );
+}
+
+/** Appends additive Gaussian noise (argument = absolute sigma). */
+export function addColumnNoise(
+  data: number[][],
+  sigma: number,
+  seed?: number
+): number[][] {
+  const rng = mulberry32(seed ?? (Date.now() % 2147483647));
+  return data.map((column) => {
+    const baseSigma =
+      sigma > 0 ? sigma : (stddev(finiteNumbers(column)) || 1) * 0.1;
+    return column.map((value) =>
+      Number.isFinite(value)
+        ? value + gaussianSample(rng, 0, baseSigma)
+        : value
+    );
+  });
+}
+
+/** Computes a histogram (density estimation) of each column. */
+export function densityEstimateColumn(
+  column: number[],
+  binCount: number
+): { counts: number[]; edges: number[] } {
+  const values = finiteNumbers(column);
+  if (values.length === 0) {
+    return { counts: [], edges: [] };
+  }
+  const lowest = Math.min(...values);
+  const highest = Math.max(...values);
+  const width = (highest - lowest) / binCount || 1;
+  const counts = new Array<number>(binCount).fill(0);
+  values.forEach((value) => {
+    const bucket = Math.min(binCount - 1, Math.floor((value - lowest) / width));
+    counts[bucket] += 1;
+  });
+  const edges = Array.from(
+    { length: binCount + 1 },
+    (_, index) => lowest + index * width
+  );
+  return { counts, edges };
+}
+
+/** Column-wise summary statistics, transposed to row-aligned result columns. */
+export function summaryStatisticsColumns(
+  data: number[][]
+): Record<string, number[]> {
+  const finitePerColumn = data.map(finiteNumbers);
+  return {
+    mean: finitePerColumn.map((values) => (values.length ? mean(values) : 0)),
+    median: finitePerColumn.map((values) =>
+      values.length ? median(values) : 0
+    ),
+    stddev: finitePerColumn.map((values) =>
+      values.length > 1 ? stddev(values) : 0
+    ),
+    count: finitePerColumn.map((values) => values.length),
+    min: finitePerColumn.map((values) =>
+      values.length ? Math.min(...values) : 0
+    ),
+    max: finitePerColumn.map((values) =>
+      values.length ? Math.max(...values) : 0
+    ),
+  };
+}
+
+/** Pairwise Pearson correlation matrix between the columns. */
+export function columnCorrelationMatrix(data: number[][]): number[][] {
+  return data.map((source) =>
+    data.map((target) => pearsonCorrelation(source, target))
+  );
+}
+
+/** Pairwise Pearson correlation matrix between the rows. */
+export function rowCorrelationMatrix(data: number[][]): number[][] {
+  const rowCount = data[0]?.length ?? 0;
+  const rows: number[][] = [];
+  for (let row = 0; row < rowCount; row += 1) {
+    rows.push(data.map((column) => column[row]).filter(Number.isFinite));
+  }
+  const correlation = (left: number[], right: number[]): number => {
+    const pairs = left
+      .map((value, index) => [value, right[index]] as const)
+      .filter(([a, b]) => Number.isFinite(a) && Number.isFinite(b));
+    if (pairs.length < 2) return 0;
+    return ss.sampleCorrelation(
+      pairs.map(([a]) => a),
+      pairs.map(([, b]) => b)
+    );
+  };
+  return rows.map((rowA) => rows.map((rowB) => correlation(rowA, rowB)));
+}
+
+/** Column quantiles: returns a list of quantile values per column. */
+export function columnQuantiles(
+  data: number[][],
+  probabilities: number[]
+): number[][] {
+  return data.map((column) => {
+    const values = finiteNumbers(column);
+    if (values.length === 0) return probabilities.map(() => Number.NaN);
+    const sorted = [...values].sort((a, b) => a - b);
+    return probabilities.map((probability) =>
+      ss.quantileSorted(sorted, probability)
+    );
+  });
+}
+
+/** Combines the columns into a single summed column. */
+export function combineMainColumns(data: number[][]): number[] {
+  const rowCount = data[0]?.length ?? 0;
+  return Array.from({ length: rowCount }, (_, rowIndex) =>
+    data.reduce(
+      (total, column) =>
+        total + (Number.isFinite(column[rowIndex]) ? column[rowIndex] : 0),
+      0
+    )
+  );
+}
+
+/**
+ * Combines the rows that share a common identifier (from a text column) by
+ * averaging their numeric columns. The identifier column is supplied as an
+ * array of string values parallel to the rows.
+ */
+export function combineRowsByIdentifiers(
+  data: number[][],
+  identifiers: string[]
+): {
+  combinedData: number[][];
+  identifiers: { id: string; rowIndices: number[] }[];
+} {
+  const groups = new Map<string, number[]>();
+  identifiers.forEach((identifier, rowIndex) => {
+    const key = typeof identifier === "string" ? identifier : String(rowIndex);
+    const group = groups.get(key);
+    if (group) group.push(rowIndex);
+    else groups.set(key, [rowIndex]);
+  });
+  const groupsList = [...groups.entries()].map(([id, rowIndices]) => ({
+    id,
+    rowIndices,
+  }));
+  const combinedData = data.map((column) =>
+    groupsList.map((group) => {
+      const values = group.rowIndices
+        .map((rowIndex) => column[rowIndex])
+        .filter(Number.isFinite);
+      return values.length ? mean(values) : Number.NaN;
+    })
+  );
+  return { combinedData, identifiers: groupsList };
+}
+
+/** Replaces missing values of each column with random normal draws. */
+export function imputeGaussianColumn(
+  column: number[],
+  width: number,
+  seed?: number
+): number[] {
+  const rng = mulberry32(seed ?? (Date.now() % 2147483647));
+  const values = finiteNumbers(column);
+  if (values.length === 0) return column.slice();
+  const average = mean(values);
+  const spread = values.length > 1 ? stddev(values) : 1;
+  return column.map((value) => {
+    if (Number.isFinite(value)) return value;
+    return gaussianSample(
+      rng,
+      average,
+      Math.max(spread * width, 1e-6)
+    );
+  });
+}
+
+/** Replaces missing values from a down-shifted normal distribution. */
+export function imputeDownShiftColumn(
+  column: number[],
+  shift: number,
+  width: number,
+  seed?: number
+): number[] {
+  const rng = mulberry32(seed ?? (Date.now() % 2147483647));
+  const values = finiteNumbers(column);
+  if (values.length === 0) return column.slice();
+  const average = mean(values);
+  const spread = values.length > 1 ? stddev(values) : 1;
+  return column.map((value) => {
+    if (Number.isFinite(value)) return value;
+    return gaussianSample(
+      rng,
+      average - shift * spread,
+      Math.max(spread * width, 1e-6)
+    );
+  });
+}
+
+/** Replaces missing values with the smallest measured value of the column. */
+export function imputeMinimumColumn(column: number[]): number[] {
+  const values = finiteNumbers(column);
+  if (values.length === 0) return column.slice();
+  const minimum = Math.min(...values);
+  return column.map((value) => (Number.isFinite(value) ? value : minimum));
+}
+
+/** Significance A / B style outlier scoring on a per-row basis. */
+export function significanceOutliers(
+  data: number[][],
+  useDetection = true
+): { zScores: number[][]; flags: number[][] } {
+  const rowCount = data[0]?.length ?? 0;
+  const rowMeans: number[] = [];
+  const rowSds: number[] = [];
+  for (let row = 0; row < rowCount; row += 1) {
+    const values = data
+      .map((column) => column[row])
+      .filter((value) => Number.isFinite(value));
+    rowMeans.push(values.length ? mean(values) : Number.NaN);
+    rowSds.push(values.length > 1 ? stddev(values) : 0);
+  }
+  // Significance B: intensity-dependent variance. Compute per-multiplicity
+  // (number of valid values) sigma so low-intensity rows are not over-flagged.
+  const sigmaByMultiplicity = new Map<number, number>();
+  for (let row = 0; row < rowCount; row += 1) {
+    const values = data
+      .map((column) => column[row])
+      .filter((value) => Number.isFinite(value));
+    const count = values.length;
+    if (count < 2) continue;
+    const current = sigmaByMultiplicity.get(count) ?? 0;
+    sigmaByMultiplicity.set(count, Math.max(current, stddev(values)));
+  }
+  const zScores: number[][] = [];
+  const flags: number[][] = [];
+  for (let row = 0; row < rowCount; row += 1) {
+    const rowZ: number[] = [];
+    const rowFlag: number[] = [];
+    data.forEach((column) => {
+      const value = column[row];
+      const mu = rowMeans[row];
+      if (!Number.isFinite(value) || !Number.isFinite(mu)) {
+        rowZ.push(Number.NaN);
+        rowFlag.push(0);
+        return;
+      }
+      const count = data
+        .map((c) => c[row])
+        .filter((v) => Number.isFinite(v)).length;
+      const sigma = useDetection
+        ? (rowSds[row] || 1)
+        : (sigmaByMultiplicity.get(count) || 1);
+      const z = sigma > 0 ? (value - mu) / sigma : 0;
+      rowZ.push(z);
+      rowFlag.push(Number.isFinite(z) && Math.abs(z) > 3 ? 1 : 0);
+    });
+    zScores.push(rowZ);
+    flags.push(rowFlag);
+  }
+  // Transpose back to column-major.
+  return { zScores, flags };
+}
+
+/** One-sample t-test statistics per row: mean, sd, t, p. */
+export function oneSampleTTestRows(
+  data: number[][],
+  hypothesized: number
+): { t: number[]; p: number[] } {
+  const rowCount = data[0]?.length ?? 0;
+  const t: number[] = [];
+  const p: number[] = [];
+  for (let row = 0; row < rowCount; row += 1) {
+    const values = data
+      .map((column) => column[row])
+      .filter((value) => Number.isFinite(value));
+    const n = values.length;
+    if (n < 2) {
+      t.push(Number.NaN);
+      p.push(1);
+      continue;
+    }
+    const average = mean(values);
+    const spread = stddev(values);
+    const tStat =
+      spread > 0 ? (average - hypothesized) / (spread / Math.sqrt(n)) : average - hypothesized;
+    const pValue =
+      spread > 0
+        ? 2 * (1 - jStat.studentt.cdf(Math.abs(tStat), n - 1))
+        : average === hypothesized
+          ? 1
+          : 0;
+    t.push(tStat);
+    p.push(Math.min(1, Math.max(0, pValue)));
+  }
+  return { t, p };
+}
+
+/** Simple periodogram using the discrete cosine transform of de-meaned data. */
+export function periodogramSignal(column: number[]): number[] {
+  const values = finiteNumbers(column);
+  if (values.length < 3) return [];
+  const average = mean(values);
+  const centered = values.map((value) => value - average);
+  const totalSq = centered.reduce((sum, value) => sum + value * value, 0);
+  const frequencies: number[] = [];
+  const half = Math.floor(values.length / 2);
+  for (let k = 1; k <= half; k += 1) {
+    let real = 0;
+    let imag = 0;
+    for (let n = 0; n < centered.length; n += 1) {
+      const angle = (2 * Math.PI * k * n) / centered.length;
+      real += centered[n] * Math.cos(angle);
+      imag += centered[n] * Math.sin(angle);
+    }
+    frequencies.push((real * real + imag * imag) / (totalSq || 1));
+  }
+  return frequencies;
+}
+
+/** Ranks a list of numbers ascending (average ranking for ties). */
+export function rankOrder(values: number[]): number[] {
+  const indexed = values.map((value, index) => ({ value, index }));
+  indexed.sort((a, b) => a.value - b.value);
+  const order = new Array<number>(values.length).fill(0);
+  indexed.forEach((entry, position) => {
+    order[entry.index] = position + 1;
+  });
+  return order;
+}
+
+/** Converts matrix values that equal a given pattern to NaN. */
+export function convertValuesToNaN(data: number[][], value: number): number[][] {
+  return data.map((column) =>
+    column.map((item) => (Number.isFinite(item) && item === value ? Number.NaN : item))
+  );
+}
+
+/** Creates a validity (quality) matrix: 1 for finite values, 0 for missing. */
+export function createValidityMatrix(data: number[][]): number[][] {
+  return data.map((column) =>
+    column.map((value) => (Number.isFinite(value) ? 1 : 0))
+  );
+}
+
+/** Removes the target columns from the matrix (column-major). */
+export function removeSelectedColumns(
+  data: number[][],
+  columnNames: string[],
+  selected: string[]
+): { removed: number[][]; removedNames: string[] } {
+  const removed: number[][] = [];
+  const removedNames: string[] = [];
+  columnNames.forEach((name, index) => {
+    if (!selected.includes(name)) {
+      removed.push(data[index] ?? []);
+      removedNames.push(name);
+    }
+  });
+  return { removed, removedNames };
+}
+
+/** Removes columns where every value is missing. */
+export function removeEmptyColumns(
+  data: number[][],
+  columnNames: string[]
+): { kept: number[][]; keptNames: string[] } {
+  const kept: number[][] = [];
+  const keptNames: string[] = [];
+  data.forEach((column, index) => {
+    if (column.some((value) => Number.isFinite(value))) {
+      kept.push(column);
+      keptNames.push(columnNames[index] ?? `column_${index}`);
+    }
+  });
+  return { kept, keptNames };
+}
+
+/** Renames the columns using a regular expression substitution. */
+export function renameColumnsByRegex(
+  columnNames: string[],
+  pattern: string,
+  replacement: string
+): string[] {
+  return columnNames.map((name) =>
+    pattern ? name.replace(new RegExp(pattern, "g"), replacement) : name
+  );
+}
+
+/** De-hyphenates row identifiers: "-" is replaced by the supplied string. */
+export function deHyphenateRowIds(
+  identifiers: string[],
+  replacement: string
+): string[] {
+  return identifiers.map((identifier) =>
+    typeof identifier === "string" ? identifier.replace(/-/g, replacement) : String(identifier)
+  );
+}
+
+/** Lists the unique values of a text column. */
+export function uniqueValuesOfColumn(column: Array<string | number>): Array<string | number> {
+  const seen = new Map<string, string | number>();
+  column.forEach((value) => {
+    if (value === null || value === undefined || value === "") return;
+    seen.set(String(value), value);
+  });
+  return [...seen.values()];
+}
+
+/** Keeps the first occurrence of each row fingerprint over the selected columns. */
+export function uniqueRows(
+  data: number[][],
+  rowCount: number,
+  fingerprintColumns: number[]
+): { kept: number[][]; keptLength: number } {
+  const seen = new Set<string>();
+  const keepRow = new Array<boolean>(rowCount).fill(false);
+  let keptCount = 0;
+  for (let row = 0; row < rowCount; row += 1) {
+    const fingerprint = fingerprintColumns
+      .map((columnIndex) => String(data[columnIndex]?.[row]))
+      .join("|");
+    if (!seen.has(fingerprint)) {
+      seen.add(fingerprint);
+      keepRow[row] = true;
+      keptCount += 1;
+    }
+  }
+  const kept = data.map((column) =>
+    column.filter((_, row) => keepRow[row])
+  );
+  return { kept, keptLength: keptCount };
 }

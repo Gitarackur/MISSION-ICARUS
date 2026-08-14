@@ -129,7 +129,165 @@ export type StatisticalAction =
   | "1d-normalize"
   | "1d-index"
   | "pi-multiply"
-  | "pi-divide";
+  | "pi-divide"
+  // ===================================================================
+  // PERSEUS MATRIX UPLOAD / EXPORT
+  // ===================================================================
+  | "generic-matrix-upload"
+  | "binary-upload"
+  | "create-gene-list"
+  | "create-random-matrix"
+  | "ngs-data-upload"
+  | "raw-upload"
+  | "matrix-export"
+  // ===================================================================
+  // PERSEUS MATRIX ANALYSIS
+  // ===================================================================
+  | "co-expression-clustering"
+  | "numeric-venn-diagram"
+  | "select-rows-manually"
+  | "sequence-logos"
+  | "hawaii-plot"
+  | "3d-plot"
+  | "histogram"
+  | "multi-scatter-plot"
+  | "profile-plot"
+  // ===================================================================
+  // PERSEUS MATRIX MULTI-PROCESSING
+  // ===================================================================
+  | "matching-rows-by-name"
+  | "matching-columns-by-name"
+  | "replace-strings"
+  | "change-column-names"
+  | "assert-matrix-equals"
+  // ===================================================================
+  // PERSEUS ANNOT. COLUMNS
+  // ===================================================================
+  | "1d-annotation-enrichment"
+  | "2d-annotation-enrichment"
+  | "add-annotation"
+  | "annotation-matrix"
+  | "average-categories"
+  | "category-counting"
+  | "fisher-exact-test"
+  | "to-base-identifiers"
+  // ===================================================================
+  // PERSEUS ANNOT. ROWS
+  // ===================================================================
+  | "average-groups"
+  | "categorical-annotation-rows"
+  | "join-terms-in-categorical-row"
+  | "numerical-annotation-rows"
+  // ===================================================================
+  // PERSEUS BASIC (PROCESSING)
+  // ===================================================================
+  | "transform"
+  | "summary-statistics-rows"
+  | "summary-statistics-columns"
+  | "row-correlation"
+  | "quantiles"
+  | "performance-curves"
+  | "density-estimation"
+  | "combine-rows-by-identifiers"
+  | "combine-main-columns"
+  | "column-correlation"
+  | "clone"
+  | "add-noise"
+  // ===================================================================
+  // PERSEUS CLUSTERING / FILTER COLUMNS / FILTER ROWS
+  // ===================================================================
+  | "generic-clustering"
+  | "filter-columns-categorical-row"
+  | "filter-columns-valid-values"
+  | "filter-rows-categorical-column"
+  | "filter-rows-numerical-column"
+  | "filter-rows-random-sampling"
+  | "filter-rows-text-column"
+  | "filter-rows-valid-values"
+  // ===================================================================
+  // PERSEUS IMPUTATION
+  // ===================================================================
+  | "impute-constant"
+  | "impute-gaussian"
+  | "impute-downshift"
+  | "impute-minimum"
+  | "replace-imputed-by-nan"
+  // ===================================================================
+  // PERSEUS LEARNING
+  // ===================================================================
+  | "classification-cross-validation"
+  | "classification-feature-optimization"
+  | "classification-parameter-optimization"
+  // ===================================================================
+  // PERSEUS MODIFICATIONS
+  // ===================================================================
+  | "add-known-sites"
+  | "add-linear-motifs"
+  | "add-modification-counts"
+  | "add-regulatory-sites"
+  | "add-sequence-features"
+  | "expand-site-table"
+  | "kinase-substrate-relations"
+  | "shorten-motif-length"
+  // ===================================================================
+  // PERSEUS NORMALIZATION
+  // ===================================================================
+  | "cluster-normalization"
+  | "normalize-divide"
+  | "normalize-modify-by-column"
+  | "normalize-rank"
+  | "normalize-scale-to-interval"
+  | "normalize-subtract"
+  | "subtract-row-cluster"
+  | "un-z-score"
+  | "normalize-unit-vectors"
+  | "width-adjustment"
+  // ===================================================================
+  // PERSEUS OUTLIERS
+  // ===================================================================
+  | "significance-a"
+  | "significance-b"
+  // ===================================================================
+  // PERSEUS QUALITY
+  // ===================================================================
+  | "convert-to-nan"
+  | "create-quality-matrix"
+  | "filter-quality"
+  // ===================================================================
+  // PERSEUS REARRANGE
+  // ===================================================================
+  | "change-column-type"
+  | "combine-annotations"
+  | "combine-categorical-columns"
+  | "convert-multi-numeric-column"
+  | "de-hyphenate-ids"
+  | "duplicate-columns"
+  | "expand-multi-numeric-text-columns"
+  | "fill-categorical-columns"
+  | "process-text-column"
+  | "remove-empty-columns"
+  | "rename-columns-regex"
+  | "reorder-columns-numerical-annotation"
+  | "reorder-remove-annotation-rows"
+  | "remove-columns"
+  | "search-text-column"
+  | "unique-rows"
+  | "unique-values"
+  // ===================================================================
+  // PERSEUS TESTS
+  // ===================================================================
+  | "one-sample-tests"
+  | "multiple-sample-tests"
+  | "two-way-anova"
+  | "three-way-anova"
+  | "post-hoc-tests"
+  // ===================================================================
+  // PERSEUS TIME SERIES
+  // ===================================================================
+  | "periodicity-analysis"
+  | "periodogram"
+  | "time-series-ordering"
+  | "cyclic-annotation-enrichment";
 
 
 // Clustering result types

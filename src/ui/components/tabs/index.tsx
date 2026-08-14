@@ -14,7 +14,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
     { id: "visualization", label: "Visualization", icon: BarChart3 },
     {
       id: "protein-data-info-panel",
-      label: "Protein Data Info Panel",
+      label: "Proteomics",
       icon: Calculator,
     },
     { id: "analysis", label: "Analysis", icon: TrendingUp },

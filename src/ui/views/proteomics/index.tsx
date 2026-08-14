@@ -3,9 +3,12 @@ import DataPreview from "@/ui/components/data-output/preview";
 import ProteinDataPanel from "@/ui/components/statistics/components/panel";
 import VisualizationPanel from "@/ui/components/visualization";
 import AnalysisPanel from "@/ui/components/analysis";
-import { useProteomicsAnalysisView } from "./hooks/useProteomicsAnalysisView";
 import { ProteomicsAnalysisHomeViewProps } from "./types/index.types";
 import { proteomicsPagestyles } from "./variants/proteomics.variants";
+import { usePreviewMenuAction } from "@/ui/components/data-output/hooks/usePreviewMenuAction";
+import { LazyColumnarData } from "@/app-layer/shared/lazy-columnar-data";
+import { TableMatrix } from "@/domain/workflow/main.types";
+import { useMemo } from "react";
 
 export default function ProteomicsAnalysisHomeView(
   props: ProteomicsAnalysisHomeViewProps
@@ -27,14 +30,6 @@ export default function ProteomicsAnalysisHomeView(
     setSelectedDataColumns,
   } = props;
   const styles = proteomicsPagestyles();
-  const {
-    intensityDist,
-    // isSummaryLoading,
-    retrySummary,
-    stats,
-    summaryError,
-    volcanoData,
-  } = useProteomicsAnalysisView({ originalDataColumns, originalDataTable });
   const selectTab = (tab: typeof activeTab) => {
     setActiveTab(tab);
     if (tab !== "visualization") {
@@ -45,6 +40,22 @@ export default function ProteomicsAnalysisHomeView(
     setActiveVisualizationId(visualizationId);
     setActiveTab("visualization");
   };
+
+  const allColumnarData = useMemo(
+    () =>
+      originalDataTable && originalDataTable.rowCount
+        ? new LazyColumnarData(originalDataTable, originalDataColumns)
+        : new Map<string, TableMatrix>(),
+    [originalDataTable, originalDataColumns]
+  );
+
+  const handleMenuAction = usePreviewMenuAction({
+    onVisualizationCreated: selectCreatedVisualization,
+    saveActivityInWorkflow,
+    saveVisualizationInWorkflow,
+    sessionSourceMatrix,
+    visualizations: activeSession?.visualizations ?? [],
+  });
 
   return (
     <div className={styles.container()}>
@@ -57,23 +68,6 @@ export default function ProteomicsAnalysisHomeView(
       </div>
 
       <div className={styles.contentPadding()}>
-        {summaryError && (
-          <div role="alert" className={styles.workerError()}>
-            <span className={styles.workerErrorText()}>{summaryError}</span>
-            <button
-              type="button"
-              className={styles.workerRetryButton()}
-              onClick={retrySummary}
-            >
-              Try again
-            </button>
-          </div>
-        )}
-        {/* {isSummaryLoading && (
-          <div role="status" className={styles.workerStatus()}>
-            Calculating the proteomics summary in the background…
-          </div>
-        )} */}
         {activeTab === "import" && (
           <div className={styles.sectionSpacing()}>
             <DataPreview
@@ -92,14 +86,19 @@ export default function ProteomicsAnalysisHomeView(
           </div>
         )}
 
-        {activeTab === "protein-data-info-panel" && stats && (
-          <ProteinDataPanel stats={stats} intensityDist={intensityDist} />
+        {activeTab === "protein-data-info-panel" && (
+          <ProteinDataPanel
+            onMenuAction={handleMenuAction}
+            dataTable={originalDataTable ?? undefined}
+            dataColumns={originalDataColumns}
+            allColumnarData={allColumnarData}
+          />
         )}
 
         {activeTab === "visualization" && (
           <VisualizationPanel
-            volcanoData={volcanoData}
-            intensityDist={intensityDist}
+            volcanoData={[]}
+            intensityDist={[]}
             activeMatrix={activeMatrix}
             activeSession={activeSession}
             saveVisualizationInWorkflow={saveVisualizationInWorkflow}

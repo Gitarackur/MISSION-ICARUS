@@ -6,9 +6,10 @@ import type { ProteomicsSummaryWorkerRequest } from "@/domain/workers/index.type
 import { runWorkerRequest } from "@/app-layer/shared/workers/worker-client";
 
 export const computeProteomicsSummaryInWorker = (
-  table: ColumnarTable
+  table: ColumnarTable,
+  columns?: string[]
 ): Promise<ProteomicsSummary> => {
-  const request: ProteomicsSummaryWorkerRequest = { table };
+  const request: ProteomicsSummaryWorkerRequest = { table, columns };
   return runWorkerRequest({
     createWorker: () =>
       new Worker(

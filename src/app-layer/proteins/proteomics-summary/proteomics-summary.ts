@@ -1,3 +1,5 @@
+import { jStat } from "jstat";
+import * as ss from "simple-statistics";
 import type {
   ProteomicsSummary,
   Stats,
@@ -7,28 +9,13 @@ import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { WorkerYieldHook } from "@/domain/workers/index.types";
 
 const mean = (values: number[]) =>
-  values.length
-    ? values.reduce((total, value) => total + value, 0) / values.length
-    : 0;
+  values.length ? jStat.mean(values) : 0;
 
-const median = (values: number[]) => {
-  if (!values.length) return 0;
-  const sorted = [...values].sort((left, right) => left - right);
-  const middle = Math.floor(sorted.length / 2);
-  return sorted.length % 2
-    ? sorted[middle]
-    : (sorted[middle - 1] + sorted[middle]) / 2;
-};
+const median = (values: number[]) =>
+  values.length ? jStat.median(values) : 0;
 
-const sampleStandardDeviation = (values: number[]) => {
-  if (values.length < 2) return 0;
-  const average = mean(values);
-  const squaredDifferenceTotal = values.reduce(
-    (total, value) => total + (value - average) ** 2,
-    0
-  );
-  return Math.sqrt(squaredDifferenceTotal / (values.length - 1));
-};
+const sampleStandardDeviation = (values: number[]) =>
+  values.length < 2 ? 0 : ss.sampleStandardDeviation(values);
 
 const safeLog2Ratio = (numerator: number, denominator: number) => {
   if (
@@ -53,6 +40,7 @@ const readColumnNumber = (
 
 export const computeProteomicsSummary = async (
   table: ColumnarTable,
+  columns?: string[],
   onYield?: WorkerYieldHook
 ): Promise<ProteomicsSummary> => {
   if (!table.rowCount) {
@@ -65,22 +53,29 @@ export const computeProteomicsSummary = async (
   const findIntensityColumns = (caseInsensitive = false): number[] => {
     const matches: number[] = [];
     table.headers.forEach((header, index) => {
-      if (
-        caseInsensitive
-          ? header.toLowerCase().includes("intensity")
-          : header.includes("intensity")
-      ) {
-        matches.push(index);
-      }
+      const candidate = caseInsensitive ? header.toLowerCase() : header;
+      if (candidate.includes("intensity")) matches.push(index);
     });
     return matches;
   };
 
-  const selectedIntensityColumns = findIntensityColumns();
-  const intensityColumns = [...selectedIntensityColumns];
-  if (!intensityColumns.length) {
-    intensityColumns.push(...findIntensityColumns(true));
-  }
+  const explicitlySelectedColumns = columns
+    ? columns
+        .map((column) => columnIndices.get(column))
+        .filter((index): index is number => index !== undefined)
+    : undefined;
+  const defaultDistributionColumns = findIntensityColumns();
+  const defaultSummaryColumns = defaultDistributionColumns.length
+    ? defaultDistributionColumns
+    : findIntensityColumns(true);
+
+  // New callers provide an explicit selection. Keep automatic detection for
+  // older callers that omit the argument so the public summary API remains
+  // backwards compatible.
+  const intensityColumns =
+    explicitlySelectedColumns ?? defaultSummaryColumns;
+  const distributionColumns =
+    explicitlySelectedColumns ?? defaultDistributionColumns;
 
   const intensities: number[] = [];
   let missingValues = 0;
@@ -111,10 +106,7 @@ export const computeProteomicsSummary = async (
     missingValues,
   };
 
-  // Preserve the previous display behavior: the summary statistics fall back
-  // to case-insensitive intensity columns, while the distribution only uses
-  // explicitly selected lowercase `intensity` columns.
-  const intensityDist = selectedIntensityColumns.map((columnIndex) => {
+  const intensityDist = distributionColumns.map((columnIndex) => {
     const values: number[] = [];
     for (let rowIndex = 0; rowIndex < table.rowCount; rowIndex += 1) {
       const value = Math.log10(readColumnNumber(table, columnIndex, rowIndex) || 1);

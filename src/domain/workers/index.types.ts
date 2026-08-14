@@ -147,6 +147,8 @@ export type MatrixViewWorkerResponse =
 
 export interface ProteomicsSummaryWorkerRequest {
   table: ColumnarTable;
+  /** Optional user-selected columns; the summary is computed only over these. */
+  columns?: string[];
 }
 
 export type ProteomicsSummaryWorkerResponse =
