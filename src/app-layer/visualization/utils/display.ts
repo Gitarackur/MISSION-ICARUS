@@ -1,5 +1,4 @@
 import {
-  BarChartPayload,
   BoxPlotPayload,
   HeatmapPayload,
   PcaPlotPayload,
@@ -13,6 +12,7 @@ import {
   getSavedVisualizationPayload,
   getVisualizationImage,
 } from "@/domain/visualization/utils/main";
+import { getBarChartPayloadForVisualization } from "@/domain/visualization/utils/payloads";
 import {
   renderBarSvg,
   renderBoxPlotSvg,
@@ -32,12 +32,6 @@ const isSeriesArray = (value: unknown) =>
       Array.isArray((entry as { values?: unknown }).values)
   );
 
-const isBarChartPayload = (payload: unknown): payload is BarChartPayload =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  Array.isArray((payload as Partial<BarChartPayload>).categories) &&
-  isSeriesArray((payload as Partial<BarChartPayload>).series);
-
 const isBoxPlotPayload = (payload: unknown): payload is BoxPlotPayload =>
   Boolean(payload) &&
   typeof payload === "object" &&
@@ -55,16 +49,6 @@ const isScatterPlotPayload = (payload: unknown): payload is ScatterPlotPayload =
   Boolean(payload) &&
   typeof payload === "object" &&
   Array.isArray((payload as Partial<ScatterPlotPayload>).series);
-
-const isLegacyBarChartPayload = (
-  payload: unknown
-): payload is Record<string, number> =>
-  Boolean(payload) &&
-  typeof payload === "object" &&
-  !Array.isArray(payload) &&
-  Object.values(payload as Record<string, unknown>).every((value) =>
-    Number.isFinite(Number(value))
-  );
 
 const isLegacyScatterPlotPayload = (
   payload: unknown
@@ -110,33 +94,9 @@ export const renderVisualizationForDisplay = ({
   if (!visualization) return null;
 
   const payload = getSavedVisualizationPayload(visualization);
-
-  if (
-    (visualization.visualizationType === "bar" ||
-      visualization.visualizationType === "missing-values") &&
-    isBarChartPayload(payload)
-  ) {
-    return renderBarSvg(payload, settings, visualization.title);
-  }
-
-  if (
-    visualization.visualizationType === "bar" &&
-    isLegacyBarChartPayload(payload)
-  ) {
-    return renderBarSvg(
-      {
-        categories: Object.keys(payload),
-        series: [
-          {
-            name: visualization.title ?? "Bar Plot",
-            values: Object.values(payload).map(Number),
-          },
-        ],
-        title: visualization.title ?? "Bar Plot",
-      },
-      settings,
-      visualization.title
-    );
+  const barPayload = getBarChartPayloadForVisualization(visualization);
+  if (barPayload) {
+    return renderBarSvg(barPayload, settings, visualization.title);
   }
 
   if (

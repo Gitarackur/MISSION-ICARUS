@@ -2,9 +2,13 @@ import { Loader2, RefreshCw } from "lucide-react";
 import SingleSelect from "@/ui/design-system/Select/select";
 import MultiSelect from "@/ui/design-system/Select/Multi/select";
 import { Input } from "@/ui/design-system/Input";
-import { VisualizationRenderer } from "@/domain/workflow/main.types";
+import type { VisualizationRenderer } from "@/domain/workflow/main.types";
 import { visualizationStyles } from "../variants/visualization.variants";
-import { PlotLibraryCard } from "../types/index.types";
+import type { PlotActionCardProps } from "../types/index.types";
+import {
+  getVisualizationRendererLabel,
+  toVisualizationSelectOptions,
+} from "../utils/plot-library";
 
 function PlotActionCard({
   description,
@@ -26,20 +30,12 @@ function PlotActionCard({
   title,
   xAxisOptions,
   yAxisOptions,
-}: PlotLibraryCard & { isRendering: boolean }) {
+}: PlotActionCardProps) {
   const s = visualizationStyles();
-  const rendererLabel = (item: string) =>
-    item === "recharts"
-      ? "Native"
-      : item === "fsharp"
-        ? "F#"
-        : item.toUpperCase();
   const rendererOptions = renderers.map((item) => ({
     value: item,
-    label: rendererLabel(item),
+    label: getVisualizationRendererLabel(item),
   }));
-  const axisOptions = (values?: string[]) =>
-    (values ?? []).map((value) => ({ value, label: value }));
 
   return (
     <div className={s.card()}>
@@ -79,7 +75,7 @@ function PlotActionCard({
           multipleLabelAxis ? (
             <MultiSelect
               label="Point Label Columns"
-              options={axisOptions(labelAxisOptions)}
+              options={toVisualizationSelectOptions(labelAxisOptions)}
               value={selection.labelAxes ?? (selection.labelAxis ? [selection.labelAxis] : [])}
               onChange={(values) =>
                 onSelectionChange({
@@ -93,7 +89,7 @@ function PlotActionCard({
           ) : (
             <SingleSelect
               label="Point Label Column"
-              options={axisOptions(labelAxisOptions)}
+              options={toVisualizationSelectOptions(labelAxisOptions)}
               value={selection.labelAxis ?? selection.labelAxes?.[0] ?? null}
               onChange={(value) =>
                 onSelectionChange({
@@ -113,7 +109,7 @@ function PlotActionCard({
           multipleXAxis ? (
             <MultiSelect
               label="X Axes"
-              options={axisOptions(xAxisOptions)}
+              options={toVisualizationSelectOptions(xAxisOptions)}
               value={selection.xAxes ?? (selection.xAxis ? [selection.xAxis] : [])}
               onChange={(values) =>
                 onSelectionChange({
@@ -128,7 +124,7 @@ function PlotActionCard({
           ) : (
             <SingleSelect
               label="X Axis"
-              options={axisOptions(xAxisOptions)}
+              options={toVisualizationSelectOptions(xAxisOptions)}
               value={selection.xAxis ?? selection.xAxes?.[0] ?? null}
               onChange={(value) =>
                 onSelectionChange({
@@ -145,7 +141,7 @@ function PlotActionCard({
         {yAxisOptions?.length ? (
           <MultiSelect
             label={xAxisOptions?.length ? "Y Axis / Series" : "Columns"}
-            options={axisOptions(yAxisOptions)}
+            options={toVisualizationSelectOptions(yAxisOptions)}
             value={
               selection.yAxes ??
               selection.columns ??
@@ -238,7 +234,7 @@ function PlotActionCard({
               onClick={() => onRender()}
               disabled={disabled || isRendering}
             >
-              Create with {renderer === "recharts" ? "Native" : renderer === "fsharp" ? "F#" : renderer.toUpperCase()}
+              Create with {getVisualizationRendererLabel(renderer)}
             </button>
           )}
         </div>

@@ -34,6 +34,7 @@
     "test:command-with-retry": "node scripts/test-command-with-retry.mjs",
     "test:matrix-storage": "node scripts/test-matrix-storage.mjs",
     "test:proteomics-summary": "node scripts/test-proteomics-summary.mjs",
+    "test:native-visualization": "node scripts/test-native-visualization.mjs",
     "test:lazy-columnar-data": "node scripts/test-lazy-columnar-data.mjs",
     "test:storage-health": "node scripts/test-storage-health.mjs",
     "test:browser-worker-client": "node scripts/test-browser-worker-client.mjs",

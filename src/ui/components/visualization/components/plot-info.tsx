@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import type { PlotInfoProps } from "../types/index.types";
 import { visualizationStyles } from "../variants/visualization.variants";
 
 const PlotInfo = ({
   children,
-}: {
-  children?: React.ReactNode;
-}) => {
+  interactive = false,
+}: PlotInfoProps) => {
   const s = visualizationStyles();
   const [showScrollNote, setShowScrollNote] = useState(true);
   const [showShortcuts, setShowShortcuts] = useState(true);
@@ -14,7 +14,7 @@ const PlotInfo = ({
   return (
     <div>
       <div className={s.plotInfoOverlay()}>
-        {showShortcuts && (
+        {!interactive && showShortcuts && (
           <div className={s.plotInfoHelp()}>
             <span>
               Drag to pan • Scroll to zoom • Arrows to move • +/- to zoom • 0 to reset
@@ -29,7 +29,7 @@ const PlotInfo = ({
             </button>
           </div>
         )}
-        {showScrollNote && (
+        {!interactive && showScrollNote && (
           <p className={s.plotInfoScrollNote()}>
             <span>
               Page scrolling is paused while your cursor is inside the plot. Move

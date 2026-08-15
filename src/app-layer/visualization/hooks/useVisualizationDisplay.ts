@@ -9,7 +9,6 @@ import {
 } from "react";
 import {
   VisualizationDisplaySettings,
-  VisualizationRecord,
 } from "@/domain/visualization/index.types";
 import {
   getVisualizationLabel,
@@ -30,15 +29,14 @@ import {
   DisplayMode,
   DisplayWarning,
   LiveDisplayMode,
+  UseVisualizationDisplayOptions,
 } from "@/app-layer/visualization/types";
 
 export const useVisualizationDisplay = ({
   activeVisualization,
+  hasNativeChartModel = false,
   visualizations,
-}: {
-  activeVisualization?: VisualizationRecord;
-  visualizations: VisualizationRecord[];
-}) => {
+}: UseVisualizationDisplayOptions) => {
   const [displayMode, setDisplayMode] = useState<DisplayMode>("saved");
   const [settings, setSettingsState] = useState<VisualizationDisplaySettings>(
     getVisualizationDisplaySettings(activeVisualization),
@@ -298,6 +296,9 @@ export const useVisualizationDisplay = ({
     () => getVisualizationImage(activeVisualization),
     [activeVisualization],
   );
+  const canUseNativeView = Boolean(
+    nativeDisplayImage || hasNativeChartModel
+  );
 
   const availableDisplayModes = useMemo(() => {
     const modes: DisplayMode[] = [];
@@ -317,11 +318,11 @@ export const useVisualizationDisplay = ({
     ) {
       modes.push("fsharp");
     }
-    if (nativeDisplayImage) modes.push("native");
+    if (canUseNativeView) modes.push("native");
     return modes;
   }, [
     activeVisualization,
-    nativeDisplayImage,
+    canUseNativeView,
     rendererAvailability,
     savedDisplayImage,
   ]);
@@ -339,7 +340,7 @@ export const useVisualizationDisplay = ({
     return order.find((mode) => {
       if (!availableDisplayModes.includes(mode)) return false;
       if (mode === "saved") return Boolean(savedDisplayImage);
-      if (mode === "native") return Boolean(nativeDisplayImage);
+      if (mode === "native") return canUseNativeView;
       if (mode === "python") return Boolean(pythonDisplayImage);
       if (mode === "r") return Boolean(rDisplayImage);
       if (mode === "fsharp") return Boolean(fsharpDisplayImage);
@@ -347,7 +348,7 @@ export const useVisualizationDisplay = ({
     });
   }, [
     availableDisplayModes,
-    nativeDisplayImage,
+    canUseNativeView,
     preferredDisplayMode,
     pythonDisplayImage,
     rDisplayImage,
@@ -479,7 +480,7 @@ export const useVisualizationDisplay = ({
     if (supportsRenderer(activeVisualization, "fsharp")) {
       optionMap.set("fsharp", { value: "fsharp", label: "F# Renderer" });
     }
-    if (nativeDisplayImage) {
+    if (canUseNativeView) {
       optionMap.set("native", { value: "native", label: "Native Renderer" });
     }
 
@@ -505,7 +506,7 @@ export const useVisualizationDisplay = ({
       );
   }, [
     activeVisualization,
-    nativeDisplayImage,
+    canUseNativeView,
     preferredDisplayMode,
     savedDisplayImage,
   ]);
@@ -549,12 +550,19 @@ export const useVisualizationDisplay = ({
 
       if (
         matchingLiveMode &&
-        supportsRenderer(activeVisualization, matchingLiveMode)
+        (matchingLiveMode === "native"
+          ? canUseNativeView
+          : supportsRenderer(activeVisualization, matchingLiveMode))
       ) {
         selectDisplayMode(matchingLiveMode);
       }
     },
-    [activeVisualization, displayMode, selectDisplayMode],
+    [
+      activeVisualization,
+      canUseNativeView,
+      displayMode,
+      selectDisplayMode,
+    ],
   );
 
   const currentFileName = useMemo(() => {
@@ -584,7 +592,7 @@ export const useVisualizationDisplay = ({
 
   return {
     activeDisplayImage,
-    canUseNativeView: Boolean(nativeDisplayImage),
+    canUseNativeView,
     currentFileName,
     displayWarning,
     displayMode,

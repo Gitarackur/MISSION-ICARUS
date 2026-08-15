@@ -1,22 +1,19 @@
-import { PlotAxisSelection } from "@/domain/visualization/index.types";
-import {
+import type { PlotAxisSelection } from "@/domain/visualization/index.types";
+import type {
   VisualizationKind,
   VisualizationRenderer,
 } from "@/domain/workflow/main.types";
-import {
+import type {
   PlotAvailabilityMap,
   PlotSelectionState,
   RenderJob,
 } from "@/app-layer/visualization/types";
-import { PlotLibraryCard } from "@/ui/components/visualization/types/index.types";
-
-const getDisabledReason = (
-  duplicate: boolean,
-  availabilityReason?: string
-) =>
-  duplicate
-    ? "Already created for this matrix with this renderer and axis selection."
-    : availabilityReason;
+import type { PlotLibraryCard } from "@/ui/components/visualization/types/index.types";
+import {
+  getPlotDisabledReason,
+  getSelectedLabelColumns,
+  getSelectedXAxisColumns,
+} from "../utils/plot-library";
 
 export const usePlotLibraryCards = ({
   columnOptions,
@@ -60,46 +57,28 @@ export const usePlotLibraryCards = ({
     selection: Partial<PlotAxisSelection>
   ) => void;
 }) => {
-  const selectedXAxes = (selection: PlotAxisSelection) =>
-    selection.xAxes?.length
-      ? selection.xAxes
-      : selection.xAxis
-        ? [selection.xAxis]
-        : [];
-  const selectedLabelAxes = (selection: PlotAxisSelection) =>
-    selection.labelAxes?.length
-      ? selection.labelAxes
-      : selection.labelAxis
-        ? [selection.labelAxis]
-        : [];
   const barColumns = [
-    ...selectedXAxes(plotSelections.bar),
+    ...getSelectedXAxisColumns(plotSelections.bar),
     ...(plotSelections.bar.yAxes ?? []),
   ].filter(Boolean);
   const boxColumns = plotSelections.box.yAxes ?? [];
   const scatterColumns = [
-    ...selectedXAxes(plotSelections.scatter),
+    ...getSelectedXAxisColumns(plotSelections.scatter),
     ...(plotSelections.scatter.yAxes ?? []),
-    ...selectedLabelAxes(plotSelections.scatter),
+    ...getSelectedLabelColumns(plotSelections.scatter),
   ].filter(Boolean);
   const heatmapColumns = plotSelections.heatmap.columns ?? [];
   const volcanoColumns = [
-    ...selectedXAxes(plotSelections.volcano),
+    ...getSelectedXAxisColumns(plotSelections.volcano),
     ...(plotSelections.volcano.yAxes ?? []),
-    ...selectedLabelAxes(plotSelections.volcano),
+    ...getSelectedLabelColumns(plotSelections.volcano),
   ].filter(Boolean);
   const qcColumns = plotSelections.qc.yAxes ?? [];
   const missingValueColumns = plotSelections["missing-values"].columns ?? [];
   const pcaColumns = [
     ...(plotSelections.pca.columns ?? []),
-    ...selectedLabelAxes(plotSelections.pca),
+    ...getSelectedLabelColumns(plotSelections.pca),
   ];
-
-  const buildDuplicateState = (
-    kind: VisualizationKind,
-    renderer: VisualizationRenderer | undefined,
-    columns: string[]
-  ) => hasSavedVisualization(kind, renderer, columns);
 
   const cards: PlotLibraryCard[] = [
     {
@@ -110,9 +89,9 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.bar.ready ||
-        buildDuplicateState("bar", plotSelections.bar.renderer, barColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("bar", plotSelections.bar.renderer, barColumns),
+        hasSavedVisualization("bar", plotSelections.bar.renderer, barColumns),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization("bar", plotSelections.bar.renderer, barColumns),
         plotAvailability.bar.reason
       ),
       onRender: () => renderBarPlot(plotSelections.bar.renderer ?? "python"),
@@ -133,9 +112,9 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.box.ready ||
-        buildDuplicateState("box", plotSelections.box.renderer, boxColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("box", plotSelections.box.renderer, boxColumns),
+        hasSavedVisualization("box", plotSelections.box.renderer, boxColumns),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization("box", plotSelections.box.renderer, boxColumns),
         plotAvailability.box.reason
       ),
       onRender: () => renderBoxPlot(plotSelections.box.renderer ?? "python"),
@@ -155,9 +134,17 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.scatter.ready ||
-        buildDuplicateState("scatter", plotSelections.scatter.renderer, scatterColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("scatter", plotSelections.scatter.renderer, scatterColumns),
+        hasSavedVisualization(
+          "scatter",
+          plotSelections.scatter.renderer,
+          scatterColumns
+        ),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization(
+          "scatter",
+          plotSelections.scatter.renderer,
+          scatterColumns
+        ),
         plotAvailability.scatter.reason
       ),
       onRender: () =>
@@ -170,7 +157,8 @@ export const usePlotLibraryCards = ({
         (column) => !(plotSelections.scatter.yAxes ?? []).includes(column)
       ),
       yAxisOptions: columnOptions.numericColumns.filter(
-        (column) => !selectedXAxes(plotSelections.scatter).includes(column)
+        (column) =>
+          !getSelectedXAxisColumns(plotSelections.scatter).includes(column)
       ),
       labelAxisOptions: columnOptions.allColumns,
       onRendererChange: (renderer) => setPlotSelection("scatter", { renderer }),
@@ -184,9 +172,17 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.heatmap.ready ||
-        buildDuplicateState("heatmap", plotSelections.heatmap.renderer, heatmapColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("heatmap", plotSelections.heatmap.renderer, heatmapColumns),
+        hasSavedVisualization(
+          "heatmap",
+          plotSelections.heatmap.renderer,
+          heatmapColumns
+        ),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization(
+          "heatmap",
+          plotSelections.heatmap.renderer,
+          heatmapColumns
+        ),
         plotAvailability.heatmap.reason
       ),
       onRender: () => renderHeatmap(plotSelections.heatmap.renderer ?? "python"),
@@ -206,9 +202,17 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.volcano.ready ||
-        buildDuplicateState("volcano", plotSelections.volcano.renderer, volcanoColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("volcano", plotSelections.volcano.renderer, volcanoColumns),
+        hasSavedVisualization(
+          "volcano",
+          plotSelections.volcano.renderer,
+          volcanoColumns
+        ),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization(
+          "volcano",
+          plotSelections.volcano.renderer,
+          volcanoColumns
+        ),
         plotAvailability.volcano.reason
       ),
       onRender: () =>
@@ -222,7 +226,8 @@ export const usePlotLibraryCards = ({
         (column) => !(plotSelections.volcano.yAxes ?? []).includes(column)
       ),
       yAxisOptions: columnOptions.numericColumns.filter(
-        (column) => !selectedXAxes(plotSelections.volcano).includes(column)
+        (column) =>
+          !getSelectedXAxisColumns(plotSelections.volcano).includes(column)
       ),
       labelAxisOptions: columnOptions.allColumns,
       showVolcanoLegendLabels: true,
@@ -237,9 +242,9 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.qc.ready ||
-        buildDuplicateState("qc", plotSelections.qc.renderer, qcColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("qc", plotSelections.qc.renderer, qcColumns),
+        hasSavedVisualization("qc", plotSelections.qc.renderer, qcColumns),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization("qc", plotSelections.qc.renderer, qcColumns),
         plotAvailability.qc.reason
       ),
       onRender: () => renderQcPlot(plotSelections.qc.renderer ?? "python"),
@@ -259,9 +264,9 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability.pca.ready ||
-        buildDuplicateState("pca", plotSelections.pca.renderer, pcaColumns),
-      disabledReason: getDisabledReason(
-        buildDuplicateState("pca", plotSelections.pca.renderer, pcaColumns),
+        hasSavedVisualization("pca", plotSelections.pca.renderer, pcaColumns),
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization("pca", plotSelections.pca.renderer, pcaColumns),
         plotAvailability.pca.reason
       ),
       onRender: () => renderPcaPlot(plotSelections.pca.renderer ?? "python"),
@@ -282,13 +287,13 @@ export const usePlotLibraryCards = ({
       disabled:
         isRendering ||
         !plotAvailability["missing-values"].ready ||
-        buildDuplicateState(
+        hasSavedVisualization(
           "missing-values",
           plotSelections["missing-values"].renderer,
           missingValueColumns
         ),
-      disabledReason: getDisabledReason(
-        buildDuplicateState(
+      disabledReason: getPlotDisabledReason(
+        hasSavedVisualization(
           "missing-values",
           plotSelections["missing-values"].renderer,
           missingValueColumns

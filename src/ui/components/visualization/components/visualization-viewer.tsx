@@ -18,6 +18,7 @@ import {
 } from "@/ui/components/visualization/types/index.types";
 import SingleSelect from "@/ui/design-system/Select/select";
 import { visualizationStyles } from "../variants/visualization.variants";
+import { NativeVisualizationRenderer } from "./native-visualization-renderer";
 import VisualizationSettingsPanel from "./viewer-settings";
 import PlotInfo from "./plot-info";
 
@@ -28,6 +29,7 @@ export function VisualizationViewer({
   displayRendererOptions,
   hasVisualizations,
   isRendererRefreshing,
+  nativeChartModel,
   onDownload,
   onSelectVisualization,
   onSetDisplayMode,
@@ -38,6 +40,11 @@ export function VisualizationViewer({
   onToggleShowSettings,
 }: VisualizationViewerProps) {
   const s = visualizationStyles();
+  const activeNativeChartModel =
+    displayMode === "native" ? nativeChartModel : null;
+  const hasDisplayContent = Boolean(
+    activeDisplayImage || activeNativeChartModel
+  );
   const colorSeriesLabels = getVisualizationColorSeriesLabels(
     activeVisualization,
     settings.plotColors.length,
@@ -62,6 +69,7 @@ export function VisualizationViewer({
   } = useVisualizationViewport({
     activeVisualizationId: activeVisualization?.id,
     displayMode,
+    interactive: Boolean(activeNativeChartModel),
   });
 
   return (
@@ -80,7 +88,7 @@ export function VisualizationViewer({
         </div>
 
         <div className={s.actionRow()}>
-          {activeDisplayImage && (
+          {hasDisplayContent && (
             <>
               <button
                 type="button"
@@ -182,20 +190,20 @@ export function VisualizationViewer({
             key={`${activeVisualization?.id ?? "empty"}-${displayMode}`}
             className={s.viewerTransition()}
           >
-            {activeDisplayImage ? (
+            {hasDisplayContent ? (
               <div
                 ref={frameRef}
                 className={s.displayActiveImageContainer()}
                 tabIndex={0}
-                onWheel={handleWheel}
-                onKeyDown={handleKeyDown}
-                onMouseDown={handleMouseDown}
+                onWheel={activeNativeChartModel ? undefined : handleWheel}
+                onKeyDown={activeNativeChartModel ? undefined : handleKeyDown}
+                onMouseDown={activeNativeChartModel ? undefined : handleMouseDown}
                 style={{
-                  cursor,
+                  cursor: activeNativeChartModel ? "default" : cursor,
                   touchAction: "none",
                 }}
               >
-                <PlotInfo>
+                <PlotInfo interactive={Boolean(activeNativeChartModel)}>
                   {showSettings && activeVisualization ? (
                     <div
                       className={s.settingsPanelContainer()}
@@ -217,14 +225,23 @@ export function VisualizationViewer({
                   ) : null}
                 </PlotInfo>
 
-                <img
-                  src={activeDisplayImage}
-                  alt={activeVisualization?.title ?? "Selected visualization"}
+                <div
                   className={s.viewerImage()}
-                  loading="eager"
-                  decoding="async"
-                  style={imageStyle}
-                />
+                  style={{
+                    ...imageStyle,
+                    pointerEvents: activeNativeChartModel ? "auto" : "none",
+                  }}
+                >
+                  <NativeVisualizationRenderer
+                    alt={
+                      activeVisualization?.title ?? "Selected visualization"
+                    }
+                    className="h-full w-full"
+                    imageSource={activeDisplayImage}
+                    model={activeNativeChartModel}
+                    settings={settings}
+                  />
+                </div>
               </div>
             ) : (
               <div className={s.viewerEmpty()}>

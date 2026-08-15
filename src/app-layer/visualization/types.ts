@@ -4,6 +4,7 @@ import type { IcarusMatrix } from "@/domain/workflow/main.types";
 import {
   IntensityDistribution,
   PlotAxisSelection,
+  VisualizationRecord,
   VolcanoPoint,
 } from "@/domain/visualization/index.types";
 import { SaveVisualizationActivity } from "@/domain/workflow/main.types";
@@ -73,3 +74,8 @@ export type ColumnDescriptor = {
 
 export type PanState = { x: number; y: number };
 
+export type UseVisualizationDisplayOptions = {
+  activeVisualization?: VisualizationRecord;
+  hasNativeChartModel?: boolean;
+  visualizations: VisualizationRecord[];
+};

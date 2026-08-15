@@ -7,6 +7,7 @@ import { PlotLibrary } from "./components/plot-library";
 import { visualizationStyles } from "./variants/visualization.variants";
 import { useVisualizationFeedback } from "./hooks/useVisualizationFeedback";
 import { usePlotLibraryCards } from "./hooks/usePlotLibraryCards";
+import { getNativeVisualizationChartModel } from "./utils/native-visualization";
 
 const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
   const s = visualizationStyles();
@@ -32,6 +33,9 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     setActiveVisualizationId,
     setPlotSelection,
   } = useVisualizationPanel(props);
+  const nativeChartModel = getNativeVisualizationChartModel(
+    activeSavedVisualization
+  );
   const {
     activeDisplayImage,
     clearDisplayWarning,
@@ -46,6 +50,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
     setSettings,
   } = useVisualizationDisplay({
     activeVisualization: activeSavedVisualization,
+    hasNativeChartModel: Boolean(nativeChartModel),
     visualizations: savedVisualizations,
   });
 
@@ -84,6 +89,7 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
         displayRendererOptions={displayRendererOptions}
         hasVisualizations={hasVisualizations}
         isRendererRefreshing={isRendererRefreshing}
+        nativeChartModel={nativeChartModel}
         onDownload={downloadCurrentVisualization}
         onSelectVisualization={setActiveVisualizationId}
         onSetDisplayMode={setDisplayMode}
@@ -102,3 +108,27 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
 };
 
 export default VisualizationPanel;
+export { NativeChart } from "./components/native-chart";
+export type {
+  BackendVisualizationRenderer,
+  IntensityDistributionPlotConfig,
+  IntensityVisualizationRenderer,
+  InteractiveNativeChartProps,
+  NativeChartAxesProps,
+  NativeChartContent,
+  NativeChartDataContent,
+  NativeChartImageContent,
+  NativeChartKind,
+  NativeChartProps,
+  NativeChartSeries,
+  NativeChartXAxisAngleOptions,
+  NativeVisualizationChartModel,
+  NativeVisualizationRendererProps,
+  NativeVisualizationRow,
+  PlotActionCardProps,
+  PlotInfoProps,
+  UseIntensityDistributionPlotOptions,
+} from "./types/index.types";
+export {
+  NativeVisualizationRenderer,
+} from "./components/native-visualization-renderer";
