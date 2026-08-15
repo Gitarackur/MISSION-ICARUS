@@ -1,9 +1,4 @@
-import {
-  useLayoutEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import type { ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -22,6 +17,7 @@ import type {
   NativeChartAxesProps,
   NativeChartProps,
 } from "../types/index.types";
+import { useNativeChartSize } from "../hooks/useNativeChartSize";
 import {
   formatNativeChartNumericTick,
   getNativeChartSeriesColor,
@@ -89,46 +85,10 @@ function InteractiveNativeChart<TData extends object>({
   className = "h-full w-full",
   content: { categoryKey, data, kind, series, settings },
 }: InteractiveNativeChartProps<TData>) {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState(() => ({
-    width: settings.plotWidth,
-    height: settings.plotHeight,
-  }));
-
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const bounds = container.getBoundingClientRect();
-      if (bounds.width <= 0 || bounds.height <= 0) return;
-
-      const nextSize = {
-        width: Math.round(bounds.width),
-        height: Math.round(bounds.height),
-      };
-      setSize((currentSize) =>
-        currentSize.width === nextSize.width &&
-        currentSize.height === nextSize.height
-          ? currentSize
-          : nextSize
-      );
-    };
-
-    updateSize();
-
-    const observer =
-      typeof ResizeObserver === "undefined"
-        ? null
-        : new ResizeObserver(updateSize);
-    observer?.observe(container);
-    window.addEventListener("resize", updateSize);
-
-    return () => {
-      observer?.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
-  }, []);
+  const { containerRef, size } = useNativeChartSize({
+    initialWidth: settings.plotWidth,
+    initialHeight: settings.plotHeight,
+  });
 
   const categoryLabels = data.map((row) => String(row[categoryKey] ?? ""));
   const axes = (

@@ -3,13 +3,13 @@ import SingleSelect from "@/ui/design-system/Select/select";
 import MultiSelect from "@/ui/design-system/Select/Multi/select";
 import { NativeChart } from "@/ui/components/visualization/components/native-chart";
 import VisualizationSettingsPanel from "@/ui/components/visualization/components/viewer-settings";
-import type {
-  BackendVisualizationRenderer,
-  IntensityVisualizationRenderer,
-  UseIntensityDistributionPlotOptions,
-} from "@/ui/components/visualization/types/index.types";
 import { visualizationStyles } from "@/ui/components/visualization/variants/visualization.variants";
 import { useIntensityDistributionPlot } from "../hooks/useIntensityDistributionPlot";
+import type {
+  IntensityBackendRenderer,
+  IntensityDistributionPlotProps,
+  IntensityVisualizationRenderer,
+} from "../types/index.types";
 import {
   getIntensityRendererLabel,
   intensityRendererOptions,
@@ -21,7 +21,7 @@ export const IntensityDistributionPlot = ({
   dataTable,
   dataColumns,
   initialDistribution,
-}: UseIntensityDistributionPlotOptions) => {
+}: IntensityDistributionPlotProps) => {
   const s = proteomicsStyles();
   const vs = visualizationStyles();
   const {
@@ -166,7 +166,7 @@ export const IntensityDistributionPlot = ({
               <Loader2 className="h-4 w-4 animate-spin" size={18} />
               Rendering with the{" "}
               {getIntensityRendererLabel(
-                plotted.renderer as BackendVisualizationRenderer
+                plotted.renderer as IntensityBackendRenderer
               )}{" "}
               renderer…
             </div>

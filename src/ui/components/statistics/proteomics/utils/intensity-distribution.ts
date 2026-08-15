@@ -6,10 +6,12 @@ import type {
   VisualizationDisplaySettings,
 } from "@/domain/visualization/index.types";
 import type {
-  IntensityDistributionPlotConfig,
-  IntensityVisualizationRenderer,
   NativeChartKind,
 } from "@/ui/components/visualization/types/index.types";
+import type {
+  IntensityDistributionPlotConfig,
+  IntensityVisualizationRenderer,
+} from "../types/index.types";
 
 export const INTENSITY_Y_AXIS_LABEL = "Mean Log10 Intensity";
 

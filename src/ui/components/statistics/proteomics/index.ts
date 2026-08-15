@@ -8,6 +8,13 @@ export { IntensityDistributionPlot } from "./components/intensity-distribution-p
 export { SummaryStatistics } from "./components/summary-statistics";
 export { ZoomablePlotViewer } from "./components/zoomable-plot-viewer";
 export { proteomicsStyles } from "./variants/proteomics.variants";
+export type {
+  IntensityBackendRenderer,
+  IntensityDistributionPlotConfig,
+  IntensityDistributionPlotProps,
+  IntensityVisualizationRenderer,
+  UseIntensityDistributionPlotOptions,
+} from "./types/index.types";
 export {
   isProteomicsActivity,
   ACTIVITY_CONFIG_BY_ACTION,

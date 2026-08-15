@@ -110,9 +110,6 @@ const VisualizationPanel: React.FC<VisualizationPanelProps> = (props) => {
 export default VisualizationPanel;
 export { NativeChart } from "./components/native-chart";
 export type {
-  BackendVisualizationRenderer,
-  IntensityDistributionPlotConfig,
-  IntensityVisualizationRenderer,
   InteractiveNativeChartProps,
   NativeChartAxesProps,
   NativeChartContent,
@@ -121,13 +118,15 @@ export type {
   NativeChartKind,
   NativeChartProps,
   NativeChartSeries,
+  NativeChartSize,
   NativeChartXAxisAngleOptions,
   NativeVisualizationChartModel,
   NativeVisualizationRendererProps,
   NativeVisualizationRow,
   PlotActionCardProps,
   PlotInfoProps,
-  UseIntensityDistributionPlotOptions,
+  UseNativeChartSizeOptions,
+  UseNativeChartSizeResult,
 } from "./types/index.types";
 export {
   NativeVisualizationRenderer,

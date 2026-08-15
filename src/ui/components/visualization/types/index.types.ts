@@ -3,12 +3,10 @@ import type { SaveVisualizationInWorkflow } from "@/app-layer/visualization/type
 import type { IcarusSessionWithWorkflow } from "@/domain/session";
 import type { IcarusMatrix } from "@/domain/workflow/main.types";
 import type {
-  IntensityDistribution,
   PlotAxisSelection,
   VisualizationDisplaySettings,
   VisualizationRecord,
 } from "@/domain/visualization/index.types";
-import type { ColumnarTable } from "@/domain/shared/index.types";
 import type { VisualizationRenderer } from "@/domain/workflow/main.types";
 
 export type VisualizationPanelProps = {
@@ -36,21 +34,19 @@ export type VisualizationDisplayMode =
 
 export type NativeChartKind = "bar" | "line" | "area";
 
-export type BackendVisualizationRenderer = "python" | "r" | "fsharp";
-
-export type IntensityVisualizationRenderer =
-  | `native-${NativeChartKind}`
-  | BackendVisualizationRenderer;
-
-export type IntensityDistributionPlotConfig = {
-  columns: string[];
-  renderer: IntensityVisualizationRenderer;
+export type NativeChartSize = {
+  width: number;
+  height: number;
 };
 
-export type UseIntensityDistributionPlotOptions = {
-  dataTable?: ColumnarTable;
-  dataColumns?: string[];
-  initialDistribution?: IntensityDistribution;
+export type UseNativeChartSizeOptions = {
+  initialWidth: number;
+  initialHeight: number;
+};
+
+export type UseNativeChartSizeResult = {
+  containerRef: React.RefObject<HTMLDivElement>;
+  size: NativeChartSize;
 };
 
 export type NativeChartSeries<TData extends object> = {

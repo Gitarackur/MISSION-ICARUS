@@ -13,11 +13,11 @@ import {
 } from "@/app-layer/visualization/utils/renderers";
 import type { VisualizationDisplaySettings } from "@/domain/visualization/index.types";
 import type {
-  BackendVisualizationRenderer,
+  IntensityBackendRenderer,
   IntensityDistributionPlotConfig,
   IntensityVisualizationRenderer,
   UseIntensityDistributionPlotOptions,
-} from "@/ui/components/visualization/types/index.types";
+} from "../types/index.types";
 import {
   buildIntensityBarPayload,
   buildIntensityDisplaySettings,
@@ -62,7 +62,7 @@ export const useIntensityDistributionPlot = ({
 
   const renderWithBackend = useCallback(
     async (
-      backend: BackendVisualizationRenderer,
+      backend: IntensityBackendRenderer,
       columns: string[],
       displaySettings: VisualizationDisplaySettings
     ) => {
@@ -112,7 +112,7 @@ export const useIntensityDistributionPlot = ({
 
     if (!config.renderer.startsWith("native-")) {
       void renderWithBackend(
-        config.renderer as BackendVisualizationRenderer,
+        config.renderer as IntensityBackendRenderer,
         config.columns,
         settings
       );
@@ -134,7 +134,7 @@ export const useIntensityDistributionPlot = ({
   useEffect(() => {
     if (!plotted || plotted.renderer.startsWith("native-")) return;
 
-    const backend = plotted.renderer as BackendVisualizationRenderer;
+    const backend = plotted.renderer as IntensityBackendRenderer;
     if (rendererSettingsTimerRef.current !== null) {
       window.clearTimeout(rendererSettingsTimerRef.current);
     }
