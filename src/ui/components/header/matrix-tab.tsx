@@ -50,10 +50,16 @@ const MatrixTab = ({
         className="flex flex-shrink-0 items-center border-r border-gray-300 dark:border-gray-700 dark:bg-gray-950"
       >
         <img
-          alt="icarus-image"
+          alt="Icarus"
           src="assets/icarus-compressed.png"
           loading="lazy"
-          className="mx-4 my-2 h-8 w-auto select-none"
+          className="mx-4 my-2 h-8 w-auto select-none dark:hidden"
+        />
+        <img
+          alt="Icarus"
+          src="assets/icarus-mark.svg"
+          loading="lazy"
+          className="mx-4 my-2 hidden h-8 w-auto select-none dark:block"
         />
       </button>
 

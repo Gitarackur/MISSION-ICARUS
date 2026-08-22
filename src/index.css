@@ -17,8 +17,39 @@ html {
 }
 
 html.dark {
-  background-color: #030712;
+  /* A cool ink palette gives dark mode depth without the harsh jump between
+     pure black and stock gray. Tailwind's color utilities use these variables,
+     so the palette stays consistent across every existing component. */
+  --color-gray-50: #f7f9fc;
+  --color-gray-100: #eef3fa;
+  --color-gray-200: #dce4ef;
+  --color-gray-300: #c1cbda;
+  --color-gray-400: #9eacc0;
+  --color-gray-500: #70839e;
+  --color-gray-600: #445a7b;
+  --color-gray-700: #2d3d5c;
+  --color-gray-800: #1c2840;
+  --color-gray-900: #121a2d;
+  --color-gray-950: #0b1020;
+
+  --color-blue-200: #c7d5ff;
+  --color-blue-300: #9eb7ff;
+  --color-blue-400: #7697ff;
+  --color-blue-500: #5b7ff5;
+  --color-blue-600: #3f67dc;
+  --color-blue-700: #3455b6;
+  --color-blue-800: #2a438c;
+  --color-blue-900: #20376d;
+  --color-blue-950: #121f42;
+
+  --color-indigo-300: #b5b7ff;
+  --color-indigo-500: #787bf3;
+  --color-indigo-600: #6164e6;
+  --color-indigo-700: #4d50bf;
+
+  background-color: var(--color-gray-950);
   color-scheme: dark;
+  accent-color: var(--color-blue-500);
 }
 
 /* Temporarily added by the theme provider while a theme flip is being applied.
@@ -38,56 +69,78 @@ body {
 }
 
 .dark body {
-  background: #030712;
-  color: #f3f4f6;
+  background: var(--color-gray-950);
+  color: var(--color-gray-100);
 }
 
 .dark .bg-white {
-  background-color: #111827 !important;
+  background-color: var(--color-gray-900) !important;
 }
 
 .dark .bg-gray-50,
 .dark .bg-gray-50\/60 {
-  background-color: #030712 !important;
+  background-color: var(--color-gray-950) !important;
 }
 
 .dark .bg-gray-100 {
-  background-color: #1f2937 !important;
+  background-color: var(--color-gray-800) !important;
 }
 
 .dark .bg-gray-200 {
-  background-color: #374151 !important;
+  background-color: var(--color-gray-700) !important;
 }
 
 .dark .text-gray-900,
 .dark .text-gray-800,
 .dark .text-gray-700 {
-  color: #f3f4f6 !important;
+  color: var(--color-gray-100) !important;
 }
 
 .dark .text-gray-600,
-.dark .text-gray-500,
+.dark .text-gray-500 {
+  color: var(--color-gray-300) !important;
+}
+
 .dark .text-gray-400 {
-  color: #d1d5db !important;
+  color: var(--color-gray-400) !important;
 }
 
 .dark .border-gray-100,
 .dark .border-gray-200,
 .dark .border-gray-300,
 .dark .border-gray-400 {
-  border-color: #374151 !important;
+  border-color: var(--color-gray-700) !important;
 }
 
 .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]) {
-  border-color: #374151 !important;
+  border-color: var(--color-gray-700) !important;
 }
 
 .dark input,
 .dark textarea,
 .dark select {
-  background-color: #111827;
-  border-color: #374151;
-  color: #f3f4f6;
+  background-color: var(--color-gray-900);
+  border-color: var(--color-gray-700);
+  color: var(--color-gray-100);
+}
+
+.dark .shadow,
+.dark .shadow-sm {
+  box-shadow:
+    0 1px 2px rgb(0 0 0 / 45%),
+    0 0 0 1px rgb(158 172 192 / 7%);
+}
+
+.dark .shadow-lg,
+.dark .shadow-xl {
+  box-shadow:
+    0 18px 48px -24px rgb(0 0 0 / 90%),
+    0 0 0 1px rgb(158 172 192 / 9%);
+}
+
+.dark ::selection {
+  background-color: rgb(91 127 245 / 38%);
+  color: var(--color-gray-50);
 }
 
 h1 {
@@ -119,6 +172,14 @@ h1 {
   background: #6b7280;
 }
 
+.dark ::-webkit-scrollbar-thumb {
+  background: var(--color-gray-600);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: var(--color-gray-500);
+}
+
 ::-webkit-scrollbar-corner {
   background: transparent;
 }
@@ -127,6 +188,10 @@ h1 {
 * {
   scrollbar-width: thin;
   scrollbar-color: #9ca3af transparent;
+}
+
+.dark * {
+  scrollbar-color: var(--color-gray-600) transparent;
 }
 
 /* IE/Edge scrollbar */
