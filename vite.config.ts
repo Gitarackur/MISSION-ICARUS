@@ -10,9 +10,38 @@ const sharedAliases = {
   'pub@': path.resolve(__dirname, 'public'),
 }
 
+// Content Security Policy for production builds. The renderer loads bundled
+// scripts and workers from disk, renders plots as data/blob image URLs, and
+// styles components through inline style attributes; nothing else is needed.
+// Injected only on `build` so the dev server keeps HMR and inline preamble.
+const CSP_DIRECTIVES = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "worker-src 'self' blob:",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob:",
+  "font-src 'self' data:",
+  "connect-src 'self'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'none'",
+].join('; ')
+
+const injectCspMeta = () => ({
+  name: 'inject-csp-meta',
+  apply: 'build' as const,
+  transformIndexHtml(html: string) {
+    return html.replace(
+      '<head>',
+      `<head>\n    <meta http-equiv="Content-Security-Policy" content="${CSP_DIRECTIVES}" />`
+    )
+  },
+})
+
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
+    injectCspMeta(),
     react(),
     tailwindcss(),
     electron({

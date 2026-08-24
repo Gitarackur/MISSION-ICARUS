@@ -18,6 +18,7 @@ The current app is built around a few core ideas:
 - renderer-aware plots (`Python` with Matplotlib, `R` with ggplot2, and native)
 - a dark-mode capable desktop UI
 - a workflow/activity tree that lets users navigate analysis history and linked outputs
+- a CSP-hardened production renderer
 
 ---
 
@@ -110,6 +111,11 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 - Persistent theme selection
 - Dark-mode coverage across tables, forms, menus, activity tree surfaces, modals, and visualization panels
 
+### Renderer security
+
+- Production builds ship a strict Content Security Policy (`default-src 'self'`, no inline scripts, no `unsafe-eval`) injected into `dist/index.html` at build time
+- The policy allowlists exactly what the renderer needs: bundled scripts and Web Workers, data/blob plot images, and inline style attributes; dev-server HMR is unaffected since the meta is build-only
+
 ### Desktop packaging
 
 - Electron desktop application
@@ -133,6 +139,7 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 - [x] Statistics hook cleanup and utility separation
 - [x] More resilient import parsing pipeline
 - [x] CI packaging cleanup for desktop release flow
+- [x] Content Security Policy for the packaged renderer
 
 ---
 
@@ -162,7 +169,7 @@ The visualization workspace supports plot-library driven creation and renderer-a
 <img width="1600" alt="Icarus visualization viewer with the plot settings panel open" src="./docs/images/plot-settings.png" />
 
 ##### Native - Recharts
-<img width="1600" alt="Icarus visualization viewer displaying a grouped bar plot with the saved native renderer" src="./docs/images/visualization-dark.png" />
+<img width="1600" alt="Icarus visualization viewer displaying a grouped bar plot with the saved native renderer" src="./docs/images/native-recharts-sample.png" />
 
 
 #### Python and R renderer samples
@@ -184,6 +191,84 @@ Alongside the Recharts bar plot shown above, these captures show the same groupe
 #### Dark mode import workspace
 ##### Dark mode is supported across the table view, statistics menu, activity tree, and visualization workspace, with persistent `light`, `dark`, and `system` theme selection.
 <img width="1600" alt="Icarus dark-mode import workspace captured from the Electron app" src="./docs/images/dark-mode-home.png" />
+
+---
+
+### Current-release supplements (v0.0.155)
+
+Full-frame captures of every panel in both themes, taken with sidebars and sheets closed so each view fills the frame. The Visualization shots show a rendered Python/Matplotlib bar plot; the Proteomics shot shows computed summary statistics and the intensity distribution.
+
+#### App overview
+
+Session workspace with the sidebar open, showing session management, matrix tabs, and the activity log entry point.
+
+#### Dark mode
+<img width="1600" alt="Icarus session workspace with the sessions sidebar open in dark mode" src="./docs/images/sessions-sidebar-dark.png" />
+
+#### Light mode
+<img width="1600" alt="Icarus session workspace with the sessions sidebar open in light mode" src="./docs/images/sessions-sidebar-light.png" />
+
+#### Data import
+
+The upload screen for starting a session, followed by the table-first `Data Import` view rendered directly over the columnar table.
+
+##### Upload screen
+###### Dark mode
+<img width="1600" alt="Icarus data upload screen in dark mode" src="./docs/images/import-upload-dark.png" />
+
+###### Light mode
+<img width="1600" alt="Icarus data upload screen in light mode" src="./docs/images/import-upload-light.png" />
+
+##### Imported matrix table
+###### Dark mode
+<img width="1600" alt="Icarus data import table view in dark mode" src="./docs/images/import-table-dark.png" />
+
+###### Light mode
+<img width="1600" alt="Icarus data import table view in light mode" src="./docs/images/import-table-light.png" />
+
+#### Proteomics tab
+
+Dedicated proteomics analysis surface with column-focused statistics, imputation, normalization, and differential-expression oriented activities.
+
+###### Dark mode
+<img width="1600" alt="Icarus proteomics analysis tab in dark mode" src="./docs/images/proteomics-dark.png" />
+
+###### Light mode
+<img width="1600" alt="Icarus proteomics analysis tab in light mode" src="./docs/images/proteomics-light.png" />
+
+#### Analysis panel
+
+###### Dark mode
+<img width="1600" alt="Icarus analysis workspace tab in dark mode" src="./docs/images/analysis-dark.png" />
+
+###### Light mode
+<img width="1600" alt="Icarus analysis workspace tab in light mode" src="./docs/images/analysis-light.png" />
+
+#### Visualization workspace
+
+Plot-library driven creation with renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
+
+###### Dark mode
+<img width="1600" alt="Icarus visualization workspace showing a rendered Matplotlib bar plot in dark mode" src="./docs/images/visualization-dark.png" />
+
+###### Light mode
+<img width="1600" alt="Icarus visualization workspace showing a rendered bar plot in light mode" src="./docs/images/visualization-light.png" />
+
+#### Settings and export
+
+Settings sheet with theme selection (`light`, `dark`, `system`), export defaults, storage usage, and the export sheet with format, delimiter, and scope options.
+
+###### Settings — dark mode
+<img width="1600" alt="Icarus settings sheet in dark mode" src="./docs/images/settings-dark.png" />
+
+###### Export — dark mode
+<img width="1600" alt="Icarus export sheet in dark mode" src="./docs/images/export-dark.png" />
+
+###### Settings — light mode
+<img width="1600" alt="Icarus settings sheet in light mode" src="./docs/images/settings-light.png" />
+
+###### Export — light mode
+<img width="1600" alt="Icarus export sheet in light mode" src="./docs/images/export-light.png" />
 
 
 ---
