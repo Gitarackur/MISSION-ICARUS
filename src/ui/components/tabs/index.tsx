@@ -52,13 +52,14 @@ const NavTabs: React.FC<NavTabsProps> = ({
           })}
         </nav>
 
-        <div
+        <button
+          type="button"
           className={activityFloatingButton({ intent: "primary" })}
           onClick={openActivitySheet}
         >
-          <Menu size={24} className="text-white inline mr-2" />
+          <Menu size={16} className="flex-shrink-0" />
           <span>View Activity Log</span>
-        </div>
+        </button>
       </div>
     </div>
   );

@@ -28,20 +28,20 @@ export const headerVariants = tv({
 export const tabNavigationVariants = tv({
   slots: {
     tabList:
-      "sticky left-0 right-0 top-0 z-30 flex w-full items-stretch justify-between overflow-hidden border-b border-gray-200 bg-white pt-0 dark:border-gray-700 dark:bg-gray-950",
+      "sticky left-0 right-0 top-0 z-30 flex h-8 w-full items-stretch justify-between overflow-hidden border-b border-gray-200 bg-white pt-0 dark:border-gray-700 dark:bg-gray-950",
     tabScroller:
-      "flex min-w-0 flex-1 items-stretch overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth border-x border-gray-300 [scrollbar-width:thin] dark:border-gray-700",
+      "flex min-w-0 flex-1 items-end overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth [scrollbar-width:thin]",
     tabButton: [
-      "relative",
-      "min-w-[160px]",
-      "max-w-[220px]",
+      "flex",
+      "min-h-7",
+      "min-w-0",
       "flex-1",
+      "items-center",
       "overflow-hidden",
       "whitespace-nowrap",
       "text-ellipsis",
-      "border-r-0",
-      "px-4",
-      "py-2",
+      "px-2.5",
+      "py-0.5",
       "text-left",
       "text-sm",
       "font-medium",
@@ -58,22 +58,28 @@ export const tabNavigationVariants = tv({
       "flex shrink-0 items-center rounded ring-1 ring-gray-200 dark:ring-gray-700",
     visualizationDeleteButton:
       "flex h-6 w-5 items-center justify-center rounded-r text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300",
+    matrixDeleteButton:
+      "flex min-h-7 w-7 flex-shrink-0 items-center justify-center border-l text-gray-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-300 dark:hover:bg-red-950/40 dark:hover:text-red-300 dark:focus-visible:ring-red-700",
   },
   variants: {
     active: {
       true: {
         tabButton:
-          "z-20 -mb-[1px] border border-l-0 border-gray-300 bg-white text-blue-600 shadow-md dark:border-gray-700 dark:bg-gray-900 dark:text-blue-300",
+          "bg-white text-blue-600 hover:bg-blue-50/70 dark:bg-gray-900 dark:text-blue-300 dark:hover:bg-blue-950/35",
         visualizationList: "border-blue-100 bg-blue-50/50 dark:border-blue-900/70 dark:bg-blue-950/40",
         visualizationButton:
           "bg-blue-100 text-blue-700 ring-1 ring-blue-300 dark:bg-blue-900/60 dark:text-blue-200 dark:ring-blue-700",
+        matrixDeleteButton:
+          "border-blue-100 bg-white hover:bg-red-50 dark:border-blue-900/70 dark:bg-gray-900 dark:hover:bg-red-950/40",
       },
       false: {
         tabButton:
-          "bg-gray-100 text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-x border-t border-transparent rounded-t-lg border-b-gray-200 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white",
+          "bg-gray-100 text-gray-600 hover:bg-gray-200/80 hover:text-gray-950 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white",
         visualizationList: "border-gray-200 dark:border-gray-700",
         visualizationButton:
           "bg-white text-gray-600 ring-1 ring-gray-200 hover:text-gray-900 dark:bg-gray-900 dark:text-gray-300 dark:ring-gray-700 dark:hover:text-white",
+        matrixDeleteButton:
+          "border-gray-200 bg-gray-100 hover:bg-red-50 dark:border-gray-700 dark:bg-gray-900 dark:hover:bg-red-950/40",
       },
     },
   },
@@ -84,12 +90,12 @@ export const tabNavigationVariants = tv({
 export const matrixTabVariants = tv({
   slots: {
     wrapper:
-      "flex min-w-[260px] max-w-[440px] shrink-0 items-stretch border-r border-gray-200 bg-gray-50 dark:border-gray-700 dark:bg-gray-900",
+      "ml-0.5 flex min-w-[180px] max-w-[360px] shrink-0 items-stretch overflow-hidden rounded-t-sm bg-gray-100 transition-shadow duration-200 hover:shadow-sm dark:bg-gray-900",
   },
   variants: {
     active: {
       true: {
-        wrapper: "bg-white shadow-sm ring-1 ring-inset ring-blue-200 dark:bg-gray-900 dark:ring-blue-800",
+        wrapper: "bg-white shadow-sm hover:shadow-md dark:bg-gray-900",
       },
       false: {
         wrapper: "",

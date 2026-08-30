@@ -9,46 +9,49 @@ const sidebarStyles = tv({
     // listItem: "",
 
     aside:
-      "bg-gray-900 text-white border-r border-gray-800 flex flex-row items-center w-full sticky",
-    list: "overflow-y-auto max-w-[60%]",
-    ul: "inline-flex space-y-1 space-x-4 p-2",
-    listItem: "cursor-pointer min-w-60 flex items-center justify-between",
+      "sticky bottom-0 z-40 flex h-10 w-full items-end border-t border-blue-800 bg-blue-700 text-white shadow-[0_-1px_3px_rgba(15,23,42,0.18)] dark:border-blue-500 dark:bg-blue-950 dark:text-blue-50",
+    list:
+      "min-w-0 flex-1 overflow-x-auto overflow-y-hidden [scrollbar-width:thin]",
+    ul: "flex h-10 items-start gap-0.5 px-2",
+    listItem:
+      "group relative flex h-10 min-w-32 max-w-52 shrink-0 items-start",
 
-    header: "p-4 gap-4 border-b border-gray-800 flex items-center justify-between",
-    headerTitle: "text-lg font-semibold tracking-wide",
+    header:
+      "flex h-10 shrink-0 items-center gap-2 border-r border-blue-800/80 px-3 dark:border-blue-700",
+    headerTitle: "text-xs font-semibold uppercase tracking-wide text-blue-100 dark:text-blue-200",
 
     sessionButton: `
-      w-full text-left px-4 py-2 text-sm rounded-md transition-colors flex items-center gap-2 justify-between
-      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1
+      flex h-10 w-full min-w-0 items-center border border-b-0 px-3 pr-8 text-left text-xs font-medium
+      transition-colors duration-150
+      focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-0
     `,
-    sessionButtonActive: "bg-indigo-600/40 text-white shadow-md",
+    sessionButtonActive:
+      "border-blue-100 bg-white text-blue-900 shadow-sm dark:border-blue-300 dark:bg-blue-50 dark:text-blue-950",
     sessionButtonInactive:
-      "hover:bg-gray-800 hover:text-indigo-300 text-gray-300",
+      "border-blue-600 bg-blue-600 text-blue-50 hover:border-blue-200 hover:bg-blue-500 hover:text-white dark:border-blue-800 dark:bg-blue-900 dark:text-blue-100 dark:hover:border-blue-500 dark:hover:bg-blue-800 dark:hover:text-white",
 
-    createSection: "flex justify-center items-center flex-grow p-4",
+    createSection: "flex h-10 min-w-4 flex-grow items-center",
     createCard:
       "bg-gray-800 border border-gray-700 rounded-lg p-4 w-full max-w-xs text-center",
 
     createButton: `
-      flex items-center justify-center space-x-2
-      px-2 py-1 rounded-md
-      border-2 border-indigo-600
-      bg-indigo-600 text-white
-      hover:bg-indigo-700
-      font-semibold
-      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1
-      transition
-      mx-auto
+      flex h-6 w-6 items-center justify-center rounded border border-gray-300 bg-white text-gray-600
+      hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700
+      focus:outline-none focus:ring-2 focus:ring-blue-500
+      transition-colors
+      dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:border-blue-800 dark:hover:bg-blue-950/40 dark:hover:text-blue-300
     `,
     createSubtext: "mt-2 text-sm text-gray-400",
     emptyStateWrapper: "flex flex-col gap-1 text-center text-gray-400",
 
+    deleteButtonWrap:
+      "absolute right-1.5 top-1/2 -translate-y-1/2 opacity-100",
     deleteButton:
-      "p-1.5 text-red-400 bg-red-400/40 rounded-full aspect-square hover:text-red-600",
+      "flex h-5 w-5 items-center justify-center rounded-sm text-blue-300 transition-colors hover:bg-red-50 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-300 group-has-[:hover]:text-blue-500 dark:text-blue-300 dark:hover:bg-red-950/40 dark:hover:text-red-300",
 
-    footer: "p-4 border-t border-gray-800 text-sm text-gray-400 text-center",
+    footer:
+      "flex h-10 shrink-0 items-center border-l border-blue-800/80 px-3 text-xs text-blue-100 dark:border-blue-700 dark:text-blue-200",
   },
 });
 
 export default sidebarStyles;
-
