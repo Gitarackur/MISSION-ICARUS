@@ -4,12 +4,12 @@ import { tv, type VariantProps } from "tailwind-variants";
 import { cn } from "@/ui/utils";
 
 const input = tv({
-  base: "mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 shadow-sm transition-colors placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500",
+  base: "mt-1 block min-h-9 w-full rounded-sm border border-gray-300 bg-white px-3 py-1.5 text-sm text-gray-900 shadow-sm transition-colors placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:placeholder:text-gray-500",
   variants: {
     scale: {
-      sm: "px-2 py-1 text-sm",
-      md: "px-3 py-2 text-base",
-      lg: "px-4 py-3 text-lg",
+      sm: "min-h-8 px-2 py-1 text-sm",
+      md: "min-h-9 px-3 py-1.5 text-sm",
+      lg: "min-h-10 px-3.5 py-2 text-sm",
     },
     intent: {
       default: "",

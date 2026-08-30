@@ -42,24 +42,22 @@ export const statisticsStyles = tv({
 // statistics menu styles
 export const statisticsMenuStyles = tv({
   slots: {
-    // mainContainer: "w-full bg-white rounded-lg   flex flex-col font-sans text-gray-800",
     mainContainer:
       "flex w-full flex-col rounded-sm border border-gray-200 bg-white p-5 font-sans text-gray-800 shadow-sm transition-all duration-200 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100",
     mainContent: "flex flex-row",
 
     rightToolbarArea: "flex-1 flex flex-col gap-2",
-    // toolbarRow: "flex  items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm",
     toolbarRow:
       "flex flex-wrap items-center gap-2 rounded-sm bg-gray-50/60 p-2 dark:bg-gray-950/60",
     toolbarRowLabel: "px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
 
-    toolbarButton: "flex items-center space-x-1 rounded-sm border border-slate-300 bg-white px-3 py-1 text-sm text-gray-700 cursor-pointer transition-colors hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700",
+    toolbarButton: "flex min-h-8 items-center space-x-1 rounded-sm border border-slate-300 bg-white px-3 py-1 text-sm text-gray-700 cursor-pointer transition-colors hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700",
     toolbarButtonIcon: "text-lg size-4 text-current",
     toolbarButtonText: "whitespace-nowrap text-sm text-current",
     dropdownArrow: "ml-auto text-xs text-current",
 
-    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 w-48 mt-2 p-1 rounded-sm shadow-lg bg-white border border-gray-300 max-h-80 overflow-y-auto dark:border-gray-700 dark:bg-gray-900",
-    dropdownItem: "flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-sm hover:bg-gray-100 transition-colors duration-150 dark:text-gray-200 dark:hover:bg-gray-800",
+    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-sm border border-gray-300 bg-white p-1 shadow-lg max-h-80 overflow-y-auto dark:border-gray-700 dark:bg-gray-900",
+    dropdownItem: "flex min-h-9 w-full items-center px-3 py-2 text-sm text-gray-700 rounded-sm hover:bg-gray-100 transition-colors duration-150 dark:text-gray-200 dark:hover:bg-gray-800",
     dropdownSectionHeading: "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
     dropdownRowHeading: "flex-1 flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
 
@@ -77,7 +75,7 @@ export const statisticsMenuStyles = tv({
     },
     wide: {
       true: {
-        dropdownContainer: "w-64",
+        dropdownContainer: "w-56",
       },
       false: {},
     },

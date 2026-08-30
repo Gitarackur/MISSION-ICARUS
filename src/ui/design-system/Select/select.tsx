@@ -206,7 +206,7 @@ const SingleSelect = React.forwardRef<HTMLDivElement, SingleSelectProps>(
           >
             <div className={content()}>
               {selectedOption ? (
-                <div className="flex-1">
+                <div className="min-w-0 flex-1">
                   <div className={selectedText()}>{selectedOption.label}</div>
                   {showDescriptions && selectedOption.description && (
                     <div className={selectedDescription()}>
