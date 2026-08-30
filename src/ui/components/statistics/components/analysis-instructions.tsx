@@ -12,7 +12,7 @@ const columnStyles = tv({
 
     // column analysis  instructions styles
     container:
-      "mb-4 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-slate-900",
+      "mb-4 rounded-sm border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-slate-900",
     headingText: "mb-2 font-semibold text-blue-800 dark:text-blue-200",
     listText: "space-y-1 text-sm text-blue-700 dark:text-slate-300",
     listItem: "font-bold flex items-center gap-2",
