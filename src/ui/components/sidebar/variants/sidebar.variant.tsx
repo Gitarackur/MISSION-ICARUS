@@ -2,11 +2,6 @@ import { tv } from "tailwind-variants";
 
 const sidebarStyles = tv({
   slots: {
-    // aside:
-    //   "w-60 bg-gray-900 text-white flex flex-col border-r border-gray-800 h-screen",
-    // list: "overflow-y-auto",
-    // ul: "space-y-1 p-2",
-    // listItem: "",
 
     aside:
       "sticky bottom-0 z-40 flex h-10 w-full items-end border-t border-blue-800 bg-blue-700 text-white shadow-[0_-1px_3px_rgba(15,23,42,0.18)] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100",
