@@ -47,19 +47,19 @@ const MatrixTab = ({
       <button
         type="button"
         onClick={toggleSidebar}
-        className="flex h-8 flex-shrink-0 items-center border-r border-gray-200 dark:border-gray-700 dark:bg-gray-950"
+        className="flex h-8 shrink-0 items-center rounded-md px-1 transition-colors hover:bg-white dark:hover:bg-gray-900"
       >
         <img
           alt="Icarus"
           src="assets/icarus-compressed.png"
           loading="lazy"
-          className="mx-3 h-5 w-auto select-none dark:hidden"
+          className="mx-2 h-6 w-auto select-none dark:hidden"
         />
         <img
           alt="Icarus"
           src="assets/icarus-mark.svg"
           loading="lazy"
-          className="mx-3 hidden h-5 w-auto select-none dark:block"
+          className="mx-2 hidden h-6 w-auto select-none dark:block"
         />
       </button>
 
@@ -81,23 +81,23 @@ const MatrixTab = ({
       </div>
 
       {activeMatrixId && (
-        <div className="flex h-8 flex-row items-center gap-3 px-4 dark:bg-gray-950">
+        <div className="flex border-l border-gray-200 h-8 flex-row items-center gap-1.5 px-2 dark:bg-gray-950">
           <button
             type="button"
-            className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
             onClick={handleExport}
           >
             <Download className={s.buttonIcon()} />
-            <span className="text-sm">Export</span>
+            <span>Export</span>
           </button>
 
           <button
             type="button"
-            className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
             onClick={onOpenSettings}
           >
             <Settings className={s.buttonIcon()} />
-            <span className="text-sm">Settings</span>
+            <span>Settings</span>
           </button>
 
           <ThemeModeControl />

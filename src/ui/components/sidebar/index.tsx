@@ -40,7 +40,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                     }`}
                   title={session.name}
                 >
-                  <span className="truncate">{session.name}</span>
+                  <span className="block min-w-0 truncate leading-none">
+                    {session.name}
+                  </span>
                 </button>
                 <div className={s.deleteButtonWrap()}>
                   <button
