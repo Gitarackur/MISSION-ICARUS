@@ -82,7 +82,7 @@ export const visualizationStyles = tv({
       "pointer-events-auto flex max-w-sm items-start gap-2 rounded-sm border border-gray-200/80 bg-white/90 px-3 py-2 text-xs leading-relaxed text-gray-500 shadow-sm backdrop-blur dark:border-gray-700/80 dark:bg-gray-900/90 dark:text-gray-400",
     plotInfoClose:
       "ml-auto inline-flex shrink-0 cursor-pointer items-center justify-center rounded-sm p-0.5 text-gray-400 transition-colors hover:bg-gray-200/70 hover:text-gray-700 dark:hover:bg-gray-700/70 dark:hover:text-gray-200",
-    plotActionGrid: "grid gap-2.5 md:grid-cols-2 mb-4",
+    plotActionGrid: "flex flex-col gap-2.5 md:grid-cols-2 mb-4",
     plotActionFullField: "md:col-span-2",
     plotActionFieldLabel:
       "mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200",
