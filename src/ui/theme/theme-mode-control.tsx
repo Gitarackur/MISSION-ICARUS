@@ -19,7 +19,7 @@ export function ThemeModeControl() {
       title={`Theme: ${THEME_LABELS[mode]}`}
     >
       <Icon className="h-4 w-4" />
-      <span className="hidden text-sm xl:inline">{THEME_LABELS[mode]}</span>
+      <span className="hidden text-xs xl:inline">{THEME_LABELS[mode]}</span>
     </button>
   );
 }

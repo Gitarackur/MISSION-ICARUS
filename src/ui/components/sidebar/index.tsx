@@ -2,8 +2,6 @@ import React from "react";
 import { Plus, Trash2 } from "lucide-react";
 import sidebarStyles from "@/ui/components/sidebar/variants/sidebar.variant";
 import { SidebarProps } from "@/ui/components/sidebar/types/sidebar.types";
-import clsx from "clsx";
-import useStickyBottomScroll from "@/ui/hooks/useStickyBottomScroll";
 
 const Sidebar: React.FC<SidebarProps> = ({
   sessions,
@@ -13,20 +11,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   onDeleteSession,
 }) => {
   const s = sidebarStyles();
-  const { isSticky } = useStickyBottomScroll()
-
-  const asideClasses = clsx(s.aside(), {
-    '': isSticky
-  })
 
   return (
-    <aside className={asideClasses}>
+    <aside className={s.aside()}>
       <div className={s.header()}>
         <h2 className={s.headerTitle()}>Sessions</h2>
         <div>
           {sessions?.length ? (
             <button onClick={onCreateSession} className={s.createButton()}>
-              <Plus size={20} />
+              <Plus size={14} />
             </button>
           ) : null}
         </div>
@@ -38,27 +31,33 @@ const Sidebar: React.FC<SidebarProps> = ({
             const isActive = activeSession?.id === session?.id;
             return (
               <li key={session.id} className={s.listItem()}>
-                <a
+                <button
+                  type="button"
                   onClick={() => onSessionClick(session)}
                   className={`${s.sessionButton()}  ${isActive
                       ? s.sessionButtonActive()
                       : s.sessionButtonInactive()
                     }`}
+                  title={session.name}
                 >
-                  {session.name}
-                  <div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDeleteSession(session.id);
-                      }}
-                      className={s.deleteButton()}
-                      title="Delete session"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </a>
+                  <span className="block min-w-0 truncate leading-none">
+                    {session.name}
+                  </span>
+                </button>
+                <div className={s.deleteButtonWrap()}>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteSession(session.id);
+                    }}
+                    className={s.deleteButton()}
+                    title="Delete session"
+                    aria-label={`Delete session ${session.name}`}
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </li>
             );
           })}
@@ -78,7 +77,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         ) : null}
       </div>
 
-      <div className={s.footer()}>Total Sessions: {sessions?.length}</div>
+      <div className={s.footer()}>{sessions?.length ?? 0} sessions</div>
     </aside>
   );
 };

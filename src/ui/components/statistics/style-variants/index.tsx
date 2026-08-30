@@ -4,7 +4,7 @@ export const statisticsStyles = tv({
   slots: {
     container: 'space-y-6',
     grid: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6',
-    card: 'bg-white rounded-lg shadow p-6 transition hover:shadow-md',
+    card: 'rounded-sm bg-slate-50 p-5 transition dark:bg-gray-900',
     iconWrapper: 'p-3 rounded-full flex items-center justify-center',
     iconColor: 'w-6 h-6',
     title: 'text-sm font-medium text-gray-600',
@@ -42,22 +42,22 @@ export const statisticsStyles = tv({
 // statistics menu styles
 export const statisticsMenuStyles = tv({
   slots: {
-    // mainContainer: "w-full bg-white rounded-lg   flex flex-col font-sans text-gray-800",
-    mainContainer: "w-full bg-white rounded-lg shadow-xl p-6 flex flex-col font-sans text-gray-800 dark:bg-gray-900 dark:text-gray-100",
+    mainContainer:
+      "flex w-full flex-col rounded-sm border border-gray-200 bg-white p-5 font-sans text-gray-800 shadow-sm transition-all duration-200 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-100",
     mainContent: "flex flex-row",
 
     rightToolbarArea: "flex-1 flex flex-col gap-2",
-    // toolbarRow: "flex  items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm",
-    toolbarRow: "flex flex-wrap items-center gap-2 bg-gray-50 border border-gray-200 rounded-md p-2 shadow-sm dark:border-gray-800 dark:bg-gray-950",
+    toolbarRow:
+      "flex flex-wrap items-center gap-2 rounded-sm bg-gray-50/60 p-2 dark:bg-gray-950/60",
     toolbarRowLabel: "px-2 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
 
-    toolbarButton: "flex items-center px-3 py-1 bg-gray-100 border border-gray-300 rounded-md text-sm cursor-pointer text-gray-700 hover:bg-gray-200 hover:border-gray-400 transition-colors space-x-1 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-gray-600 dark:hover:bg-gray-700",
+    toolbarButton: "flex min-h-8 items-center space-x-1 rounded-sm border border-slate-300 bg-white px-3 py-1 text-sm text-gray-700 cursor-pointer transition-colors hover:border-slate-400 hover:bg-slate-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:bg-gray-700",
     toolbarButtonIcon: "text-lg size-4 text-current",
     toolbarButtonText: "whitespace-nowrap text-sm text-current",
     dropdownArrow: "ml-auto text-xs text-current",
 
-    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 w-48 mt-2 p-1 rounded-lg shadow-lg bg-white border border-gray-300 max-h-80 overflow-y-auto dark:border-gray-700 dark:bg-gray-900",
-    dropdownItem: "flex items-center w-full px-3 py-2 text-sm text-gray-700 rounded-md hover:bg-gray-100 transition-colors duration-150 dark:text-gray-200 dark:hover:bg-gray-800",
+    dropdownContainer: "absolute top-full left-1/2 -translate-x-1/2 z-10 mt-2 w-56 max-w-[calc(100vw-2rem)] rounded-sm border border-gray-300 bg-white p-1 shadow-lg max-h-80 overflow-y-auto dark:border-gray-700 dark:bg-gray-900",
+    dropdownItem: "flex min-h-9 w-full items-center px-3 py-2 text-sm text-gray-700 rounded-sm hover:bg-gray-100 transition-colors duration-150 dark:text-gray-200 dark:hover:bg-gray-800",
     dropdownSectionHeading: "px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
     dropdownRowHeading: "flex-1 flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500",
 
@@ -67,7 +67,7 @@ export const statisticsMenuStyles = tv({
   variants: {
     active: {
       true: {
-        toolbarButton: "bg-blue-600 border-blue-600 text-white hover:bg-blue-700 hover:border-blue-700 dark:bg-blue-600 dark:border-blue-600 dark:text-white dark:hover:bg-blue-700",
+        toolbarButton: "border-blue-700 bg-blue-600 text-white hover:border-blue-800 hover:bg-blue-700 dark:border-blue-600 dark:bg-blue-600 dark:text-white dark:hover:bg-blue-700",
         toolbarButtonIcon: "text-white",
         toolbarButtonText: "text-white",
       },
@@ -75,7 +75,7 @@ export const statisticsMenuStyles = tv({
     },
     wide: {
       true: {
-        dropdownContainer: "w-64",
+        dropdownContainer: "w-56",
       },
       false: {},
     },

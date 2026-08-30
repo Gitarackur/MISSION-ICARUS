@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from "react";
-import { Download, Settings, Trash2 } from "lucide-react";
+import { Download, Settings, X } from "lucide-react";
 import { IcarusVisualization } from "@/domain/workflow/main.types";
 import { getVisualizationsForMatrix } from "@/domain/visualization/utils/main";
 import { ThemeModeControl } from "@/ui/theme/theme-mode-control";
@@ -47,19 +47,19 @@ const MatrixTab = ({
       <button
         type="button"
         onClick={toggleSidebar}
-        className="flex flex-shrink-0 items-center border-r border-gray-300 dark:border-gray-700 dark:bg-gray-950"
+        className="flex h-8 shrink-0 items-center rounded-sm px-1 transition-colors hover:bg-white dark:hover:bg-gray-900"
       >
         <img
           alt="Icarus"
           src="assets/icarus-compressed.png"
           loading="lazy"
-          className="mx-4 my-2 h-8 w-auto select-none dark:hidden"
+          className="mx-2 h-6 w-auto select-none dark:hidden"
         />
         <img
           alt="Icarus"
           src="assets/icarus-mark.svg"
           loading="lazy"
-          className="mx-4 my-2 hidden h-8 w-auto select-none dark:block"
+          className="mx-2 hidden h-6 w-auto select-none dark:block"
         />
       </button>
 
@@ -81,23 +81,23 @@ const MatrixTab = ({
       </div>
 
       {activeMatrixId && (
-        <div className="flex flex-row gap-3 px-5 dark:bg-gray-950">
+        <div className="flex border-l border-gray-200 h-8 flex-row items-center gap-1.5 px-2 dark:bg-gray-950">
           <button
             type="button"
-            className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+            className="flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
             onClick={handleExport}
           >
             <Download className={s.buttonIcon()} />
-            <span className="text-sm">Export</span>
+            <span>Export</span>
           </button>
 
           <button
             type="button"
-            className="flex items-center gap-2 text-gray-700 dark:text-gray-200"
+            className="flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
             onClick={onOpenSettings}
           >
             <Settings className={s.buttonIcon()} />
-            <span className="text-sm">Settings</span>
+            <span>Settings</span>
           </button>
 
           <ThemeModeControl />
@@ -117,9 +117,10 @@ const MatrixTabGroup = ({
   onMatrixDelete,
   onVisualizationDelete,
 }: MatrixTabGroupProps) => {
-  const { tabButton, visualizationList } = tabNavigationVariants({
-    active: isActive,
-  });
+  const { tabButton, visualizationList, matrixDeleteButton } =
+    tabNavigationVariants({
+      active: isActive,
+    });
   const { wrapper } = matrixTabVariants({ active: isActive });
   const groupRef = useActiveTabVisibility<HTMLDivElement>(isActive);
 
@@ -130,7 +131,7 @@ const MatrixTabGroup = ({
       aria-label={`${matrix.id} matrix tab group`}
       onClick={() => onMatrixSelect(matrix.id)}
     >
-      <div className="flex min-w-[180px] flex-1 items-stretch">
+      <div className="flex min-w-0 flex-1 items-stretch">
         <button
           type="button"
           onClick={(event) => {
@@ -149,11 +150,11 @@ const MatrixTabGroup = ({
               event.stopPropagation();
               onMatrixDelete(matrix.id);
             }}
-            className="flex w-8 flex-shrink-0 items-center justify-center text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300"
+            className={matrixDeleteButton()}
             title={`Delete matrix ${matrix.id}`}
             aria-label={`Delete matrix ${matrix.id}`}
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <X className="h-3.5 w-3.5" />
           </button>
         )}
       </div>

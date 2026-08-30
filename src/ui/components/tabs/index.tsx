@@ -44,7 +44,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
               >
                 <Icon
                   className={tabIconStyles({ active: isActive })}
-                  size={18}
+                  size={12}
                 />
                 <span className="hidden sm:inline truncate">{tab.label}</span>
               </button>
@@ -52,13 +52,14 @@ const NavTabs: React.FC<NavTabsProps> = ({
           })}
         </nav>
 
-        <div
+        <button
+          type="button"
           className={activityFloatingButton({ intent: "primary" })}
           onClick={openActivitySheet}
         >
-          <Menu size={24} className="text-white inline mr-2" />
+          <Menu size={16} className="flex-shrink-0" />
           <span>View Activity Log</span>
-        </div>
+        </button>
       </div>
     </div>
   );

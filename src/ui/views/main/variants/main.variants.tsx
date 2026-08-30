@@ -5,12 +5,12 @@ export const activityFloatingButton = tv({
   // base: `fixed z-50 p-2 rounded-lg shadow-xl cursor-pointer transition-colors duration-200 flex items-center space-x-2 top-1/2 -translate-y-1/2
   // text-blue-800 font-semibold text-sm right-10`,
 
-  base: "text-sm bg-blue-500 text-white rounded px-4 py-1 flex items-center cursor-pointer",
+  base: "flex items-center gap-1.5 rounded-sm border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 cursor-pointer transition-colors hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700 dark:border-gray-700 dark:bg-gray-950 dark:text-gray-300 dark:hover:border-blue-800 dark:hover:bg-blue-950/40 dark:hover:text-blue-300",
   
   variants: {
     intent: {
       // primary: 'bg-blue-100 hover:bg-blue-200 text-blue-800',
-      primary: 'bg-blue-500',
+      primary: '',
     },
     label: {
       visible: 'block',
@@ -41,6 +41,6 @@ export const mainViewStyles = tv({
     matrixLoadState:
       "flex h-full min-h-80 items-center justify-center text-sm text-gray-500 animate-[workspace-enter_0.3s_ease-out_both] dark:text-gray-400",
     matrixViewShell:
-      "relative h-full animate-[content-fade_0.3s_ease-out]",
+      "relative min-h-0 flex-1 overflow-y-auto animate-[content-fade_0.3s_ease-out]",
   },
 });

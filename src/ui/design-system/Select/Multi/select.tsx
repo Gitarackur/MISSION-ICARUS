@@ -217,7 +217,7 @@ const MultiSelect = React.forwardRef<HTMLDivElement, MultiSelectProps>(
                 <>
                   {displayedTags.map((option) => (
                     <span key={option.value} className={tagClass()}>
-                      {option.label}
+                      <span className="min-w-0 truncate">{option.label}</span>
                       {!disabled && (
                         <button
                           onClick={(e) => {
