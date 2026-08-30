@@ -8,16 +8,16 @@ export const headerVariants = tv({
     flexMain:
       "flex flex-col gap-5 lg:gap-0 lg:flex-row lg:items-center lg:justify-between",
     logoWrapper: "flex flex-col items-center space-x-3",
-    iconBg: "px-2 bg-white rounded-lg text-center",
+    iconBg: "px-2 bg-white rounded-sm text-center",
     icon: "w-auto h-50 text-white",
     titleWrapper: "text-center",
     title: "!text-3xl font-bold text-gray-900",
     subtitle: "text-sm text-gray-600",
     buttonGroup: "flex ",
     buttonExport:
-      "flex items-center space-x-2 px-4 py-2 text-sm bg-green-600 text-white rounded-l-lg hover:bg-green-700",
+      "flex items-center space-x-2 px-4 py-2 text-sm bg-green-600 text-white rounded-l-sm hover:bg-green-700",
     buttonSettings:
-      "flex items-center space-x-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-r-lg hover:bg-blue-700",
+      "flex items-center space-x-2 px-4 py-2 text-sm bg-blue-600 text-white rounded-r-sm hover:bg-blue-700",
     buttonIcon: "w-4 h-4",
   },
 });
@@ -52,11 +52,11 @@ export const tabNavigationVariants = tv({
     visualizationList:
       "flex min-w-0 max-w-[240px] shrink-0 items-center gap-1 overflow-x-auto overflow-y-hidden overscroll-x-contain scroll-smooth border-l px-2 [scrollbar-width:thin]",
     visualizationButton:
-      "flex h-6 w-7 flex-shrink-0 items-center justify-center rounded text-[11px] font-medium transition-colors",
+      "flex h-6 w-7 flex-shrink-0 items-center justify-center rounded-sm text-[11px] font-medium transition-colors",
     visualizationTabWrapper:
-      "flex shrink-0 items-center rounded ring-1 ring-gray-200 dark:ring-gray-700",
+      "flex shrink-0 items-center rounded-sm ring-1 ring-gray-200 dark:ring-gray-700",
     visualizationDeleteButton:
-      "flex h-6 w-5 items-center justify-center rounded-r text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300",
+      "flex h-6 w-5 items-center justify-center rounded-r-sm text-gray-400 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/40 dark:hover:text-red-300",
     matrixDeleteButton:
       "flex h-9 w-7 flex-shrink-0 items-center justify-center text-gray-400 transition-colors duration-200 hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-red-300 dark:hover:bg-red-950/40 dark:hover:text-red-300 dark:focus-visible:ring-red-700",
   },

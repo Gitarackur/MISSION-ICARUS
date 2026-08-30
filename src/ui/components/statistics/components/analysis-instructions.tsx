@@ -3,21 +3,28 @@ import { tv } from "tailwind-variants"
 
 const columnStyles = tv({
   slots: {
-    string: "rounded-full h-5 w-5 inline-block border-2 border-black bg-yellow-100 dark:bg-yellow-950/30",
-    number: "rounded-full h-5 w-5 inline-block border-2 border-black bg-green-100 dark:bg-green-950/30",
-    boolean: "rounded-full h-5 w-5 inline-block border-2 border-black bg-red-100 dark:bg-red-950/30",
+    string:
+      "inline-block h-5 w-5 rounded-full border-2 border-yellow-300 bg-yellow-100 dark:border-yellow-500/70 dark:bg-yellow-900/60",
+    number:
+      "inline-block h-5 w-5 rounded-full border-2 border-green-300 bg-green-100 dark:border-green-500/70 dark:bg-green-900/60",
+    boolean:
+      "inline-block h-5 w-5 rounded-full border-2 border-red-300 bg-red-100 dark:border-red-500/70 dark:bg-red-900/60",
 
     // column analysis  instructions styles
-    container: "mb-4 p-4 bg-blue-50 rounded-lg",
-    headingText: "font-semibold text-blue-800 mb-2",
-    listText: "text-sm text-blue-700 space-y-1",
+    container:
+      "mb-4 rounded-lg border border-blue-100 bg-blue-50 p-4 dark:border-blue-900/60 dark:bg-slate-900",
+    headingText: "mb-2 font-semibold text-blue-800 dark:text-blue-200",
+    listText: "space-y-1 text-sm text-blue-700 dark:text-slate-300",
     listItem: "font-bold flex items-center gap-2",
   },
   variants: {
     columnType: {
-      string: "rounded-full h-5 w-5 inline-block border-2 border-black bg-yellow-100 dark:bg-yellow-950/30",
-      number: "rounded-full h-5 w-5 inline-block border-2 border-black bg-green-100 dark:bg-green-950/30",
-      boolean: "rounded-full h-5 w-5 inline-block border-2 border-black bg-red-100 dark:bg-red-950/30"
+      string:
+        "inline-block h-5 w-5 rounded-full border-2 border-yellow-300 bg-yellow-100 dark:border-yellow-500/70 dark:bg-yellow-900/60",
+      number:
+        "inline-block h-5 w-5 rounded-full border-2 border-green-300 bg-green-100 dark:border-green-500/70 dark:bg-green-900/60",
+      boolean:
+        "inline-block h-5 w-5 rounded-full border-2 border-red-300 bg-red-100 dark:border-red-500/70 dark:bg-red-900/60",
     }
   }
 })

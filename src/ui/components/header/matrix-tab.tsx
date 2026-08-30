@@ -47,7 +47,7 @@ const MatrixTab = ({
       <button
         type="button"
         onClick={toggleSidebar}
-        className="flex h-8 shrink-0 items-center rounded-md px-1 transition-colors hover:bg-white dark:hover:bg-gray-900"
+        className="flex h-8 shrink-0 items-center rounded-sm px-1 transition-colors hover:bg-white dark:hover:bg-gray-900"
       >
         <img
           alt="Icarus"
@@ -84,7 +84,7 @@ const MatrixTab = ({
         <div className="flex border-l border-gray-200 h-8 flex-row items-center gap-1.5 px-2 dark:bg-gray-950">
           <button
             type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+            className="flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
             onClick={handleExport}
           >
             <Download className={s.buttonIcon()} />
@@ -93,7 +93,7 @@ const MatrixTab = ({
 
           <button
             type="button"
-            className="flex h-7 items-center gap-1.5 rounded-md px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
+            className="flex h-7 items-center gap-1.5 rounded-sm px-2 text-xs font-medium text-gray-600 transition-colors hover:bg-white hover:text-gray-950 dark:text-gray-300 dark:hover:bg-gray-900 dark:hover:text-white"
             onClick={onOpenSettings}
           >
             <Settings className={s.buttonIcon()} />
