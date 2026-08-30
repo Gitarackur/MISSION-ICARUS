@@ -261,7 +261,7 @@ const IcarusApp: React.FC = () => {
           )}
         </div>
       )}
-      <main className="flex-1 overflow-y-auto bg-white dark:bg-gray-950">
+      <main className="flex min-h-0 flex-1 flex-col overflow-hidden bg-white dark:bg-gray-950">
         <MatrixTab
           matrices={matrices}
           activeMatrixId={activeMatrix?.id || ""}

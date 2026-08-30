@@ -44,7 +44,7 @@ const NavTabs: React.FC<NavTabsProps> = ({
               >
                 <Icon
                   className={tabIconStyles({ active: isActive })}
-                  size={18}
+                  size={12}
                 />
                 <span className="hidden sm:inline truncate">{tab.label}</span>
               </button>

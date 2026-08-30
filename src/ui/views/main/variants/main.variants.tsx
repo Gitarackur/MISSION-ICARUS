@@ -41,6 +41,6 @@ export const mainViewStyles = tv({
     matrixLoadState:
       "flex h-full min-h-80 items-center justify-center text-sm text-gray-500 animate-[workspace-enter_0.3s_ease-out_both] dark:text-gray-400",
     matrixViewShell:
-      "relative h-full animate-[content-fade_0.3s_ease-out]",
+      "relative min-h-0 flex-1 overflow-y-auto animate-[content-fade_0.3s_ease-out]",
   },
 });

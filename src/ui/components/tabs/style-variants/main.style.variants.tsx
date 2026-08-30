@@ -14,7 +14,7 @@ export const tabButtonStyles = tv({
     `,
     base: `
       flex items-center space-x-2
-      px-3 py-1.5
+      px-3 pb-1.5 pt-2
       border-b-2 border-x border-x-transparent font-medium text-xs
       flex-grow sm:flex-grow-0 min-w-0
       transition-colors duration-200 ease-in-out

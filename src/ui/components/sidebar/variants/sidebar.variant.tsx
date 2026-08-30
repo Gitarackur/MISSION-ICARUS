@@ -32,10 +32,10 @@ const sidebarStyles = tv({
 
     createSection: "flex h-10 min-w-4 flex-grow items-center",
     createCard:
-      "bg-gray-800 border border-gray-700 rounded-lg p-4 w-full max-w-xs text-center",
+      "bg-gray-800 border border-gray-700 rounded-sm p-4 w-full max-w-xs text-center",
 
     createButton: `
-      flex h-6 w-6 items-center justify-center rounded border border-gray-300 bg-white text-gray-600
+      flex h-6 w-6 items-center justify-center rounded-sm border border-gray-300 bg-white text-gray-600
       hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700
       focus:outline-none focus:ring-2 focus:ring-blue-500
       transition-colors
