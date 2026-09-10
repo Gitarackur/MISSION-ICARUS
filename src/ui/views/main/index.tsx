@@ -323,7 +323,7 @@ const IcarusApp: React.FC = () => {
             )}
           </div>
         ) : (
-          <div className="w-full">
+          <div className="flex min-h-0 flex-1">
             <CreateSession
               isProcessing={isProcessing}
               setIsProcessing={setIsProcessing}

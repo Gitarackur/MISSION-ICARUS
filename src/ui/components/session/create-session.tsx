@@ -57,7 +57,7 @@ const CreateSession = ({
   );
 
   return (
-    <div className="h-[calc(100vh_-_50px)] flex gap-y-4 flex-col justify-center items-center">
+    <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-y-4 overflow-y-auto">
       <Header />
       <DataImport
         fileInputRef={fileInputRef}
