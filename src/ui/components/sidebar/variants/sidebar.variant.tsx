@@ -25,7 +25,6 @@ const sidebarStyles = tv({
     sessionButtonInactive:
       "border-blue-800/50 bg-blue-700 text-blue-50 hover:bg-blue-600 hover:text-white dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900 dark:hover:text-white",
 
-    createSection: "flex h-10 min-w-4 flex-grow items-center",
     createCard:
       "bg-gray-800 border border-gray-700 rounded-sm p-4 w-full max-w-xs text-center",
 
@@ -37,7 +36,7 @@ const sidebarStyles = tv({
       dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:border-sky-600 dark:hover:bg-slate-800 dark:hover:text-sky-200
     `,
     createSubtext: "mt-2 text-sm text-gray-400",
-    emptyStateWrapper: "flex flex-col gap-1 text-center text-gray-400",
+    emptyStateWrapper: "flex h-10 items-center whitespace-nowrap px-3 text-xs text-blue-100 dark:text-slate-300",
 
     deleteButtonWrap:
       "absolute right-2 top-1/2 flex -translate-y-1/2 items-center opacity-100",
