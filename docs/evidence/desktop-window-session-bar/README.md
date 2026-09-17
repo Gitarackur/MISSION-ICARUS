@@ -5,7 +5,7 @@ Verified on macOS with Electron 30 and the production renderer build, using a te
 - `npm run build:application`: passed (TypeScript and Vite renderer/main/preload builds).
 - ESLint on the three changed source files: passed.
 - `git diff --check`: passed.
-- Launch: `isMaximized()` returned true; native fullscreen was false. Window occupied the display work area (1440 × 822, with a one-pixel macOS rounding difference in window height).
+- Launch: native fullscreen is enabled (`isFullScreen()` returned true). The maximize call is also retained before showing the window.
 - Zero sessions: the main view correctly hides the session bar.
 - Two sessions: the scroll region ends exactly at the count, with no horizontal overflow.
 - Twenty sessions: the scroll region ends exactly at the count, can scroll to the last tab, and does not cause page overflow.
@@ -29,7 +29,7 @@ Twenty sessions scrolled to the end, dark mode:
 
 ## Manual reproduction
 
-1. Build and start Icarus on macOS. Confirm the window opens maximized with normal window controls.
+1. Build and start Icarus on macOS. Confirm the window opens in native fullscreen.
 2. Create two sessions. Confirm the bottom strip uses all the space between the Sessions header and session count.
 3. Create enough sessions to exceed that space. Scroll horizontally to reach the last tab; the count remains visible.
 4. Check both light and dark themes.

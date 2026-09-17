@@ -1,6 +1,6 @@
-{"platform":"darwin","bounds":{"x":0,"y":30,"width":1440,"height":821},"workArea":{"x":0,"y":30,"width":1440,"height":822},"maximized":true,"fullscreen":false}
+{"platform":"darwin","bounds":{"x":0,"y":0,"width":1440,"height":900},"workArea":{"x":0,"y":30,"width":1440,"height":870},"maximized":false,"fullscreen":true}
 {"count":0,"hidden":true}
 {"count":2,"listRight":1355.4609375,"footerLeft":1355.4609375,"clientWidth":1235,"scrollWidth":1235,"scrollLeft":0,"footerText":"2 sessions","bodyWidth":1440,"viewport":1440,"emptyText":"Analysis session 01Analysis session 02"}
 {"count":20,"listRight":1347.8984375,"footerLeft":1347.8984375,"clientWidth":1227,"scrollWidth":3151,"scrollLeft":1924,"footerText":"20 sessions","bodyWidth":1440,"viewport":1440,"emptyText":"Analysis session 01Analysis session 02Analysis session 11Analysis session 12Analysis session 13Analysis session 14Analysis session 15Analysis session 16Analysis session 17Analysis session 18Analysis session 19Analysis session 20Analysis session 03Analysis session 04Analysis session 05Analysis session 06Analysis session 07Analysis session 08Analysis session 09Analysis session 10"}
-PASS: maximized launch, session strip fills to count, overflow scrolls, no page overflow. Closing last window.
+PASS: fullscreen launch, session strip fills to count, overflow scrolls, no page overflow. Closing last window.
 quit event: checks complete=true

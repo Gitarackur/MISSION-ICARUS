@@ -40,6 +40,7 @@ function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "assets", "icarus.png"),
     resizable: true,
+    fullscreen: true,
     show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
