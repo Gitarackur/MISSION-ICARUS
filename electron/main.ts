@@ -40,13 +40,17 @@ function createWindow() {
   win = new BrowserWindow({
     icon: path.join(process.env.VITE_PUBLIC, "assets", "icarus.png"),
     resizable: true,
-    fullscreen: true,
+    show: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.mjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },
   });
+
+  // Fill the available desktop before showing the analytical workspace.
+  win.maximize();
+  win.show();
 
   win.webContents.on("did-finish-load", () => {
     win?.webContents.send("main-process-message", new Date().toLocaleString());
@@ -163,10 +167,8 @@ try {
 }
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-    win = null;
-  }
+  win = null;
+  app.quit();
 });
 
 app.on("activate", () => {

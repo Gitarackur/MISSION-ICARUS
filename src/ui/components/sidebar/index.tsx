@@ -26,53 +26,47 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       <div className={s.list()}>
-        <ul className={s.ul()}>
-          {sessions?.map((session) => {
-            const isActive = activeSession?.id === session?.id;
-            return (
-              <li key={session.id} className={s.listItem()}>
-                <button
-                  type="button"
-                  onClick={() => onSessionClick(session)}
-                  className={`${s.sessionButton()}  ${isActive
-                      ? s.sessionButtonActive()
-                      : s.sessionButtonInactive()
-                    }`}
-                  title={session.name}
-                >
-                  <span className="block min-w-0 truncate leading-none">
-                    {session.name}
-                  </span>
-                </button>
-                <div className={s.deleteButtonWrap()}>
+        {sessions?.length !== 0 ? (
+          <ul className={s.ul()}>
+            {sessions?.map((session) => {
+              const isActive = activeSession?.id === session?.id;
+              return (
+                <li key={session.id} className={s.listItem()}>
                   <button
                     type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteSession(session.id);
-                    }}
-                    className={s.deleteButton()}
-                    title="Delete session"
-                    aria-label={`Delete session ${session.name}`}
+                    onClick={() => onSessionClick(session)}
+                    className={`${s.sessionButton()}  ${isActive
+                        ? s.sessionButtonActive()
+                        : s.sessionButtonInactive()
+                      }`}
+                    title={session.name}
                   >
-                    <Trash2 size={12} />
+                    <span className="block min-w-0 truncate leading-none">
+                      {session.name}
+                    </span>
                   </button>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-
-      <div className={s.createSection()}>
-        &nbsp;
+                  <div className={s.deleteButtonWrap()}>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteSession(session.id);
+                      }}
+                      className={s.deleteButton()}
+                      title="Delete session"
+                      aria-label={`Delete session ${session.name}`}
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        ) : null}
         {sessions?.length === 0 ? (
           <div className={s.emptyStateWrapper()}>
-            <span>No sessions available</span>
-            <p>
-              Upload your data analysis file to{" "}
-              <strong>get started</strong>.
-            </p>
+            No sessions available. Upload your data analysis file to get started.
           </div>
         ) : null}
       </div>
