@@ -42,6 +42,7 @@ const ActivityTree2 = ({
 }: DisplayedActivityTree) => {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [zoomLevel, setZoomLevel] = useState(0.8);
   const [isPanning, setIsPanning] = useState(false);
   const zoomBehaviorRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown>>();
@@ -120,7 +121,7 @@ const ActivityTree2 = ({
   // Extract the styles
   const {
     base,
-    zoomInfo,
+    //zoomInfo,
     controlsContainer,
     contentArea,
     svg,
