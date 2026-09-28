@@ -120,7 +120,6 @@ const ActivityTree2 = ({
   // Extract the styles
   const {
     base,
-    header,
     zoomInfo,
     controlsContainer,
     contentArea,
@@ -210,10 +209,18 @@ const ActivityTree2 = ({
 
     svg.call(zoom);
 
-    const nodeWidth = 180;
-    const nodeHeight = 150;
-    const siblingSeparation = 40;
-    const generationSeparation = 120;
+    const nodeWidth = 220;
+    const nodeHeight = 178;
+    const siblingSeparation = 52;
+    const generationSeparation = 136;
+    const nodeRadius = 2;
+    const titleMaxWidth = 150;
+    const plotButtonWidth = 92;
+    const plotButtonHeight = 18;
+    const plotButtonGap = 8;
+    const matrixButtonWidth = 88;
+    const matrixButtonHeight = 26;
+    const matrixButtonGap = 8;
 
     const treeLayout = d3
       .tree<ActivityTreeNodeForD3>()
@@ -309,8 +316,8 @@ const ActivityTree2 = ({
         .attr("y", -nodeHeight / 2)
         .attr("width", nodeWidth)
         .attr("height", nodeHeight)
-        .attr("rx", 8)
-        .attr("ry", 8)
+        .attr("rx", nodeRadius)
+        .attr("ry", nodeRadius)
         .attr("fill", (d) => {
           switch (d.data.depth) {
             case 0:
@@ -334,13 +341,14 @@ const ActivityTree2 = ({
       // Activity name
       nodes
         .append("text")
-        .attr("dy", "-1.8em")
+        .attr("y", -nodeHeight / 2 + 26)
+        .attr("dy", "0")
         .attr("text-anchor", "middle")
         .attr("font-size", "12px")
         .attr("font-weight", "600")
         .attr("fill", palette.text)
-        .text((d) => d.data.activity.name)
-        .call(wrapText, 80);
+        .text((d) => formatAxisLabel(d.data.activity.name, 34))
+        .call(wrapText, titleMaxWidth);
 
       if (handlersRef.current.onDeleteActivity) {
         const activityDeleteButton = nodes
@@ -365,7 +373,7 @@ const ActivityTree2 = ({
           .append("rect")
           .attr("width", 18)
           .attr("height", 18)
-          .attr("rx", 4)
+          .attr("rx", nodeRadius)
           .attr("fill", palette.dangerFill)
           .attr("stroke", palette.dangerStroke);
 
@@ -393,7 +401,10 @@ const ActivityTree2 = ({
         const plotGroup = d3
           .select(this)
           .append("g")
-          .attr("transform", `translate(${-nodeWidth / 2 + 12}, 10)`);
+          .attr(
+            "transform",
+            `translate(${-nodeWidth / 2 + 12}, ${-nodeHeight / 2 + 78})`
+          );
 
         activityVisualizations.slice(0, 4).forEach((visualization, index) => {
           const sourceMatrixId =
@@ -410,7 +421,9 @@ const ActivityTree2 = ({
             .append("g")
             .attr(
               "transform",
-              `translate(${(index % 2) * 80}, ${Math.floor(index / 2) * 20})`
+              `translate(${(index % 2) * (plotButtonWidth + plotButtonGap)}, ${
+                Math.floor(index / 2) * (plotButtonHeight + 4)
+              })`
             )
             .style("cursor", "pointer")
             .on("click", (event: MouseEvent) => {
@@ -423,25 +436,25 @@ const ActivityTree2 = ({
 
           button
             .append("rect")
-            .attr("width", 74)
-            .attr("height", 18)
-            .attr("rx", 4)
+            .attr("width", plotButtonWidth)
+            .attr("height", plotButtonHeight)
+            .attr("rx", nodeRadius)
             .attr("fill", palette.visualizationFill)
             .attr("stroke", palette.visualizationStroke);
 
           button
             .append("text")
-            .attr("x", handlersRef.current.onDeleteVisualization ? 30 : 37)
+            .attr("x", handlersRef.current.onDeleteVisualization ? 38 : plotButtonWidth / 2)
             .attr("y", 12)
             .attr("font-size", "9px")
             .attr("text-anchor", "middle")
             .attr("fill", palette.visualizationText)
-            .text(formatAxisLabel(label, 11));
+            .text(formatAxisLabel(label, 15));
 
           if (handlersRef.current.onDeleteVisualization) {
             const deleteButton = button
               .append("g")
-              .attr("transform", "translate(57, 0)")
+              .attr("transform", `translate(${plotButtonWidth - 17}, 0)`)
               .attr("role", "button")
               .attr("tabindex", 0)
               .attr("aria-label", `Delete visualization ${visualizationLabel}`)
@@ -460,7 +473,7 @@ const ActivityTree2 = ({
               .append("rect")
               .attr("width", 17)
               .attr("height", 18)
-              .attr("rx", 4)
+              .attr("rx", nodeRadius)
               .attr("fill", palette.dangerFill);
             deleteButton
               .append("text")
@@ -476,7 +489,7 @@ const ActivityTree2 = ({
         if (activityVisualizations.length > 4) {
           plotGroup
             .append("text")
-            .attr("x", 166)
+            .attr("x", plotButtonWidth * 2 + plotButtonGap + 8)
             .attr("y", 32)
             .attr("font-size", "10px")
             .attr("fill", palette.mutedText)
@@ -500,14 +513,16 @@ const ActivityTree2 = ({
       // Button container
       const buttonGroup = nodes
         .append("g")
-        .attr("transform", `translate(0, ${nodeHeight / 2 - 30})`);
+        .attr("transform", `translate(0, ${nodeHeight / 2 - 42})`);
 
       // Input button
       const inputButton = buttonGroup
         .filter((d) => Boolean(d.data.activity.inputMatrixReferences))
         .append("g")
-        // .attr("transform", "translate(-45, 0)")
-        .attr("transform", "translate(-81, -3)")
+        .attr(
+          "transform",
+          `translate(${-matrixButtonWidth - matrixButtonGap / 2}, 0)`
+        )
         .style("cursor", "pointer")
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
@@ -519,16 +534,16 @@ const ActivityTree2 = ({
 
       inputButton
         .append("rect")
-        .attr("width", 77)
-        .attr("height", 24)
-        .attr("rx", 4)
+        .attr("width", matrixButtonWidth)
+        .attr("height", matrixButtonHeight)
+        .attr("rx", nodeRadius)
         .attr("fill", palette.inputFill)
         .attr("stroke", palette.inputStroke);
 
       inputButton
         .append("text")
-        .attr("x", handlersRef.current.onDeleteMatrix ? 32 : 40)
-        .attr("y", 14)
+        .attr("x", handlersRef.current.onDeleteMatrix ? 36 : matrixButtonWidth / 2)
+        .attr("y", 16)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
         .attr("fill", palette.inputText)
@@ -538,7 +553,7 @@ const ActivityTree2 = ({
         const inputDeleteButton = inputButton
           .filter((d) => Boolean(d.data.activity.inputMatrixReferences))
           .append("g")
-          .attr("transform", "translate(59, 3)")
+          .attr("transform", `translate(${matrixButtonWidth - 20}, 4)`)
           .attr("role", "button")
           .attr("tabindex", 0)
           .attr(
@@ -566,13 +581,13 @@ const ActivityTree2 = ({
 
         inputDeleteButton
           .append("rect")
-          .attr("width", 15)
+          .attr("width", 16)
           .attr("height", 18)
-          .attr("rx", 3)
+          .attr("rx", nodeRadius)
           .attr("fill", palette.dangerFill);
         inputDeleteButton
           .append("text")
-          .attr("x", 7.5)
+          .attr("x", 8)
           .attr("y", 13)
           .attr("font-size", "12px")
           .attr("text-anchor", "middle")
@@ -584,8 +599,7 @@ const ActivityTree2 = ({
       const outputButton = buttonGroup
         .filter((d) => Boolean(d.data.activity.outputMatrixReference))
         .append("g")
-        // .attr("transform", "translate(45, 0)")
-        .attr("transform", "translate(5, -3)")
+        .attr("transform", `translate(${matrixButtonGap / 2}, 0)`)
         .style("cursor", "pointer")
         .on("click", (event: MouseEvent, d) => {
           event.stopPropagation();
@@ -597,16 +611,16 @@ const ActivityTree2 = ({
 
       outputButton
         .append("rect")
-        .attr("width", 75)
-        .attr("height", 24)
-        .attr("rx", 4)
+        .attr("width", matrixButtonWidth)
+        .attr("height", matrixButtonHeight)
+        .attr("rx", nodeRadius)
         .attr("fill", palette.outputFill)
         .attr("stroke", palette.outputStroke);
 
       outputButton
         .append("text")
-        .attr("x", handlersRef.current.onDeleteMatrix ? 32 : 40)
-        .attr("y", 14)
+        .attr("x", handlersRef.current.onDeleteMatrix ? 36 : matrixButtonWidth / 2)
+        .attr("y", 16)
         .attr("font-size", "10px")
         .attr("text-anchor", "middle")
         .attr("fill", palette.outputText)
@@ -616,7 +630,7 @@ const ActivityTree2 = ({
         const outputDeleteButton = outputButton
           .filter((d) => Boolean(d.data.activity.outputMatrixReference))
           .append("g")
-          .attr("transform", "translate(57, 3)")
+          .attr("transform", `translate(${matrixButtonWidth - 20}, 4)`)
           .attr("role", "button")
           .attr("tabindex", 0)
           .attr(
@@ -644,13 +658,13 @@ const ActivityTree2 = ({
 
         outputDeleteButton
           .append("rect")
-          .attr("width", 15)
+          .attr("width", 16)
           .attr("height", 18)
-          .attr("rx", 3)
+          .attr("rx", nodeRadius)
           .attr("fill", palette.dangerFill);
         outputDeleteButton
           .append("text")
-          .attr("x", 7.5)
+          .attr("x", 8)
           .attr("y", 13)
           .attr("font-size", "12px")
           .attr("text-anchor", "middle")
@@ -731,12 +745,11 @@ const ActivityTree2 = ({
       const containerWidth = containerRef.current.clientWidth;
       const containerHeight = containerRef.current.clientHeight;
 
-      const g = svg.select("g");
-      const allNodes = g.selectAll<SVGGElement, unknown>("[class^='node-']");
+      const g = svg.select<SVGGElement>("g");
+      const gNode = g.node();
 
-      if (allNodes.size() > 0) {
-        const node = allNodes.node() as SVGGElement;
-        const bbox = node.getBBox();
+      if (gNode) {
+        const bbox = gNode.getBBox();
 
         const scale = 1
           // Math.min(
@@ -759,12 +772,14 @@ const ActivityTree2 = ({
 
   return (
     <div className={base()}>
-      <div className={header()}>
+      <div
+        ref={containerRef}
+        className={contentArea()}
+        style={{ cursor: isPanning ? "grabbing" : "grab" }}
+      >
+        <svg ref={svgRef} className={svg()} />
+
         <div className={controlsContainer()}>
-          <span className={zoomInfo()}>
-            Zoom: {Math.round(zoomLevel * 100)}%
-          </span>
-          <div className="w-3"></div>
           <button
             onClick={handleZoomOut}
             className={buttonStyle({ intent: "ghost" })}
@@ -785,14 +800,6 @@ const ActivityTree2 = ({
             <RefreshCcw size={14} />
           </button>
         </div>
-      </div>
-
-      <div
-        ref={containerRef}
-        className={contentArea()}
-        style={{ cursor: isPanning ? "grabbing" : "grab" }}
-      >
-        <svg ref={svgRef} className={svg()} />
 
         <div className={tooltip()}>
           <div>💡 Use mouse wheel to zoom, drag to pan</div>

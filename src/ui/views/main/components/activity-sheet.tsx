@@ -35,8 +35,9 @@ export function ActivitySheet({
       sidebarWidth="0px"
       overlayClassName="!bg-opacity-80"
       panelClassName="bg-blue-50 border border-gray-200 w-150 dark:border-gray-800 dark:bg-gray-950"
-      headerClassName="border-blue-300 dark:border-gray-800"
-      bodyClassName="p-0"
+      headerClassName="border-blue-300 px-3 py-2 dark:border-gray-800"
+      titleClassName="text-sm"
+      bodyClassName="min-h-0 p-0"
     >
       {activeSession && (
         <ActivityTree2

@@ -55,10 +55,11 @@ export const activityStyleVariants = tv({
 
 // === D3 Tree variants ===
 export const buttonStyle = tv({
-  base: "px-2 py-1 rounded text-xs font-medium cursor-pointer transition-colors",
+  base: "flex min-h-8 min-w-8 items-center justify-center rounded-sm border text-xs font-medium cursor-pointer transition-colors",
   variants: {
     intent: {
-      ghost: "",
+      ghost:
+        "border-gray-300 bg-white text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800",
       input:
         "bg-blue-100 text-blue-800 hover:bg-blue-200 border border-blue-300 dark:border-blue-900 dark:bg-blue-950 dark:text-blue-200 dark:hover:bg-blue-900",
       output:
@@ -71,16 +72,16 @@ export const buttonStyle = tv({
 
 export const activityTreeStyle = tv({
   slots: {
-    base: "relative flex flex-col h-screen w-full overflow-hidden bg-gray-50 dark:bg-gray-950",
+    base: "relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-gray-50 dark:bg-gray-950",
     header:
-      "fixed top-[calc(100vh_-_92.3%)] px-6 left-0 right-0 flex justify-end items-center z-10",
+      "hidden",
     title: "m-0 text-lg font-semibold text-gray-800 dark:text-gray-100",
-    zoomInfo: "text-xs text-gray-500 uppercase dark:text-gray-400",
-    controlsContainer: "flex items-center",
+    zoomInfo: "text-[10px] font-medium text-gray-500 uppercase [writing-mode:vertical-rl] rotate-180 dark:text-gray-400",
+    controlsContainer: "absolute left-3 top-3 z-10 flex flex-col items-center gap-1 rounded-sm border border-gray-200 bg-white/90 p-1 shadow-sm dark:border-gray-800 dark:bg-gray-950/90",
     contentArea: "flex-1 overflow-hidden relative",
     svg: "w-full h-full bg-gray-50 dark:bg-gray-950",
     tooltip:
-      "fixed bottom-4 left-[calc(100%_-_86%)] bg-white/90 p-3 rounded-lg border border-gray-200 text-sm text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200",
+      "pointer-events-none absolute bottom-3 left-3 max-w-[calc(100%_-_1.5rem)] bg-white/90 p-3 rounded-sm border border-gray-200 text-xs text-gray-700 shadow-sm dark:border-gray-700 dark:bg-gray-900/90 dark:text-gray-200",
   },
 });
 
