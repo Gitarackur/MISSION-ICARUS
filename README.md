@@ -15,7 +15,7 @@ The current app is built around a few core ideas:
 
 - matrix-first workflows
 - persistent activities and visualizations
-- renderer-aware plots (`Python` with Matplotlib, `R` with ggplot2, and native)
+- renderer-aware plots (`Python` with Matplotlib, `R` with ggplot2, `F#` with Plotly.NET, and native)
 - a dark-mode capable desktop UI
 - a workflow/activity tree that lets users navigate analysis history and linked outputs
 - a CSP-hardened production renderer
@@ -95,8 +95,8 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 
 - Plot library lives in the visualization area, separate from raw statistical calculations
 - Supported plot types include bar, box, scatter, heatmap, volcano, and PCA
-- Renderer selection for plot creation: Python (Matplotlib), R (ggplot2), or native
-- Renderer selection for plot viewing: saved renderer, Python (Matplotlib), R (ggplot2), or native when available
+- Renderer selection for plot creation: Python (Matplotlib), R (ggplot2), F# (Plotly.NET), or native
+- Renderer selection for plot viewing: saved renderer, Python (Matplotlib), R (ggplot2), F# (Plotly.NET), or native when available
 - Matrix-linked saved visualizations
 - Plot-focused viewer instead of a cluttered multi-plot canvas
 - Download support for rendered visualizations
@@ -130,7 +130,7 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 - [x] Visualization tabs nested under matrix context
 - [x] Activity-tree navigation into visualizations
 - [x] Plot library refactor for centralized visualization creation
-- [x] Python, R, and native renderer support
+- [x] Python, R, F#, and native renderer support
 - [x] Heatmap and volcano plot support
 - [x] Persistent visualization records
 - [x] Visualization viewer zoom/pan controls
@@ -163,7 +163,15 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 
 
 ### Visualization and renderer options
-The visualization workspace supports plot-library driven creation and renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
+The visualization workspace supports plot-library driven creation and renderer-aware viewing across Python (Matplotlib), R (ggplot2), F# (Plotly.NET), saved output, and native rendering.
+
+#### F# renderer
+
+F# powers an additional renderer for bar, box, scatter, heatmap, volcano, and PCA plots. The [IcarusPlotRenderer project](./assets/scripts/fsharp/IcarusPlotRenderer/IcarusPlotRenderer.fsproj) uses Plotly.NET to construct charts and FSharp.Stats to compute PCA projections from centered input data.
+
+Electron sends plot payloads to the bundled `fsharp-plot` executable through IPC. The F# process returns Plotly figure JSON, which Plotly.js converts to SVG in the visualization workspace for display and download. F# is available for plot creation and viewing when its runtime is bundled for the current platform and architecture.
+
+The renderer targets .NET 10 and is published as a self-contained single-file executable, so users of packaged builds do not need a separate .NET installation. Rebuilding it requires the .NET 10 SDK; `npm run prepare:renderer:runtimes` prepares the bundled renderers, and `node scripts/test-fsharp-manager.mjs` checks the F# manager and runs binary smoke tests when the runtime is available.
 
 #### Plot settings
 <img width="1600" alt="Icarus visualization viewer with the plot settings panel open" src="./docs/images/plot-settings.png" />
@@ -246,7 +254,7 @@ Dedicated proteomics analysis surface with column-focused statistics, imputation
 
 #### Visualization workspace
 
-Plot-library driven creation with renderer-aware viewing across Python (Matplotlib), R (ggplot2), saved output, and native rendering.
+Plot-library driven creation with renderer-aware viewing across Python (Matplotlib), R (ggplot2), F# (Plotly.NET), saved output, and native rendering.
 
 ###### Dark mode
 <img width="1600" alt="Icarus visualization workspace showing a rendered Matplotlib bar plot in dark mode" src="./docs/images/visualization-dark.png" />
@@ -280,8 +288,8 @@ Settings sheet with theme selection (`light`, `dark`, `system`), export defaults
 | Desktop app | Electron |
 | Frontend | React, TypeScript |
 | Styling | Tailwind CSS, tailwind-variants |
-| Charts and visuals | Python (Matplotlib, Seaborn), R (ggplot2), Recharts, D3 |
-| Statistics | NumPy, SciPy, scikit-learn, Bioconductor LIMMA, WGCNA, jStat, simple-statistics |
+| Charts and visuals | Python (Matplotlib, Seaborn), R (ggplot2), F# (Plotly.NET), Plotly.js, Recharts, D3 |
+| Statistics | NumPy, SciPy, scikit-learn, Bioconductor LIMMA, WGCNA, FSharp.Stats (F# PCA plots), jStat, simple-statistics |
 | Data handling | Single-pass columnar parser (`ColumnarTable`: `Float64Array` numeric columns, `"N/A"` missing) with Papa Parse fallback |
 | Local storage / persistence | SQLite workflow storage |
 

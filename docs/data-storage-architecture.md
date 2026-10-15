@@ -84,6 +84,13 @@ source row; because there is no scientifically equivalent TypeScript fallback,
 the UI reports a missing-package error when that package is unavailable. The
 bundled R build vendors both packages and their runtime dependencies.
 
+F# supplies the Plotly.NET visualization backend for bar, box, scatter,
+heatmap, volcano, and PCA plots. Its FSharp.Stats dependency computes the PCA
+projection from centered input data. Electron invokes the bundled,
+self-contained .NET 10 `fsharp-plot` executable through the F# IPC handler;
+the process returns Plotly figure JSON, and Plotly.js converts that figure to
+SVG in the renderer for display and export.
+
 Python, R, and F# renderer/analysis processes use a shared persistent
 newline-delimited JSON control protocol. Startup has a bounded readiness check,
 but calculations do not have a wall-clock deadline. The Python analysis worker
