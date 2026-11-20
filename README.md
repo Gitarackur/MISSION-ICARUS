@@ -120,7 +120,7 @@ The solid arrows are logical data-flow relationships reconstructed from IDs; the
 
 - Electron desktop application
 - GitHub Actions build flow for desktop packaging
-- Unsigned macOS fallback packaging flow for environments without Apple notarization credentials
+- Sealed macOS fallback packaging that preserves Gatekeeper's user override flow without notarization credentials
 
 ---
 
@@ -341,5 +341,6 @@ Python renderer is rebuilt with a fully cold C compiler.
 
 ## Notes
 
-- macOS notarization still requires Apple credentials; unsigned fallback packaging is supported for environments without them
+- macOS notarization still requires Apple credentials; fallback builds have a valid bundle seal and can be approved through System Settings > Privacy & Security
+- Homebrew users can install the current cask with `brew install --cask gitarackur/tap/icarus`
 - visualization creation is intentionally centralized in the visualization plot library so statistical calculations remain distinct from plot generation

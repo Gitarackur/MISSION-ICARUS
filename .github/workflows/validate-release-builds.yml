@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - ".github/actions/**"
+      - ".github/scripts/package-macos.sh"
       - ".github/workflows/release.yml"
       - ".github/workflows/validate-release-builds.yml"
       - "assets/scripts/**"
@@ -87,7 +88,13 @@ jobs:
         if: runner.os == 'macOS'
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-        run: npm run build -- --publish never
+        run: |
+          npm run prepare:renderer:runtimes
+          npm run build:application
+          npm run package:desktop -- --mac dir --publish never
+          APP_PATH=$(find "release/$(node -p "require('./package.json').version")" -name "*.app" | head -n 1)
+          test -n "$APP_PATH"
+          bash .github/scripts/package-macos.sh "$APP_PATH" "release/validation/Icarus-Mac-Validation.dmg"
 
       - name: Build Linux installer
         if: runner.os == 'Linux'
